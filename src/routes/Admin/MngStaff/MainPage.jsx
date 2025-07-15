@@ -21,7 +21,7 @@ const initialStaff = [
   },
 ];
 
-const MainPage = () => {
+const ManageStaffPage = () => {
   const [staffList, setStaffList] = useState(initialStaff);
   const [showForm, setShowForm] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
@@ -33,10 +33,30 @@ const MainPage = () => {
     setStaffList((prev) =>
       prev.map((s) =>
         s.id === id
-          ? { ...s, status: s.status === "Active" ? "Inactive" : "Active" }
+          ? {
+              ...s,
+              status: s.status === "Active" ? "Inactive" : "Active",
+            }
           : s
       )
     );
+  };
+
+  const handleAddStaff = (newStaff) => {
+    if (!newStaff.name?.trim() || !newStaff.contact?.trim()) return;
+
+    const nextId = staffList.length > 0
+      ? Math.max(...staffList.map(s => s.id)) + 1
+      : 1;
+
+    const staffToAdd = {
+      ...newStaff,
+      id: nextId,
+      status: "Active",
+    };
+
+    setStaffList((prev) => [...prev, staffToAdd]);
+    setShowForm(false);
   };
 
   return (
@@ -91,19 +111,13 @@ const MainPage = () => {
 
       {/* Add Form Modal */}
       {showForm && (
-        <StaffForm
-          onAdd={(newStaff) => {
-            setStaffList((prev) => [...prev, { ...newStaff, id: prev.length + 1 }]);
-            setShowForm(false);
-          }}
-          onClose={() => setShowForm(false)}
-        />
+        <StaffForm onAdd={handleAddStaff} onClose={() => setShowForm(false)} />
       )}
 
       {/* Audit Trail Modal */}
       {showAudit && <AuditTrail onClose={() => setShowAudit(false)} />}
 
-      {/* Confirm Enable/Disable */}
+      {/* Confirm Enable/Disable Modal */}
       {confirmTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50">
           <div className="card w-full max-w-sm">
@@ -145,4 +159,4 @@ const MainPage = () => {
   );
 };
 
-export default MainPage;
+export default ManageStaffPage;

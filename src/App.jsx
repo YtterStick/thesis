@@ -1,68 +1,62 @@
 import { ThemeProvider } from "@/contexts/theme-context";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import {
+  Navigate,
+  createBrowserRouter,
+  RouterProvider,
+} from "react-router-dom";
 
-// Layout and Pages
+// 📦 Pages
 import Layout from "@/routes/layout";
-import DashboardPage from "@/routes/dashboard/page";
-import ManageStaffPage from "@/routes/MngStaff/MainPage";
-import ManageInventoryPage from "@/routes/MngInventory/MainPage";
-import ManageTransactionPage from "@/routes/MngTransaction/MainPage";
-import SalesReportPage from "@/routes/SalesReport/MainPage";
+import DashboardPage from "@/routes/Admin/dashboard/page";
+import SalesReportPage from "@/routes/Admin/SalesReport/MainPage";
+import ManageTransactionPage from "@/routes/Admin/MngTransaction/MainPage";
+import ManageStaffPage from "@/routes/Admin/MngStaff/MainPage";
+import ManageInventoryPage from "@/routes/Admin/MngInventory/MainPage";
+import LoginPage from "@/routes/Auth/LoginPage";
+
+// 🛡️ Shared Admin Wrapper
+const AdminRoute = ({ element }) => <Layout>{element}</Layout>;
+
+// 🚨 Fallback Page
+const NotFoundPage = () => (
+  <div className="text-center text-red-500 mt-24 text-xl font-semibold">
+    🚧 404 - Page Not Found
+  </div>
+);
 
 function App() {
   const router = createBrowserRouter([
+    { path: "/", element: <Navigate to="/login" replace /> },
+
+    { path: "/login", element: <LoginPage /> },
+
+    // 🔒 Admin Routes (direct access with layout)
+    { path: "/dashboard", element: <AdminRoute element={<DashboardPage />} /> },
+    { path: "/salesreports", element: <AdminRoute element={<SalesReportPage />} /> },
+    { path: "/managetransaction", element: <AdminRoute element={<ManageTransactionPage />} /> },
+    { path: "/managestaff", element: <AdminRoute element={<ManageStaffPage />} /> },
+    { path: "/manageinventory", element: <AdminRoute element={<ManageInventoryPage />} /> },
+
+    // 🔧 Optional placeholder routes
     {
-      path: "/",
-      element: <Layout />,
-      children: [
-        { index: true, element: <DashboardPage /> },
-        {
-          path: "sales-reports",
-          element: <SalesReportPage />,
-        },
-        {
-          path: "manage-transaction",
-          element: <ManageTransactionPage />, // ✅ now points to the actual page
-        },
-        {
-          path: "manage-staff",
-          element: <ManageStaffPage />,
-        },
-        {
-          path: "manage-inventory",
-          element: <ManageInventoryPage />,
-        },
-        {
-          path: "manage-receipts",
-          element: <h1 className="title">Manage Receipts</h1>,
-        },
-        {
-          path: "service-option",
-          element: <h1 className="title">Service Option</h1>,
-        },
-        {
-          path: "pricing-management",
-          element: <h1 className="title">Pricing Management</h1>,
-        },
-        {
-          path: "notification-settings",
-          element: <h1 className="title">Notification Settings</h1>,
-        },
-        {
-          path: "payment-method",
-          element: <h1 className="title">Payment Method</h1>,
-        },
-        {
-          path: "settings",
-          element: <h1 className="title">Settings</h1>,
-        },
-      ],
+      path: "/settings",
+      element: (
+        <AdminRoute
+          element={<h1 className="title">Settings</h1>}
+        />
+      ),
     },
+
+    // ❌ Catch-all route
+    { path: "*", element: <NotFoundPage /> },
   ]);
 
   return (
     <ThemeProvider storageKey="theme">
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

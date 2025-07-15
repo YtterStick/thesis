@@ -323,3 +323,4 @@ export const statusFilters = {
   laundry: ["Pending", "Washing", "Done"],
   pickup: ["Unclaimed", "Claimed", "Expired"],
 };
+export const laundryServices = ["Wash Only", "Wash & Dry", "Dry Only"];
