@@ -100,10 +100,10 @@ const TransactionTable = ({ items = [], onEdit }) => {
         <div className="flex flex-col gap-6">
             {/* Search & Filters */}
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="relative w-full lg:max-w-sm">
-                    <div className="input flex items-center rounded-md border border-slate-300 bg-white px-3 dark:border-slate-600 dark:bg-slate-800">
+                <div className="relative h-[38px] w-full lg:w-[250px]">
+                    <div className="input flex h-full items-center rounded-md border border-slate-300 bg-white px-3 dark:border-slate-600 dark:bg-slate-800">
                         <Search
-                            size={18}
+                            size={16}
                             className="text-slate-400 dark:text-slate-500"
                         />
                         <input
@@ -111,7 +111,7 @@ const TransactionTable = ({ items = [], onEdit }) => {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="Search by name..."
-                            className="w-full bg-transparent px-2 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-50"
+                            className="w-full bg-transparent px-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-50"
                         />
                     </div>
                 </div>
@@ -146,7 +146,7 @@ const TransactionTable = ({ items = [], onEdit }) => {
                                         type="payment"
                                         options={statusFilters.payment}
                                         selected={selectedPayment}
-                                        toggleFn={toggleStatus}
+                                        toggleFn={toggleStatus} 
                                     />
                                 </div>
 
@@ -265,23 +265,34 @@ const TransactionTable = ({ items = [], onEdit }) => {
                 </table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
-                <div className="flex justify-center gap-2 text-sm">
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm">
                     <button
                         disabled={currentPage === 1}
                         onClick={() => setCurrentPage((p) => p - 1)}
-                        className="rounded-md border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+                        className="rounded px-2 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         Previous
                     </button>
-                    <span className="flex items-center px-2 text-slate-700 dark:text-slate-100">
-                        Page {currentPage} of {totalPages}
-                    </span>
+
+                    {Array.from({ length: totalPages }, (_, i) => (
+                        <button
+                            key={i + 1}
+                            onClick={() => setCurrentPage(i + 1)}
+                            className={`rounded px-2 py-1 ${
+                                currentPage === i + 1
+                                    ? "bg-[#3DD9B6] text-white dark:bg-[#007362]"
+                                    : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                            }`}
+                        >
+                            {i + 1}
+                        </button>
+                    ))}
+
                     <button
                         disabled={currentPage === totalPages}
                         onClick={() => setCurrentPage((p) => p + 1)}
-                        className="rounded-md border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+                        className="rounded px-2 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         Next
                     </button>

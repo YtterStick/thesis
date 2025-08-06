@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, createContext } from "react";
+import { useRef, useEffect, useState, createContext, useContext } from "react";
 
 const AuthContext = createContext();
 
@@ -8,11 +8,20 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAuthenticating, setIsAuthenting] = useState(false);
-
-  // 🔁 Fetch /me on mount if token exists
+  const hasLoggedOnce = useRef(false);
   useEffect(() => {
-    const token = localStorage.getItem("jwt");
+    const token = localStorage.getItem("authToken");
+
     if (!token) {
+      if (!hasLoggedOnce.current) {
+        console.log("🔐 No token found. Resetting auth.");
+        hasLoggedOnce.current = true;
+
+      }
+
+      setUser(null);
+      setRole(null);
+      setIsAuthenticated(false);
       setLoading(false);
       return;
     }
@@ -31,15 +40,17 @@ export const AuthProvider = ({ children }) => {
         console.log("✅ AuthContext initialized:", data);
       })
       .catch((err) => {
+        localStorage.removeItem("authToken");
+        setUser(null);
+        setRole(null);
+        setIsAuthenticated(false);
         console.warn("⚠️ AuthContext fetch error:", err.message);
-        localStorage.removeItem("jwt");
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // 🔐 Login method after user authenticates
   const login = async (token) => {
-    localStorage.setItem("jwt", token);
+    localStorage.setItem("authToken", token);
 
     try {
       const res = await fetch("http://localhost:8080/me", {
@@ -54,22 +65,35 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       console.log("🔐 Logged in:", data);
     } catch (err) {
+      localStorage.removeItem("authToken");
+      setUser(null);
+      setRole(null);
+      setIsAuthenticated(false);
       console.warn("⚠️ Login error:", err.message);
-      localStorage.removeItem("jwt");
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("jwt");
+    localStorage.removeItem("authToken");
     setUser(null);
     setRole(null);
     setIsAuthenticated(false);
+    hasLoggedMissingToken.current = false; // ✅ Reset for next mount
     console.log("🚪 Logged out");
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, role, isAuthenticated, loading, login, logout }}
+      value={{
+        user,
+        role,
+        isAuthenticated,
+        loading,
+        login,
+        logout,
+        isAuthenticating,
+        setIsAuthenting,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 import { useTheme } from "@/hooks/use-theme";
+import AuthLoader from "@/components/feedback/AuthLoader"; // ✅ default import
 
 const Layout = ({ children }) => {
   const isDesktopDevice = useMediaQuery("(min-width: 768px)");
@@ -35,13 +36,7 @@ const Layout = ({ children }) => {
   });
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-100 dark:bg-slate-950">
-        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-          Authenticating...
-        </p>
-      </div>
-    );
+    return <AuthLoader />;
   }
 
   return (

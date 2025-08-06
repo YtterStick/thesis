@@ -54,7 +54,7 @@ const AuthLoader = () => {
 
         {/* Caption */}
         <p className="font-starjedi text-xl uppercase tracking-[0.25em] text-[#3DD9B6] drop-shadow-[0_0_8px_#3DD9B6]">
-          Systems Authenticating...
+          Loading...
         </p>
 
         {/* Bouncing dots */}

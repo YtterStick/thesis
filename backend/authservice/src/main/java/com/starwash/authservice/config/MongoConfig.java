@@ -13,7 +13,7 @@ public class MongoConfig {
     public MongoClient mongoClient() {
         return MongoClients.create("mongodb+srv://ytterstick:vQjnfLWfTnN43tyf@starwash-cluster.fp7frav.mongodb.net");
     }
-
+    
     @Bean
     public MongoTemplate mongoTemplate() {
         return new MongoTemplate(mongoClient(), "starwashDB");

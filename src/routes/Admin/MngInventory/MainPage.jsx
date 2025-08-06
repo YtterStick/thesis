@@ -1,121 +1,257 @@
-import { useState } from "react";
-import InventoryTable from "./InventoryTable";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import {
+  Plus,
+  Boxes,
+  PackageX,
+  Package,
+  Clock8,
+} from "lucide-react";
 import InventoryForm from "./InventoryForm";
+import InventoryTable from "./InventoryTable";
 import StockModal from "./StockModal";
-import ConfirmDialog from "./components/ConfirmDialog";
-import ToastMessage from "./components/ToastMessage";
-
-const initialInventory = [
-  { id: 1, name: "Plastic", quantity: 20, unit: "pcs", lastRestock: "2025-06-28" },
-  { id: 2, name: "Detergent", quantity: 0, unit: "pcs", lastRestock: "2025-06-25" },
-  { id: 3, name: "Fabric", quantity: 5, unit: "pcs", lastRestock: "2025-06-29" },
-];
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const MainPage = () => {
-  const [inventory, setInventory] = useState(initialInventory);
-  const [activeItem, setActiveItem] = useState(null);
+  const [items, setItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(null);
-  const [toast, setToast] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const updateStock = (id, amount) => {
-    setInventory((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              quantity: item.quantity + amount,
-              lastRestock: new Date().toISOString().slice(0, 10),
-            }
-          : item
-      )
-    );
+  const getAxiosWithAuth = () => {
+    const token = localStorage.getItem("token");
+    return axios.create({
+      baseURL: "http://localhost:8080/api",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
   };
 
-  const handleDeleteRequest = (item) => {
-    if (item.quantity > 0) {
-      setToast(`Cannot delete "${item.name}" — stock still available.`);
-    } else {
-      setConfirmDelete(item);
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const response = await getAxiosWithAuth().get("/stock");
+      const safeItems = Array.isArray(response.data)
+        ? response.data
+        : response.data.items ?? [];
+      setItems(safeItems);
+    } catch (error) {
+      console.error("Error loading inventory:", error);
     }
   };
 
+  const handleSave = async (data) => {
+    try {
+      if (editingItem) {
+        await getAxiosWithAuth().put(`/stock/${editingItem.id}`, data);
+      } else {
+        await getAxiosWithAuth().post("/stock", data);
+      }
+      fetchInventory();
+      setShowForm(false);
+      setEditingItem(null);
+    } catch (error) {
+      console.error("Error saving item:", error);
+    }
+  };
+
+  const handleDelete = async (item) => {
+    try {
+      await getAxiosWithAuth().delete(`/stock/${item.id}`);
+      fetchInventory();
+    } catch (error) {
+      console.error("Error deleting item:", error);
+    }
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setShowForm(true);
+  };
+
+  const handleAddStock = async (amount) => {
+    try {
+      await getAxiosWithAuth().put(`/stock/${selectedItem.id}/restock?amount=${amount}`);
+      fetchInventory();
+    } catch (error) {
+      console.error("Error adding stock:", error);
+    } finally {
+      setSelectedItem(null);
+      setShowStockModal(false);
+    }
+  };
+
+  const openStockModal = (item) => {
+    setSelectedItem(item);
+    setShowStockModal(true);
+  };
+
+  const closeStockModal = () => {
+    setSelectedItem(null);
+    setShowStockModal(false);
+  };
+
+  const filteredItems = items.filter(item =>
+    item?.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="flex flex-col gap-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="title">Manage Inventory</h1>
-        <button
-          onClick={() => {
-            setEditItem(null);
-            setShowForm(true);
-          }}
-          className="btn-ghost border px-4 py-2 text-sm text-slate-900 dark:text-slate-50"
-        >
-          + Add Item
-        </button>
-      </div>
-
-      <div className="card">
-        <div className="card-header justify-between">
-          <p className="card-title">Inventory List</p>
+    <main className="relative p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Boxes className="w-6 h-6 text-[#3DD9B6]" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
+            Manage Inventory
+          </h1>
         </div>
-        <InventoryTable
-          items={inventory}
-          onAddStock={(item) => setActiveItem(item)}
-          onEditItem={(item) => {
-            setEditItem(item);
-            setShowForm(true);
-          }}
-          onDeleteRequest={handleDeleteRequest}
-        />
+        {items.length > 0 && (
+          <Button
+            onClick={() => {
+              setEditingItem(null);
+              setShowForm(true);
+            }}
+            className="bg-[#3DD9B6] text-white hover:bg-[#2fc3a4] dark:bg-[#007362] dark:hover:bg-[#00564e] shadow-md transition-transform hover:scale-105"
+          >
+            <Plus size={16} className="mr-2" />
+            Add Item
+          </Button>
+        )}
       </div>
 
-      {activeItem && (
-        <StockModal
-          item={activeItem}
-          onClose={() => setActiveItem(null)}
-          onSubmit={(amount) => {
-            updateStock(activeItem.id, amount);
-            setActiveItem(null);
-          }}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {[
+          {
+            title: "Total Items",
+            icon: <Boxes size={26} />,
+            value: items.length,
+            growth: "+0% change today",
+          },
+          {
+            title: "Out of Stock",
+            icon: <PackageX size={26} />,
+            value: items.filter((i) => i.quantity === 0).length,
+            growth: "-0% change today",
+          },
+          {
+            title: "Low Stock",
+            icon: <Package size={26} />,
+            value: items.filter((i) => i.quantity > 0 && i.quantity < 5).length,
+            growth: "+0% change today",
+          },
+          {
+            title: "Recently Restocked",
+            icon: <Clock8 size={26} />,
+            value: items.filter((i) => i.restockedRecently).length || 0,
+            growth: "+0% change today",
+          },
+        ].map(({ title, icon, value, growth }) => (
+          <div key={title} className="card">
+            <div className="card-header flex items-center gap-x-3">
+              <div className="w-fit rounded-lg bg-[#3DD9B6]/20 p-2 text-[#3DD9B6] dark:bg-[#007362]/30 dark:text-[#3DD9B6]">
+                {icon}
+              </div>
+              <p className="card-title">{title}</p>
+            </div>
+            <div className="card-body bg-slate-100 transition-colors dark:bg-slate-950 rounded-md p-4">
+              <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 transition-colors">
+                {value}
+              </p>
+              <p
+                className={`text-xs font-medium transition-colors ${
+                  growth.startsWith("-")
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-emerald-700 dark:text-[#28b99a]"
+                }`}
+              >
+                {growth}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Search Input */}
+      <Input
+        placeholder="Search items by name..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="mt-6 mb-6 max-w-sm"
+        autoComplete="off"
+      />
+
+      {/* Inventory Table or Empty State */}
+      {filteredItems.length > 0 ? (
+        <InventoryTable
+          items={filteredItems}
+          onAddStock={openStockModal}
+          onEditItem={handleEdit}
+          onDeleteRequest={handleDelete}
         />
+      ) : search.trim() ? (
+        <div className="flex flex-col items-center justify-center mt-12 text-center">
+          <img
+            src="https://www.transparenttextures.com/patterns/stardust.png"
+            alt="No match"
+            className="w-32 h-32 opacity-50 mb-4"
+          />
+          <p className="text-slate-500 dark:text-slate-400 mb-2">
+            No items found matching "<strong>{search}</strong>"
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center mt-12 text-center">
+          <img
+            src="https://www.transparenttextures.com/patterns/stardust.png"
+            alt="Empty"
+            className="w-32 h-32 opacity-50 mb-4"
+          />
+          <p className="text-slate-500 dark:text-slate-400 mb-2">
+            No inventory items yet.
+          </p>
+          <Button
+            onClick={() => {
+              setEditingItem(null);
+              setShowForm(true);
+            }}
+            className="bg-[#3DD9B6] text-white hover:bg-[#2fc3a4] dark:bg-[#007362] dark:hover:bg-[#00564e]"
+          >
+            <Plus size={16} className="mr-2" />
+            Add Your First Item
+          </Button>
+        </div>
       )}
 
-      {showForm && (
+      {/* Inventory Form */}
+      {showForm && !showStockModal && (
         <InventoryForm
-          item={editItem}
-          onAdd={(newItem) => {
-            if (editItem) {
-              setInventory((prev) =>
-                prev.map((i) => (i.id === editItem.id ? { ...i, ...newItem } : i))
-              );
-            } else {
-              setInventory((prev) => [...prev, { ...newItem, id: prev.length + 1 }]);
-            }
-            setShowForm(false);
-            setEditItem(null);
-          }}
+          item={editingItem}
+          onAdd={handleSave}
           onClose={() => {
             setShowForm(false);
-            setEditItem(null);
+            setEditingItem(null);
           }}
+          existingItems={items}
         />
       )}
 
-      {confirmDelete && (
-        <ConfirmDialog
-          message={`Delete "${confirmDelete.name}" from inventory?`}
-          onCancel={() => setConfirmDelete(null)}
-          onConfirm={() => {
-            setInventory((prev) => prev.filter((i) => i.id !== confirmDelete.id));
-            setConfirmDelete(null);
-          }}
+      {/* Stock Modal */}
+      {showStockModal && selectedItem && (
+        <StockModal
+          item={selectedItem}
+          onClose={closeStockModal}
+          onSubmit={handleAddStock}
         />
       )}
-
-      {toast && <ToastMessage message={toast} onClose={() => setToast(null)} />}
-    </div>
+    </main>
   );
 };
 

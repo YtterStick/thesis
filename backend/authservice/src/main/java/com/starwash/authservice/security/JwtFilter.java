@@ -7,13 +7,13 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -45,9 +45,15 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (jwtUtil.validateToken(token)) {
                 String username = jwtUtil.getUsername(token);
+                String role = jwtUtil.getRole(token); // Expected format: "ADMIN" or "STAFF"
+
+                System.out.println("✅ Token valid. User: " + username + ", Role: " + role);
+
+                List<SimpleGrantedAuthority> authorities =
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
 
                 UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
+                        new UsernamePasswordAuthenticationToken(username, null, authorities);
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -55,7 +61,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 System.out.println("❌ Invalid JWT token");
             }
         } else {
-            System.out.println("⚠️ No Authorization header or wrong format");
+            System.out.println("⚠️ Missing or invalid Authorization header");
         }
 
         chain.doFilter(request, response);

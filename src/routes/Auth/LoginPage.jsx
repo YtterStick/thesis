@@ -38,31 +38,36 @@ const LoginPage = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setIsAuthenticating(true);
+  e.preventDefault();
+  setError("");
+  setIsAuthenticating(true);
 
-    try {
-      const loginRes = await fetch("http://localhost:8080/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+  try {
+    const loginRes = await fetch("http://localhost:8080/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
 
-      if (!loginRes.ok) throw new Error("Login failed");
+    if (!loginRes.ok) throw new Error("Login failed");
 
-      const { token } = await loginRes.json();
-      await login(token);
+    const { token } = await loginRes.json();
 
-      setTimeout(() => {
-        navigate("/dashboard");
-        setIsAuthenticating(false);
-      }, 3000);
-    } catch (err) {
-      setError("Invalid username or password");
+    // ✅ This is what was missing:
+    localStorage.setItem("token", token); // 🔐 Save token for later use
+
+    await login(token); // optional: still call your auth context method
+
+    setTimeout(() => {
+      navigate("/dashboard");
       setIsAuthenticating(false);
-    }
-  };
+    }, 3000);
+  } catch (err) {
+    setError("Invalid username or password");
+    setIsAuthenticating(false);
+  }
+};
+
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4 py-10 text-slate-100">

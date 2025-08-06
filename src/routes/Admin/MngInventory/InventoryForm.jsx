@@ -1,19 +1,38 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast"; // ✅ Toast hook
 
-const InventoryForm = ({ onAdd, onClose, item }) => {
-  const [formData, setFormData] = useState({
+const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
+  const [form, setForm] = useState({
     name: "",
     quantity: "",
     unit: "pcs",
   });
 
+  const { toast } = useToast(); // ✅ Toast instance
   const units = ["pcs", "kg", "L"];
   const isEditMode = Boolean(item);
 
   useEffect(() => {
     if (item) {
-      setFormData({
+      setForm({
         name: item.name,
         quantity: item.quantity.toString(),
         unit: item.unit,
@@ -21,86 +40,111 @@ const InventoryForm = ({ onAdd, onClose, item }) => {
     }
   }, [item]);
 
+  const handleChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || formData.quantity === "" || isNaN(formData.quantity)) return;
+    if (!form.name || form.quantity === "" || isNaN(form.quantity)) return;
+
+    const normalizedName = form.name.trim().toLowerCase();
+    const isDuplicate = existingItems.some(
+      (i) =>
+        i.name.trim().toLowerCase() === normalizedName &&
+        (!isEditMode || i.id !== item.id)
+    );
+
+    if (isDuplicate) {
+      toast({
+        title: "Duplicate Item",
+        description: "An item with this name already exists.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const result = {
-      name: formData.name.trim(),
-      quantity: parseInt(formData.quantity),
-      unit: formData.unit,
-      lastRestock: new Date().toISOString().slice(0, 10),
+      name: form.name.trim(),
+      quantity: parseInt(form.quantity),
+      unit: form.unit,
+      ...(isEditMode ? {} : { lastRestock: new Date().toISOString() }),
     };
 
     onAdd(result);
-    setFormData({ name: "", quantity: "", unit: "pcs" });
+    setForm({ name: "", quantity: "", unit: "pcs" });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50">
-      <div className="card w-full max-w-md">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="card-title">{isEditMode ? "Edit Item" : "Add New Item"}</p>
-          <button
-            onClick={onClose}
-            className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          >
-            Cancel
-          </button>
-        </div>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="rounded-lg border border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+            {isEditMode ? "Edit Item" : "Add New Item"}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditMode
+              ? "Edit the inventory item's name, quantity, and unit."
+              : "Provide item name, quantity, and unit to add to inventory."}
+          </DialogDescription>
+          <DialogClose />
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-y-3">
-          <input
-            type="text"
-            placeholder="Item Name"
-            className="form-input"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        <form onSubmit={handleSubmit} className="mt-2 space-y-4">
+          <Input
+            placeholder="Item name"
+            value={form.name}
+            onChange={(e) => handleChange("name", e.target.value)}
             required
+            className="form-input"
           />
-
-          <input
+          <Input
             type="number"
-            min={0}
             placeholder="Quantity"
-            className="form-input"
-            value={formData.quantity}
-            onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+            value={form.quantity}
+            onChange={(e) => handleChange("quantity", e.target.value)}
             required
+            min="0"
+            step="1"
+            className="form-input"
           />
-
-          <select
-            className="form-input bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50"
-            value={formData.unit}
-            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+          <Select
+            value={form.unit}
+            onValueChange={(value) => handleChange("unit", value)}
           >
-            {units.map((u) => (
-              <option
-                key={u}
-                value={u}
-                className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-50"
-              >
-                {u}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="form-input">
+              <SelectValue placeholder="Select unit" />
+            </SelectTrigger>
+            <SelectContent className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
+              {units.map((u) => (
+                <SelectItem
+                  key={u}
+                  value={u}
+                  className="cursor-pointer bg-white text-slate-900 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-800"
+                >
+                  {u}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <button
+          <Button
             type="submit"
-            className="mt-2 rounded-lg bg-[#008B76] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#007362] dark:bg-[#007362] dark:hover:bg-[#00564e]"
+            className="w-full bg-[#3DD9B6] text-white hover:bg-[#2fc3a4] dark:bg-[#007362] dark:hover:bg-[#00564e]"
           >
             {isEditMode ? "Update Item" : "Save Item"}
-          </button>
+          </Button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
 InventoryForm.propTypes = {
+  item: PropTypes.object,
   onAdd: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
-  item: PropTypes.object,
+  existingItems: PropTypes.array,
 };
 
 export default InventoryForm;

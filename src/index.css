@@ -92,13 +92,13 @@
   }
 
   @keyframes cardglow {
-    0%, 100% {
-      box-shadow: 0 0 40px #3dd9b650;
-    }
-    50% {
-      box-shadow: 0 0 60px #3dd9b6;
-    }
+  0%, 100% {
+    box-shadow: 0 0 12px #3dd9b630;
   }
+  50% {
+    box-shadow: 0 0 20px #3dd9b6;
+  }
+}
 
   @keyframes gridPulse {
     0%, 100% {

@@ -16,7 +16,7 @@ import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000") // ✅ Allow frontend access from dev server
+@CrossOrigin(origins = "http://localhost:3000")
 public class AuthController {
 
     @Autowired
@@ -28,11 +28,33 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // 🔐 Login: verify credentials & issue JWT
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User registerRequest) {
+        System.out.println("📝 Registering new user: " + registerRequest.getUsername());
+
+        if (userRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Collections.singletonMap("error", "Username already exists"));
+        }
+
+        registerRequest.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+
+        if (registerRequest.getRole() == null || registerRequest.getRole().isEmpty()) {
+            registerRequest.setRole("STAFF");
+        }
+
+        if (registerRequest.getStatus() == null || registerRequest.getStatus().isEmpty()) {
+            registerRequest.setStatus("Active");
+        }
+
+        User savedUser = userRepository.save(registerRequest);
+        System.out.println("✅ User registered: " + savedUser.getUsername());
+
+        return ResponseEntity.ok(savedUser);
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User loginRequest) {
-        System.out.println("📥 Login attempt: " + loginRequest.getUsername());
-
         Optional<User> foundUser = userRepository.findByUsername(loginRequest.getUsername());
 
         if (foundUser.isPresent()) {
@@ -41,46 +63,51 @@ public class AuthController {
 
             if (matches) {
                 String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
-                System.out.println("✅ Credentials valid. Issued token for " + user.getUsername());
                 return ResponseEntity.ok(Collections.singletonMap("token", token));
-            } else {
-                System.out.println("❌ Password mismatch for user: " + user.getUsername());
             }
-        } else {
-            System.out.println("❌ No matching user found: " + loginRequest.getUsername());
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Collections.singletonMap("error", "Invalid credentials"));
+                .body(Collections.singletonMap("error", "Invalid credentials"));
     }
 
-    // 🔎 /me: decode JWT and return user + role
-    @GetMapping("/me")
-    public ResponseEntity<?> getMe(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        System.out.println("📡 Incoming /me request. Header: " + authHeader);
-
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("❌ Missing or malformed Authorization header");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Collections.singletonMap("error", "Missing or invalid token"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", "Missing or invalid token"));
         }
 
         String token = authHeader.replace("Bearer ", "");
 
         if (!jwtUtil.validateToken(token)) {
-            System.out.println("❌ JWT failed validation: " + token);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Collections.singletonMap("error", "Invalid or expired token"));
+                    .body(Collections.singletonMap("error", "Invalid token"));
+        }
+
+        String username = jwtUtil.getUsername(token);
+        System.out.println("👋 Logout for: " + username);
+
+        return ResponseEntity.ok(Collections.singletonMap("message", "Logged out successfully"));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getMe(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Collections.singletonMap("error", "Missing or invalid token"));
+        }
+
+        String token = authHeader.replace("Bearer ", "");
+
+        if (!jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Collections.singletonMap("error", "Invalid or expired token"));
         }
 
         String username = jwtUtil.getUsername(token);
         String role = jwtUtil.getRole(token);
 
-        System.out.println("👤 /me resolved. User: " + username + ", Role: " + role);
-
-        return ResponseEntity.ok(Map.of(
-            "user", username,
-            "role", role
-        ));
+        return ResponseEntity.ok(Map.of("user", username, "role", role));
     }
 }
