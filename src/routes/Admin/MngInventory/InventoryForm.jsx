@@ -17,16 +17,17 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast"; // ✅ Toast hook
+import { useToast } from "@/hooks/use-toast";
 
 const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
   const [form, setForm] = useState({
     name: "",
     quantity: "",
     unit: "pcs",
+    price: "",
   });
 
-  const { toast } = useToast(); // ✅ Toast instance
+  const { toast } = useToast();
   const units = ["pcs", "kg", "L"];
   const isEditMode = Boolean(item);
 
@@ -36,6 +37,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
         name: item.name,
         quantity: item.quantity.toString(),
         unit: item.unit,
+        price: item.price?.toString() ?? "",
       });
     }
   }, [item]);
@@ -46,9 +48,12 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.name || form.quantity === "" || isNaN(form.quantity)) return;
 
-    const normalizedName = form.name.trim().toLowerCase();
+    const { name, quantity, unit, price } = form;
+
+    if (!name || quantity === "" || price === "" || isNaN(quantity) || isNaN(price)) return;
+
+    const normalizedName = name.trim().toLowerCase();
     const isDuplicate = existingItems.some(
       (i) =>
         i.name.trim().toLowerCase() === normalizedName &&
@@ -65,14 +70,15 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
     }
 
     const result = {
-      name: form.name.trim(),
-      quantity: parseInt(form.quantity),
-      unit: form.unit,
+      name: name.trim(),
+      quantity: parseInt(quantity),
+      unit,
+      price: parseFloat(price),
       ...(isEditMode ? {} : { lastRestock: new Date().toISOString() }),
     };
 
     onAdd(result);
-    setForm({ name: "", quantity: "", unit: "pcs" });
+    setForm({ name: "", quantity: "", unit: "pcs", price: "" });
   };
 
   return (
@@ -84,8 +90,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
           </DialogTitle>
           <DialogDescription className="sr-only">
             {isEditMode
-              ? "Edit the inventory item's name, quantity, and unit."
-              : "Provide item name, quantity, and unit to add to inventory."}
+              ? "Edit the inventory item's name, quantity, unit, and price."
+              : "Provide item name, quantity, unit, and price to add to inventory."}
           </DialogDescription>
           <DialogClose />
         </DialogHeader>
@@ -106,6 +112,16 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
             required
             min="0"
             step="1"
+            className="form-input"
+          />
+          <Input
+            type="number"
+            placeholder="Price"
+            value={form.price}
+            onChange={(e) => handleChange("price", e.target.value)}
+            required
+            min="0"
+            step="0.01"
             className="form-input"
           />
           <Select

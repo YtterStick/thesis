@@ -16,6 +16,7 @@ public class StockItem {
     private String name;
     private int quantity;
     private String unit;
+    private double price;
 
     @CreatedDate
     private LocalDateTime createdAt;
@@ -28,15 +29,25 @@ public class StockItem {
     // Optional: track who last updated the item
     private String updatedBy;
 
-    public StockItem() {}
+    public StockItem() {
+    }
 
-    public StockItem(String name, int quantity, String unit) {
+    public StockItem(String name, int quantity, String unit, double price) {
         this.name = name;
         this.quantity = quantity;
         this.unit = unit;
+        this.price = price;
         this.createdAt = LocalDateTime.now();
         this.lastUpdated = LocalDateTime.now();
         this.lastRestock = LocalDateTime.now();
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
     }
 
     public String getId() {

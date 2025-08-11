@@ -11,7 +11,6 @@ import InventoryForm from "./InventoryForm";
 import InventoryTable from "./InventoryTable";
 import StockModal from "./StockModal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 const MainPage = () => {
   const [items, setItems] = useState([]);
@@ -19,7 +18,6 @@ const MainPage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showStockModal, setShowStockModal] = useState(false);
-  const [search, setSearch] = useState("");
 
   const getAxiosWithAuth = () => {
     const token = localStorage.getItem("token");
@@ -68,7 +66,7 @@ const MainPage = () => {
       fetchInventory();
     } catch (error) {
       console.error("Error deleting item:", error);
-    }
+    }  
   };
 
   const handleEdit = (item) => {
@@ -98,10 +96,6 @@ const MainPage = () => {
     setShowStockModal(false);
   };
 
-  const filteredItems = items.filter(item =>
-    item?.name?.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
     <main className="relative p-6">
       {/* Header */}
@@ -127,36 +121,54 @@ const MainPage = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-6">
         {[
           {
             title: "Total Items",
             icon: <Boxes size={26} />,
             value: items.length,
             growth: "+0% change today",
+            color: "#3DD9B6",
+            darkColor: "#007362",
+            growthColor: "text-emerald-700 dark:text-[#28b99a]",
           },
           {
             title: "Out of Stock",
             icon: <PackageX size={26} />,
             value: items.filter((i) => i.quantity === 0).length,
             growth: "-0% change today",
+            color: "#F87171",
+            darkColor: "#DC2626",
+            growthColor: "text-red-600 dark:text-red-400",
           },
           {
             title: "Low Stock",
             icon: <Package size={26} />,
             value: items.filter((i) => i.quantity > 0 && i.quantity < 5).length,
             growth: "+0% change today",
+            color: "#FB923C",
+            darkColor: "#EA580C",
+            growthColor: "text-orange-600 dark:text-orange-400",
           },
           {
             title: "Recently Restocked",
             icon: <Clock8 size={26} />,
             value: items.filter((i) => i.restockedRecently).length || 0,
             growth: "+0% change today",
+            color: "#60A5FA",
+            darkColor: "#2563EB",
+            growthColor: "text-blue-600 dark:text-blue-400",
           },
-        ].map(({ title, icon, value, growth }) => (
+        ].map(({ title, icon, value, growth, color, growthColor }) => (
           <div key={title} className="card">
             <div className="card-header flex items-center gap-x-3">
-              <div className="w-fit rounded-lg bg-[#3DD9B6]/20 p-2 text-[#3DD9B6] dark:bg-[#007362]/30 dark:text-[#3DD9B6]">
+              <div
+                className="w-fit rounded-lg p-2"
+                style={{
+                  backgroundColor: `${color}33`,
+                  color: color,
+                }}
+              >
                 {icon}
               </div>
               <p className="card-title">{title}</p>
@@ -165,13 +177,7 @@ const MainPage = () => {
               <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 transition-colors">
                 {value}
               </p>
-              <p
-                className={`text-xs font-medium transition-colors ${
-                  growth.startsWith("-")
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-emerald-700 dark:text-[#28b99a]"
-                }`}
-              >
+              <p className={`text-xs font-medium transition-colors ${growthColor}`}>
                 {growth}
               </p>
             </div>
@@ -179,34 +185,14 @@ const MainPage = () => {
         ))}
       </div>
 
-      {/* Search Input */}
-      <Input
-        placeholder="Search items by name..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mt-6 mb-6 max-w-sm"
-        autoComplete="off"
-      />
-
       {/* Inventory Table or Empty State */}
-      {filteredItems.length > 0 ? (
+      {items.length > 0 ? (
         <InventoryTable
-          items={filteredItems}
+          items={items}
           onAddStock={openStockModal}
           onEditItem={handleEdit}
           onDeleteRequest={handleDelete}
         />
-      ) : search.trim() ? (
-        <div className="flex flex-col items-center justify-center mt-12 text-center">
-          <img
-            src="https://www.transparenttextures.com/patterns/stardust.png"
-            alt="No match"
-            className="w-32 h-32 opacity-50 mb-4"
-          />
-          <p className="text-slate-500 dark:text-slate-400 mb-2">
-            No items found matching "<strong>{search}</strong>"
-          </p>
-        </div>
       ) : (
         <div className="flex flex-col items-center justify-center mt-12 text-center">
           <img

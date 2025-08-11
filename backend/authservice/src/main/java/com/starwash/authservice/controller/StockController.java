@@ -42,6 +42,7 @@ public class StockController {
         newItem.setName(dto.getName());
         newItem.setUnit(dto.getUnit());
         newItem.setQuantity(dto.getQuantity());
+        newItem.setPrice(dto.getPrice());
         newItem.setCreatedAt(LocalDateTime.now());
         newItem.setLastUpdated(LocalDateTime.now());
         newItem.setLastRestock(LocalDateTime.now());
@@ -53,13 +54,25 @@ public class StockController {
 
     @PutMapping("/stock/{id}")
     public ResponseEntity<?> updateStockItem(@PathVariable String id,
-                                             @RequestBody StockItem updatedItem) {
-        if (updatedItem == null || updatedItem.getName() == null) {
-            return ResponseEntity.badRequest().body("Missing item name for update");
+                                             @RequestBody StockItemDto dto) {
+        Optional<StockItem> existingOpt = stockService.getItemById(id);
+        if (existingOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
         }
-        Optional<StockItem> item = stockService.updateItem(id, updatedItem);
-        return item.map(ResponseEntity::ok)
-                   .orElse(ResponseEntity.notFound().build());
+
+        StockItem existing = existingOpt.get();
+
+        // Apply updates only if fields are present
+        if (dto.getName() != null) existing.setName(dto.getName());
+        if (dto.getUnit() != null) existing.setUnit(dto.getUnit());
+        if (dto.getQuantity() != null) existing.setQuantity(dto.getQuantity());
+        if (dto.getPrice() != null) existing.setPrice(dto.getPrice());
+        if (dto.getUpdatedBy() != null) existing.setUpdatedBy(dto.getUpdatedBy());
+
+        existing.setLastUpdated(LocalDateTime.now());
+
+        StockItem updated = stockService.createItem(existing); // reuse save logic
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/stock/{id}")
@@ -74,6 +87,7 @@ public class StockController {
         if (amount <= 0) {
             return ResponseEntity.badRequest().body("Invalid restock amount");
         }
+
         Optional<StockItem> item = stockService.addStock(id, amount);
         return item.map(ResponseEntity::ok)
                    .orElse(ResponseEntity.notFound().build());

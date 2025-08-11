@@ -1,12 +1,11 @@
 import { forwardRef } from "react";
 import logoLight from "@/assets/logo-light.svg";
 import logoDark from "@/assets/logo-dark.svg";
-import { navbarLinks } from "@/constants/navbarLinks";
 import PropTypes from "prop-types";
 import { cn } from "@/utils/cn";
 import { NavLink } from "react-router-dom";
 
-export const Sidebar = forwardRef(({ collapsed }, ref) => {
+export const Sidebar = forwardRef(({ collapsed, links }, ref) => {
   return (
     <aside
       ref={ref}
@@ -36,7 +35,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
 
       {/* Navigation links */}
       <div className="flex w-full flex-col gap-y-6 overflow-y-auto overflow-x-hidden p-3 scrollbar-thin">
-        {navbarLinks.map((group) => (
+        {links.map((group) => (
           <nav
             key={group.title}
             className={cn("flex flex-col gap-y-2", collapsed && "items-center")}
@@ -78,4 +77,5 @@ Sidebar.displayName = "Sidebar";
 
 Sidebar.propTypes = {
   collapsed: PropTypes.bool,
+  links: PropTypes.array.isRequired,
 };

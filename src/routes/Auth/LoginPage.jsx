@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +15,17 @@ import { Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 import logoLight from "@/assets/logo-dark.svg";
 import AuthLoader from "@/components/feedback/AuthLoader";
+
+// 🧠 Decode JWT token to extract payload
+const decodeToken = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded;
+  } catch {
+    return null;
+  }
+};
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -38,36 +51,48 @@ const LoginPage = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError("");
-  setIsAuthenticating(true);
+    e.preventDefault();
+    setError("");
+    setIsAuthenticating(true);
 
-  try {
-    const loginRes = await fetch("http://localhost:8080/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    try {
+      const loginRes = await fetch("http://localhost:8080/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    if (!loginRes.ok) throw new Error("Login failed");
+      if (!loginRes.ok) throw new Error("Login failed");
 
-    const { token } = await loginRes.json();
+      const { token } = await loginRes.json();
 
-    // ✅ This is what was missing:
-    localStorage.setItem("token", token); // 🔐 Save token for later use
+      if (!token) throw new Error("No token received");
 
-    await login(token); // optional: still call your auth context method
+      console.log("🔐 Received token:", token);
 
-    setTimeout(() => {
-      navigate("/dashboard");
+      localStorage.setItem("token", token);
+      await login(token); // optional: update context
+
+      const decoded = decodeToken(token);
+      console.log("👤 Decoded:", decoded);
+
+      const normalizedRole = decoded?.role?.toUpperCase();
+
+      if (normalizedRole === "ADMIN") {
+        navigate("/dashboard");
+      } else if (normalizedRole === "STAFF") {
+        navigate("/staff/dashboard");
+      } else {
+        navigate("/login");
+      }
+
       setIsAuthenticating(false);
-    }, 3000);
-  } catch (err) {
-    setError("Invalid username or password");
-    setIsAuthenticating(false);
-  }
-};
-
+    } catch (err) {
+      console.error("❌ Login error:", err);
+      setError("Invalid username or password");
+      setIsAuthenticating(false);
+    }
+  };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4 py-10 text-slate-100">

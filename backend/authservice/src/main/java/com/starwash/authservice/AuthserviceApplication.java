@@ -10,5 +10,6 @@ public class AuthserviceApplication {
     public static void main(String[] args) {
         SpringApplication.run(AuthserviceApplication.class, args);
         System.out.println("🚀 Authservice is running with MongoDB backing!");
+        System.out.println("🔧 Active profile: " + System.getProperty("spring.profiles.active"));
     }
 }

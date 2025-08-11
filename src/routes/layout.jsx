@@ -7,7 +7,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 import { useTheme } from "@/hooks/use-theme";
-import AuthLoader from "@/components/feedback/AuthLoader"; // ✅ default import
+import AuthLoader from "@/components/feedback/AuthLoader";
+
+import { navbarLinks } from "@/constants/navbarLinks";
+import { staffNavbarLinks } from "@/constants/staffNavbarLinks";
 
 const Layout = ({ children }) => {
   const isDesktopDevice = useMediaQuery("(min-width: 768px)");
@@ -22,12 +25,13 @@ const Layout = ({ children }) => {
     location.pathname.startsWith("/unauthorized");
 
   const showProtectedLayout =
-    !isAuthRoute && !loading && isAuthenticated && role === "ADMIN";
+    !isAuthRoute && !loading && isAuthenticated && (role === "ADMIN" || role === "STAFF");
 
-  // 🛠 Update collapsed only on device resize — NOT on route change
+  const sidebarLinks = role === "ADMIN" ? navbarLinks : staffNavbarLinks;
+
   useEffect(() => {
     setCollapsed(!isDesktopDevice);
-  }, [isDesktopDevice]); // ✅ removed location.pathname
+  }, [isDesktopDevice]);
 
   useClickOutside([sidebarRef], () => {
     if (!isDesktopDevice && !collapsed) {
@@ -52,7 +56,7 @@ const Layout = ({ children }) => {
 
       {/* Sidebar */}
       {showProtectedLayout && (
-        <Sidebar ref={sidebarRef} collapsed={collapsed} />
+        <Sidebar ref={sidebarRef} collapsed={collapsed} links={sidebarLinks} />
       )}
 
       {/* Main layout wrapper */}
@@ -68,7 +72,7 @@ const Layout = ({ children }) => {
       >
         {/* Header */}
         {showProtectedLayout && (
-          <Header collapsed={collapsed} setCollapsed={setCollapsed} />
+          <Header collapsed={collapsed} setCollapsed={setCollapsed} role={role} />
         )}
 
         {/* Page content */}

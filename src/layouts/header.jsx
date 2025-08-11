@@ -14,7 +14,7 @@ import profileImg from "@/assets/profile.jpg";
 import PropTypes from "prop-types";
 import { useLogout } from "@/hooks/useLogout";
 
-export const Header = ({ collapsed, setCollapsed }) => {
+export const Header = ({ collapsed, setCollapsed, role }) => {
   const { theme, setTheme } = useTheme();
   const [showMenu, setShowMenu] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
@@ -118,11 +118,12 @@ export const Header = ({ collapsed, setCollapsed }) => {
                   className="absolute right-0 mt-2 w-40 rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
                 >
                   <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700">
-                    View Profile
+                    {role === "STAFF" ? "My Profile" : "View Profile"}
                   </button>
                   <button 
-                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-100 dark:hover:bg-slate-700"
-                  onClick={logout}>
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    onClick={logout}
+                  >
                     Logout
                   </button>
                 </motion.div>
@@ -171,4 +172,5 @@ export const Header = ({ collapsed, setCollapsed }) => {
 Header.propTypes = {
   collapsed: PropTypes.bool,
   setCollapsed: PropTypes.func,
+  role: PropTypes.string,
 };

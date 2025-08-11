@@ -6,8 +6,9 @@ public class StockItemDto {
 
     private String id;
     private String name;
-    private int quantity;
+    private Integer quantity; // ✅ changed from int to Integer
     private String unit;
+    private Double price;     // ✅ already correct
 
     private LocalDateTime createdAt;
     private LocalDateTime lastUpdated;
@@ -18,16 +19,17 @@ public class StockItemDto {
     // Constructors
     public StockItemDto() {}
 
-    public StockItemDto(String id, String name, int quantity, String unit,
+    public StockItemDto(String id, String name, Integer quantity, String unit, Double price,
                         LocalDateTime createdAt, LocalDateTime lastUpdated,
                         LocalDateTime lastRestock, String updatedBy) {
         this.id = id;
         this.name = name;
         this.quantity = quantity;
         this.unit = unit;
+        this.price = price;
         this.createdAt = createdAt;
         this.lastUpdated = lastUpdated;
-        this.lastRestock = lastRestock; 
+        this.lastRestock = lastRestock;
         this.updatedBy = updatedBy;
     }
 
@@ -48,11 +50,11 @@ public class StockItemDto {
         this.name = name;
     }
 
-    public int getQuantity() {
+    public Integer getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(int quantity) {
+    public void setQuantity(Integer quantity) {
         this.quantity = quantity;
     }
 
@@ -62,6 +64,14 @@ public class StockItemDto {
 
     public void setUnit(String unit) {
         this.unit = unit;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
     }
 
     public LocalDateTime getCreatedAt() {

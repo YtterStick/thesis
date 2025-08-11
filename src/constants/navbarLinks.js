@@ -6,42 +6,47 @@ import {
   Boxes,
   Receipt,
   Sliders,
-  Tags,
   Bell,
   CreditCard,
   Settings,
+  FileCog,
 } from "lucide-react";
 
 export const navbarLinks = [
   {
     title: "Dashboard",
     Links: [
-      { label: "Dashboard", icon: Home, path: "/dashboard" },
+      { label: "Overview", icon: Home, path: "/dashboard" },
       { label: "Sales & Reports", icon: BarChart3, path: "/salesreports" },
     ],
   },
   {
-    title: "Management",
+    title: "Operations",
     Links: [
-      { label: "Manage Transaction", icon: HandCoins, path: "/managetransaction" },
-      { label: "Manage Staff", icon: UserCog, path: "/managestaff" },
-      { label: "Manage Inventory", icon: Boxes, path: "/manageinventory" },
-      { label: "Manage Receipts", icon: Receipt, path: "/managereceipts" }, // optional
+      { label: "Transaction Records", icon: HandCoins, path: "/managetransaction" },
+      { label: "Receipts", icon: Receipt, path: "/managereceipts" },
+      { label: "Inventory", icon: Boxes, path: "/manageinventory" },
     ],
   },
   {
-    title: "System Configuration",
+    title: "User Management",
     Links: [
-      { label: "Service Option", icon: Sliders, path: "/serviceoption" },         // optional
-      { label: "Pricing Management", icon: Tags, path: "/pricingmanagement" },    // optional
-      { label: "Notification Settings", icon: Bell, path: "/notificationsettings" }, // optional
-      { label: "Payment Method", icon: CreditCard, path: "/paymentmethod" },      // optional
+      { label: "User Accounts", icon: UserCog, path: "/managestaff" },
     ],
   },
   {
-    title: "Settings",
+    title: "System Settings",
     Links: [
-      { label: "Settings", icon: Settings, path: "/settings" }, // optional
+      { label: "Services & Pricing", icon: Sliders, path: "/serviceoption" },
+      { label: "SMS Alerts", icon: Bell, path: "/notificationsettings" },
+      { label: "Receipt Format", icon: FileCog, path: "/receiptssettings" },
+      { label: "Payment Methods", icon: CreditCard, path: "/paymentmethod" },
+    ],
+  },
+  {
+    title: "General",
+    Links: [
+      { label: "App Settings", icon: Settings, path: "/settings" },
     ],
   },
 ];

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pencil, Trash2, Plus, Settings } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import EditServiceModal from "./components/EditServiceModal";
@@ -7,19 +7,93 @@ import { Button } from "@/components/ui/button";
 const MainPage = () => {
   const [services, setServices] = useState([]);
   const [editTarget, setEditTarget] = useState(null);
+  const [error, setError] = useState(null);
 
-  const handleSave = (updated) => {
-    setServices((prev) => {
-      const exists = prev.some((s) => s.id === updated.id);
-      return exists
-        ? prev.map((s) => (s.id === updated.id ? updated : s))
-        : [...prev, { ...updated, id: Date.now() }];
-    });
-    setEditTarget(null);
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    if (!token) {
+      setError("No token found. Please log in.");
+      return;
+    }
+
+    const fetchServices = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/api/services", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Unauthorized or failed to fetch services.");
+        }
+
+        const data = await response.json();
+        setServices(data);
+      } catch (err) {
+        console.error("❌ Error fetching services:", err.message);
+        setError("Failed to load services. Make sure you're logged in.");
+      }
+    };
+
+    fetchServices();
+  }, [token]);
+
+  const handleSave = async (updated) => {
+    const method = updated.id ? "PUT" : "POST";
+    const url = updated.id
+      ? `http://localhost:8080/api/services/${updated.id}`
+      : "http://localhost:8080/api/services";
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updated),
+      });
+
+      if (!response.ok) throw new Error("Failed to save service");
+
+      const saved = await response.json();
+
+      setServices((prev) => {
+        const exists = prev.some((s) => s.id === saved.id);
+        return exists
+          ? prev.map((s) => (s.id === saved.id ? saved : s))
+          : [...prev, saved];
+      });
+
+      setEditTarget(null);
+    } catch (error) {
+      console.error("❌ Error saving service:", error.message);
+      setError("Failed to save service.");
+    }
   };
 
-  const handleDelete = (id) => {
-    setServices((prev) => prev.filter((s) => s.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/services/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to delete service");
+
+      setServices((prev) => prev.filter((s) => s.id !== id));
+    } catch (error) {
+      console.error("❌ Error deleting service:", error.message);
+      setError("Failed to delete service.");
+    }
   };
 
   return (
@@ -32,7 +106,6 @@ const MainPage = () => {
           </h1>
         </div>
 
-        {/* ✅ Only show top-right button if services exist */}
         {services.length > 0 && (
           <Button
             onClick={() => setEditTarget({})}
@@ -43,6 +116,8 @@ const MainPage = () => {
           </Button>
         )}
       </div>
+
+      {error && <div className="text-red-500 mb-4">{error}</div>}
 
       {services.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -72,7 +147,10 @@ const MainPage = () => {
                       onClick={() => setEditTarget(s)}
                       className="hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
-                      <Pencil size={16} className="text-slate-600 dark:text-slate-300" />
+                      <Pencil
+                        size={16}
+                        className="text-slate-600 dark:text-slate-300"
+                      />
                     </Button>
                     <Button
                       variant="ghost"
@@ -80,7 +158,10 @@ const MainPage = () => {
                       onClick={() => handleDelete(s.id)}
                       className="hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
-                      <Trash2 size={16} className="text-red-600 dark:text-red-400" />
+                      <Trash2
+                        size={16}
+                        className="text-red-600 dark:text-red-400"
+                      />
                     </Button>
                   </div>
                 </div>

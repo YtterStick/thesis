@@ -6,7 +6,7 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-// 📦 Pages
+// 📦 Admin Pages
 import Layout from "@/routes/layout";
 import DashboardPage from "@/routes/Admin/dashboard/page";
 import SalesReportPage from "@/routes/Admin/SalesReport/MainPage";
@@ -14,13 +14,19 @@ import ManageTransactionPage from "@/routes/Admin/MngTransaction/MainPage";
 import ManageStaffPage from "@/routes/Admin/MngStaff/MainPage";
 import ManageInventoryPage from "@/routes/Admin/MngInventory/MainPage";
 import LoginPage from "@/routes/Auth/LoginPage";
-import ServiceOptionPage from "@/routes/Admin/SvcOption/MainPage"; // ✅ NEW import
+import ServiceOptionPage from "@/routes/Admin/SvcOption/MainPage";
+import ReceiptSettingsPage from "@/routes/Admin/ReceiptSettings/MainPage";
+import ManageReceiptPage from "@/routes/Admin/MngReceipt/MainPage";
+
+// 👕 Staff Pages
+import StaffDashboardPage from "@/routes/Staff/dashboard/page";
 
 // ✅ Toast Provider
 import { Toaster } from "@/components/ui/toaster";
 
-// 🛡️ Shared Admin Wrapper
+// 🛡️ Route Wrappers
 const AdminRoute = ({ element }) => <Layout>{element}</Layout>;
+const StaffRoute = ({ element }) => <Layout>{element}</Layout>; // Reuse layout for now
 
 // 🚨 Fallback Page
 const NotFoundPage = () => (
@@ -40,10 +46,17 @@ function App() {
     { path: "/managetransaction", element: <AdminRoute element={<ManageTransactionPage />} /> },
     { path: "/managestaff", element: <AdminRoute element={<ManageStaffPage />} /> },
     { path: "/manageinventory", element: <AdminRoute element={<ManageInventoryPage />} /> },
-    { path: "/managereceipts", element: <AdminRoute element={<h1 className="title">Manage Receipts</h1>} /> }, // 🔧 Optional placeholder
-    { path: "/serviceoption", element: <AdminRoute element={<ServiceOptionPage />} /> }, // ✅ NEW route
-    { path: "/pricingmanagement", element: <AdminRoute element={<h1 className="title">Pricing Management</h1>} /> }, // 🔧 Optional placeholder
-    { path: "/settings", element: <AdminRoute element={<h1 className="title">Settings</h1>} /> }, // 🔧 Optional placeholder
+    { path: "/managereceipts", element: <AdminRoute element={<ManageReceiptPage />} /> },
+    { path: "/serviceoption", element: <AdminRoute element={<ServiceOptionPage />} /> },
+    { path: "/notificationsettings", element: <AdminRoute element={<h1 className="title">Notification Settings</h1>} /> },
+    { path: "/paymentmethod", element: <AdminRoute element={<h1 className="title">Payment Method</h1>} /> },
+    { path: "/receiptssettings", element: <AdminRoute element={<ReceiptSettingsPage />} /> },
+    { path: "/settings", element: <AdminRoute element={<h1 className="title">Settings</h1>} /> },
+
+    // 👕 Staff Routes
+    { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },
+    { path: "/staff/transactions/new", element: <StaffRoute element={<h1 className="title">Staff Transactions</h1>} /> },
+    { path: "/staff/transactions/records", element: <StaffRoute element={<h1 className="title">Transaction records</h1>} /> },
 
     // ❌ Catch-all
     { path: "*", element: <NotFoundPage /> },
@@ -53,7 +66,7 @@ function App() {
     <ThemeProvider storageKey="theme">
       <AuthProvider>
         <RouterProvider router={router} />
-        <Toaster /> {/* ✅ Enables toast notifications */}
+        <Toaster />
       </AuthProvider>
     </ThemeProvider>
   );

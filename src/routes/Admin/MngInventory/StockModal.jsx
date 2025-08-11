@@ -19,7 +19,16 @@ const StockModal = ({ item, onClose, onSubmit }) => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-y-3">
           <p className="text-sm text-slate-600 dark:text-slate-300">
             {item.name} stock:{" "}
-            <strong className="text-slate-900 dark:text-white">{item.quantity}</strong>
+            <strong className="text-slate-900 dark:text-white">
+              {item.quantity}
+            </strong>
+          </p>
+
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Unit price:{" "}
+            <strong className="text-slate-900 dark:text-white">
+              ₱{item.price?.toFixed(2) ?? "—"}
+            </strong>
           </p>
 
           <input

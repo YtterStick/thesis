@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -11,10 +12,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 const EditServiceModal = ({ service, onClose, onSave }) => {
-  const [form, setForm] = useState({ name: "", description: "", price: "" });
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    price: "",
+  });
 
   useEffect(() => {
-    setForm(service || { name: "", description: "", price: "" });
+    setForm({
+      name: service?.name ?? "",
+      description: service?.description ?? "",
+      price: service?.price?.toFixed(2) ?? "",
+    });
   }, [service]);
 
   const handleChange = (field, value) => {
@@ -26,7 +35,17 @@ const EditServiceModal = ({ service, onClose, onSave }) => {
     if (!form.name || !form.price) return;
     const parsedPrice = parseFloat(form.price);
     if (isNaN(parsedPrice)) return;
-    onSave({ ...form, price: parsedPrice, id: service?.id || Date.now() });
+
+    const payload = {
+      ...form,
+      price: parsedPrice,
+    };
+
+    if (service?.id) {
+      payload.id = service.id;
+    }
+
+    onSave(payload);
   };
 
   return (
@@ -36,6 +55,9 @@ const EditServiceModal = ({ service, onClose, onSave }) => {
           <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
             {service?.id ? "Edit Service" : "Add Service"}
           </DialogTitle>
+          <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
+            Fill out the details below to save your service.
+          </DialogDescription>
           <DialogClose />
         </DialogHeader>
 
@@ -55,13 +77,24 @@ const EditServiceModal = ({ service, onClose, onSave }) => {
             className="form-input"
           />
           <Input
-            type="number"
+            type="text"
+            inputMode="decimal"
+            pattern="^\d+(\.\d{0,2})?$"
             placeholder="Price"
             value={form.price}
-            onChange={(e) => handleChange("price", e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (/^\d*\.?\d{0,2}$/.test(value)) {
+                handleChange("price", value);
+              }
+            }}
+            onBlur={() => {
+              const formatted = parseFloat(form.price);
+              if (!isNaN(formatted)) {
+                handleChange("price", formatted.toFixed(2));
+              }
+            }}
             required
-            min="0"
-            step="0.01"
             className="form-input"
           />
           <Button
