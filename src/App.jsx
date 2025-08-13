@@ -16,7 +16,9 @@ import ManageInventoryPage from "@/routes/Admin/MngInventory/MainPage";
 import LoginPage from "@/routes/Auth/LoginPage";
 import ServiceOptionPage from "@/routes/Admin/SvcOption/MainPage";
 import ReceiptSettingsPage from "@/routes/Admin/ReceiptSettings/MainPage";
+import InvoiceSettingsPage from "@/routes/Admin/InvoiceSettings/MainPage"; // ✅ NEW
 import ManageReceiptPage from "@/routes/Admin/MngReceipt/MainPage";
+import NewTransactionPage from "@/routes/Staff/transaction/MainPage";
 
 // 👕 Staff Pages
 import StaffDashboardPage from "@/routes/Staff/dashboard/page";
@@ -51,11 +53,12 @@ function App() {
     { path: "/notificationsettings", element: <AdminRoute element={<h1 className="title">Notification Settings</h1>} /> },
     { path: "/paymentmethod", element: <AdminRoute element={<h1 className="title">Payment Method</h1>} /> },
     { path: "/receiptssettings", element: <AdminRoute element={<ReceiptSettingsPage />} /> },
+    { path: "/invoicesettings", element: <AdminRoute element={<InvoiceSettingsPage />} /> }, // ✅ NEW
     { path: "/settings", element: <AdminRoute element={<h1 className="title">Settings</h1>} /> },
 
     // 👕 Staff Routes
     { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },
-    { path: "/staff/transactions/new", element: <StaffRoute element={<h1 className="title">Staff Transactions</h1>} /> },
+    { path: "/staff/transactions/new", element: <StaffRoute element={<NewTransactionPage />} /> },
     { path: "/staff/transactions/records", element: <StaffRoute element={<h1 className="title">Transaction records</h1>} /> },
 
     // ❌ Catch-all

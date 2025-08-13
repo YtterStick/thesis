@@ -10,6 +10,7 @@ import {
   CreditCard,
   Settings,
   FileCog,
+  ScrollText, // ✅ Added for Invoice Format
 } from "lucide-react";
 
 export const navbarLinks = [
@@ -40,6 +41,7 @@ export const navbarLinks = [
       { label: "Services & Pricing", icon: Sliders, path: "/serviceoption" },
       { label: "SMS Alerts", icon: Bell, path: "/notificationsettings" },
       { label: "Receipt Format", icon: FileCog, path: "/receiptssettings" },
+      { label: "Invoice Format", icon: ScrollText, path: "/invoicesettings" }, // ✅ New link
       { label: "Payment Methods", icon: CreditCard, path: "/paymentmethod" },
     ],
   },

@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QRCode from "react-qr-code";
-import { Settings } from "lucide-react";
+import { ScrollText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import axios from "axios";
 
-export default function ReceiptSettingsPage() {
+export default function InvoiceSettingsPage() {
   const { toast } = useToast();
 
   const [storeName, setStoreName] = useState("");
@@ -17,18 +17,16 @@ export default function ReceiptSettingsPage() {
   const [footerNote, setFooterNote] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
 
-  const sampleReceiptItem = {
-    id: "abc123",
-    customerName: "Andrei",
-    detergentQty: 2,
-    fabricQty: 1,
-    plasticQty: 1,
-    loads: 3,
-    total: 180.0,
-    paymentMethod: "Cash",
-    createdAt: "Aug 12, 2025 10:45 AM",
-    staffName: "Sheena",
-  };
+  // 🧪 Static preview data
+  const detergentQty = 2;
+  const fabricQty = 1;
+  const plasticQty = 1;
+  const invoiceNumber = "INV-2025-00123";
+  const issueDate = "Aug 12, 2025";
+  const dueDate = "Aug 19, 2025";
+  const customerName = "Andrei Dilag";
+
+  const sampleInvoiceId = "inv123";
 
   const getAxiosWithAuth = () => {
     const token = localStorage.getItem("token");
@@ -42,7 +40,7 @@ export default function ReceiptSettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const res = await getAxiosWithAuth().get("/receipt-settings");
+      const res = await getAxiosWithAuth().get("/invoice-settings");
       const data = res.data;
       setStoreName(data.storeName || "");
       setAddress(data.address || "");
@@ -50,7 +48,7 @@ export default function ReceiptSettingsPage() {
       setFooterNote(data.footerNote || "");
       setTrackingUrl(data.trackingUrl || "");
     } catch (error) {
-      console.error("Failed to fetch receipt settings:", error);
+      console.error("Failed to fetch invoice settings:", error);
     }
   };
 
@@ -67,16 +65,16 @@ export default function ReceiptSettingsPage() {
         footerNote,
         trackingUrl,
       };
-      await getAxiosWithAuth().post("/receipt-settings", payload);
+      await getAxiosWithAuth().post("/invoice-settings", payload);
       toast({
         title: "Saved",
-        description: "Receipt settings updated successfully.",
+        description: "Invoice settings updated successfully.",
       });
-      await fetchSettings(); // Refresh preview
+      await fetchSettings();
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to save receipt settings.",
+        description: "Failed to save invoice settings.",
         variant: "destructive",
       });
       console.error("Save error:", error);
@@ -84,25 +82,25 @@ export default function ReceiptSettingsPage() {
   };
 
   const previewTrackingLink = trackingUrl.includes("{id}")
-    ? trackingUrl.replace("{id}", sampleReceiptItem.id)
+    ? trackingUrl.replace("{id}", sampleInvoiceId)
     : trackingUrl;
 
   return (
     <main className="relative p-6">
-      {/* 🧾 Admin Header */}
+      {/* 🧾 Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Settings className="w-6 h-6 text-[#3DD9B6]" />
+        <ScrollText className="w-6 h-6 text-[#3DD9B6]" />
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-          Admin: Configure Receipt Settings
+          Invoice Settings
         </h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 🛠️ Editable Settings Form */}
+        {/* 🛠️ Settings Form */}
         <Card className="shadow-md h-[560px] flex flex-col justify-between">
           <CardHeader className="pb-1">
             <CardTitle className="text-slate-900 dark:text-slate-50 text-base">
-              🛠️ Receipt Configuration
+              🛠️ Configure Invoice
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm px-6">
@@ -138,60 +136,83 @@ export default function ReceiptSettingsPage() {
           </div>
         </Card>
 
-        {/* 🧾 Receipt Preview (Staff-style layout) */}
+        {/* 🧾 Invoice Preview */}
         <Card className="bg-white dark:bg-muted shadow-md print:border-none print:bg-white h-[560px] flex flex-col">
           <CardHeader className="pb-1">
             <CardTitle className="text-slate-900 dark:text-slate-50 text-base">
-              🧾 Receipt Preview
+              🧾 Invoice Preview
             </CardTitle>
           </CardHeader>
-
           <CardContent className="p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-muted border border-gray-300 dark:border-gray-600 rounded-md p-4 font-mono text-sm space-y-2 print:text-black print:border-gray-300">
+            <div className="font-mono text-sm space-y-2 border border-dashed rounded-md dark:border-gray-600 print:border-gray-300 print:text-black p-4">
               {/* 🏪 Store Info */}
               <div className="text-center font-bold text-lg dark:text-white">{storeName}</div>
               <div className="text-center dark:text-gray-300">{address}</div>
               <div className="text-center dark:text-gray-300">{phone}</div>
 
-              <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
+              <hr className="my-2 border-t border-gray-300 dark:border-gray-600 print:border-gray-300" />
 
-              {/* 📄 Receipt Meta */}
-              <div className="grid grid-cols-2 gap-1 dark:text-white">
-                <div>Receipt #: <span className="font-bold">{sampleReceiptItem.id}</span></div>
-                <div className="text-right">Date: <span className="font-bold">{sampleReceiptItem.createdAt}</span></div>
-                <div>Customer: <span className="font-bold">{sampleReceiptItem.customerName}</span></div>
-                <div className="text-right">Staff: <span className="font-bold">{sampleReceiptItem.staffName}</span></div>
-                <div>Payment: <span className="font-bold">{sampleReceiptItem.paymentMethod}</span></div>
+              {/* 📄 Invoice Meta */}
+              <div className="flex justify-between mt-2 text-xs dark:text-gray-300">
+                <span>Invoice #: {invoiceNumber}</span>
+                <span>Issued: {issueDate}</span>
+              </div>
+              <div className="flex justify-between text-xs dark:text-gray-300">
+                <span>Due: {dueDate}</span>
+                <span className="text-red-600 font-bold uppercase">Unpaid</span>
               </div>
 
-              <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
+              <hr className="my-2 border-t border-gray-300 dark:border-gray-600 print:border-gray-300" />
 
-              {/* 🧼 Service Breakdown */}
+              {/* 👤 Customer Info */}
+              <div className="text-sm dark:text-white">
+                <span>Customer: {customerName}</span>
+              </div>
+
+              <hr className="my-2 border-t border-gray-300 dark:border-gray-600 print:border-gray-300" />
+
+              {/* 📋 Itemized Services */}
               <div className="space-y-1 dark:text-white">
-                <div className="flex justify-between"><span>Detergents × {sampleReceiptItem.detergentQty}</span><span>₱{(sampleReceiptItem.detergentQty * 30).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Fabric Softeners × {sampleReceiptItem.fabricQty}</span><span>₱{(sampleReceiptItem.fabricQty * 30).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Plastic × {sampleReceiptItem.plasticQty}</span><span>₱{(sampleReceiptItem.plasticQty * 10).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Wash & Dry × {sampleReceiptItem.loads}</span><span>₱{(sampleReceiptItem.loads * 50).toFixed(2)}</span></div>
+                <div className="flex justify-between">
+                  <span>Wash & Dry (3 Loads)</span>
+                  <span>₱150.00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Detergent ({detergentQty} pcs)</span>
+                  <span>₱20.00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Fabric Softener ({fabricQty} pc)</span>
+                  <span>₱10.00</span>
+                </div>
               </div>
 
-              <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
+              <hr className="my-2 border-t border-gray-300 dark:border-gray-600 print:border-gray-300" />
 
               {/* 💰 Totals */}
+              <div className="flex justify-between dark:text-white">
+                <span>Subtotal</span>
+                <span>₱180.00</span>
+              </div>
+              <div className="flex justify-between dark:text-white">
+                <span>Tax (0%)</span>
+                <span>₱0.00</span>
+              </div>
               <div className="flex justify-between font-bold dark:text-white">
                 <span>Total</span>
-                <span>₱{sampleReceiptItem.total.toFixed(2)}</span>
+                <span>₱180.00</span>
               </div>
 
-              {/* 📱 QR Code */}
+              {/* 📍 QR + Footer */}
               <div className="flex justify-center mt-3 print:hidden">
                 <QRCode value={previewTrackingLink} size={64} />
               </div>
               <div className="text-center mt-1 text-xs dark:text-gray-300 print:hidden">
                 Scan to track your laundry status
               </div>
-
-              {/* 📝 Footer Note */}
-              <div className="text-center mt-2 dark:text-gray-300">{footerNote}</div>
+                            <div className="text-center mt-2 dark:text-gray-300">
+                {footerNote}
+              </div>
             </div>
           </CardContent>
         </Card>
