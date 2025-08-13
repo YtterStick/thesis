@@ -44,7 +44,7 @@ const PaymentSection = ({
           <SelectTrigger>
             <SelectValue placeholder="Select status" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-slate-100 shadow-md dark:bg-slate-950">
             {paymentOptions.map((status) => (
               <SelectItem key={status} value={status}>
                 {status}

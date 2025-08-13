@@ -97,7 +97,7 @@ export default function InvoiceSettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 🛠️ Settings Form */}
-        <Card className="shadow-md h-[560px] flex flex-col justify-between">
+        <Card className="card bg-slate-100 dark:bg-slate-950 shadow-md h-[560px] flex flex-col justify-between">
           <CardHeader className="pb-1">
             <CardTitle className="text-slate-900 dark:text-slate-50 text-base">
               🛠️ Configure Invoice
@@ -137,14 +137,14 @@ export default function InvoiceSettingsPage() {
         </Card>
 
         {/* 🧾 Invoice Preview */}
-        <Card className="bg-white dark:bg-muted shadow-md print:border-none print:bg-white h-[560px] flex flex-col">
+        <Card className="card bg-slate-100 dark:bg-slate-950 shadow-md print:border-none print:bg-white h-[560px] flex flex-col">
           <CardHeader className="pb-1">
             <CardTitle className="text-slate-900 dark:text-slate-50 text-base">
               🧾 Invoice Preview
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 overflow-y-auto">
-            <div className="font-mono text-sm space-y-2 border border-dashed rounded-md dark:border-gray-600 print:border-gray-300 print:text-black p-4">
+            <div className="bg-slate-100 dark:bg-slate-950 font-mono text-sm space-y-2 border border-dashed rounded-md dark:border-gray-600 print:border-gray-300 print:text-black p-4">
               {/* 🏪 Store Info */}
               <div className="text-center font-bold text-lg dark:text-white">{storeName}</div>
               <div className="text-center dark:text-gray-300">{address}</div>
@@ -210,7 +210,7 @@ export default function InvoiceSettingsPage() {
               <div className="text-center mt-1 text-xs dark:text-gray-300 print:hidden">
                 Scan to track your laundry status
               </div>
-                            <div className="text-center mt-2 dark:text-gray-300">
+              <div className="text-center mt-2 dark:text-gray-300">
                 {footerNote}
               </div>
             </div>

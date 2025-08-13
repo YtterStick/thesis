@@ -8,9 +8,10 @@ import {
   Sliders,
   Bell,
   CreditCard,
-  Settings,
   FileCog,
-  ScrollText, // ✅ Added for Invoice Format
+  ScrollText,
+  BookText,
+  WashingMachine,
 } from "lucide-react";
 
 export const navbarLinks = [
@@ -41,14 +42,15 @@ export const navbarLinks = [
       { label: "Services & Pricing", icon: Sliders, path: "/serviceoption" },
       { label: "SMS Alerts", icon: Bell, path: "/notificationsettings" },
       { label: "Receipt Format", icon: FileCog, path: "/receiptssettings" },
-      { label: "Invoice Format", icon: ScrollText, path: "/invoicesettings" }, // ✅ New link
+      { label: "Invoice Format", icon: ScrollText, path: "/invoicesettings" },
       { label: "Payment Methods", icon: CreditCard, path: "/paymentmethod" },
     ],
   },
   {
-    title: "General",
+    title: "Legal & Machine",
     Links: [
-      { label: "App Settings", icon: Settings, path: "/settings" },
+      { label: "Terms & Conditions", icon: BookText, path: "/termsandconditions" },
+      { label: "Machine Settings", icon: WashingMachine, path: "/machinesettings" },
     ],
   },
 ];

@@ -54,12 +54,15 @@ function App() {
     { path: "/paymentmethod", element: <AdminRoute element={<h1 className="title">Payment Method</h1>} /> },
     { path: "/receiptssettings", element: <AdminRoute element={<ReceiptSettingsPage />} /> },
     { path: "/invoicesettings", element: <AdminRoute element={<InvoiceSettingsPage />} /> }, // ✅ NEW
-    { path: "/settings", element: <AdminRoute element={<h1 className="title">Settings</h1>} /> },
+    { path: "/termsandconditions", element: <AdminRoute element={<h1 className="title">Terms & Conditions</h1>} /> },
+    { path: "/machinesettings", element: <AdminRoute element={<h1 className="title">Machine Settings</h1>} /> },
 
     // 👕 Staff Routes
     { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },
     { path: "/staff/transactions/new", element: <StaffRoute element={<NewTransactionPage />} /> },
     { path: "/staff/transactions/records", element: <StaffRoute element={<h1 className="title">Transaction records</h1>} /> },
+    { path: "/staff/receipts", element: <StaffRoute element={<h1 className="title">Staff Receipts</h1>} /> },
+    { path: "/staff/inventory", element: <StaffRoute element={<h1 className="title">Staff Inventory</h1>} /> },
 
     // ❌ Catch-all
     { path: "*", element: <NotFoundPage /> },

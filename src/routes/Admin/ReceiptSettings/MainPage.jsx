@@ -93,13 +93,13 @@ export default function ReceiptSettingsPage() {
       <div className="flex items-center gap-2 mb-4">
         <Settings className="w-6 h-6 text-[#3DD9B6]" />
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-          Admin: Configure Receipt Settings
+          Receipt Settings
         </h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 🛠️ Editable Settings Form */}
-        <Card className="shadow-md h-[560px] flex flex-col justify-between">
+        <Card className="card bg-slate-100 dark:bg-slate-950 shadow-md h-[560px] flex flex-col justify-between">
           <CardHeader className="pb-1">
             <CardTitle className="text-slate-900 dark:text-slate-50 text-base">
               🛠️ Receipt Configuration
@@ -139,7 +139,7 @@ export default function ReceiptSettingsPage() {
         </Card>
 
         {/* 🧾 Receipt Preview (Staff-style layout) */}
-        <Card className="bg-white dark:bg-muted shadow-md print:border-none print:bg-white h-[560px] flex flex-col">
+        <Card className="card bg-slate-100 dark:bg-slate-950 shadow-md print:border-none print:bg-white h-[560px] flex flex-col">
           <CardHeader className="pb-1">
             <CardTitle className="text-slate-900 dark:text-slate-50 text-base">
               🧾 Receipt Preview
@@ -147,7 +147,7 @@ export default function ReceiptSettingsPage() {
           </CardHeader>
 
           <CardContent className="p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-muted border border-gray-300 dark:border-gray-600 rounded-md p-4 font-mono text-sm space-y-2 print:text-black print:border-gray-300">
+            <div className="bg-slate-100 dark:bg-slate-950 border border-gray-300 dark:border-gray-600 rounded-md p-4 font-mono text-sm space-y-2 print:text-black print:border-gray-300">
               {/* 🏪 Store Info */}
               <div className="text-center font-bold text-lg dark:text-white">{storeName}</div>
               <div className="text-center dark:text-gray-300">{address}</div>
