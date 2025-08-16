@@ -30,7 +30,20 @@ public class ReceiptSettingsController {
             return ResponseEntity.status(401).body("Unauthorized");
         }
 
-        ReceiptSettings settings = new ReceiptSettings(dto);
+        Optional<ReceiptSettings> existingOpt = repository.findTopByOrderByIdDesc();
+
+        ReceiptSettings settings;
+        if (existingOpt.isPresent()) {
+            settings = existingOpt.get();
+            settings.setStoreName(dto.getStoreName());
+            settings.setAddress(dto.getAddress());
+            settings.setPhone(dto.getPhone());
+            settings.setFooterNote(dto.getFooterNote());
+            settings.setTrackingUrl(dto.getTrackingUrl());
+        } else {
+            settings = new ReceiptSettings(dto);
+        }
+
         repository.save(settings);
         return ResponseEntity.ok("Saved");
     }
@@ -51,10 +64,9 @@ public class ReceiptSettingsController {
         }
     }
 
-    // 🔐 Token validation helper
     private boolean isAuthorized(String authHeader) {
         return authHeader != null &&
                authHeader.startsWith("Bearer ") &&
                jwtUtil.validateToken(authHeader.replace("Bearer ", ""));
     }
-}   
+}

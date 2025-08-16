@@ -52,6 +52,14 @@ public class ReceiptController {
                       .orElse(notFound());
     }
 
+    @GetMapping("/track/{receiptCode}")
+    public ResponseEntity<ReceiptItemDto> trackReceipt(@PathVariable String receiptCode) {
+        Optional<ReceiptItem> receipt = receiptService.getReceiptByReceiptCode(receiptCode);
+        return receipt.map(this::toDto)
+                      .map(ResponseEntity::ok)
+                      .orElse(notFound());
+    }
+
     @PostMapping
     public ResponseEntity<ReceiptItemDto> createReceipt(@RequestBody ReceiptItemDto dto,
                                                         @RequestHeader("Authorization") String authHeader) {
@@ -93,7 +101,6 @@ public class ReceiptController {
         return ResponseEntity.ok(dtos);
     }
 
-    // 🔐 Token helpers
     private boolean isAuthorized(String authHeader) {
         return authHeader != null && authHeader.startsWith("Bearer ") &&
                jwtUtil.validateToken(extractToken(authHeader));
@@ -103,7 +110,6 @@ public class ReceiptController {
         return authHeader.replace("Bearer ", "");
     }
 
-    // 🧩 Mapping helpers
     private ReceiptItemDto toDto(ReceiptItem item) {
         List<ServiceEntryDto> services = item.getServices().stream()
                 .map(s -> new ServiceEntryDto(s.getName(), s.getPrice(), s.getQuantity()))
@@ -154,7 +160,6 @@ public class ReceiptController {
         return item;
     }
 
-    // ✅ Generic response helpers
     private <T> ResponseEntity<T> notFound() {
         return ResponseEntity.status(404).build();
     }

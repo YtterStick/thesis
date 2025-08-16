@@ -83,9 +83,9 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="rounded-lg border border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+      <DialogContent className="rounded-lg border border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-950 text-slate-900 dark:text-white">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+          <DialogTitle className="text-lg font-semibold">
             {isEditMode ? "Edit Item" : "Add New Item"}
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -102,7 +102,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
             value={form.name}
             onChange={(e) => handleChange("name", e.target.value)}
             required
-            className="form-input"
+            className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
           />
           <Input
             type="number"
@@ -112,31 +112,37 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
             required
             min="0"
             step="1"
-            className="form-input"
+            className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
           />
-          <Input
-            type="number"
-            placeholder="Price"
-            value={form.price}
-            onChange={(e) => handleChange("price", e.target.value)}
-            required
-            min="0"
-            step="0.01"
-            className="form-input"
-          />
+
+          {/* Price Input with Peso Sign */}
+          <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-950 focus-within:ring-2 focus-within:ring-cyan-500 dark:focus-within:ring-cyan-400 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-slate-950">
+            <span className="px-3 text-slate-500 dark:text-slate-400">₱</span>
+            <Input
+              type="number"
+              placeholder="Price"
+              value={form.price}
+              onChange={(e) => handleChange("price", e.target.value)}
+              required
+              min="0"
+              step="0.01"
+              className="flex-1 border-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none"
+            />
+          </div>
+
           <Select
             value={form.unit}
             onValueChange={(value) => handleChange("unit", value)}
           >
-            <SelectTrigger className="form-input">
+            <SelectTrigger className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
               <SelectValue placeholder="Select unit" />
             </SelectTrigger>
-            <SelectContent className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
+            <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
               {units.map((u) => (
                 <SelectItem
                   key={u}
                   value={u}
-                  className="cursor-pointer bg-white text-slate-900 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-800"
+                  className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   {u}
                 </SelectItem>
@@ -146,7 +152,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
 
           <Button
             type="submit"
-            className="w-full bg-[#3DD9B6] text-white hover:bg-[#2fc3a4] dark:bg-[#007362] dark:hover:bg-[#00564e]"
+            className="w-full bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
           >
             {isEditMode ? "Update Item" : "Save Item"}
           </Button>

@@ -5,7 +5,6 @@ const InvoiceCard = ({ invoice, settings }) => {
   if (!invoice || !settings) return null;
 
   const {
-    transactionId,
     invoiceNumber,
     issueDate,
     dueDate,
@@ -48,14 +47,15 @@ const InvoiceCard = ({ invoice, settings }) => {
 
   const totalFromItems = serviceSubtotal + consumablesTotal;
 
-  const trackingUrl =
-    invoiceNumber && transactionId
-      ? `http://localhost:3000/track/${transactionId}?invoice=${invoiceNumber}`
-      : null;
+  const trackingUrl = invoiceNumber
+    ? `http://localhost:3000/track/${invoiceNumber}`
+    : null;
+
+  console.log("🔍 QR Tracking URL:", trackingUrl);
 
   const statusBadge = (
     <span
-      className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+      className={`rounded px-2 py-1 text-xs font-bold uppercase ${
         status === "Unpaid"
           ? "bg-red-100 text-red-600"
           : "bg-green-100 text-green-600"
@@ -67,14 +67,12 @@ const InvoiceCard = ({ invoice, settings }) => {
 
   return (
     <div className="printable-area">
-      <div className="bg-white dark:bg-muted shadow-md rounded-md p-4 border border-dashed dark:border-gray-600 font-mono text-sm space-y-2 max-w-md mx-auto">
-        {/* 🧾 Invoice Type Label */}
+      <div className="mx-auto max-w-md space-y-2 rounded-md border border-dashed bg-white p-4 font-mono text-sm shadow-md dark:border-gray-600 dark:bg-muted">
         <div className="text-center text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
           {status === "Unpaid" ? "Unpaid Invoice" : "Sales Invoice"}
         </div>
 
-        {/* 🏪 Store Info */}
-        <div className="text-center font-bold text-lg dark:text-white">
+        <div className="text-center text-lg font-bold dark:text-white">
           {settings.storeName}
         </div>
         <div className="text-center dark:text-gray-300">{settings.address}</div>
@@ -82,10 +80,9 @@ const InvoiceCard = ({ invoice, settings }) => {
 
         <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
 
-        {/* 📄 Invoice Metadata */}
-        <div className="text-xs dark:text-gray-300 space-y-1">
+        <div className="space-y-1 text-xs dark:text-gray-300">
           <div className="flex justify-between">
-            <span>Invoice #: {invoiceNumber ?? "Not Assigned"}</span>
+            <span>Invoice #: {invoiceNumber || "Pending"}</span>
             <span>Issued: {formatDate(issueDate)}</span>
           </div>
           <div className="flex justify-between">
@@ -94,13 +91,12 @@ const InvoiceCard = ({ invoice, settings }) => {
           </div>
         </div>
 
-        <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">
+        <div className="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">
           Payment due within 7 days of issue date.
         </div>
 
         <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
 
-        {/* 👤 Customer Info */}
         <div className="space-y-1 text-sm dark:text-white">
           <div className="flex justify-between">
             <span>Customer</span>
@@ -114,7 +110,6 @@ const InvoiceCard = ({ invoice, settings }) => {
 
         <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
 
-        {/* 📋 Itemized Breakdown */}
         <div className="space-y-1 dark:text-white">
           {service && (
             <div className="flex justify-between">
@@ -138,7 +133,6 @@ const InvoiceCard = ({ invoice, settings }) => {
 
         <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
 
-        {/* 💰 Totals */}
         <div className="flex justify-between dark:text-white">
           <span>Subtotal</span>
           <span>{formatCurrency(serviceSubtotal + consumablesTotal)}</span>
@@ -152,7 +146,6 @@ const InvoiceCard = ({ invoice, settings }) => {
           <span>{formatCurrency(total ?? totalFromItems)}</span>
         </div>
 
-        {/* 💳 Payment Info */}
         {typeof amountGiven === "number" && (
           <>
             <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
@@ -168,32 +161,33 @@ const InvoiceCard = ({ invoice, settings }) => {
         )}
 
         {status === "Unpaid" && (
-          <div className="text-yellow-600 text-xs italic text-center mt-2">
+          <div className="mt-2 text-center text-xs italic text-yellow-600">
             This invoice is marked as <strong>Unpaid</strong>. Payment can be
             settled later.
           </div>
         )}
 
-        {/* 📱 QR Code */}
-        {trackingUrl && (
-          <div className="flex justify-center mt-3 print:hidden">
+        {trackingUrl ? (
+          <div className="mt-3 flex justify-center">
             <QRCode value={trackingUrl} size={64} />
           </div>
+        ) : (
+          <div className="mt-3 text-center text-xs text-red-500">
+            Tracking unavailable — missing invoice number
+          </div>
         )}
-        <div className="text-center mt-1 text-xs dark:text-gray-300 print:hidden">
+        <div className="mt-1 text-center text-xs dark:text-gray-300">
           Scan to track your laundry status
         </div>
 
-        {/* 📝 Footer Note */}
-        <div className="text-center mt-2 dark:text-gray-300">
+        <div className="mt-2 text-center dark:text-gray-300">
           {settings.footerNote}
         </div>
 
-        {/* 🖨️ Print Button */}
-        <div className="text-center mt-4 print:hidden">
+        <div className="mt-4 text-center print:hidden">
           <button
             onClick={() => window.print()}
-            className="bg-[#3DD9B6] text-white px-4 py-2 rounded hover:bg-[#2fc3a4] dark:bg-[#007362] dark:hover:bg-[#00564e] shadow-md transition-transform hover:scale-105"
+            className="rounded bg-[#3DD9B6] px-4 py-2 text-white shadow-md transition-transform hover:scale-105 hover:bg-[#2fc3a4] dark:bg-[#007362] dark:hover:bg-[#00564e]"
           >
             Print Invoice
           </button>

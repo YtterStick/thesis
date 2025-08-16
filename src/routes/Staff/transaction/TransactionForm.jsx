@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import PropTypes from "prop-types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import PaymentSection from "./PaymentSection";
 
-const TransactionForm = ({ onSubmit }) => {
+const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
     const [form, setForm] = useState({
         transactionId: "",
         name: "",
@@ -17,13 +17,37 @@ const TransactionForm = ({ onSubmit }) => {
         serviceId: "",
         loads: 1,
         paymentStatus: "Unpaid",
-        amountGiven: "",
+        amountGiven: 0,
     });
 
     const [consumables, setConsumables] = useState({});
     const [services, setServices] = useState([]);
     const [stockItems, setStockItems] = useState([]);
     const { toast } = useToast();
+
+    useImperativeHandle(ref, () => ({
+        resetForm: () => {
+            const defaultService = services[0]; // ✅ First service in the list
+
+            setForm({
+                transactionId: "",
+                name: "",
+                contact: "",
+                serviceId: defaultService?.id || "",
+                loads: 1,
+                paymentStatus: "Unpaid",
+                amountGiven: 0,
+            });
+
+            const initialConsumables = {};
+            stockItems.forEach((item) => {
+                const isPlastic = item.name.toLowerCase().includes("plastic");
+                initialConsumables[item.name] = isPlastic ? 1 : 0;
+            });
+            setConsumables(initialConsumables);
+            onPreviewChange?.(null);
+        },
+    }));
 
     useEffect(() => {
         setConsumables((prev) => {
@@ -50,6 +74,14 @@ const TransactionForm = ({ onSubmit }) => {
                 });
                 const data = await res.json();
                 setServices(data);
+
+                const defaultService = data.find((s) => s.name.toLowerCase().includes("wash & dry"));
+                if (data.length > 0) {
+                    setForm((prev) => ({
+                        ...prev,
+                        serviceId: data[0].id, // ✅ Select first service by default
+                    }));
+                }
             } catch {
                 toast({
                     title: "Service Fetch Error",
@@ -111,6 +143,20 @@ const TransactionForm = ({ onSubmit }) => {
 
     const totalAmount = serviceTotal + consumablesTotal;
 
+    useEffect(() => {
+        const isValid = form.name && form.contact && form.serviceId && form.loads >= 1 && Object.keys(consumables).length > 0;
+
+        if (isValid) {
+            const change = form.paymentStatus === "Paid" ? parseFloat(form.amountGiven || 0) - totalAmount : 0;
+
+            onPreviewChange?.({
+                totalAmount,
+                amountGiven: parseFloat(form.amountGiven || 0),
+                change,
+            });
+        }
+    }, [form, consumablesTotal, serviceTotal]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -118,6 +164,16 @@ const TransactionForm = ({ onSubmit }) => {
             toast({
                 title: "Missing Fields",
                 description: "Please fill all required fields.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const isValidContact = /^09\d{9}$/.test(form.contact);
+        if (!isValidContact) {
+            toast({
+                title: "Invalid Contact Number",
+                description: "Invalid contact number format. Use 09XXXXXXXXX.",
                 variant: "destructive",
             });
             return;
@@ -183,7 +239,7 @@ const TransactionForm = ({ onSubmit }) => {
     }
 
     return (
-        <Card className="card max-h-[620px] overflow-y-auto bg-slate-100 shadow-md dark:bg-slate-950">
+        <Card className="card max-h-[620px] overflow-y-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
             <CardHeader className="pb-1">
                 <CardTitle className="flex items-center gap-2 text-base text-slate-800 dark:text-slate-100">
                     <Receipt size={18} />
@@ -201,18 +257,31 @@ const TransactionForm = ({ onSubmit }) => {
                         <div>
                             <Label className="mb-1 block">Name</Label>
                             <Input
+                                placeholder="Customer Name"
                                 value={form.name}
                                 onChange={(e) => handleChange("name", e.target.value)}
                                 required
+                                className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
                             />
                         </div>
 
                         <div>
                             <Label className="mb-1 block">Contact Number</Label>
                             <Input
+                                type="tel"
+                                inputMode="numeric"
+                                pattern="^09\d{9}$"
+                                maxLength={11}
+                                placeholder="09XXXXXXXXX"
                                 value={form.contact}
-                                onChange={(e) => handleChange("contact", e.target.value)}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (/^\d{0,11}$/.test(value)) {
+                                        handleChange("contact", value);
+                                    }
+                                }}
                                 required
+                                className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
                             />
                         </div>
 
@@ -223,14 +292,15 @@ const TransactionForm = ({ onSubmit }) => {
                                 value={form.serviceId}
                                 onValueChange={(value) => handleChange("serviceId", value)}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
                                     <SelectValue placeholder="Select service" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-slate-100 shadow-md dark:bg-slate-950">
+                                <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                                     {services.map((service) => (
                                         <SelectItem
                                             key={service.id}
                                             value={service.id}
+                                            className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
                                         >
                                             {service.name}
                                         </SelectItem>
@@ -245,10 +315,20 @@ const TransactionForm = ({ onSubmit }) => {
                                 <Label className="mb-1 block">Loads</Label>
                                 <Input
                                     type="number"
+                                    inputMode="numeric"
                                     min={1}
                                     value={form.loads}
-                                    onChange={(e) => handleChange("loads", parseInt(e.target.value) || 1)}
+                                    onChange={(e) => {
+                                        const raw = e.target.value;
+                                        const cleaned = raw.replace(/^0+/, "") || "1";
+                                        handleChange("loads", cleaned);
+                                    }}
+                                    onBlur={(e) => {
+                                        const numeric = parseInt(e.target.value, 10);
+                                        handleChange("loads", isNaN(numeric) || numeric < 1 ? 1 : numeric);
+                                    }}
                                     required
+                                    className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
                                 />
                             </div>
 
@@ -259,13 +339,24 @@ const TransactionForm = ({ onSubmit }) => {
                                         <Label className="mb-1 block">{item.name}</Label>
                                         <Input
                                             type="number"
+                                            inputMode="numeric"
                                             min={0}
-                                            value={consumables[item.name] || 0}
-                                            onChange={(e) => handleConsumableChange(item.name, e.target.value)}
+                                            value={consumables[item.name]?.toString() ?? "0"}
+                                            onChange={(e) => {
+                                                const raw = e.target.value;
+                                                handleConsumableChange(item.name, raw);
+                                            }}
+                                            onBlur={(e) => {
+                                                const cleaned = e.target.value.replace(/^0+/, "") || "0";
+                                                const numeric = parseInt(cleaned, 10);
+                                                handleConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
+                                            }}
+                                            className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
                                         />
                                     </div>
                                 ))}
                         </div>
+
                         {/* 🧼 Other Consumables */}
                         {chunkedConsumables.map((pair, index) => (
                             <div
@@ -277,9 +368,18 @@ const TransactionForm = ({ onSubmit }) => {
                                         <Label className="mb-1 block">{item.name}</Label>
                                         <Input
                                             type="number"
+                                            inputMode="numeric"
                                             min={0}
-                                            value={consumables[item.name] || 0}
-                                            onChange={(e) => handleConsumableChange(item.name, e.target.value)}
+                                            value={consumables[item.name]?.toString() ?? "0"}
+                                            onChange={(e) => {
+                                                handleConsumableChange(item.name, e.target.value);
+                                            }}
+                                            onBlur={(e) => {
+                                                const cleaned = e.target.value.replace(/^0+/, "") || "0";
+                                                const numeric = parseInt(cleaned, 10);
+                                                handleConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
+                                            }}
+                                            className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
                                         />
                                     </div>
                                 ))}
@@ -291,14 +391,19 @@ const TransactionForm = ({ onSubmit }) => {
                             paymentStatus={form.paymentStatus}
                             amountGiven={form.amountGiven}
                             totalAmount={totalAmount}
-                            onStatusChange={(value) => handleChange("paymentStatus", value)}
+                            onStatusChange={(value) => {
+                                handleChange("paymentStatus", value);
+                                if (value === "Unpaid") {
+                                    handleChange("amountGiven", 0);
+                                }
+                            }}
                             onAmountChange={(value) => handleChange("amountGiven", value)}
                         />
                     </div>
 
                     <Button
                         type="submit"
-                        className="mt-2 w-full bg-[#3DD9B6] text-white hover:bg-[#2fc3a4]"
+                        className="mt-2 w-full rounded-md bg-[#60A5FA] px-4 py-2 text-white transition-colors hover:bg-[#3B82F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
                     >
                         Save Transaction
                     </Button>
@@ -306,10 +411,11 @@ const TransactionForm = ({ onSubmit }) => {
             </CardContent>
         </Card>
     );
-};
+});
 
 TransactionForm.propTypes = {
     onSubmit: PropTypes.func.isRequired,
+    onPreviewChange: PropTypes.func,
 };
 
 export default TransactionForm;

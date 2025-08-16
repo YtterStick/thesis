@@ -44,26 +44,29 @@ const AuthLoader = () => {
         style={fadeIn}
         className="relative z-10 flex flex-col items-center justify-center gap-6 text-center"
       >
-        {/* Chibi Vader floating above */}
+        {/* 🛸 Chibi Vader floating */}
         <animated.img
           src={chibiAsset}
           alt="Chibi Darth Vader"
           style={float}
-          className="h-28 w-auto drop-shadow-[0_0_16px_#3DD9B6]"
+          className="h-28 w-auto drop-shadow-[0_0_16px_#00B5FF]"
         />
 
-        {/* Caption */}
-        <p className="font-starjedi text-xl uppercase tracking-[0.25em] text-[#3DD9B6] drop-shadow-[0_0_8px_#3DD9B6]">
+        {/* ✨ Caption with Death Star font */}
+        <p
+          className="text-xl uppercase tracking-[0.25em] text-[#00B5FF] drop-shadow-[0_0_8px_#00B5FF80]"
+          style={{ fontFamily: 'DeathStar' }}
+        >
           Loading...
         </p>
 
-        {/* Bouncing dots */}
+        {/* 🫧 Bouncing dots */}
         <div className="flex gap-4">
           {springs.map((style, index) => (
             <animated.div
               key={index}
               style={style}
-              className="h-5 w-5 rounded-full bg-[#3DD9B6] shadow-[0_0_12px_#3DD9B6]"
+              className="h-5 w-5 rounded-full bg-[#00B5FF] shadow-[0_0_12px_#00B5FF80]"
             />
           ))}
         </div>

@@ -1,13 +1,11 @@
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.dto.*;
-import com.starwash.authservice.model.ServiceItem;
-import com.starwash.authservice.model.ServiceEntry;
-import com.starwash.authservice.model.StockItem;
-import com.starwash.authservice.model.Transaction;
+import com.starwash.authservice.model.*;
 import com.starwash.authservice.repository.ServiceRepository;
 import com.starwash.authservice.repository.StockRepository;
 import com.starwash.authservice.repository.TransactionRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -20,13 +18,16 @@ public class TransactionService {
     private final ServiceRepository serviceRepository;
     private final StockRepository stockRepository;
     private final TransactionRepository transactionRepository;
+    private final InvoiceService invoiceService;
 
     public TransactionService(ServiceRepository serviceRepository,
                               StockRepository stockRepository,
-                              TransactionRepository transactionRepository) {
+                              TransactionRepository transactionRepository,
+                              InvoiceService invoiceService) {
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
         this.transactionRepository = transactionRepository;
+        this.invoiceService = invoiceService;
     }
 
     public TransactionResponseDto createTransaction(TransactionRequestDto request) {
@@ -44,6 +45,8 @@ public class TransactionService {
         double total = service.getPrice() * loads;
 
         List<ServiceEntryDto> consumableDtos = new ArrayList<>();
+        List<ServiceEntry> consumables = new ArrayList<>();
+
         for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
             String itemName = entry.getKey();
             Integer quantity = entry.getValue();
@@ -51,22 +54,24 @@ public class TransactionService {
             StockItem item = stockRepository.findByName(itemName)
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
 
+            if (item.getQuantity() < quantity) {
+                throw new RuntimeException("Insufficient stock for: " + itemName);
+            }
+
+            item.setQuantity(item.getQuantity() - quantity);
+            stockRepository.save(item);
+
             double itemTotal = item.getPrice() * quantity;
             total += itemTotal;
 
             consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
+            consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
         }
 
         double amountGiven = request.getAmountGiven() != null ? request.getAmountGiven() : 0.0;
         double change = amountGiven - total;
 
-        List<ServiceEntry> consumables = consumableDtos.stream()
-                .map(dto -> new ServiceEntry(dto.getName(), dto.getPrice(), dto.getQuantity()))
-                .collect(Collectors.toList());
-
         LocalDateTime now = LocalDateTime.now();
-
-        // ✅ Generate printable receipt code
         String receiptCode = "R-" + Long.toString(System.currentTimeMillis(), 36);
 
         Transaction transaction = new Transaction(
@@ -82,13 +87,17 @@ public class TransactionService {
                 change,
                 now
         );
-        transaction.setReceiptCode(receiptCode); // ✅ assign code
+        transaction.setReceiptCode(receiptCode);
 
         transactionRepository.save(transaction);
 
+        // ✅ Create invoice from transaction
+        InvoiceItem invoice = invoiceService.createInvoiceFromTransaction(transaction, request);
+
+        // ✅ Return full response including invoiceNumber
         return new TransactionResponseDto(
                 transaction.getId(),
-                transaction.getReceiptCode(), // ✅ include in response
+                transaction.getReceiptCode(),
                 transaction.getCustomerName(),
                 transaction.getContact(),
                 serviceDto,
@@ -98,8 +107,9 @@ public class TransactionService {
                 amountGiven,
                 change,
                 transaction.getCreatedAt(),
-                transaction.getCreatedAt(),
-                transaction.getCreatedAt().plusDays(7)
+                invoice.getIssueDate(),
+                invoice.getDueDate(),
+                invoice.getInvoiceNumber()
         );
     }
 
@@ -117,9 +127,16 @@ public class TransactionService {
                 .map(entry -> new ServiceEntryDto(entry.getName(), entry.getPrice(), entry.getQuantity()))
                 .collect(Collectors.toList());
 
+        InvoiceItem invoice = null;
+        try {
+            invoice = invoiceService.getInvoiceByTransactionId(transaction.getId());
+        } catch (RuntimeException e) {
+            // Invoice not found — fallback will apply
+        }
+
         return new TransactionResponseDto(
                 transaction.getId(),
-                transaction.getReceiptCode(), // ✅ include in response
+                transaction.getReceiptCode(),
                 transaction.getCustomerName(),
                 transaction.getContact(),
                 serviceDto,
@@ -129,8 +146,9 @@ public class TransactionService {
                 transaction.getAmountGiven(),
                 transaction.getChange(),
                 transaction.getCreatedAt(),
-                transaction.getCreatedAt(),
-                transaction.getCreatedAt().plusDays(7)
+                invoice != null ? invoice.getIssueDate() : transaction.getCreatedAt(),
+                invoice != null ? invoice.getDueDate() : transaction.getCreatedAt().plusDays(7),
+                invoice != null ? invoice.getInvoiceNumber() : null
         );
     }
 }

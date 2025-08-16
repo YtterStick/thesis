@@ -1,6 +1,9 @@
 package com.starwash.authservice.service;
 
+import com.starwash.authservice.dto.TransactionRequestDto;
 import com.starwash.authservice.model.InvoiceItem;
+import com.starwash.authservice.model.ServiceEntry;
+import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.repository.InvoiceRepository;
 import com.starwash.authservice.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,11 @@ public class InvoiceService {
         return invoiceRepository.findById(id);
     }
 
+    // ✅ Get invoice by invoice number (for public tracking)
+    public Optional<InvoiceItem> getInvoiceByInvoiceNumber(String invoiceNumber) {
+        return invoiceRepository.findByInvoiceNumber(invoiceNumber);
+    }
+
     // ✅ Create new invoice with auto-generated metadata
     public InvoiceItem createInvoice(InvoiceItem invoice) {
         LocalDateTime now = LocalDateTime.now();
@@ -45,19 +53,43 @@ public class InvoiceService {
             throw new IllegalArgumentException("Transaction ID is required for invoice creation.");
         }
 
-        String prefix = "INV-" + now.getYear();
-        long count = invoiceRepository.count();
-        invoice.setInvoiceNumber(prefix + "-" + String.format("%04d", count + 1));
+        String invoiceCode = "I-" + Long.toString(System.currentTimeMillis(), 36);
+        invoice.setInvoiceNumber(invoiceCode);
 
         return invoiceRepository.save(invoice);
     }
 
-    // ✅ Update existing invoice (transactionId is immutable)
+    // ✅ Create invoice from transaction
+    public InvoiceItem createInvoiceFromTransaction(Transaction transaction, TransactionRequestDto request) {
+        InvoiceItem invoice = new InvoiceItem();
+
+        invoice.setTransactionId(transaction.getId());
+        invoice.setCustomerName(transaction.getCustomerName());
+
+        List<ServiceEntry> allServices = transaction.getConsumables();
+        allServices.add(new ServiceEntry(
+                transaction.getServiceName(),
+                transaction.getServicePrice(),
+                transaction.getServiceQuantity()
+        ));
+        invoice.setServices(allServices);
+
+        invoice.setSubtotal(transaction.getTotalPrice());
+        invoice.setTax(0.0);
+        invoice.setDiscount(0.0);
+        invoice.setTotal(transaction.getTotalPrice());
+
+        invoice.setPaymentMethod("Paid".equalsIgnoreCase(transaction.getStatus()) ? "Cash" : null);
+        invoice.setCreatedBy("system");
+
+        return createInvoice(invoice);
+    }
+
+    // ✅ Update existing invoice
     public Optional<InvoiceItem> updateInvoice(String id, InvoiceItem updated) {
         return invoiceRepository.findById(id).map(existing -> {
             existing.setInvoiceNumber(updated.getInvoiceNumber());
 
-            // Prevent overwriting transactionId
             if (existing.getTransactionId() == null && updated.getTransactionId() != null) {
                 existing.setTransactionId(updated.getTransactionId());
             }
@@ -104,5 +136,11 @@ public class InvoiceService {
         return transactionRepository.findById(transactionId)
                 .map(t -> "Paid".equalsIgnoreCase(t.getStatus()))
                 .orElse(false);
+    }
+
+    // ✅ Get invoice by transaction ID
+    public InvoiceItem getInvoiceByTransactionId(String transactionId) {
+        return invoiceRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found for transaction: " + transactionId));
     }
 }

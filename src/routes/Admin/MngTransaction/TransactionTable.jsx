@@ -3,8 +3,54 @@ import ExportCSV from "@/constants/ExportCSV";
 import CustomDateInput from "../../../constants/CustomDateInput";
 import TransactionActionMenu from "./components/TransactionActionMenu";
 import StatusCheckboxGroup from "./components/StatusCheckBoxGroup";
-import { Search, Filter, MoreVertical } from "lucide-react";
-import { statusColor, tableHeaders, statusFilters } from "@/constants";
+import { Search, Filter, MoreVertical, XCircle, AlertCircle, CircleCheck, CheckCircle2 } from "lucide-react";
+import { tableHeaders, statusFilters } from "@/constants";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+
+const renderStatusBadge = (status) => {
+    let icon = null;
+    let tooltipClass = "";
+
+    switch (status) {
+        case "Unpaid":
+        case "Expired":
+            icon = <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />;
+            tooltipClass = "text-red-600 dark:text-red-400";
+            break;
+        case "Pending":
+        case "Unclaimed":
+            icon = <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400" />;
+            tooltipClass = "text-orange-600 dark:text-orange-400";
+            break;
+        case "Washing":
+            icon = <CircleCheck className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
+            tooltipClass = "text-blue-600 dark:text-blue-400";
+            break;
+        case "Paid":
+        case "Done":
+        case "Claimed":
+            icon = <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />;
+            tooltipClass = "text-green-600 dark:text-green-400";
+            break;
+        default:
+            icon = null;
+            tooltipClass = "text-slate-600 dark:text-slate-300";
+    }
+
+    return icon ? (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="inline-flex items-center justify-center">{icon}</span>
+            </TooltipTrigger>
+            <TooltipContent
+                side="top"
+                className={tooltipClass}
+            >
+                {status}
+            </TooltipContent>
+        </Tooltip>
+    ) : null;
+};
 
 const TransactionTable = ({ items = [], onEdit }) => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -12,15 +58,12 @@ const TransactionTable = ({ items = [], onEdit }) => {
     const [selectedPayment, setSelectedPayment] = useState([]);
     const [selectedLaundry, setSelectedLaundry] = useState([]);
     const [selectedPickup, setSelectedPickup] = useState([]);
-
     const [showFilters, setShowFilters] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const filterRef = useRef(null);
     const dropdownRef = useRef(null);
-
     const [currentPage, setCurrentPage] = useState(1);
     const rowsPerPage = 6;
-
     const [openItem, setOpenItem] = useState(null);
     const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
     const triggerRefs = useRef({});
@@ -34,7 +77,6 @@ const TransactionTable = ({ items = [], onEdit }) => {
             if (filterRef.current?.contains(e.target) || dropdownRef.current?.contains(e.target)) {
                 return;
             }
-
             setShowFilters(false);
             setShowDatePicker(false);
             setOpenItem(null);
@@ -91,231 +133,234 @@ const TransactionTable = ({ items = [], onEdit }) => {
     const handleEdit = () => {
         const target = openItem;
         if (!target) return;
-        console.log("[handleEdit] Editing item:", target); // <- ADD THIS
         onEdit(target);
         setTimeout(() => setOpenItem(null), 100);
     };
 
     return (
-        <div className="flex flex-col gap-6">
-            {/* Search & Filters */}
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="relative h-[38px] w-full lg:w-[250px]">
-                    <div className="input flex h-full items-center rounded-md border border-slate-300 bg-white px-3 dark:border-slate-600 dark:bg-slate-800">
-                        <Search
-                            size={16}
-                            className="text-slate-400 dark:text-slate-500"
-                        />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Search by name..."
-                            className="w-full bg-transparent px-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-50"
-                        />
+        <TooltipProvider>
+            <div className="flex flex-col gap-6">
+                {/* 🔍 Search & Filters */}
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="relative h-[38px] w-full lg:w-[250px]">
+                        <div className="flex h-full items-center rounded-md border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-cyan-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:focus-within:ring-cyan-400 dark:focus-within:ring-offset-slate-950">
+                            <Search
+                                size={16}
+                                className="text-[#0891B2] dark:text-[#0891B2]"
+                            />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Search by name..."
+                                className="w-full bg-transparent px-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                            />
+                        </div>
                     </div>
-                </div>
 
-                <div className="flex flex-wrap items-end justify-between gap-2 sm:flex-row">
-                    <div className="relative">
-                        <button
-                            onClick={() => {
-                                setShowFilters((prev) => !prev);
-                                setShowDatePicker(false);
-                            }}
-                            className={`flex h-[38px] min-w-[120px] items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium shadow-sm transition-all ${
-                                showFilters
-                                    ? "border-transparent bg-[#69cab1] text-white hover:bg-[#5fbba7]"
-                                    : "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
-                            }`}
-                        >
-                            <Filter className="h-4 w-4 text-[#69cab1] dark:text-[#3DD9B6]" />
-                            Filters
-                        </button>
-
-                        {showFilters && (
-                            <div
-                                ref={filterRef}
-                                className="absolute z-50 mt-2 flex flex-col gap-6 rounded-md border border-slate-300 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-800"
-                                style={{ minWidth: "220px", maxWidth: "280px", width: "100%" }}
+                    <div className="flex flex-wrap items-end justify-between gap-2 sm:flex-row">
+                        <div className="relative">
+                            <button
+                                onClick={() => {
+                                    setShowFilters((prev) => !prev);
+                                    setShowDatePicker(false);
+                                }}
+                                className={`flex h-[38px] min-w-[120px] items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-cyan-400 dark:focus-visible:ring-offset-slate-950 ${
+                                    showFilters
+                                        ? "bg-[#0891B2] text-white hover:bg-[#0E7490]"
+                                        : "bg-slate-100 text-slate-800 hover:bg-slate-200 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+                                }`}
                             >
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-white">Payment</span>
-                                    <StatusCheckboxGroup
-                                        label=""
-                                        type="payment"
-                                        options={statusFilters.payment}
-                                        selected={selectedPayment}
-                                        toggleFn={toggleStatus} 
-                                    />
-                                </div>
+                                <Filter
+                                    className={`h-4 w-4 transition-colors ${showFilters ? "text-white" : "text-[#0891B2] dark:text-[#0891B2]"}`}
+                                />
+                                Filters
+                            </button>
+                            {showFilters && (
+                                <div
+                                    ref={filterRef}
+                                    className="absolute z-50 mt-2 flex flex-col gap-6 rounded-md border border-slate-300 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+                                    style={{ minWidth: "220px", maxWidth: "280px", width: "100%" }}
+                                >
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-white">Payment</span>
+                                        <StatusCheckboxGroup
+                                            label=""
+                                            type="payment"
+                                            options={statusFilters.payment}
+                                            selected={selectedPayment}
+                                            toggleFn={toggleStatus}
+                                        />
+                                    </div>
 
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-white">Laundry Status</span>
-                                    <StatusCheckboxGroup
-                                        label=""
-                                        type="laundry"
-                                        options={statusFilters.laundry}
-                                        selected={selectedLaundry}
-                                        toggleFn={toggleStatus}
-                                    />
-                                </div>
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-white">Laundry Status</span>
+                                        <StatusCheckboxGroup
+                                            label=""
+                                            type="laundry"
+                                            options={statusFilters.laundry}
+                                            selected={selectedLaundry}
+                                            toggleFn={toggleStatus}
+                                        />
+                                    </div>
 
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-white">Pickup Status</span>
-                                    <StatusCheckboxGroup
-                                        label=""
-                                        type="pickup"
-                                        options={statusFilters.pickup}
-                                        selected={selectedPickup}
-                                        toggleFn={toggleStatus}
-                                    />
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-white">Pickup Status</span>
+                                        <StatusCheckboxGroup
+                                            label=""
+                                            type="pickup"
+                                            options={statusFilters.pickup}
+                                            selected={selectedPickup}
+                                            toggleFn={toggleStatus}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
+
+                        <CustomDateInput
+                            value={selectedRange}
+                            onChange={setSelectedRange}
+                            show={showDatePicker}
+                            setShow={setShowDatePicker}
+                            closeOther={() => setShowFilters(false)}
+                        />
+
+                        <ExportCSV
+                            data={filtered}
+                            filename="transactions.csv"
+                        />
                     </div>
-
-                    <CustomDateInput
-                        value={selectedRange}
-                        onChange={setSelectedRange}
-                        show={showDatePicker}
-                        setShow={setShowDatePicker}
-                        closeOther={() => setShowFilters(false)}
-                    />
-
-                    <ExportCSV
-                        data={filtered}
-                        filename="transactions.csv"
-                    />
                 </div>
-            </div>
 
-            {/* Table */}
-            <div className="w-full overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-                <table className="w-full min-w-[800px] text-left text-sm">
-                    <thead className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        <tr>
-                            {tableHeaders.map((header) => (
-                                <th
-                                    key={header}
-                                    className="p-2"
-                                >
-                                    {header}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {paginated.length > 0 ? (
-                            paginated.map((t) => (
-                                <tr
-                                    key={t.id}
-                                    className="border-b border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/40"
-                                >
-                                    <td className="p-2 text-slate-800 dark:text-slate-100">{t.name}</td>
-                                    <td className="p-2 text-slate-600 dark:text-slate-300">{t.service}</td>
-                                    <td className="p-2 text-slate-600 dark:text-slate-300">{t.loads}</td>
-                                    <td className="p-2 text-slate-600 dark:text-slate-300">{t.detergent}</td>
-                                    <td className="p-2 text-slate-600 dark:text-slate-300">{t.softener}</td>
-                                    <td className="p-2 text-slate-600 dark:text-slate-300">₱{t.price.toFixed(2)}</td>
-                                    <td className="p-2 text-slate-600 dark:text-slate-300">{new Date(t.createdAt).toLocaleDateString("en-US")}</td>
-                                    <td className="p-2">
-                                        <span
-                                            className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${statusColor[t.paymentStatus]}`}
-                                        >
-                                            {t.paymentStatus}
-                                        </span>
-                                    </td>
-                                    <td className="p-2">
-                                        <span
-                                            className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${statusColor[t.laundryStatus]}`}
-                                        >
-                                            {t.laundryStatus}
-                                        </span>
-                                    </td>
-                                    <td className="p-2">
-                                        <span
-                                            className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${statusColor[t.pickupStatus]}`}
-                                        >
-                                            {t.pickupStatus}
-                                        </span>
-                                    </td>
-                                    <td className="p-2 text-center">
-                                        <button
-                                            ref={(el) => (triggerRefs.current[t.id] = el)}
-                                            onClick={() => toggleMenu(t)}
-                                            className="rounded-md p-1 hover:bg-slate-100 dark:hover:bg-slate-800"
-                                        >
-                                            <MoreVertical className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                                        </button>
+                {/* 📋 Table */}
+                <div className="mt-4 w-full overflow-x-auto rounded-md border border-slate-300 dark:border-slate-700">
+                    <table className="min-w-full text-left text-sm">
+                        <thead className="bg-slate-200 text-xs uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            <tr>
+                                {tableHeaders.map((header) => (
+                                    <th
+                                        key={header}
+                                        className="p-2"
+                                    >
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paginated.length > 0 ? (
+                                paginated.map((t) => (
+                                    <tr
+                                        key={t.id}
+                                        className="border-b border-slate-200 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                                    >
+                                        <td className="p-2 text-slate-800 dark:text-slate-100">{t.name}</td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">{t.service}</td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">{t.loads}</td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">{t.detergent}</td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">{t.softener}</td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">₱{t.price.toFixed(2)}</td>
+                                        <td className="p-2 text-xs text-slate-500 dark:text-slate-400">
+                                            {new Date(t.createdAt).toLocaleDateString("en-US")}
+                                        </td>
+                                        <td className="whitespace-nowrap p-2 text-slate-600 dark:text-slate-300">
+                                            <div className="inline-flex items-center gap-2">
+                                                <span>{t.paymentStatus}</span>
+                                                {renderStatusBadge(t.paymentStatus)}
+                                            </div>
+                                        </td>
+                                        <td className="whitespace-nowrap p-2 text-slate-600 dark:text-slate-300">
+                                            <div className="inline-flex items-center gap-2">
+                                                <span>{t.laundryStatus}</span>
+                                                {renderStatusBadge(t.laundryStatus)}
+                                            </div>
+                                        </td>
+                                        <td className="whitespace-nowrap p-2 text-slate-600 dark:text-slate-300">
+                                            <div className="inline-flex items-center gap-2">
+                                                <span>{t.pickupStatus}</span>
+                                                {renderStatusBadge(t.pickupStatus)}
+                                            </div>
+                                        </td>
+                                        <td className="p-2 text-center">
+                                            <button
+                                                ref={(el) => (triggerRefs.current[t.id] = el)}
+                                                onClick={() => toggleMenu(t)}
+                                                className="rounded-md p-1 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+                                            >
+                                                <MoreVertical className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td
+                                        colSpan={11}
+                                        className="p-4 text-center text-slate-500 dark:text-slate-400"
+                                    >
+                                        No transactions found.
                                     </td>
                                 </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td
-                                    colSpan={11}
-                                    className="p-4 text-center text-slate-500 dark:text-slate-400"
-                                >
-                                    No transactions found.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
 
-            {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-center gap-2 text-sm">
-                    <button
-                        disabled={currentPage === 1}
-                        onClick={() => setCurrentPage((p) => p - 1)}
-                        className="rounded px-2 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                        Previous
-                    </button>
-
-                    {Array.from({ length: totalPages }, (_, i) => (
+                {/* 📄 Pagination */}
+                {totalPages > 1 && (
+                    <div className="mt-4 flex items-center justify-center gap-2 text-sm">
                         <button
-                            key={i + 1}
-                            onClick={() => setCurrentPage(i + 1)}
-                            className={`rounded px-2 py-1 ${
-                                currentPage === i + 1
-                                    ? "bg-[#3DD9B6] text-white dark:bg-[#007362]"
-                                    : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                            }`}
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage((p) => p - 1)}
+                            className="rounded px-2 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
                         >
-                            {i + 1}
+                            Previous
                         </button>
-                    ))}
 
-                    <button
-                        disabled={currentPage === totalPages}
-                        onClick={() => setCurrentPage((p) => p + 1)}
-                        className="rounded px-2 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                        {Array.from({ length: totalPages }, (_, i) => (
+                            <button
+                                key={i + 1}
+                                onClick={() => setCurrentPage(i + 1)}
+                                className={`rounded px-2 py-1 ${
+                                    currentPage === i + 1
+                                        ? "bg-[#3DD9B6] text-white dark:bg-[#007362]"
+                                        : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                                }`}
+                            >
+                                {i + 1}
+                            </button>
+                        ))}
+
+                        <button
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage((p) => p + 1)}
+                            className="rounded px-2 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
+
+                {/* 🎯 Floating Action Menu */}
+                {openItem && (
+                    <div
+                        id="transaction-dropdown"
+                        className="fixed z-50"
+                        style={{ top: menuPos.top, left: menuPos.left }}
+                        ref={dropdownRef}
                     >
-                        Next
-                    </button>
-                </div>
-            )}
-
-            {openItem && (
-                <div
-                    id="transaction-dropdown"
-                    className="fixed z-50"
-                    style={{ top: menuPos.top, left: menuPos.left }}
-                    ref={dropdownRef} // <--- now it's defined!
-                >
-                    <TransactionActionMenu
-                        onEdit={handleEdit}
-                        onDelete={() => {
-                            console.log("[TransactionTable] Delete triggered:", openItem);
-                            setOpenItem(null);
-                        }}
-                    />
-                </div>
-            )}
-        </div>
+                        <TransactionActionMenu
+                            onEdit={handleEdit}
+                            onDelete={() => {
+                                console.log("[TransactionTable] Delete triggered:", openItem);
+                                setOpenItem(null);
+                            }}
+                        />
+                    </div>
+                )}
+            </div>
+        </TooltipProvider>
     );
 };
 

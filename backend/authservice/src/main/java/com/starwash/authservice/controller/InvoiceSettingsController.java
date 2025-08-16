@@ -23,11 +23,26 @@ public class InvoiceSettingsController {
     }
 
     @PostMapping
-    public ResponseEntity<?> saveSettings(@RequestBody InvoiceSettings settings,
-                                          @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> saveSettings(@RequestBody InvoiceSettings incoming,
+            @RequestHeader("Authorization") String authHeader) {
         if (!isAuthorized(authHeader)) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
+
+        Optional<InvoiceSettings> existingOpt = repository.findTopByOrderByIdDesc();
+
+        InvoiceSettings settings;
+        if (existingOpt.isPresent()) {
+            settings = existingOpt.get();
+            settings.setStoreName(incoming.getStoreName());
+            settings.setAddress(incoming.getAddress());
+            settings.setPhone(incoming.getPhone());
+            settings.setFooterNote(incoming.getFooterNote());
+            settings.setTrackingUrl(incoming.getTrackingUrl());
+        } else {
+            settings = incoming;
+        }
+
         repository.save(settings);
         return ResponseEntity.ok("Saved");
     }
@@ -37,13 +52,19 @@ public class InvoiceSettingsController {
         if (!isAuthorized(authHeader)) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
+
         Optional<InvoiceSettings> settings = repository.findTopByOrderByIdDesc();
-        return settings.map(ResponseEntity::ok)
-                       .orElse(ResponseEntity.status(404).build());
+
+        if (settings.isPresent()) {
+            return ResponseEntity.ok(settings.get());
+        } else {
+            return ResponseEntity.status(404).body("No settings found");
+        }
     }
 
     private boolean isAuthorized(String authHeader) {
-        return authHeader != null && authHeader.startsWith("Bearer ") &&
-               jwtUtil.validateToken(authHeader.replace("Bearer ", ""));
+        return authHeader != null &&
+                authHeader.startsWith("Bearer ") &&
+                jwtUtil.validateToken(authHeader.replace("Bearer ", ""));
     }
 }

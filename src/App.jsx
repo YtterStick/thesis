@@ -16,12 +16,16 @@ import ManageInventoryPage from "@/routes/Admin/MngInventory/MainPage";
 import LoginPage from "@/routes/Auth/LoginPage";
 import ServiceOptionPage from "@/routes/Admin/SvcOption/MainPage";
 import ReceiptSettingsPage from "@/routes/Admin/ReceiptSettings/MainPage";
-import InvoiceSettingsPage from "@/routes/Admin/InvoiceSettings/MainPage"; // ✅ NEW
+import InvoiceSettingsPage from "@/routes/Admin/InvoiceSettings/MainPage";
 import ManageReceiptPage from "@/routes/Admin/MngReceipt/MainPage";
-import NewTransactionPage from "@/routes/Staff/transaction/MainPage";
+import MachineMainPage from "@/routes/Admin/Machine/MainPage"; // ✅ keep this
+import TermsSettingsPage from "@/routes/Admin/TermsSettings/MainPage";
+
+
 
 // 👕 Staff Pages
 import StaffDashboardPage from "@/routes/Staff/dashboard/page";
+import NewTransactionPage from "@/routes/Staff/transaction/MainPage";
 
 // ✅ Toast Provider
 import { Toaster } from "@/components/ui/toaster";
@@ -53,9 +57,10 @@ function App() {
     { path: "/notificationsettings", element: <AdminRoute element={<h1 className="title">Notification Settings</h1>} /> },
     { path: "/paymentmethod", element: <AdminRoute element={<h1 className="title">Payment Method</h1>} /> },
     { path: "/receiptssettings", element: <AdminRoute element={<ReceiptSettingsPage />} /> },
-    { path: "/invoicesettings", element: <AdminRoute element={<InvoiceSettingsPage />} /> }, // ✅ NEW
-    { path: "/termsandconditions", element: <AdminRoute element={<h1 className="title">Terms & Conditions</h1>} /> },
-    { path: "/machinesettings", element: <AdminRoute element={<h1 className="title">Machine Settings</h1>} /> },
+    { path: "/invoicesettings", element: <AdminRoute element={<InvoiceSettingsPage />} /> },
+    { path: "/machines", element: <AdminRoute element={<MachineMainPage />} /> },
+    { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
+
 
     // 👕 Staff Routes
     { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },
@@ -72,7 +77,7 @@ function App() {
     <ThemeProvider storageKey="theme">
       <AuthProvider>
         <RouterProvider router={router} />
-        <Toaster />
+        <Toaster /> {/* ✅ Toast system is active here */}
       </AuthProvider>
     </ThemeProvider>
   );

@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface InvoiceRepository extends MongoRepository<InvoiceItem, String> {
@@ -14,4 +15,10 @@ public interface InvoiceRepository extends MongoRepository<InvoiceItem, String> 
 
     // 🔍 Optional: filter by customer name
     List<InvoiceItem> findByCustomerName(String customerName);
+
+    // ✅ Find invoice by transaction ID
+    Optional<InvoiceItem> findByTransactionId(String transactionId);
+
+    // ✅ NEW: Find invoice by invoice number (for public tracking)
+    Optional<InvoiceItem> findByInvoiceNumber(String invoiceNumber);
 }

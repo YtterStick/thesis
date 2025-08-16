@@ -49,8 +49,8 @@ export const navbarLinks = [
   {
     title: "Legal & Machine",
     Links: [
-      { label: "Terms & Conditions", icon: BookText, path: "/termsandconditions" },
-      { label: "Machine Settings", icon: WashingMachine, path: "/machinesettings" },
+      { label: "Terms & Conditions", icon: BookText, path: "/termssettings" },
+      { label: "Manage Machines", icon: WashingMachine, path: "/machines" }
     ],
   },
 ];

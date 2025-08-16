@@ -23,6 +23,8 @@ public class TransactionResponseDto {
     private LocalDateTime issueDate;
     private LocalDateTime dueDate;
 
+    private String invoiceNumber; // ✅ Added field
+
     public TransactionResponseDto() {}
 
     public TransactionResponseDto(String transactionId, String receiptCode,
@@ -32,7 +34,8 @@ public class TransactionResponseDto {
                                   Double amountGiven, Double change,
                                   LocalDateTime createdAt,
                                   LocalDateTime issueDate,
-                                  LocalDateTime dueDate) {
+                                  LocalDateTime dueDate,
+                                  String invoiceNumber) { // ✅ Added to constructor
         this.transactionId = transactionId;
         this.receiptCode = receiptCode;
         this.customerName = customerName;
@@ -46,6 +49,7 @@ public class TransactionResponseDto {
         this.createdAt = createdAt;
         this.issueDate = issueDate;
         this.dueDate = dueDate;
+        this.invoiceNumber = invoiceNumber;
     }
 
     // Getters
@@ -62,6 +66,7 @@ public class TransactionResponseDto {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getIssueDate() { return issueDate; }
     public LocalDateTime getDueDate() { return dueDate; }
+    public String getInvoiceNumber() { return invoiceNumber; } // ✅ Getter
 
     // Setters
     public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
@@ -77,4 +82,5 @@ public class TransactionResponseDto {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
     public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
+    public void setInvoiceNumber(String invoiceNumber) { this.invoiceNumber = invoiceNumber; } // ✅ Setter
 }

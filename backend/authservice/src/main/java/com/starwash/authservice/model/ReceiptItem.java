@@ -3,6 +3,7 @@ package com.starwash.authservice.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -13,6 +14,9 @@ public class ReceiptItem {
 
     @Id
     private String id;
+
+    @Indexed(unique = true) // ✅ Optional: enforce uniqueness
+    private String receiptCode; // ✅ Newly added field
 
     private String customerName;
     private List<ServiceEntry> services;
@@ -28,10 +32,11 @@ public class ReceiptItem {
 
     public ReceiptItem() {}
 
-    public ReceiptItem(String id, String customerName, List<ServiceEntry> services,
-                       double total, String paymentMethod,
-                       String createdBy, LocalDateTime createdAt, LocalDateTime lastUpdated) {
+    public ReceiptItem(String id, String receiptCode, String customerName, List<ServiceEntry> services,
+                       double total, String paymentMethod, String createdBy,
+                       LocalDateTime createdAt, LocalDateTime lastUpdated) {
         this.id = id;
+        this.receiptCode = receiptCode;
         this.customerName = customerName;
         this.services = services;
         this.total = total;
@@ -44,6 +49,10 @@ public class ReceiptItem {
     // Getters
     public String getId() {
         return id;
+    }
+
+    public String getReceiptCode() {
+        return receiptCode;
     }
 
     public String getCustomerName() {
@@ -77,6 +86,10 @@ public class ReceiptItem {
     // Setters
     public void setId(String id) {
         this.id = id;
+    }
+
+    public void setReceiptCode(String receiptCode) {
+        this.receiptCode = receiptCode;
     }
 
     public void setCustomerName(String customerName) {

@@ -52,6 +52,14 @@ public class InvoiceController {
                       .orElse(notFound());
     }
 
+    @GetMapping("/track/{invoiceNumber}")
+    public ResponseEntity<InvoiceItemDto> trackInvoice(@PathVariable String invoiceNumber) {
+        Optional<InvoiceItem> invoice = invoiceService.getInvoiceByInvoiceNumber(invoiceNumber);
+        return invoice.map(this::toDto)
+                      .map(ResponseEntity::ok)
+                      .orElse(notFound());
+    }
+
     @PostMapping
     public ResponseEntity<InvoiceItemDto> createInvoice(@RequestBody InvoiceItemDto dto,
                                                         @RequestHeader("Authorization") String authHeader) {
@@ -62,10 +70,7 @@ public class InvoiceController {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setLastUpdated(LocalDateTime.now());
 
-        // ✅ Let service generate invoiceNumber if missing
         InvoiceItem saved = invoiceService.createInvoice(entity);
-
-        // ✅ Return full DTO with invoiceNumber included
         return ResponseEntity.ok(toDto(saved));
     }
 
@@ -98,7 +103,6 @@ public class InvoiceController {
         return ResponseEntity.ok(dtos);
     }
 
-    // 🔐 Token helpers
     private boolean isAuthorized(String authHeader) {
         return authHeader != null && authHeader.startsWith("Bearer ") &&
                jwtUtil.validateToken(extractToken(authHeader));
@@ -108,7 +112,6 @@ public class InvoiceController {
         return authHeader.replace("Bearer ", "");
     }
 
-    // 🧩 Mapping helpers
     private InvoiceItemDto toDto(InvoiceItem item) {
         List<ServiceEntryDto> services = item.getServices().stream()
                 .map(s -> new ServiceEntryDto(s.getName(), s.getPrice(), s.getQuantity()))
@@ -122,7 +125,7 @@ public class InvoiceController {
 
         return new InvoiceItemDto(
                 item.getId(),
-                item.getInvoiceNumber(), // ✅ Confirmed mapping
+                item.getInvoiceNumber(),
                 item.getTransactionId(),
                 item.getIssueDate(),
                 item.getDueDate(),
@@ -148,7 +151,7 @@ public class InvoiceController {
 
         InvoiceItem item = new InvoiceItem();
         item.setId(dto.getId());
-        item.setInvoiceNumber(dto.getInvoiceNumber()); // ✅ Will be overridden if null
+        item.setInvoiceNumber(dto.getInvoiceNumber());
         item.setTransactionId(dto.getTransactionId());
         item.setIssueDate(dto.getIssueDate());
         item.setDueDate(dto.getDueDate());
@@ -175,7 +178,6 @@ public class InvoiceController {
         );
     }
 
-    // ✅ Generic response helpers
     private <T> ResponseEntity<T> notFound() {
         return ResponseEntity.status(404).build();
     }

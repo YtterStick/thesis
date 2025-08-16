@@ -66,7 +66,7 @@ const MainPage = () => {
       fetchInventory();
     } catch (error) {
       console.error("Error deleting item:", error);
-    }  
+    }
   };
 
   const handleEdit = (item) => {
@@ -101,22 +101,22 @@ const MainPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Boxes className="w-6 h-6 text-[#3DD9B6]" />
+          <Boxes className="w-6 h-6 text-cyan-400" />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
             Manage Inventory
           </h1>
         </div>
         {items.length > 0 && (
-          <Button
+          <button
             onClick={() => {
               setEditingItem(null);
               setShowForm(true);
             }}
-            className="bg-[#3DD9B6] text-white hover:bg-[#2fc3a4] dark:bg-[#007362] dark:hover:bg-[#00564e] shadow-md transition-transform hover:scale-105"
+            className="flex items-center gap-2 text-slate-900 dark:text-white hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors"
           >
-            <Plus size={16} className="mr-2" />
-            Add Item
-          </Button>
+            <Plus size={18} />
+            <span className="text-sm font-medium">Add Item</span>
+          </button>
         )}
       </div>
 
@@ -129,7 +129,6 @@ const MainPage = () => {
             value: items.length,
             growth: "+0% change today",
             color: "#3DD9B6",
-            darkColor: "#007362",
             growthColor: "text-emerald-700 dark:text-[#28b99a]",
           },
           {
@@ -138,7 +137,6 @@ const MainPage = () => {
             value: items.filter((i) => i.quantity === 0).length,
             growth: "-0% change today",
             color: "#F87171",
-            darkColor: "#DC2626",
             growthColor: "text-red-600 dark:text-red-400",
           },
           {
@@ -147,7 +145,6 @@ const MainPage = () => {
             value: items.filter((i) => i.quantity > 0 && i.quantity < 5).length,
             growth: "+0% change today",
             color: "#FB923C",
-            darkColor: "#EA580C",
             growthColor: "text-orange-600 dark:text-orange-400",
           },
           {
@@ -156,7 +153,6 @@ const MainPage = () => {
             value: items.filter((i) => i.restockedRecently).length || 0,
             growth: "+0% change today",
             color: "#60A5FA",
-            darkColor: "#2563EB",
             growthColor: "text-blue-600 dark:text-blue-400",
           },
         ].map(({ title, icon, value, growth, color, growthColor }) => (
@@ -173,11 +169,11 @@ const MainPage = () => {
               </div>
               <p className="card-title">{title}</p>
             </div>
-            <div className="card-body bg-slate-100 transition-colors dark:bg-slate-950 rounded-md p-4">
-              <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 transition-colors">
+            <div className="card-body bg-slate-100 dark:bg-slate-950 rounded-md p-4 transition-colors">
+              <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">
                 {value}
               </p>
-              <p className={`text-xs font-medium transition-colors ${growthColor}`}>
+              <p className={`text-xs font-medium ${growthColor}`}>
                 {growth}
               </p>
             </div>
@@ -203,16 +199,16 @@ const MainPage = () => {
           <p className="text-slate-500 dark:text-slate-400 mb-2">
             No inventory items yet.
           </p>
-          <Button
+          <button
             onClick={() => {
               setEditingItem(null);
               setShowForm(true);
             }}
-            className="bg-[#3DD9B6] text-white hover:bg-[#2fc3a4] dark:bg-[#007362] dark:hover:bg-[#00564e]"
+            className="flex items-center gap-2 text-slate-900 dark:text-white hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors"
           >
-            <Plus size={16} className="mr-2" />
-            Add Your First Item
-          </Button>
+            <Plus size={18} />
+            <span className="text-sm font-medium">Add Your First Item</span>
+          </button>
         </div>
       )}
 

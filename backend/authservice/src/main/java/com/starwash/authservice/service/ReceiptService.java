@@ -27,6 +27,11 @@ public class ReceiptService {
         return receiptRepository.findById(id);
     }
 
+    // ✅ Get receipt by receipt code (for public tracking)
+    public Optional<ReceiptItem> getReceiptByReceiptCode(String receiptCode) {
+        return receiptRepository.findByReceiptCode(receiptCode);
+    }
+
     // ✅ Create new receipt
     public ReceiptItem createReceipt(ReceiptItem receipt) {
         receipt.setCreatedAt(LocalDateTime.now());

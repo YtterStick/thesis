@@ -44,44 +44,43 @@ const Layout = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors">
-      {/* Mobile overlay */}
-      <div
-        className={cn(
-          "pointer-events-none fixed inset-0 -z-10 bg-black opacity-0 transition-opacity",
-          !collapsed &&
-            "max-md:pointer-events-auto max-md:z-50 max-md:opacity-30"
-        )}
-      />
+  <div className="min-h-screen text-slate-900 dark:text-slate-50 transition-colors">
+    {/* Mobile overlay */}
+    <div
+      className={cn(
+        "pointer-events-none fixed inset-0 -z-10 bg-black opacity-0 transition-opacity",
+        !collapsed && "max-md:pointer-events-auto max-md:z-50 max-md:opacity-30"
+      )}
+    />
 
-      {/* Sidebar */}
+    {/* Sidebar */}
+    {showProtectedLayout && (
+      <Sidebar ref={sidebarRef} collapsed={collapsed} links={sidebarLinks} />
+    )}
+
+    {/* Main layout wrapper */}
+    <div
+      className={cn(
+        "transition-[margin] duration-300",
+        showProtectedLayout
+          ? collapsed
+            ? "md:ml-[70px]"
+            : "md:ml-[240px]"
+          : ""
+      )}
+    >
+      {/* Header */}
       {showProtectedLayout && (
-        <Sidebar ref={sidebarRef} collapsed={collapsed} links={sidebarLinks} />
+        <Header collapsed={collapsed} setCollapsed={setCollapsed} role={role} />
       )}
 
-      {/* Main layout wrapper */}
-      <div
-        className={cn(
-          "transition-[margin] duration-300",
-          showProtectedLayout
-            ? collapsed
-              ? "md:ml-[70px]"
-              : "md:ml-[240px]"
-            : ""
-        )}
-      >
-        {/* Header */}
-        {showProtectedLayout && (
-          <Header collapsed={collapsed} setCollapsed={setCollapsed} role={role} />
-        )}
-
-        {/* Page content */}
-        <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6 bg-slate-100 dark:bg-slate-950 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
-          {children}
-        </div>
+      {/* Page content */}
+      <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 bg-slate-100 dark:bg-slate-950">
+        {children}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default Layout;

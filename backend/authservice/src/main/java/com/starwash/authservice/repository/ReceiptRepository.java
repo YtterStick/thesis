@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ReceiptRepository extends MongoRepository<ReceiptItem, String> {
@@ -14,4 +15,7 @@ public interface ReceiptRepository extends MongoRepository<ReceiptItem, String> 
 
     // 🔍 Optional: filter by customer name
     List<ReceiptItem> findByCustomerName(String customerName);
+
+    // ✅ NEW: Find receipt by receipt code (for public tracking)
+    Optional<ReceiptItem> findByReceiptCode(String receiptCode);
 }
