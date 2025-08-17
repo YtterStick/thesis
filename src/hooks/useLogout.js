@@ -1,13 +1,14 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export const useLogout = () => {
   const navigate = useNavigate();
+  const { logout: contextLogout } = useAuth();
 
   const logout = async () => {
     try {
       const token = localStorage.getItem("authToken");
 
-      // 🔐 Only send /logout if token is still present
       if (token) {
         const response = await fetch("http://localhost:8080/logout", {
           method: "POST",
@@ -25,8 +26,9 @@ export const useLogout = () => {
         }
       }
 
-      // 💣 Now clear the token
+      // 💣 Clear token and reset context
       localStorage.removeItem("authToken");
+      contextLogout(); // ✅ sync with AuthProvider
 
       // 🚀 Redirect
       navigate("/login", { replace: true });

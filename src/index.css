@@ -228,7 +228,7 @@
 }
 @font-face {
   font-family: 'DeathStar';
-  src: url('/fonts/DeathStar.ttf') format('truetype');
+  src: url('/fonts/DeathStar.otf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
