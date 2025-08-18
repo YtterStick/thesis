@@ -40,12 +40,17 @@ const decodeToken = (token) => {
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, role, loading } = useAuth();
+
   const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [loginMeta, setLoginMeta] = useState(null);
+
+  useEffect(() => {
+    setIsAuthenticating(false); // 🧼 Reset on mount
+  }, []);
 
   useEffect(() => {
     if (!loading && isAuthenticated && role) {
@@ -76,6 +81,8 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isAuthenticating) return;
+
     setError("");
     setIsAuthenticating(true);
 
@@ -113,11 +120,10 @@ const LoginPage = () => {
       } else {
         navigate("/unauthorized");
       }
-
-      setIsAuthenticating(false);
     } catch (err) {
       console.error("❌ Login error:", err);
       setError("Invalid username or password");
+    } finally {
       setIsAuthenticating(false);
     }
   };
@@ -135,7 +141,9 @@ const LoginPage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-[400px]"
+        className={`relative z-10 w-full max-w-[400px] ${
+          isAuthenticating ? "pointer-events-none blur-sm" : ""
+        }`}
       >
         <Card className="animate-cardglow border border-[#00B5FF] bg-[#181818]/80 backdrop-blur-md">
           <CardHeader className="space-y-3">
@@ -198,7 +206,7 @@ const LoginPage = () => {
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3 top-3 text-white transition-colors hover:text-[#00B5FF]"
-                  aria-label="Toggle password visibility"
+                                    aria-label="Toggle password visibility"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -211,9 +219,10 @@ const LoginPage = () => {
                 )}
               </div>
 
-                            {/* 🔘 Login Button */}
+              {/* 🔘 Login Button */}
               <Button
                 type="submit"
+                disabled={isAuthenticating}
                 className="w-full bg-gradient-to-r from-[#0077CC] via-[#00B5FF] to-[#0077CC] px-4 py-2 text-xs font-medium text-slate-900 shadow-[0_0_8px_#00B5FF80] transition-transform hover:scale-[1.01] hover:shadow-[0_0_12px_#00B5FF80]"
               >
                 Login
@@ -231,8 +240,12 @@ const LoginPage = () => {
         </Card>
       </motion.div>
 
-      {/* ⏳ Auth Loader */}
-      {isAuthenticating && <AuthLoader />}
+      {/* ⏳ Auth Loader Overlay */}
+      {isAuthenticating && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <AuthLoader />
+        </div>
+      )}
     </div>
   );
 };

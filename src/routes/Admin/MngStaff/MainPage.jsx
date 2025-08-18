@@ -53,6 +53,7 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
 
 const MainPage = () => {
   const [accountList, setAccountList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState(null);
@@ -73,6 +74,8 @@ const MainPage = () => {
       } catch (error) {
         console.error("❌ Error fetching accounts:", error.message);
         setError("Failed to load accounts. Make sure you're logged in as ADMIN.");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -168,8 +171,19 @@ const MainPage = () => {
       {/* Error Message */}
       {error && <div className="text-red-500 mb-4">{error}</div>}
 
-      {/* Staff Table */}
-      <StaffTable staff={accountList} onConfirmDisable={setConfirmTarget} />
+      {/* Staff Table or Skeleton Loader */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="h-[160px] rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse"
+            />
+          ))}
+        </div>
+      ) : (
+        <StaffTable staff={accountList} onConfirmDisable={setConfirmTarget} />
+      )}
 
       {/* Add Form */}
       {showForm && (
@@ -208,7 +222,7 @@ const MainPage = () => {
                   toggleStatus(confirmTarget.id);
                   setConfirmTarget(null);
                 }}
-                className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 ${
+                className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white                dark:focus-visible:ring-offset-slate-950 ${
                   confirmTarget.status === "Active"
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"

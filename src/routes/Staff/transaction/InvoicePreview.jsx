@@ -37,7 +37,6 @@ const InvoicePreview = ({ invoice, settings }) => {
     }
   };
 
-  // ✅ Use invoiceNumber for QR tracking
   const qrValue =
     invoiceNumber && settings.trackingUrl
       ? `${settings.trackingUrl}/invoice/${invoiceNumber}`
@@ -119,9 +118,11 @@ const InvoicePreview = ({ invoice, settings }) => {
           <QRCode value={qrValue} size={64} />
         </div>
       )}
-      <div className="text-center mt-1 text-xs dark:text-gray-300 print:hidden">
-        Scan to track your laundry status
-      </div>
+      {qrValue && (
+        <div className="text-center mt-1 text-xs dark:text-gray-300 print:hidden">
+          Scan to track your laundry status
+        </div>
+      )}
 
       {settings.footerNote && (
         <div className="text-center mt-2 dark:text-gray-300">

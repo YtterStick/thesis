@@ -83,7 +83,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="rounded-lg border border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-950 text-slate-900 dark:text-white">
+      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" />
+      <DialogContent className="z-50 rounded-lg border border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-950 text-slate-900 dark:text-white shadow-xl">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
             {isEditMode ? "Edit Item" : "Add New Item"}

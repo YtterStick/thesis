@@ -5,7 +5,11 @@ import {
   createContext,
   useContext,
 } from "react";
-import { jwtDecode } from "jwt-decode";
+import {
+  getToken,
+  decodeToken,
+  clearAuthTokens,
+} from "@/lib/auth"; // ✅ centralized token logic
 
 const AuthContext = createContext();
 
@@ -16,10 +20,8 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const hasLoggedOnce = useRef(false);
 
-  const getStoredToken = () => localStorage.getItem("authToken");
-
   const hydrate = async () => {
-    const token = getStoredToken();
+    const token = getToken();
 
     if (!token) {
       if (!hasLoggedOnce.current) {
@@ -30,15 +32,9 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    try {
-      const decoded = jwtDecode(token);
-      if (decoded.exp * 1000 < Date.now()) {
-        console.warn("⏳ Token expired");
-        resetAuth();
-        return;
-      }
-    } catch (err) {
-      console.warn("❌ Invalid token format");
+    const decoded = decodeToken(token);
+    if (!decoded || decoded.exp * 1000 < Date.now()) {
+      console.warn("⏳ Token expired or invalid");
       resetAuth();
       return;
     }
@@ -68,14 +64,9 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const syncAuth = (e) => {
-      if (e.key === "authToken") {
-        if (e.newValue === null) {
-          console.log("🔄 Token removed in another tab. Logging out.");
-          resetAuth();
-        } else {
-          console.log("🔄 Token added in another tab. Rehydrating auth.");
-          hydrate();
-        }
+      if (e.key === "authSync") {
+        console.log("🔄 Auth sync triggered. Rehydrating...");
+        hydrate();
       }
     };
 
@@ -85,33 +76,19 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (token) => {
     localStorage.setItem("authToken", token);
-
-    window.dispatchEvent(
-      new StorageEvent("storage", {
-        key: "authToken",
-        newValue: token,
-      })
-    );
-
+    localStorage.setItem("authSync", Date.now().toString()); // 🔄 trigger sync
     await hydrate();
   };
 
   const logout = () => {
-    localStorage.removeItem("authToken");
-
-    window.dispatchEvent(
-      new StorageEvent("storage", {
-        key: "authToken",
-        newValue: null,
-      })
-    );
-
+    clearAuthTokens();
+    localStorage.setItem("authSync", Date.now().toString()); // 🔄 trigger sync
     resetAuth();
     console.log("🚪 Logged out");
   };
 
   const resetAuth = () => {
-    localStorage.removeItem("authToken");
+    clearAuthTokens();
     setUser(null);
     setIsAuthenticated(false);
     setLoading(false);

@@ -19,11 +19,6 @@ const isTokenExpired = (token) => {
     const decoded = JSON.parse(atob(payload));
     const exp = decoded.exp * 1000;
     const now = Date.now();
-
-    console.log("🔍 Token expiration check:");
-    console.log("⏳ Exp:", new Date(exp).toLocaleString());
-    console.log("🕒 Now:", new Date(now).toLocaleString());
-
     return exp + ALLOWED_SKEW_MS < now;
   } catch (err) {
     console.warn("❌ Failed to decode token:", err);
@@ -32,10 +27,9 @@ const isTokenExpired = (token) => {
 };
 
 const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken"); // ✅ consistent with backend
+  const token = localStorage.getItem("authToken");
 
   if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
     window.location.href = "/login";
     return;
   }
@@ -51,7 +45,6 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
   const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
 
   if (!response.ok) {
-    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
     throw new Error(`Request failed: ${response.status}`);
   }
 
@@ -60,6 +53,7 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
 
 const MainPage = () => {
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -76,6 +70,8 @@ const MainPage = () => {
       setItems(safeItems);
     } catch (error) {
       console.error("Error loading inventory:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,7 +136,7 @@ const MainPage = () => {
             Manage Inventory
           </h1>
         </div>
-        {items.length > 0 && (
+        {!loading && items.length > 0 && (
           <button
             onClick={() => {
               setEditingItem(null);
@@ -215,8 +211,17 @@ const MainPage = () => {
         ))}
       </div>
 
-      {/* Inventory Table or Empty State */}
-      {items.length > 0 ? (
+      {/* Inventory Table or Loading/Empty State */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="h-[160px] rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse"
+            />
+          ))}
+        </div>
+      ) : items.length > 0 ? (
         <InventoryTable
           items={items}
           onAddStock={openStockModal}
@@ -264,7 +269,7 @@ const MainPage = () => {
         <StockModal
           item={selectedItem}
           onClose={closeStockModal}
-          onSubmit={handleAddStock}
+                    onSubmit={handleAddStock}
         />
       )}
     </main>

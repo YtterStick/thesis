@@ -35,97 +35,100 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
   return (
     <>
       {!isEdit && (
-        <Button onClick={() => setOpen(true)}>
-          <PlusCircle className="w-4 h-4 mr-2" />
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors focus:outline-none"
+        >
+          <PlusCircle className="w-4 h-4" />
           Add Machine
-        </Button>
+        </button>
       )}
 
       {open && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-    <div className="max-w-lg w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 shadow-md text-slate-900 dark:text-white p-6 rounded-md">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">
-          {isEdit ? "Edit Machine" : "Add New Machine"}
-        </h2>
-        <button
-          onClick={() => setOpen(false)}
-          className="text-slate-500 hover:text-slate-700 dark:hover:text-white"
-        >
-          ✕
-        </button>
-      </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="max-w-lg w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 shadow-md text-slate-900 dark:text-white p-6 rounded-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                {isEdit ? "Edit Machine" : "Add New Machine"}
+              </h2>
+              <button
+                onClick={() => setOpen(false)}
+                className="text-slate-500 hover:text-slate-700 dark:hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
 
-      <div className="space-y-4">
-        {/* Machine Type */}
-        <div>
-          <Label className="text-slate-700 dark:text-muted-foreground">Machine Type</Label>
-          <Select value={form.type} onValueChange={(val) => handleChange("type", val)}>
-            <SelectTrigger className={selectTriggerClass}>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white">
-              <SelectItem value="Washer">Washer</SelectItem>
-              <SelectItem value="Dryer">Dryer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="space-y-4">
+              {/* Machine Type */}
+              <div>
+                <Label className="text-slate-700 dark:text-muted-foreground">Machine Type</Label>
+                <Select value={form.type} onValueChange={(val) => handleChange("type", val)}>
+                  <SelectTrigger className={selectTriggerClass}>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white">
+                    <SelectItem value="Washer">Washer</SelectItem>
+                    <SelectItem value="Dryer">Dryer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {/* Machine Name */}
-        <div>
-          <Label className="text-slate-700 dark:text-muted-foreground">Machine Name</Label>
-          <Input
-            className={inputClass}
-            value={form.name}
-            onChange={(e) => handleChange("name", e.target.value)}
-            placeholder="e.g. Washer #3"
-          />
-        </div>
+              {/* Machine Name */}
+              <div>
+                <Label className="text-slate-700 dark:text-muted-foreground">Machine Name</Label>
+                <Input
+                  className={inputClass}
+                  value={form.name}
+                  onChange={(e) => handleChange("name", e.target.value)}
+                  placeholder="e.g. Washer #3"
+                />
+              </div>
 
-        {/* Capacity */}
-        <div>
-          <Label className="text-slate-700 dark:text-muted-foreground">Capacity (kg)</Label>
-          <Input
-            type="number"
-            className={inputClass}
-            value={form.capacityKg}
-            onChange={(e) => handleChange("capacityKg", e.target.value)}
-            placeholder="e.g. 7.5"
-          />
-        </div>
+              {/* Capacity */}
+              <div>
+                <Label className="text-slate-700 dark:text-muted-foreground">Capacity (kg)</Label>
+                <Input
+                  type="number"
+                  className={inputClass}
+                  value={form.capacityKg}
+                  onChange={(e) => handleChange("capacityKg", e.target.value)}
+                  placeholder="e.g. 7.5"
+                />
+              </div>
 
-        {/* Status */}
-        <div>
-          <Label className="text-slate-700 dark:text-muted-foreground">Status</Label>
-          <Select value={form.status} onValueChange={(val) => handleChange("status", val)}>
-            <SelectTrigger className={selectTriggerClass}>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white">
-              <SelectItem value="Available" className={statusColorMap["Available"]}>
-                Available
-              </SelectItem>
-              <SelectItem value="In Use" className={statusColorMap["In Use"]}>
-                In Use
-              </SelectItem>
-              <SelectItem value="Maintenance" className={statusColorMap["Maintenance"]}>
-                Maintenance
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+              {/* Status */}
+              <div>
+                <Label className="text-slate-700 dark:text-muted-foreground">Status</Label>
+                <Select value={form.status} onValueChange={(val) => handleChange("status", val)}>
+                  <SelectTrigger className={selectTriggerClass}>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white">
+                    <SelectItem value="Available" className={statusColorMap["Available"]}>
+                      Available
+                    </SelectItem>
+                    <SelectItem value="In Use" className={statusColorMap["In Use"]}>
+                      In Use
+                    </SelectItem>
+                    <SelectItem value="Maintenance" className={statusColorMap["Maintenance"]}>
+                      Maintenance
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <Button onClick={onSubmit} className={buttonClass}>
-            <Save className="w-4 h-4" />
-            {isEdit ? "Update Machine" : "Save Machine"}
-          </Button>
+              {/* Save Button */}
+              <div className="flex justify-end">
+                <Button onClick={onSubmit} className={buttonClass}>
+                  <Save className="w-4 h-4" />
+                  {isEdit ? "Update Machine" : "Save Machine"}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </>
   );
 }

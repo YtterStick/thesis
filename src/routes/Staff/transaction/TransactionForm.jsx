@@ -27,8 +27,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
 
     useImperativeHandle(ref, () => ({
         resetForm: () => {
-            const defaultService = services[0]; // ✅ First service in the list
-
+            const defaultService = services[0];
             setForm({
                 transactionId: "",
                 name: "",
@@ -62,7 +61,17 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
     }, [form.loads]);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("authToken");
+
+        if (!token || typeof token !== "string" || !token.includes(".")) {
+            toast({
+                title: "Authentication Error",
+                description: "Invalid or missing token. Please log in again.",
+                variant: "destructive",
+            });
+            window.location.href = "/login";
+            return;
+        }
 
         const fetchServices = async () => {
             try {
@@ -75,11 +84,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                 const data = await res.json();
                 setServices(data);
 
-                const defaultService = data.find((s) => s.name.toLowerCase().includes("wash & dry"));
                 if (data.length > 0) {
                     setForm((prev) => ({
                         ...prev,
-                        serviceId: data[0].id, // ✅ Select first service by default
+                        serviceId: data[0].id,
                     }));
                 }
             } catch {
@@ -202,7 +210,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
         };
 
         try {
-            const token = localStorage.getItem("token");
+            const token = localStorage.getItem("authToken");
             const res = await fetch("http://localhost:8080/api/transactions", {
                 method: "POST",
                 headers: {
@@ -252,8 +260,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                     onSubmit={handleSubmit}
                     className="space-y-4"
                 >
+                    {/* 👤 Customer Info */}
+                    {/* 🧼 Service Selection */}
+                    {/* 🧼 Loads + Plastic */}
                     <div className="space-y-3">
-                        {/* 👤 Customer Info */}
                         <div>
                             <Label className="mb-1 block">Name</Label>
                             <Input
@@ -261,7 +271,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                                 value={form.name}
                                 onChange={(e) => handleChange("name", e.target.value)}
                                 required
-                                className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+                                className="input"
                             />
                         </div>
 
@@ -281,11 +291,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                                     }
                                 }}
                                 required
-                                className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+                                className="input"
                             />
                         </div>
 
-                        {/* 🧼 Service Selection */}
                         <div>
                             <Label className="mb-1 block">Service Type</Label>
                             <Select
@@ -309,7 +318,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                             </Select>
                         </div>
 
-                        {/* 🧼 Loads + Plastic */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label className="mb-1 block">Loads</Label>
@@ -328,7 +336,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                                         handleChange("loads", isNaN(numeric) || numeric < 1 ? 1 : numeric);
                                     }}
                                     required
-                                    className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+                                    className="input"
                                 />
                             </div>
 
@@ -351,13 +359,12 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                                                 const numeric = parseInt(cleaned, 10);
                                                 handleConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
                                             }}
-                                            className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+                                            className="input"
                                         />
                                     </div>
                                 ))}
                         </div>
 
-                        {/* 🧼 Other Consumables */}
                         {chunkedConsumables.map((pair, index) => (
                             <div
                                 key={index}
@@ -379,14 +386,13 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                                                 const numeric = parseInt(cleaned, 10);
                                                 handleConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
                                             }}
-                                            className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+                                            className="input"
                                         />
                                     </div>
                                 ))}
                             </div>
                         ))}
 
-                        {/* 💳 Payment Section */}
                         <PaymentSection
                             paymentStatus={form.paymentStatus}
                             amountGiven={form.amountGiven}

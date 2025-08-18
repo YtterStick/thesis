@@ -26,13 +26,19 @@ export const Sidebar = forwardRef(({ collapsed, links }, ref) => {
         <img src={logoDark} alt="Logo (dark)" className="h-6 hidden dark:block" />
         {!collapsed && (
           <p
-            className="text-lg font-starjedi text-white glow-text"
+            className={cn(
+              "text-lg font-starjedi tracking-wide",
+              theme === "dark" ? "text-white glow-text" : "text-slate-800"
+            )}
             style={{
-              textShadow: "0 0 3px rgba(255, 255, 255, 0.4)",
+              textShadow:
+                theme === "dark"
+                  ? "0 0 3px rgba(255, 255, 255, 0.4)"
+                  : "0 0 2px rgba(0, 0, 0, 0.2)",
               letterSpacing: "1px",
             }}
           >
-            Starwash
+            STAR WASH
           </p>
         )}
       </div>
@@ -80,4 +86,4 @@ Sidebar.displayName = "Sidebar";
 Sidebar.propTypes = {
   collapsed: PropTypes.bool,
   links: PropTypes.array.isRequired,
-};  
+};

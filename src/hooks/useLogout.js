@@ -1,6 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
-import { jwtDecode } from "jwt-decode";
+import {
+  getToken,
+  decodeToken,
+  clearAuthTokens,
+} from "@/lib/auth"; // ✅ centralized token logic
 
 export const useLogout = () => {
   const navigate = useNavigate();
@@ -8,39 +12,41 @@ export const useLogout = () => {
 
   const logout = async () => {
     try {
-      const token = localStorage.getItem("authToken");
+      const token = getToken();
 
       if (token) {
         // 🧠 Optional: Log token metadata before logout
-        try {
-          const decoded = jwtDecode(token);
+        const decoded = decodeToken(token);
+        if (decoded) {
           console.log("👤 Logging out:", decoded.sub);
+          console.log("🔐 Role:", decoded.role);
           console.log("🕒 Issued at:", new Date(decoded.iat * 1000).toLocaleString());
           console.log("⏳ Expires at:", new Date(decoded.exp * 1000).toLocaleString());
-        } catch {
-          console.warn("⚠️ Failed to decode token before logout");
         }
 
         // 🔐 Call backend logout
-        const response = await fetch("http://localhost:8080/logout", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        try {
+          const response = await fetch("http://localhost:8080/logout", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
 
-        const text = await response.text();
+          const text = await response.text();
 
-        if (!response.ok) {
-          console.warn("🚧 Logout failed:", text);
-        } else {
-          console.log("✅ Backend logout success");
+          if (!response.ok) {
+            console.warn("🚧 Logout failed:", text);
+          } else {
+            console.log("✅ Backend logout success");
+          }
+        } catch (err) {
+          console.warn("⚠️ Backend logout error:", err.message);
         }
       }
 
-      // 💣 Clear token and reset context
-      localStorage.removeItem("authToken");
-      localStorage.setItem("lastLogout", new Date().toISOString()); // 🧾 Optional audit trail
+      // 💣 Clear all tokens and reset context
+      clearAuthTokens();
       contextLogout(); // ✅ sync with AuthProvider
 
       // 🚀 Redirect

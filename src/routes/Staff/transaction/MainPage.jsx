@@ -9,6 +9,9 @@ import { RotateCcw, XCircle } from "lucide-react";
 
 const ALLOWED_SKEW_MS = 5000;
 
+/**
+ * ⏳ Check if token is expired (with skew buffer)
+ */
 const isTokenExpired = (token) => {
   try {
     const payload = token.split(".")[1];
@@ -27,18 +30,26 @@ const isTokenExpired = (token) => {
   }
 };
 
+/**
+ * 🔐 Secure fetch wrapper with token validation
+ */
 const secureFetch = async (endpoint, method = "GET", body = null) => {
   const token = localStorage.getItem("authToken");
 
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    throw new Error("Token expired");
+  console.log("🔐 Token being sent:", token);
+
+  if (!token || typeof token !== "string" || !token.includes(".") || isTokenExpired(token)) {
+    console.warn("⛔ Token expired or malformed. Redirecting to login.");
+    window.location.href = "/login";
+    throw new Error("Token expired or invalid");
   }
 
   const headers = {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
   };
+
+  console.log("📦 Request headers:", headers);
 
   const options = { method, headers };
   if (body) options.body = JSON.stringify(body);
@@ -72,9 +83,6 @@ const MainPage = () => {
       return settings;
     } catch (error) {
       console.error("❌ Failed to fetch settings:", error);
-      if (error.message === "Token expired") {
-        window.location.href = "/login";
-      }
       throw error;
     }
   };
