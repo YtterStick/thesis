@@ -1,31 +1,35 @@
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/auth-context";
 import { Navigate } from "react-router-dom";
 import PropTypes from "prop-types";
+import AuthLoader from "@/components/feedback/AuthLoader"; // ✅ correct path
 
 const AuthGuard = ({ requiredRole, children }) => {
   const { isAuthenticated, role, loading } = useAuth();
 
-  // While fetching /me or waiting for auth to resolve
+  // ⏳ Wait for /me hydration
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-100 dark:bg-slate-950">
-        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Authenticating...</p>
-      </div>
-    );
+    return <AuthLoader />;
   }
 
-  // If not logged in or doesn't match required role
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-if (role?.toUpperCase() !== requiredRole?.toUpperCase()) {
-  return <Navigate to="/unauthorized" replace />;
-}
+  // 🔐 Not logged in
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
-  // Authorized — render protected content
+  // 🚫 Role mismatch (if requiredRole is provided)
+  if (
+    requiredRole &&
+    role?.toUpperCase() !== requiredRole.toUpperCase()
+  ) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  // ✅ Authorized — render protected content
   return children;
 };
 
 AuthGuard.propTypes = {
-  requiredRole: PropTypes.string.isRequired,
+  requiredRole: PropTypes.string, // optional
   children: PropTypes.node.isRequired,
 };
 

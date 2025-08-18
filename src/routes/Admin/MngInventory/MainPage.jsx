@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import {
   Plus,
   Boxes,
@@ -12,6 +11,53 @@ import InventoryTable from "./InventoryTable";
 import StockModal from "./StockModal";
 import { Button } from "@/components/ui/button";
 
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+
+    console.log("🔍 Token expiration check:");
+    console.log("⏳ Exp:", new Date(exp).toLocaleString());
+    console.log("🕒 Now:", new Date(now).toLocaleString());
+
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken"); // ✅ consistent with backend
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
+
 const MainPage = () => {
   const [items, setItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -19,26 +65,14 @@ const MainPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showStockModal, setShowStockModal] = useState(false);
 
-  const getAxiosWithAuth = () => {
-    const token = localStorage.getItem("token");
-    return axios.create({
-      baseURL: "http://localhost:8080/api",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  };
-
   useEffect(() => {
     fetchInventory();
   }, []);
 
   const fetchInventory = async () => {
     try {
-      const response = await getAxiosWithAuth().get("/stock");
-      const safeItems = Array.isArray(response.data)
-        ? response.data
-        : response.data.items ?? [];
+      const data = await secureFetch("/stock");
+      const safeItems = Array.isArray(data) ? data : data.items ?? [];
       setItems(safeItems);
     } catch (error) {
       console.error("Error loading inventory:", error);
@@ -48,9 +82,9 @@ const MainPage = () => {
   const handleSave = async (data) => {
     try {
       if (editingItem) {
-        await getAxiosWithAuth().put(`/stock/${editingItem.id}`, data);
+        await secureFetch(`/stock/${editingItem.id}`, "PUT", data);
       } else {
-        await getAxiosWithAuth().post("/stock", data);
+        await secureFetch("/stock", "POST", data);
       }
       fetchInventory();
       setShowForm(false);
@@ -62,7 +96,7 @@ const MainPage = () => {
 
   const handleDelete = async (item) => {
     try {
-      await getAxiosWithAuth().delete(`/stock/${item.id}`);
+      await secureFetch(`/stock/${item.id}`, "DELETE");
       fetchInventory();
     } catch (error) {
       console.error("Error deleting item:", error);
@@ -76,7 +110,7 @@ const MainPage = () => {
 
   const handleAddStock = async (amount) => {
     try {
-      await getAxiosWithAuth().put(`/stock/${selectedItem.id}/restock?amount=${amount}`);
+      await secureFetch(`/stock/${selectedItem.id}/restock?amount=${amount}`, "PUT");
       fetchInventory();
     } catch (error) {
       console.error("Error adding stock:", error);

@@ -4,6 +4,53 @@ import StaffForm from "./StaffForm";
 import AuditTrail from "./AuditTrail";
 import { ShieldCheck, Users, User, Plus } from "lucide-react";
 
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+
+    console.log("🔍 Token expiration check:");
+    console.log("⏳ Exp:", new Date(exp).toLocaleString());
+    console.log("🕒 Now:", new Date(now).toLocaleString());
+
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
+
 const MainPage = () => {
   const [accountList, setAccountList] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -11,36 +58,17 @@ const MainPage = () => {
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [error, setError] = useState(null);
 
-  const token = localStorage.getItem("token");
-
   const totalAdmins = accountList.filter((acc) => acc.role === "ADMIN").length;
   const totalStaff = accountList.filter((acc) => acc.role === "STAFF").length;
 
   useEffect(() => {
-    if (!token) {
-      setError("No token found. Please log in.");
-      return;
-    }
-
     const fetchAccounts = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/accounts", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Unauthorized or failed to fetch accounts.");
-        }
-
-        const data = await response.json();
+        const data = await secureFetch("/accounts");
         const enriched = data.map((acc) => ({
           ...acc,
           status: "Active",
         }));
-
         setAccountList(enriched);
       } catch (error) {
         console.error("❌ Error fetching accounts:", error.message);
@@ -49,7 +77,7 @@ const MainPage = () => {
     };
 
     fetchAccounts();
-  }, [token]);
+  }, []);
 
   const toggleStatus = (id) => {
     setAccountList((prev) =>

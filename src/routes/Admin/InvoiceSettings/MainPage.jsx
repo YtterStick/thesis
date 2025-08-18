@@ -6,7 +6,53 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QRCode from "react-qr-code";
 import { ScrollText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import axios from "axios";
+
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return response.json();
+  } else {
+    return response.text(); // fallback for plain string responses
+  }
+};
 
 export default function InvoiceSettingsPage() {
   const { toast } = useToast();
@@ -26,27 +72,16 @@ export default function InvoiceSettingsPage() {
   const customerName = "Andrei Dilag";
   const sampleInvoiceId = "inv123";
 
-  const getAxiosWithAuth = () => {
-    const token = localStorage.getItem("token");
-    return axios.create({
-      baseURL: "http://localhost:8080/api",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  };
-
   const fetchSettings = async () => {
     try {
-      const res = await getAxiosWithAuth().get("/invoice-settings");
-      const data = res.data;
+      const data = await secureFetch("/invoice-settings");
       setStoreName(data.storeName || "");
       setAddress(data.address || "");
       setPhone(data.phone || "");
       setFooterNote(data.footerNote || "");
       setTrackingUrl(data.trackingUrl || "");
     } catch (error) {
-      console.error("Failed to fetch invoice settings:", error);
+      console.error("Failed to fetch invoice settings:", error.message);
     }
   };
 
@@ -56,18 +91,15 @@ export default function InvoiceSettingsPage() {
 
   const handleSave = async () => {
     try {
-      const payload = {
-        storeName,
-        address,
-        phone,
-        footerNote,
-        trackingUrl,
-      };
-      await getAxiosWithAuth().post("/invoice-settings", payload);
+      const payload = { storeName, address, phone, footerNote, trackingUrl };
+      const result = await secureFetch("/invoice-settings", "POST", payload);
+      console.log("✅ Save response:", result);
+
       toast({
         title: "Saved",
         description: "Invoice settings updated successfully.",
       });
+
       await fetchSettings();
     } catch (error) {
       toast({
@@ -75,7 +107,7 @@ export default function InvoiceSettingsPage() {
         description: "Failed to save invoice settings.",
         variant: "destructive",
       });
-      console.error("Save error:", error);
+      console.error("Save error:", error.message);
     }
   };
 
@@ -139,9 +171,9 @@ export default function InvoiceSettingsPage() {
           </CardHeader>
           <CardContent className="p-4 overflow-y-auto">
             <div className="bg-white dark:bg-slate-950 font-mono text-sm space-y-2 border border-dashed rounded-md dark:border-gray-600 print:border-gray-300 print:text-black p-4">
-              <div className="text-center font-bold text-lg dark:text-white">{storeName}</div>
-              <div className="text-center dark:text-gray-300">{address}</div>
-              <div className="text-center dark:text-gray-300">{phone}</div>
+              <div className="text-center font-bold text-lg dark:text-white">{storeName || "Store Name"}</div>
+              <div className="text-center dark:text-gray-300">{address || "Store Address"}</div>
+              <div className="text-center dark:text-gray-300">{phone || "Phone Number"}</div>
 
               <hr className="my-2 border-t border-gray-300 dark:border-gray-600 print:border-gray-300" />
 
@@ -162,7 +194,7 @@ export default function InvoiceSettingsPage() {
 
               <hr className="my-2 border-t border-gray-300 dark:border-gray-600 print:border-gray-300" />
 
-              <div className="space-y-1 dark:text-white">
+                            <div className="space-y-1 dark:text-white">
                 <div className="flex justify-between">
                   <span>Wash & Dry (3 Loads)</span>
                   <span>₱150.00</span>
@@ -175,6 +207,10 @@ export default function InvoiceSettingsPage() {
                   <span>Fabric Softener ({fabricQty} pc)</span>
                   <span>₱10.00</span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Plastic ({plasticQty} pc)</span>
+                  <span>₱0.00</span>
+                </div>
               </div>
 
               <hr className="my-2 border-t border-gray-300 dark:border-gray-600 print:border-gray-300" />
@@ -186,7 +222,7 @@ export default function InvoiceSettingsPage() {
               <div className="flex justify-between dark:text-white">
                 <span>Tax (0%)</span>
                 <span>₱0.00</span>
-                           </div>
+              </div>
               <div className="flex justify-between font-bold dark:text-white">
                 <span>Total</span>
                 <span>₱180.00</span>
@@ -199,7 +235,7 @@ export default function InvoiceSettingsPage() {
                 Scan to track your laundry status
               </div>
               <div className="text-center mt-2 text-xs dark:text-gray-300">
-                {footerNote}
+                {footerNote || "Thank you for your business!"}
               </div>
             </div>
           </CardContent>

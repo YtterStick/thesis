@@ -5,7 +5,7 @@ import {
   createContext,
   useContext,
 } from "react";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 const AuthContext = createContext();
 
@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
 
   const getStoredToken = () => localStorage.getItem("authToken");
 
-  useEffect(() => {
+  const hydrate = async () => {
     const token = getStoredToken();
 
     if (!token) {
@@ -37,54 +37,75 @@ export const AuthProvider = ({ children }) => {
         resetAuth();
         return;
       }
-
-      fetch("http://localhost:8080/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Invalid token");
-          return res.json();
-        })
-        .then((data) => {
-          setUser({ username: data.user, role: data.role });
-          setIsAuthenticated(true);
-          console.log("✅ AuthContext initialized:", data);
-        })
-        .catch((err) => {
-          console.warn("⚠️ AuthContext fetch error:", err.message);
-          resetAuth();
-        })
-        .finally(() => setLoading(false));
     } catch (err) {
       console.warn("❌ Invalid token format");
       resetAuth();
+      return;
     }
-  }, []);
-
-  const login = async (token) => {
-    localStorage.setItem("authToken", token);
-    setIsAuthenticating(true);
 
     try {
       const res = await fetch("http://localhost:8080/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error("Failed to fetch user");
+      if (!res.ok) throw new Error("Invalid token");
 
       const data = await res.json();
       setUser({ username: data.user, role: data.role });
       setIsAuthenticated(true);
-      console.log("🔐 Logged in:", data);
+      console.log("✅ AuthContext initialized:", data);
     } catch (err) {
-      console.warn("⚠️ Login error:", err.message);
+      console.warn("⚠️ AuthContext fetch error:", err.message);
       resetAuth();
     } finally {
-      setIsAuthenticating(false);
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    hydrate();
+  }, []);
+
+  useEffect(() => {
+    const syncAuth = (e) => {
+      if (e.key === "authToken") {
+        if (e.newValue === null) {
+          console.log("🔄 Token removed in another tab. Logging out.");
+          resetAuth();
+        } else {
+          console.log("🔄 Token added in another tab. Rehydrating auth.");
+          hydrate();
+        }
+      }
+    };
+
+    window.addEventListener("storage", syncAuth);
+    return () => window.removeEventListener("storage", syncAuth);
+  }, []);
+
+  const login = async (token) => {
+    localStorage.setItem("authToken", token);
+
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "authToken",
+        newValue: token,
+      })
+    );
+
+    await hydrate();
+  };
+
   const logout = () => {
+    localStorage.removeItem("authToken");
+
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "authToken",
+        newValue: null,
+      })
+    );
+
     resetAuth();
     console.log("🚪 Logged out");
   };

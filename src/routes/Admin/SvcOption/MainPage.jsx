@@ -9,34 +9,63 @@ import {
 import EditServiceModal from "./components/EditServiceModal";
 import { Button } from "@/components/ui/button";
 
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+
+    console.log("🔍 Token expiration check:");
+    console.log("⏳ Exp:", new Date(exp).toLocaleString());
+    console.log("🕒 Now:", new Date(now).toLocaleString());
+
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
+
 export default function MainPage() {
   const [services, setServices] = useState([]);
   const [editTarget, setEditTarget] = useState(null);
   const [error, setError] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
-  const token = localStorage.getItem("token");
-
   useEffect(() => {
-    if (!token) {
-      setError("No token found. Please log in.");
-      return;
-    }
-
     const fetchServices = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/services", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Unauthorized or failed to fetch services.");
-        }
-
-        const data = await response.json();
+        const data = await secureFetch("/services");
         setServices(data);
       } catch (err) {
         console.error("❌ Error fetching services:", err.message);
@@ -45,27 +74,14 @@ export default function MainPage() {
     };
 
     fetchServices();
-  }, [token]);
+  }, []);
 
   const handleSave = async (updated) => {
     const method = updated.id ? "PUT" : "POST";
-    const url = updated.id
-      ? `http://localhost:8080/api/services/${updated.id}`
-      : "http://localhost:8080/api/services";
+    const endpoint = updated.id ? `/services/${updated.id}` : "/services";
 
     try {
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updated),
-      });
-
-      if (!response.ok) throw new Error("Failed to save service");
-
-      const saved = await response.json();
+      const saved = await secureFetch(endpoint, method, updated);
 
       setServices((prev) => {
         const exists = prev.some((s) => s.id === saved.id);
@@ -83,15 +99,7 @@ export default function MainPage() {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/services/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error("Failed to delete service");
-
+      await secureFetch(`/services/${id}`, "DELETE");
       setServices((prev) => prev.filter((s) => s.id !== id));
       setConfirmDeleteId(null);
     } catch (error) {

@@ -2,7 +2,6 @@ package com.starwash.authservice.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SecurityException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -23,70 +22,83 @@ public class JwtUtil {
     }
 
     public String generateToken(String username, String role) {
-        String token = Jwts.builder()
-            .setSubject(username)
-            .claim("role", role.toUpperCase())
-            .setIssuedAt(new Date())
-            .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
-            .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-            .compact();
+        Date issuedAt = new Date();
+        Date expiresAt = new Date(System.currentTimeMillis() + jwtExpiration);
 
-        System.out.println("🛠️ Generated token for " + username + ": " + token);
+        String token = Jwts.builder()
+                .setSubject(username)
+                .claim("role", role.toUpperCase())
+                .setIssuedAt(issuedAt)
+                .setExpiration(expiresAt)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+
+        System.out.println("🛠️ Generated token for " + username);
+        System.out.println("🕒 Issued at: " + issuedAt);
+        System.out.println("⏳ Expires at: " + expiresAt);
+        System.out.println("🔑 Token: " + token);
+
         return token;
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token);
+            Claims claims = extractClaims(token);
+            Date now = new Date();
+            Date exp = claims.getExpiration();
 
-            System.out.println("✅ Token validated");
+            long skewMs = 5000; // match frontend
+            if (exp.getTime() + skewMs < now.getTime()) {
+                System.out.println("⏳ Token expired with skew for user: " + claims.getSubject());
+                return false;
+            }
+
             return true;
         } catch (ExpiredJwtException e) {
-            System.out.println("⚠️ Token expired: " + e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            System.out.println("⚠️ Unsupported token: " + e.getMessage());
-        } catch (MalformedJwtException e) {
-            System.out.println("⚠️ Malformed token: " + e.getMessage());
-        } catch (SecurityException e) {
-            System.out.println("⚠️ Invalid signature: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            System.out.println("❌ Illegal argument: " + e.getMessage());
+            System.out.println("⏳ Token expired for user: " + e.getClaims().getSubject());
+        } catch (JwtException e) {
+            System.out.println("❌ JWT validation failed: " + e.getMessage());
         }
         return false;
     }
 
     public String getUsername(String token) {
         try {
-            Claims claims = extractClaims(token);
-            String username = claims.getSubject();
-            System.out.println("👤 Extracted username: " + username);
-            return username;
+            return extractClaims(token).getSubject();
         } catch (Exception e) {
-            System.out.println("❌ Failed to extract username: " + e.getMessage());
             return null;
         }
     }
 
     public String getRole(String token) {
         try {
-            Claims claims = extractClaims(token);
-            String role = claims.get("role", String.class);
-            System.out.println("🔐 Extracted role: " + role);
-            return role;
+            return extractClaims(token).get("role", String.class);
         } catch (Exception e) {
-            System.out.println("❌ Failed to extract role: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public Date getIssuedAt(String token) {
+        try {
+            return extractClaims(token).getIssuedAt();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public Date getExpiration(String token) {
+        try {
+            return extractClaims(token).getExpiration();
+        } catch (Exception e) {
             return null;
         }
     }
 
     private Claims extractClaims(String token) {
         return Jwts.parserBuilder()
-            .setSigningKey(getSigningKey())
-            .build()
-            .parseClaimsJws(token)
-            .getBody();
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }

@@ -7,6 +7,52 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { RotateCcw, XCircle } from "lucide-react";
 
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+
+    console.log("🔍 Token expiration check:");
+    console.log("⏳ Exp:", new Date(exp).toLocaleString());
+    console.log("🕒 Now:", new Date(now).toLocaleString());
+
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    throw new Error("Token expired");
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
+
 const MainPage = () => {
   const formRef = useRef();
   const [transaction, setTransaction] = useState(null);
@@ -20,20 +66,17 @@ const MainPage = () => {
   }, []);
 
   const fetchSettings = async (isPaid) => {
-    const token = localStorage.getItem("token");
-    const endpoint = isPaid
-      ? "http://localhost:8080/api/receipt-settings"
-      : "http://localhost:8080/api/invoice-settings";
-
-    const res = await fetch(endpoint, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!res.ok) throw new Error("Failed to fetch settings");
-    return await res.json();
+    const endpoint = isPaid ? "/receipt-settings" : "/invoice-settings";
+    try {
+      const settings = await secureFetch(endpoint);
+      return settings;
+    } catch (error) {
+      console.error("❌ Failed to fetch settings:", error);
+      if (error.message === "Token expired") {
+        window.location.href = "/login";
+      }
+      throw error;
+    }
   };
 
   const handleSubmit = async (formData) => {
@@ -53,7 +96,7 @@ const MainPage = () => {
       setPreviewData(null);
       setShowActions(false);
     } catch (error) {
-      console.error("Failed to fetch settings:", error);
+      console.error("❌ Transaction failed:", error);
     }
   };
 

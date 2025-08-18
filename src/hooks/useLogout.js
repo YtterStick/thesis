@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/auth-context";
+import { jwtDecode } from "jwt-decode";
 
 export const useLogout = () => {
   const navigate = useNavigate();
@@ -10,6 +11,17 @@ export const useLogout = () => {
       const token = localStorage.getItem("authToken");
 
       if (token) {
+        // 🧠 Optional: Log token metadata before logout
+        try {
+          const decoded = jwtDecode(token);
+          console.log("👤 Logging out:", decoded.sub);
+          console.log("🕒 Issued at:", new Date(decoded.iat * 1000).toLocaleString());
+          console.log("⏳ Expires at:", new Date(decoded.exp * 1000).toLocaleString());
+        } catch {
+          console.warn("⚠️ Failed to decode token before logout");
+        }
+
+        // 🔐 Call backend logout
         const response = await fetch("http://localhost:8080/logout", {
           method: "POST",
           headers: {
@@ -28,6 +40,7 @@ export const useLogout = () => {
 
       // 💣 Clear token and reset context
       localStorage.removeItem("authToken");
+      localStorage.setItem("lastLogout", new Date().toISOString()); // 🧾 Optional audit trail
       contextLogout(); // ✅ sync with AuthProvider
 
       // 🚀 Redirect

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/auth-context";
 import {
   Card,
   CardContent,
@@ -20,8 +20,18 @@ const decodeToken = (token) => {
   try {
     const payload = token.split(".")[1];
     const decoded = JSON.parse(atob(payload));
-    const isExpired = decoded.exp * 1000 < Date.now();
-    return isExpired ? null : decoded;
+
+    const issuedAt = new Date(decoded.iat * 1000);
+    const expiresAt = new Date(decoded.exp * 1000);
+    const isExpired = expiresAt.getTime() < Date.now();
+
+    if (isExpired) return null;
+
+    return {
+      ...decoded,
+      issuedAt,
+      expiresAt,
+    };
   } catch {
     return null;
   }
@@ -35,8 +45,8 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const [loginMeta, setLoginMeta] = useState(null);
 
-  // ✅ Redirect if already authenticated (even from another tab)
   useEffect(() => {
     if (!loading && isAuthenticated && role) {
       const normalizedRole = role.toUpperCase();
@@ -84,10 +94,17 @@ const LoginPage = () => {
       const decoded = decodeToken(token);
       if (!decoded) throw new Error("Token expired or invalid");
 
+      console.log("🕒 Login time:", decoded.issuedAt.toLocaleString());
+      console.log("⏳ Token expires at:", decoded.expiresAt.toLocaleString());
+
+      setLoginMeta({
+        issuedAt: decoded.issuedAt,
+        expiresAt: decoded.expiresAt,
+      });
+
       localStorage.setItem("authToken", token);
       await login(token);
 
-      // ✅ Redirect immediately in this tab
       const normalizedRole = decoded.role?.toUpperCase();
       if (normalizedRole === "ADMIN") {
         navigate("/dashboard");
@@ -194,14 +211,22 @@ const LoginPage = () => {
                 )}
               </div>
 
-              {/* 🔘 Login Button */}
+                            {/* 🔘 Login Button */}
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-[#0077CC] via-[#00B5FF] to-[#0077CC] px-4 py-2 text-xs font-medium text-slate-900 shadow-[0_0_8px_#00B5FF80] transition-transform hover:scale-[1.01] hover:shadow-[0_0_12px_#00B5FF80]"
-                            >
+              >
                 Login
               </Button>
             </form>
+
+            {/* 🕒 Optional Login Metadata */}
+            {loginMeta && (
+              <div className="mt-4 space-y-1 text-xs text-slate-400">
+                <p>🕒 Logged in at: {loginMeta.issuedAt.toLocaleString()}</p>
+                <p>⏳ Token expires at: {loginMeta.expiresAt.toLocaleString()}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

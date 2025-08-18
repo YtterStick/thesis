@@ -19,6 +19,54 @@ import {
 } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
 
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+
+    console.log("🔍 Token expiration check:");
+    console.log("⏳ Exp:", new Date(exp).toLocaleString());
+    console.log("🕒 Now:", new Date(now).toLocaleString());
+
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "POST", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080${endpoint}`, options);
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error(`❌ ${method} ${endpoint} failed:`, error);
+    throw new Error(error.message || "Request failed");
+  }
+
+  return response.json();
+};
+
 const StaffForm = ({ onAdd, onClose }) => {
   const [form, setForm] = useState({
     username: "",
@@ -57,20 +105,7 @@ const StaffForm = ({ onAdd, onClose }) => {
     };
 
     try {
-      const res = await fetch("http://localhost:8080/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        alert("❌ Registration failed.");
-        console.error("Backend error:", error);
-        return;
-      }
-
-      const result = await res.json();
+      const result = await secureFetch("/register", "POST", payload);
 
       if (typeof onAdd === "function") {
         onAdd({
@@ -95,7 +130,7 @@ const StaffForm = ({ onAdd, onClose }) => {
         onClose();
       }
     } catch (err) {
-      alert("❌ Server connection error");
+      alert("❌ Registration failed.");
       console.error("API error:", err);
     }
   };
@@ -139,7 +174,7 @@ const StaffForm = ({ onAdd, onClose }) => {
             </button>
           </div>
 
-          {/* Confirm Password (always hidden) */}
+          {/* Confirm Password */}
           <Input
             type="password"
             placeholder="Confirm Password"
@@ -149,7 +184,7 @@ const StaffForm = ({ onAdd, onClose }) => {
             className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
           />
 
-          {/* Contact Input with +63 Prefix */}
+          {/* Contact Input */}
           <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-950 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-400 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-slate-950">
             <span className="px-3 text-slate-500 dark:text-slate-400">+63</span>
             <Input
@@ -166,6 +201,7 @@ const StaffForm = ({ onAdd, onClose }) => {
             />
           </div>
 
+          {/* Role Select */}
           <Select
             value={form.role}
             onValueChange={(value) => handleChange("role", value)}
@@ -186,7 +222,7 @@ const StaffForm = ({ onAdd, onClose }) => {
             </SelectContent>
           </Select>
 
-          <Button
+                    <Button
             type="submit"
             className="w-full bg-[#60A5FA] hover:bg-[#3B82F6] text-white rounded-md px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
           >

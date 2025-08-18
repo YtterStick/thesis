@@ -6,7 +6,53 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QRCode from "react-qr-code";
 import { Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import axios from "axios";
+
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return response.json();
+  } else {
+    return response.text(); // fallback for plain string responses
+  }
+};
 
 export default function ReceiptSettingsPage() {
   const { toast } = useToast();
@@ -30,27 +76,16 @@ export default function ReceiptSettingsPage() {
     staffName: "Sheena",
   };
 
-  const getAxiosWithAuth = () => {
-    const token = localStorage.getItem("token");
-    return axios.create({
-      baseURL: "http://localhost:8080/api",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  };
-
   const fetchSettings = async () => {
     try {
-      const res = await getAxiosWithAuth().get("/receipt-settings");
-      const data = res.data;
+      const data = await secureFetch("/receipt-settings");
       setStoreName(data.storeName || "");
       setAddress(data.address || "");
       setPhone(data.phone || "");
       setFooterNote(data.footerNote || "");
       setTrackingUrl(data.trackingUrl || "");
     } catch (error) {
-      console.error("Failed to fetch receipt settings:", error);
+      console.error("Failed to fetch receipt settings:", error.message);
     }
   };
 
@@ -60,18 +95,15 @@ export default function ReceiptSettingsPage() {
 
   const handleSave = async () => {
     try {
-      const payload = {
-        storeName,
-        address,
-        phone,
-        footerNote,
-        trackingUrl,
-      };
-      await getAxiosWithAuth().post("/receipt-settings", payload);
+      const payload = { storeName, address, phone, footerNote, trackingUrl };
+      const result = await secureFetch("/receipt-settings", "POST", payload);
+      console.log("✅ Save response:", result);
+
       toast({
         title: "Saved",
         description: "Receipt settings updated successfully.",
       });
+
       await fetchSettings(); // Refresh preview
     } catch (error) {
       toast({
@@ -79,7 +111,7 @@ export default function ReceiptSettingsPage() {
         description: "Failed to save receipt settings.",
         variant: "destructive",
       });
-      console.error("Save error:", error);
+      console.error("Save error:", error.message);
     }
   };
 
@@ -119,6 +151,7 @@ export default function ReceiptSettingsPage() {
                   value={value}
                   onChange={(e) => setter(e.target.value)}
                   placeholder={`Enter ${label.toLowerCase()}...`}
+                  aria-label={label}
                   className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00B7C2] dark:focus-visible:ring-[#00B7C2] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
                 />
               </div>
@@ -143,9 +176,9 @@ export default function ReceiptSettingsPage() {
           </CardHeader>
           <CardContent className="p-4 overflow-y-auto">
             <div className="bg-white dark:bg-slate-950 border border-gray-300 dark:border-gray-600 rounded-md p-4 font-mono text-sm space-y-2 print:text-black print:border-gray-300">
-              <div className="text-center font-bold text-lg dark:text-white">{storeName}</div>
-              <div className="text-center dark:text-gray-300">{address}</div>
-              <div className="text-center dark:text-gray-300">{phone}</div>
+              <div className="text-center font-bold text-lg dark:text-white">{storeName || "Store Name"}</div>
+              <div className="text-center dark:text-gray-300">{address || "Store Address"}</div>
+              <div className="text-center dark:text-gray-300">{phone || "Phone Number"}</div>
 
               <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
 
@@ -160,15 +193,27 @@ export default function ReceiptSettingsPage() {
               <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
 
               <div className="space-y-1 dark:text-white">
-                <div className="flex justify-between"><span>Detergents × {sampleReceiptItem.detergentQty}</span><span>₱{(sampleReceiptItem.detergentQty * 30).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Fabric Softeners × {sampleReceiptItem.fabricQty}</span><span>₱{(sampleReceiptItem.fabricQty * 30).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Plastic × {sampleReceiptItem.plasticQty}</span><span>₱{(sampleReceiptItem.plasticQty * 10).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Wash & Dry × {sampleReceiptItem.loads}</span><span>₱{(sampleReceiptItem.loads * 50).toFixed(2)}</span></div>
+                                <div className="flex justify-between">
+                  <span>Detergents × {sampleReceiptItem.detergentQty}</span>
+                  <span>₱{(sampleReceiptItem.detergentQty * 30).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Fabric Softeners × {sampleReceiptItem.fabricQty}</span>
+                  <span>₱{(sampleReceiptItem.fabricQty * 30).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Plastic × {sampleReceiptItem.plasticQty}</span>
+                  <span>₱{(sampleReceiptItem.plasticQty * 10).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Wash & Dry × {sampleReceiptItem.loads}</span>
+                  <span>₱{(sampleReceiptItem.loads * 50).toFixed(2)}</span>
+                </div>
               </div>
 
               <hr className="my-2 border-t border-gray-300 dark:border-gray-600" />
 
-                            <div className="flex justify-between font-bold dark:text-white">
+              <div className="flex justify-between font-bold dark:text-white">
                 <span>Total</span>
                 <span>₱{sampleReceiptItem.total.toFixed(2)}</span>
               </div>
@@ -180,7 +225,7 @@ export default function ReceiptSettingsPage() {
                 Scan to track your laundry status
               </div>
               <div className="text-center mt-2 text-xs text-slate-600 dark:text-gray-300">
-                {footerNote}
+                {footerNote || "Thank you for choosing our service!"}
               </div>
             </div>
           </CardContent>

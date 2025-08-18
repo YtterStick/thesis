@@ -35,7 +35,6 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         if (path.startsWith("/login") || path.startsWith("/register")) {
-            System.out.println("🔓 Skipping JWT filter for: " + path);
             chain.doFilter(request, response);
             return;
         }
@@ -47,23 +46,21 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (jwtUtil.validateToken(token)) {
                 String username = jwtUtil.getUsername(token);
-                String role = jwtUtil.getRole(token); // Expected format: "ADMIN" or "STAFF"
+                String role = jwtUtil.getRole(token);
 
-                System.out.println("✅ Token valid. User: " + username + ", Role: " + role);
+                if (username != null && role != null) {
+                    List<SimpleGrantedAuthority> authorities =
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
 
-                List<SimpleGrantedAuthority> authorities =
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(username, null, authorities);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            } else {
-                System.out.println("❌ Invalid JWT token");
+                    System.out.println("✅ Authenticated: " + username + " [" + role + "]");
+                }
             }
-        } else {
-            System.out.println("⚠️ Missing or invalid Authorization header");
         }
 
         chain.doFilter(request, response);

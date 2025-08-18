@@ -24,7 +24,7 @@ const InvoiceCard = ({ invoice, settings }) => {
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-PH", {
+    return isNaN(date) ? "Invalid Date" : date.toLocaleDateString("en-PH", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -50,8 +50,6 @@ const InvoiceCard = ({ invoice, settings }) => {
   const trackingUrl = invoiceNumber
     ? `http://localhost:3000/track/${invoiceNumber}`
     : null;
-
-  console.log("🔍 QR Tracking URL:", trackingUrl);
 
   const statusBadge = (
     <span

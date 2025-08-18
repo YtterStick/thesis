@@ -2,12 +2,15 @@ package com.starwash.authservice.controller;
 
 import com.starwash.authservice.model.User;
 import com.starwash.authservice.repository.UserRepository;
+import com.starwash.authservice.security.JwtUtil;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,10 +21,12 @@ import java.util.stream.Collectors;
 public class AccountController {
 
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
 
     @Autowired
-    public AccountController(UserRepository userRepository) {
+    public AccountController(UserRepository userRepository, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     // ✅ Fetch all accounts with sanitized response
@@ -39,7 +44,7 @@ public class AccountController {
                             user.getId(),
                             user.getUsername(),
                             user.getRole(),
-                            user.getContact() 
+                            user.getContact()
                     ))
                     .collect(Collectors.toList());
 
@@ -78,6 +83,37 @@ public class AccountController {
     @GetMapping("/debug/roles")
     public ResponseEntity<?> getCurrentUserRoles(org.springframework.security.core.Authentication authentication) {
         return ResponseEntity.ok(authentication.getAuthorities());
+    }
+
+    // 🕒 Debug token timestamps
+    @GetMapping("/debug/token")
+    public ResponseEntity<?> debugToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("🚫 Missing or invalid token");
+        }
+
+        String token = authHeader.replace("Bearer ", "");
+
+        if (!jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("🚫 Invalid or expired token");
+        }
+
+        String username = jwtUtil.getUsername(token);
+        Date issuedAt = jwtUtil.getIssuedAt(token);
+        Date expiresAt = jwtUtil.getExpiration(token);
+
+        System.out.println("🔍 Token introspection for: " + username);
+        System.out.println("🕒 Issued at: " + issuedAt);
+        System.out.println("⏳ Expires at: " + expiresAt);
+
+        return ResponseEntity.ok(
+                String.format("🧾 Token for %s\n🕒 Issued at: %s\n⏳ Expires at: %s",
+                        username,
+                        issuedAt.toString(),
+                        expiresAt.toString())
+        );
     }
 
     // 🧱 Internal DTO class to hide sensitive fields

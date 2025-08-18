@@ -6,31 +6,63 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Plus, X } from "lucide-react";
 import TermsModal from "./TermsModal";
 
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+
+    console.log("🔍 Token expiration check:");
+    console.log("⏳ Exp:", new Date(exp).toLocaleString());
+    console.log("🕒 Now:", new Date(now).toLocaleString());
+
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
+
 const MainPage = () => {
   const [terms, setTerms] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTerm, setEditingTerm] = useState(null);
   const [error, setError] = useState(null);
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   useEffect(() => {
-    if (!token) {
-      setError("No token found. Please log in.");
-      return;
-    }
-
     const fetchTerms = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/terms", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch terms");
-
-        const data = await response.json();
+        const data = await secureFetch("/terms");
         setTerms(data);
       } catch (err) {
         console.error("❌ Error fetching terms:", err.message);
@@ -39,22 +71,11 @@ const MainPage = () => {
     };
 
     fetchTerms();
-  }, [token]);
+  }, []);
 
   const handleAddTerm = async (newTerm) => {
     try {
-      const response = await fetch("http://localhost:8080/api/terms", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(newTerm),
-      });
-
-      if (!response.ok) throw new Error("Failed to save term");
-
-      const saved = await response.json();
+      const saved = await secureFetch("/terms", "POST", newTerm);
       setTerms((prev) => [...prev, saved]);
       setIsModalOpen(false);
     } catch (err) {
@@ -65,18 +86,7 @@ const MainPage = () => {
 
   const handleEditTerm = async (updatedTerm) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/terms/${updatedTerm.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatedTerm),
-      });
-
-      if (!response.ok) throw new Error("Failed to update term");
-
-      const saved = await response.json();
+      const saved = await secureFetch(`/terms/${updatedTerm.id}`, "PUT", updatedTerm);
       setTerms((prev) => prev.map((term) => (term.id === saved.id ? saved : term)));
       setEditingTerm(null);
       setIsModalOpen(false);
@@ -88,15 +98,7 @@ const MainPage = () => {
 
   const handleDeleteTerm = async (id) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/terms/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error("Failed to delete term");
-
+      await secureFetch(`/terms/${id}`, "DELETE");
       setTerms((prev) => prev.filter((term) => term.id !== id));
     } catch (err) {
       console.error("❌ Error deleting term:", err.message);
@@ -120,7 +122,7 @@ const MainPage = () => {
           </h1>
         </div>
 
-        {/* ✅ Add Terms Button with hover text color */}
+        {/* ✅ Add Terms Button */}
         <button
           onClick={() => {
             setEditingTerm(null);
@@ -137,10 +139,7 @@ const MainPage = () => {
 
       <Card className="border border-slate-300 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-white">
         <CardHeader>
-          {/* ✅ Removed Icon from Clause List */}
-          <CardTitle className="text-base">
-            Clause List
-          </CardTitle>
+          <CardTitle className="text-base">Clause List</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -160,7 +159,7 @@ const MainPage = () => {
                     <X size={16} />
                   </button>
 
-                  {/* 🧾 Clause Card with wrapping content */}
+                  {/* 🧾 Clause Card */}
                   <Card
                     onClick={() => openEditModal(term)}
                     className="group cursor-pointer border border-slate-300 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 p-6 shadow-sm transition-all duration-200 hover:shadow-md transform hover:scale-[1.01] dark:border-slate-700 w-full"

@@ -1,5 +1,5 @@
 import { ThemeProvider } from "@/contexts/theme-context";
-import { AuthProvider } from "@/hooks/useAuth";
+import { AuthProvider } from "@/contexts/auth-context";
 import {
   Navigate,
   createBrowserRouter,
@@ -18,10 +18,8 @@ import ServiceOptionPage from "@/routes/Admin/SvcOption/MainPage";
 import ReceiptSettingsPage from "@/routes/Admin/ReceiptSettings/MainPage";
 import InvoiceSettingsPage from "@/routes/Admin/InvoiceSettings/MainPage";
 import ManageReceiptPage from "@/routes/Admin/MngReceipt/MainPage";
-import MachineMainPage from "@/routes/Admin/Machine/MainPage"; // ✅ keep this
+import MachineMainPage from "@/routes/Admin/Machine/MainPage";
 import TermsSettingsPage from "@/routes/Admin/TermsSettings/MainPage";
-
-
 
 // 👕 Staff Pages
 import StaffDashboardPage from "@/routes/Staff/dashboard/page";
@@ -30,14 +28,32 @@ import NewTransactionPage from "@/routes/Staff/transaction/MainPage";
 // ✅ Toast Provider
 import { Toaster } from "@/components/ui/toaster";
 
-// 🛡️ Route Wrappers
-const AdminRoute = ({ element }) => <Layout>{element}</Layout>;
-const StaffRoute = ({ element }) => <Layout>{element}</Layout>; // Reuse layout for now
+// 🛡️ AuthGuard
+import AuthGuard from "@/utils/AuthGuard";
 
-// 🚨 Fallback Page
+// 🛡️ Route Wrappers with AuthGuard
+const AdminRoute = ({ element }) => (
+  <AuthGuard requiredRole="ADMIN">
+    <Layout>{element}</Layout>
+  </AuthGuard>
+);
+
+const StaffRoute = ({ element }) => (
+  <AuthGuard requiredRole="STAFF">
+    <Layout>{element}</Layout>
+  </AuthGuard>
+);
+
+// 🚨 Fallback Pages
 const NotFoundPage = () => (
   <div className="text-center text-red-500 mt-24 text-xl font-semibold">
     🚧 404 - Page Not Found
+  </div>
+);
+
+const UnauthorizedPage = () => (
+  <div className="text-center text-yellow-500 mt-24 text-xl font-semibold">
+    🚫 Unauthorized Access
   </div>
 );
 
@@ -45,6 +61,7 @@ function App() {
   const router = createBrowserRouter([
     { path: "/", element: <Navigate to="/login" replace /> },
     { path: "/login", element: <LoginPage /> },
+    { path: "/unauthorized", element: <UnauthorizedPage /> },
 
     // 🔒 Admin Routes
     { path: "/dashboard", element: <AdminRoute element={<DashboardPage />} /> },
@@ -60,7 +77,6 @@ function App() {
     { path: "/invoicesettings", element: <AdminRoute element={<InvoiceSettingsPage />} /> },
     { path: "/machines", element: <AdminRoute element={<MachineMainPage />} /> },
     { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
-
 
     // 👕 Staff Routes
     { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },

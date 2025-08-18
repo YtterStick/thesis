@@ -3,7 +3,7 @@ import { Header } from "@/layouts/header";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { useLocation, Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 import { useTheme } from "@/hooks/use-theme";
