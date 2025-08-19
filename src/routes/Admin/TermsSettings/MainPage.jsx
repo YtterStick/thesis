@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Plus, X } from "lucide-react";
 import TermsModal from "./TermsModal";
+import { useToast } from "@/hooks/use-toast";
 
 const ALLOWED_SKEW_MS = 5000;
 
@@ -46,11 +47,22 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
   const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
 
   if (!response.ok) {
-    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
-    throw new Error(`Request failed: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`Request failed: ${response.status} - ${errorText}`);
   }
 
-  return response.json();
+  const contentType = response.headers.get("content-type");
+
+  if (contentType && contentType.includes("application/json")) {
+    try {
+      return await response.json();
+    } catch (err) {
+      console.warn("Expected JSON but failed to parse:", err);
+      return null;
+    }
+  }
+
+  return null;
 };
 
 const MainPage = () => {
@@ -58,12 +70,13 @@ const MainPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTerm, setEditingTerm] = useState(null);
   const [error, setError] = useState(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchTerms = async () => {
       try {
         const data = await secureFetch("/terms");
-        setTerms(data);
+        setTerms(data || []);
       } catch (err) {
         console.error("❌ Error fetching terms:", err.message);
         setError("Failed to load terms.");
@@ -78,9 +91,19 @@ const MainPage = () => {
       const saved = await secureFetch("/terms", "POST", newTerm);
       setTerms((prev) => [...prev, saved]);
       setIsModalOpen(false);
+
+      toast({
+        title: "Term added",
+        description: `${saved.title} has been added.`,
+      });
     } catch (err) {
       console.error("❌ Error saving term:", err.message);
       setError("Failed to save term.");
+      toast({
+        title: "Save failed",
+        description: err.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -90,9 +113,19 @@ const MainPage = () => {
       setTerms((prev) => prev.map((term) => (term.id === saved.id ? saved : term)));
       setEditingTerm(null);
       setIsModalOpen(false);
+
+      toast({
+        title: "Term updated",
+        description: `${saved.title} has been updated.`,
+      });
     } catch (err) {
       console.error("❌ Error updating term:", err.message);
       setError("Failed to update term.");
+      toast({
+        title: "Update failed",
+        description: err.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -100,9 +133,19 @@ const MainPage = () => {
     try {
       await secureFetch(`/terms/${id}`, "DELETE");
       setTerms((prev) => prev.filter((term) => term.id !== id));
+
+      toast({
+        title: "Term deleted",
+        description: "The term has been removed successfully.",
+      });
     } catch (err) {
       console.error("❌ Error deleting term:", err.message);
       setError("Failed to delete term.");
+      toast({
+        title: "Delete failed",
+        description: err.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -114,7 +157,6 @@ const MainPage = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        {/* ✅ Header with Icon */}
         <div className="flex items-center gap-2">
           <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
@@ -122,7 +164,6 @@ const MainPage = () => {
           </h1>
         </div>
 
-        {/* ✅ Add Terms Button */}
         <button
           onClick={() => {
             setEditingTerm(null);
@@ -147,7 +188,6 @@ const MainPage = () => {
             {terms.length > 0 ? (
               terms.map((term, idx) => (
                 <div className="relative" key={term.id || idx}>
-                  {/* ❌ Delete Button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -159,7 +199,6 @@ const MainPage = () => {
                     <X size={16} />
                   </button>
 
-                  {/* 🧾 Clause Card */}
                   <Card
                     onClick={() => openEditModal(term)}
                     className="group cursor-pointer border border-slate-300 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 p-6 shadow-sm transition-all duration-200 hover:shadow-md transform hover:scale-[1.01] dark:border-slate-700 w-full"

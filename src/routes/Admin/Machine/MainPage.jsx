@@ -46,10 +46,23 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
     const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
 
     if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
+        const errorText = await response.text(); // fallback if no JSON
+        throw new Error(`Request failed: ${response.status} - ${errorText}`);
     }
 
-    return response.json();
+    const contentType = response.headers.get("content-type");
+
+    // ✅ Gracefully handle empty or non-JSON responses
+    if (contentType && contentType.includes("application/json")) {
+        try {
+            return await response.json();
+        } catch (err) {
+            console.warn("Expected JSON but failed to parse:", err);
+            return null;
+        }
+    }
+
+    return null; // for 204 No Content or application/octet-stream
 };
 
 export default function MachineMainPage() {
@@ -152,8 +165,18 @@ export default function MachineMainPage() {
             await secureFetch(`/machines/${id}`, "DELETE");
             setMachines((prev) => prev.filter((m) => m.id !== id));
             setConfirmDeleteId(null);
+            toast({
+                title: "Machine deleted",
+                description: "The machine has been removed successfully.",
+            });
         } catch (error) {
+            console.error("Error deleting machine:", error);
             setError("Failed to delete machine.");
+            toast({
+                title: "Delete failed",
+                description: error.message,
+                variant: "destructive",
+            });
         }
     };
 
