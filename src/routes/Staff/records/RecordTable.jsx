@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
-const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Softener", "Price", "Date", "Payment", "Pickup", "Actions"];
+const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Fabric", "Price", "Date", "Payment", "Pickup", "Actions"];
 
 const statusFilters = {
     payment: ["Paid", "Unpaid"],
@@ -54,7 +54,6 @@ const RecordTable = ({ items = [] }) => {
         setCurrentPage(1);
     }, [searchTerm, selectedRange, selectedPayment, selectedPickup]);
 
-    // close filters when clicking outside
     useEffect(() => {
         const handlePointerDown = (e) => {
             if (filterRef.current?.contains(e.target)) return;
@@ -64,7 +63,6 @@ const RecordTable = ({ items = [] }) => {
         return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, []);
 
-    // close calendar when clicking outside
     useEffect(() => {
         const handlePointerDown = (e) => {
             if (calendarRef.current?.contains(e.target)) return;
@@ -104,7 +102,6 @@ const RecordTable = ({ items = [] }) => {
     const totalPages = Math.ceil(filtered.length / rowsPerPage);
     const paginated = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-    // ✅ Print handler
     const handlePrint = (record) => {
         console.log("Printing receipt for:", record);
     };
@@ -118,7 +115,6 @@ const RecordTable = ({ items = [] }) => {
             <div className="flex flex-col gap-6">
                 {/* 🔍 Search + Filters + Calendar */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    {/* Left side: search */}
                     <div className="w-full max-w-xs flex-1">
                         <div className="relative w-full max-w-xs">
                             <div className="flex h-[38px] items-center rounded-md border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-cyan-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:focus-within:ring-cyan-400 dark:focus-within:ring-offset-slate-950">
@@ -140,9 +136,8 @@ const RecordTable = ({ items = [] }) => {
                         </div>
                     </div>
 
-                    {/* Right side: Filters + Calendar */}
+                    {/* Filters + Calendar */}
                     <div className="flex items-center gap-3">
-                        {/* Filter button */}
                         <div
                             className="relative"
                             ref={filterRef}
@@ -156,7 +151,6 @@ const RecordTable = ({ items = [] }) => {
                             {showFilters && (
                                 <div className="absolute left-0 z-50 mt-2 w-56 rounded-md border bg-white p-3 shadow-lg dark:border-slate-700 dark:bg-slate-800">
                                     <div className="space-y-4">
-                                        {/* Payment filter */}
                                         <div>
                                             <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">Payment</p>
                                             {statusFilters.payment.map((p) => (
@@ -172,8 +166,6 @@ const RecordTable = ({ items = [] }) => {
                                                 </label>
                                             ))}
                                         </div>
-
-                                        {/* Pickup filter */}
                                         <div>
                                             <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">Pickup</p>
                                             {statusFilters.pickup.map((p) => (
@@ -194,7 +186,7 @@ const RecordTable = ({ items = [] }) => {
                             )}
                         </div>
 
-                        {/* Calendar button */}
+                        {/* Calendar */}
                         <div
                             className="relative"
                             ref={calendarRef}
@@ -265,7 +257,7 @@ const RecordTable = ({ items = [] }) => {
                                         <td className="px-3 py-2">{record.service}</td>
                                         <td className="px-3 py-2">{record.loads}</td>
                                         <td className="px-3 py-2">{record.detergent}</td>
-                                        <td className="px-3 py-2">{record.softener}</td>
+                                        <td className="px-3 py-2">{record.fabric}</td>
                                         <td className="px-3 py-2">₱{record.price}</td>
                                         <td className="px-3 py-2">
                                             {record.createdAt && !isNaN(new Date(record.createdAt))
@@ -273,10 +265,21 @@ const RecordTable = ({ items = [] }) => {
                                                 : "—"}
                                         </td>
                                         <td className="p-2 text-slate-600 dark:text-slate-300">
-                                            <div className="flex items-center gap-2">
-                                                <span>{record.paymentStatus}</span>
-                                                {renderStatusBadge(record.paymentStatus)}
-                                            </div>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className="flex items-center gap-2">
+                                                        {record.paymentStatus === "Paid" ? (
+                                                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                        ) : (
+                                                            <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
+                                                        )}
+                                                        <span className="font-medium">{record.paymentStatus}</span>
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top">
+                                                    {record.paymentStatus === "Paid" ? "Payment completed" : "Payment pending"}
+                                                </TooltipContent>
+                                            </Tooltip>
                                         </td>
                                         <td className="p-2 text-slate-600 dark:text-slate-300">
                                             <div className="flex items-center gap-2">
@@ -306,33 +309,35 @@ const RecordTable = ({ items = [] }) => {
 
                 {/* 📄 Pagination */}
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 pt-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={currentPage === 1}
+                    <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+                        <button
                             onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className={`rounded px-3 py-1 transition-colors ${
+                                currentPage === 1
+                                    ? "cursor-not-allowed opacity-50"
+                                    : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
+                            }`}
                         >
-                            Previous
-                        </Button>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                            <Button
-                                key={page}
-                                size="sm"
-                                variant={page === currentPage ? "default" : "outline"}
-                                onClick={() => handlePageChange(page)}
-                            >
-                                {page}
-                            </Button>
-                        ))}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={currentPage === totalPages}
+                            Prev
+                        </button>
+
+                        <span className="font-medium text-slate-600 dark:text-slate-300">
+                            Page <span className="text-cyan-600 dark:text-cyan-400">{currentPage}</span> of{" "}
+                            <span className="text-cyan-600 dark:text-cyan-400">{totalPages}</span>
+                        </span>
+
+                        <button
                             onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className={`rounded px-3 py-1 transition-colors ${
+                                currentPage === totalPages
+                                    ? "cursor-not-allowed opacity-50"
+                                    : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
+                            }`}
                         >
                             Next
-                        </Button>
+                        </button>
                     </div>
                 )}
             </div>

@@ -1,57 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import RecordTable from "./RecordTable.jsx";
-import { PhilippinePeso, Package, Clock8, TimerOff, XCircle } from "lucide-react";
-
-const today = new Date().toISOString().split("T")[0];
-
-const initialRecords = [
-  {
-    id: 1,
-    name: "Sheyi Cat",
-    service: "Wash & Dry",
-    loads: 2,
-    detergent: "1",
-    softener: "3",
-    price: 100,
-    paymentStatus: "Paid",
-    date: today,
-    pickupStatus: "Unclaimed",
-    washed: false,
-    expired: false,
-  },
-  {
-    id: 2,
-    name: "Star Sami",
-    service: "Dry Clean",
-    loads: 1,
-    detergent: "Ariel",
-    softener: "None",
-    price: 40,
-    paymentStatus: "Unpaid",
-    date: today,
-    pickupStatus: "Expired",
-    washed: true,
-    expired: true,
-  },
-  {
-    id: 3,
-    name: "Sheena",
-    service: "Wash Only",
-    loads: 3,
-    detergent: "2",
-    softener: "1",
-    price: 90,
-    paymentStatus: "Unpaid",
-    date: today,
-    pickupStatus: "Unclaimed",
-    washed: false,
-    expired: false,
-  },
-];
+import {
+  PhilippinePeso,
+  Package,
+  Clock8,
+  TimerOff,
+  XCircle,
+  CheckCircle,
+} from "lucide-react";
 
 const MainPage = () => {
-  const [records] = useState(initialRecords);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchRecords = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        const res = await fetch("http://localhost:8080/api/records", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch records");
+
+        const data = await res.json();
+
+        const mapped = data.map((r) => ({
+          id: r.id,
+          name: r.customerName,
+          service: r.serviceName,
+          loads: r.loads,
+          detergent: r.detergent,
+          fabric: r.fabric || "—",
+          price: r.totalPrice,
+          paymentStatus: r.status,
+          pickupStatus: r.pickupStatus,
+          washed: r.washed,
+          expired: r.expired,
+          createdAt: r.createdAt,
+        }));
+
+        setRecords(mapped);
+      } catch (error) {
+        console.error("❌ Record fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecords();
+  }, []);
+
+  // 🧮 Metrics
   const totalIncome = records
     .filter((r) => r.paymentStatus === "Paid")
     .reduce((acc, r) => acc + r.price, 0);
@@ -59,62 +62,67 @@ const MainPage = () => {
   const totalLoads = records.reduce((acc, r) => acc + r.loads, 0);
   const unwashed = records.filter((r) => !r.washed).length;
   const expired = records.filter((r) => r.expired).length;
+  const paid = records.filter((r) => r.paymentStatus === "Paid").length;
   const unpaid = records.filter((r) => r.paymentStatus === "Unpaid").length;
 
+  const summaryCards = [
+    {
+      label: "Today's Income",
+      value: `₱${totalIncome.toFixed(2)}`,
+      icon: <PhilippinePeso size={26} />,
+      color: "#3DD9B6",
+      tooltip: "Total income from paid transactions",
+    },
+    {
+      label: "Today's Loads",
+      value: totalLoads,
+      icon: <Package size={26} />,
+      color: "#60A5FA",
+      tooltip: "Total number of laundry loads today",
+    },
+    {
+      label: "Unwashed Loads",
+      value: unwashed,
+      icon: <Clock8 size={26} />,
+      color: "#FB923C",
+      tooltip: "Loads that haven't been washed yet",
+    },
+    {
+      label: "Expired Loads",
+      value: expired,
+      icon: <TimerOff size={26} />,
+      color: "#A78BFA",
+      tooltip: "Loads that exceeded their pickup window",
+    },
+    {
+      label: "Unpaid",
+      value: unpaid,
+      icon: <XCircle size={26} />,
+      color: "#F87171",
+      tooltip: "Transactions marked as unpaid",
+    },
+    {
+      label: "Paid",
+      value: paid,
+      icon: <CheckCircle size={26} />,
+      color: "#34D399",
+      tooltip: "Transactions marked as paid",
+    },
+  ];
+
   return (
-    <main className="relative p-6 space-y-6">
+    <main className="relative space-y-6 p-6">
       {/* 🧢 Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
           Staff Laundry Records
         </h1>
       </div>
 
       {/* 🎨 Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {[
-          {
-            label: "Today's Income",
-            value: `₱${totalIncome.toFixed(2)}`,
-            icon: <PhilippinePeso size={26} />,
-            growth: "+4% vs yesterday",
-            color: "#3DD9B6",
-            growthColor: "text-emerald-700 dark:text-[#28b99a]",
-          },
-          {
-            label: "Today's Loads",
-            value: totalLoads,
-            icon: <Package size={26} />,
-            growth: "+2% vs yesterday",
-            color: "#60A5FA",
-            growthColor: "text-blue-600 dark:text-blue-400",
-          },
-          {
-            label: "Unwashed Loads",
-            value: unwashed,
-            icon: <Clock8 size={26} />,
-            growth: "+1%",
-            color: "#FB923C",
-            growthColor: "text-orange-600 dark:text-orange-400",
-          },
-          {
-            label: "Expired Loads",
-            value: expired,
-            icon: <TimerOff size={26} />,
-            growth: "+0%",
-            color: "#F87171",
-            growthColor: "text-red-600 dark:text-red-400",
-          },
-          {
-            label: "Unpaid",
-            value: unpaid,
-            icon: <XCircle size={26} />,
-            growth: "+3%",
-            color: "#A78BFA",
-            growthColor: "text-violet-600 dark:text-violet-400",
-          },
-        ].map(({ label, value, icon, growth, color, growthColor }) => (
-          <div key={label} className="card">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+        {summaryCards.map(({ label, value, icon, color, tooltip }) => (
+          <div key={label} className="card" title={tooltip}>
             <div className="card-header flex items-center gap-x-3">
               <div
                 className="w-fit rounded-lg p-2"
@@ -129,9 +137,19 @@ const MainPage = () => {
             </div>
             <div className="card-body rounded-md bg-slate-100 p-4 transition-colors dark:bg-slate-950">
               <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">
-                {value}
+                {loading ? (
+                  <span className="inline-block h-6 w-20 animate-pulse rounded bg-slate-300 dark:bg-slate-700" />
+                ) : (
+                  <>
+                    {value}
+                    {(label === "Paid" || label === "Unpaid") && (
+                      <span className="ml-2 text-base font-medium text-slate-500 dark:text-slate-400">
+                        {label}
+                      </span>
+                    )}
+                  </>
+                )}
               </p>
-              <p className={`text-xs font-medium mt-1 ${growthColor}`}>{growth}</p>
             </div>
           </div>
         ))}
@@ -142,7 +160,13 @@ const MainPage = () => {
         <div className="card-header justify-between">
           <p className="card-title">Laundry Records</p>
         </div>
-        <RecordTable items={records} />
+        {loading ? (
+          <div className="p-6 text-center text-slate-500 dark:text-slate-400">
+            Loading records...
+          </div>
+        ) : (
+          <RecordTable items={records} />
+        )}
       </div>
     </main>
   );

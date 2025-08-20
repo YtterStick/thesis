@@ -62,7 +62,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
 
     useEffect(() => {
         const token = localStorage.getItem("authToken");
-
         if (!token || typeof token !== "string" || !token.includes(".")) {
             toast({
                 title: "Authentication Error",
@@ -83,12 +82,8 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                 });
                 const data = await res.json();
                 setServices(data);
-
                 if (data.length > 0) {
-                    setForm((prev) => ({
-                        ...prev,
-                        serviceId: data[0].id,
-                    }));
+                    setForm((prev) => ({ ...prev, serviceId: data[0].id }));
                 }
             } catch {
                 toast({
@@ -301,15 +296,14 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                                 value={form.serviceId}
                                 onValueChange={(value) => handleChange("serviceId", value)}
                             >
-                                <SelectTrigger className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
+                                <SelectTrigger className="input">
                                     <SelectValue placeholder="Select service" />
                                 </SelectTrigger>
-                                <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                                <SelectContent>
                                     {services.map((service) => (
                                         <SelectItem
                                             key={service.id}
                                             value={service.id}
-                                            className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
                                         >
                                             {service.name}
                                         </SelectItem>
@@ -350,10 +344,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                                             inputMode="numeric"
                                             min={0}
                                             value={consumables[item.name]?.toString() ?? "0"}
-                                            onChange={(e) => {
-                                                const raw = e.target.value;
-                                                handleConsumableChange(item.name, raw);
-                                            }}
+                                            onChange={(e) => handleConsumableChange(item.name, e.target.value)}
                                             onBlur={(e) => {
                                                 const cleaned = e.target.value.replace(/^0+/, "") || "0";
                                                 const numeric = parseInt(cleaned, 10);
@@ -378,9 +369,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                                             inputMode="numeric"
                                             min={0}
                                             value={consumables[item.name]?.toString() ?? "0"}
-                                            onChange={(e) => {
-                                                handleConsumableChange(item.name, e.target.value);
-                                            }}
+                                            onChange={(e) => handleConsumableChange(item.name, e.target.value)}
                                             onBlur={(e) => {
                                                 const cleaned = e.target.value.replace(/^0+/, "") || "0";
                                                 const numeric = parseInt(cleaned, 10);

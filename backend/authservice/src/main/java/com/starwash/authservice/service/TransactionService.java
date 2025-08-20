@@ -39,8 +39,7 @@ public class TransactionService {
         ServiceEntryDto serviceDto = new ServiceEntryDto(
                 service.getName(),
                 service.getPrice(),
-                loads
-        );
+                loads);
 
         double total = service.getPrice() * loads;
 
@@ -85,16 +84,13 @@ public class TransactionService {
                 request.getStatus(),
                 amountGiven,
                 change,
-                now
-        );
+                now);
         transaction.setReceiptCode(receiptCode);
 
         transactionRepository.save(transaction);
 
-        // ✅ Create invoice from transaction
         InvoiceItem invoice = invoiceService.createInvoiceFromTransaction(transaction, request);
 
-        // ✅ Return full response including invoiceNumber
         return new TransactionResponseDto(
                 transaction.getId(),
                 transaction.getReceiptCode(),
@@ -109,8 +105,7 @@ public class TransactionService {
                 transaction.getCreatedAt(),
                 invoice.getIssueDate(),
                 invoice.getDueDate(),
-                invoice.getInvoiceNumber()
-        );
+                invoice.getInvoiceNumber());
     }
 
     public TransactionResponseDto getTransactionById(String id) {
@@ -120,8 +115,7 @@ public class TransactionService {
         ServiceEntryDto serviceDto = new ServiceEntryDto(
                 transaction.getServiceName(),
                 transaction.getServicePrice(),
-                transaction.getServiceQuantity()
-        );
+                transaction.getServiceQuantity());
 
         List<ServiceEntryDto> consumableDtos = transaction.getConsumables().stream()
                 .map(entry -> new ServiceEntryDto(entry.getName(), entry.getPrice(), entry.getQuantity()))
@@ -148,7 +142,55 @@ public class TransactionService {
                 transaction.getCreatedAt(),
                 invoice != null ? invoice.getIssueDate() : transaction.getCreatedAt(),
                 invoice != null ? invoice.getDueDate() : transaction.getCreatedAt().plusDays(7),
-                invoice != null ? invoice.getInvoiceNumber() : null
-        );
+                invoice != null ? invoice.getInvoiceNumber() : null);
+    }
+
+    // ✅ Updated: Get all transaction records for frontend table
+    public List<RecordResponseDto> getAllRecords() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
+        System.out.println("🧾 Total transactions found: " + allTransactions.size());
+
+        allTransactions.forEach(tx -> {
+            System.out.println("— Transaction —");
+            System.out.println("ID: " + tx.getId());
+            System.out.println("Customer: " + tx.getCustomerName());
+            System.out.println("Service: " + tx.getServiceName());
+            System.out.println("Loads: " + tx.getServiceQuantity());
+            System.out.println("Status: " + tx.getStatus());
+            System.out.println("Total: ₱" + tx.getTotalPrice());
+            System.out.println("Created At: " + tx.getCreatedAt());
+            System.out.println("Consumables:");
+            tx.getConsumables().forEach(c -> {
+                System.out.println("  - " + c.getName() + ": " + c.getQuantity() + " pcs @ ₱" + c.getPrice());
+            });
+            System.out.println("——————————————");
+        });
+
+        return allTransactions.stream().map(tx -> {
+            RecordResponseDto dto = new RecordResponseDto();
+            dto.setId(tx.getId());
+            dto.setCustomerName(tx.getCustomerName());
+            dto.setServiceName(tx.getServiceName());
+            dto.setLoads(tx.getServiceQuantity());
+
+            dto.setDetergent(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
+
+            dto.setFabric(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("fabric")) // ✅ now matches "fabrics"
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
+
+            dto.setTotalPrice(tx.getTotalPrice());
+            dto.setStatus(tx.getStatus());
+            dto.setPickupStatus("Unclaimed");
+            dto.setWashed(false);
+            dto.setExpired(tx.getCreatedAt().plusDays(7).isBefore(LocalDateTime.now()));
+            dto.setCreatedAt(tx.getCreatedAt());
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 }
