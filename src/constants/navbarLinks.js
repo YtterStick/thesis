@@ -26,7 +26,6 @@ export const navbarLinks = [
     title: "Operations",
     Links: [
       { label: "Transaction Records", icon: HandCoins, path: "/managetransaction" },
-      { label: "Receipts", icon: Receipt, path: "/managereceipts" },
       { label: "Inventory", icon: Boxes, path: "/manageinventory" },
     ],
   },

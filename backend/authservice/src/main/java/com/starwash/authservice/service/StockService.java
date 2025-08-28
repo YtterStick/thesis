@@ -75,7 +75,7 @@ public class StockService {
             item.setLastRestock(LocalDateTime.now());
             item.setLastUpdated(LocalDateTime.now());
 
-            String status = item.getStockStatus(); // Optional: use for logging or alerts
+            // String status = item.getStockStatus(); // Optional: use for logging or alerts
 
             return stockRepository.save(item);
         });

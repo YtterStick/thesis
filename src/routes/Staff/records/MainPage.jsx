@@ -5,8 +5,7 @@ import {
   Package,
   Clock8,
   TimerOff,
-  XCircle,
-  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 
 const MainPage = () => {
@@ -36,7 +35,6 @@ const MainPage = () => {
           detergent: r.detergent,
           fabric: r.fabric || "—",
           price: r.totalPrice,
-          paymentStatus: r.status,
           pickupStatus: r.pickupStatus,
           washed: r.washed,
           expired: r.expired,
@@ -55,15 +53,11 @@ const MainPage = () => {
   }, []);
 
   // 🧮 Metrics
-  const totalIncome = records
-    .filter((r) => r.paymentStatus === "Paid")
-    .reduce((acc, r) => acc + r.price, 0);
-
+  const totalIncome = records.reduce((acc, r) => acc + r.price, 0);
   const totalLoads = records.reduce((acc, r) => acc + r.loads, 0);
   const unwashed = records.filter((r) => !r.washed).length;
   const expired = records.filter((r) => r.expired).length;
-  const paid = records.filter((r) => r.paymentStatus === "Paid").length;
-  const unpaid = records.filter((r) => r.paymentStatus === "Unpaid").length;
+  const unclaimed = records.filter((r) => r.pickupStatus === "Unclaimed").length;
 
   const summaryCards = [
     {
@@ -71,7 +65,7 @@ const MainPage = () => {
       value: `₱${totalIncome.toFixed(2)}`,
       icon: <PhilippinePeso size={26} />,
       color: "#3DD9B6",
-      tooltip: "Total income from paid transactions",
+      tooltip: "Total income from all transactions",
     },
     {
       label: "Today's Loads",
@@ -95,18 +89,11 @@ const MainPage = () => {
       tooltip: "Loads that exceeded their pickup window",
     },
     {
-      label: "Unpaid",
-      value: unpaid,
-      icon: <XCircle size={26} />,
-      color: "#F87171",
-      tooltip: "Transactions marked as unpaid",
-    },
-    {
-      label: "Paid",
-      value: paid,
-      icon: <CheckCircle size={26} />,
-      color: "#34D399",
-      tooltip: "Transactions marked as paid",
+      label: "Unclaimed Loads",
+      value: unclaimed,
+      icon: <AlertCircle size={26} />,
+      color: "#FACC15",
+      tooltip: "Loads that haven't been picked up yet",
     },
   ];
 
@@ -120,7 +107,7 @@ const MainPage = () => {
       </div>
 
       {/* 🎨 Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         {summaryCards.map(({ label, value, icon, color, tooltip }) => (
           <div key={label} className="card" title={tooltip}>
             <div className="card-header flex items-center gap-x-3">
@@ -140,14 +127,7 @@ const MainPage = () => {
                 {loading ? (
                   <span className="inline-block h-6 w-20 animate-pulse rounded bg-slate-300 dark:bg-slate-700" />
                 ) : (
-                  <>
-                    {value}
-                    {(label === "Paid" || label === "Unpaid") && (
-                      <span className="ml-2 text-base font-medium text-slate-500 dark:text-slate-400">
-                        {label}
-                      </span>
-                    )}
-                  </>
+                  <>{value}</>
                 )}
               </p>
             </div>
