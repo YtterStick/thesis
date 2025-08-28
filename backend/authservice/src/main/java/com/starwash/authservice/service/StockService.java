@@ -26,28 +26,38 @@ public class StockService {
     }
 
     public StockItem createItem(StockItem newItem) {
+        validateThresholds(newItem);
+
         newItem.setCreatedAt(LocalDateTime.now());
         newItem.setLastUpdated(LocalDateTime.now());
         newItem.setLastRestock(newItem.getLastRestock() != null ? newItem.getLastRestock() : LocalDateTime.now());
+
         return stockRepository.save(newItem);
     }
 
     public Optional<StockItem> updateItem(String id, StockItem updatedItem) {
-    return stockRepository.findById(id).map(existing -> {
-        existing.setName(updatedItem.getName());
-        existing.setQuantity(updatedItem.getQuantity());
-        existing.setUnit(updatedItem.getUnit());
-        existing.setUpdatedBy(updatedItem.getUpdatedBy());
+        validateThresholds(updatedItem);
 
-        // Only update lastRestock if explicitly present
-        if (updatedItem.getLastRestock() != null) {
-            existing.setLastRestock(updatedItem.getLastRestock());
-        }
+        return stockRepository.findById(id).map(existing -> {
+            existing.setName(updatedItem.getName());
+            existing.setQuantity(updatedItem.getQuantity());
+            existing.setUnit(updatedItem.getUnit());
+            existing.setUpdatedBy(updatedItem.getUpdatedBy());
 
-        existing.setLastUpdated(LocalDateTime.now());
-        return stockRepository.save(existing);
-    });
-}
+            existing.setLowStockThreshold(updatedItem.getLowStockThreshold());
+            existing.setAdequateStockThreshold(updatedItem.getAdequateStockThreshold());
+            existing.setPreviousQuantity(updatedItem.getPreviousQuantity());
+
+            if (updatedItem.getLastRestock() != null) {
+                existing.setLastRestock(updatedItem.getLastRestock());
+            }
+
+            existing.setLastRestockAmount(updatedItem.getLastRestockAmount());
+            existing.setLastUpdated(LocalDateTime.now());
+
+            return stockRepository.save(existing);
+        });
+    }
 
     public boolean deleteItem(String id) {
         if (stockRepository.existsById(id)) {
@@ -59,10 +69,29 @@ public class StockService {
 
     public Optional<StockItem> addStock(String id, int amount) {
         return stockRepository.findById(id).map(item -> {
+            item.setPreviousQuantity(item.getQuantity());
             item.setQuantity(item.getQuantity() + amount);
+            item.setLastRestockAmount(amount);
             item.setLastRestock(LocalDateTime.now());
             item.setLastUpdated(LocalDateTime.now());
+
+            String status = item.getStockStatus(); // Optional: use for logging or alerts
+
             return stockRepository.save(item);
         });
+    }
+
+    // ✅ Threshold validation logic
+    private void validateThresholds(StockItem item) {
+        Integer low = item.getLowStockThreshold();
+        Integer adequate = item.getAdequateStockThreshold();
+
+        if (low == null || low <= 0) {
+            throw new IllegalArgumentException("Low stock threshold must be greater than 0.");
+        }
+
+        if (adequate == null || adequate <= low) {
+            throw new IllegalArgumentException("Adequate stock threshold must be greater than low stock threshold.");
+        }
     }
 }

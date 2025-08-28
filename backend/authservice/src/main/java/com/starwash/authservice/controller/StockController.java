@@ -48,6 +48,11 @@ public class StockController {
         newItem.setLastRestock(LocalDateTime.now());
         newItem.setUpdatedBy(dto.getUpdatedBy());
 
+        // ✅ Thresholds and previous quantity
+        newItem.setLowStockThreshold(dto.getLowStockThreshold());
+        newItem.setAdequateStockThreshold(dto.getAdequateStockThreshold());
+        newItem.setPreviousQuantity(dto.getPreviousQuantity());
+
         StockItem created = stockService.createItem(newItem);
         return ResponseEntity.ok(created);
     }
@@ -68,6 +73,9 @@ public class StockController {
         if (dto.getQuantity() != null) existing.setQuantity(dto.getQuantity());
         if (dto.getPrice() != null) existing.setPrice(dto.getPrice());
         if (dto.getUpdatedBy() != null) existing.setUpdatedBy(dto.getUpdatedBy());
+        if (dto.getLowStockThreshold() != null) existing.setLowStockThreshold(dto.getLowStockThreshold());
+        if (dto.getAdequateStockThreshold() != null) existing.setAdequateStockThreshold(dto.getAdequateStockThreshold());
+        if (dto.getPreviousQuantity() != null) existing.setPreviousQuantity(dto.getPreviousQuantity());
 
         existing.setLastUpdated(LocalDateTime.now());
 

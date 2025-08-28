@@ -25,12 +25,17 @@ public class StockItem {
     private LocalDateTime lastUpdated;
 
     private LocalDateTime lastRestock;
-
-    // Optional: track who last updated the item
     private String updatedBy;
 
-    public StockItem() {
-    }
+    // ✅ Restock tracking fields
+    private Integer previousQuantity;
+    private Integer lastRestockAmount;
+
+    // ✅ Thresholds
+    private Integer lowStockThreshold;
+    private Integer adequateStockThreshold;
+
+    public StockItem() {}
 
     public StockItem(String name, int quantity, String unit, double price) {
         this.name = name;
@@ -42,71 +47,40 @@ public class StockItem {
         this.lastRestock = LocalDateTime.now();
     }
 
-    public double getPrice() {
-        return price;
+    // ✅ Stock status logic
+    public String getStockStatus() {
+        if (lowStockThreshold == null || adequateStockThreshold == null) return "Unknown";
+        if (quantity <= lowStockThreshold) return "Low";
+        if (quantity <= adequateStockThreshold) return "Adequate";
+        return "Stocked";
     }
 
-    public void setPrice(double price) {
-        this.price = price;
-    }
+    // Getters
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public int getQuantity() { return quantity; }
+    public String getUnit() { return unit; }
+    public double getPrice() { return price; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getLastUpdated() { return lastUpdated; }
+    public LocalDateTime getLastRestock() { return lastRestock; }
+    public String getUpdatedBy() { return updatedBy; }
+    public Integer getPreviousQuantity() { return previousQuantity; }
+    public Integer getLastRestockAmount() { return lastRestockAmount; }
+    public Integer getLowStockThreshold() { return lowStockThreshold; }
+    public Integer getAdequateStockThreshold() { return adequateStockThreshold; }
 
-    public String getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public String getUnit() {
-        return unit;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getLastUpdated() {
-        return lastUpdated;
-    }
-
-    public LocalDateTime getLastRestock() {
-        return lastRestock;
-    }
-
-    public String getUpdatedBy() {
-        return updatedBy;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public void setUnit(String unit) {
-        this.unit = unit;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public void setLastUpdated(LocalDateTime lastUpdated) {
-        this.lastUpdated = lastUpdated;
-    }
-
-    public void setLastRestock(LocalDateTime lastRestock) {
-        this.lastRestock = lastRestock;
-    }
-
-    public void setUpdatedBy(String updatedBy) {
-        this.updatedBy = updatedBy;
-    }
+    // Setters
+    public void setName(String name) { this.name = name; }
+    public void setQuantity(int quantity) { this.quantity = quantity; }
+    public void setUnit(String unit) { this.unit = unit; }
+    public void setPrice(double price) { this.price = price; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
+    public void setLastRestock(LocalDateTime lastRestock) { this.lastRestock = lastRestock; }
+    public void setUpdatedBy(String updatedBy) { this.updatedBy = updatedBy; }
+    public void setPreviousQuantity(Integer previousQuantity) { this.previousQuantity = previousQuantity; }
+    public void setLastRestockAmount(Integer lastRestockAmount) { this.lastRestockAmount = lastRestockAmount; }
+    public void setLowStockThreshold(Integer lowStockThreshold) { this.lowStockThreshold = lowStockThreshold; }
+    public void setAdequateStockThreshold(Integer adequateStockThreshold) { this.adequateStockThreshold = adequateStockThreshold; }
 }
