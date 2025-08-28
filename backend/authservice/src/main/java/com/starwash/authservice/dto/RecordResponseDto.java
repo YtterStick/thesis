@@ -11,8 +11,9 @@ public class RecordResponseDto {
     private String detergent;
     private String fabric; // ✅ Renamed from fabricSoftener
     private double totalPrice;
-    private String status;         // Paid / Unpaid
-    private String pickupStatus;   // Unclaimed / Claimed / Expired
+
+    private String paymentMethod;   // ✅ Replaces status
+    private String pickupStatus;    // Unclaimed / Claimed / Expired
     private boolean washed;
     private boolean expired;
     private LocalDateTime createdAt;
@@ -22,7 +23,7 @@ public class RecordResponseDto {
 
     public RecordResponseDto(String id, String customerName, String serviceName, int loads,
                              String detergent, String fabric, double totalPrice,
-                             String status, String pickupStatus, boolean washed,
+                             String paymentMethod, String pickupStatus, boolean washed,
                              boolean expired, LocalDateTime createdAt) {
         this.id = id;
         this.customerName = customerName;
@@ -31,7 +32,7 @@ public class RecordResponseDto {
         this.detergent = detergent;
         this.fabric = fabric;
         this.totalPrice = totalPrice;
-        this.status = status;
+        this.paymentMethod = paymentMethod;
         this.pickupStatus = pickupStatus;
         this.washed = washed;
         this.expired = expired;
@@ -60,8 +61,8 @@ public class RecordResponseDto {
     public double getTotalPrice() { return totalPrice; }
     public void setTotalPrice(double totalPrice) { this.totalPrice = totalPrice; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
     public String getPickupStatus() { return pickupStatus; }
     public void setPickupStatus(String pickupStatus) { this.pickupStatus = pickupStatus; }

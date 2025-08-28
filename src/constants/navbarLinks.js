@@ -41,8 +41,7 @@ export const navbarLinks = [
     Links: [
       { label: "Services & Pricing", icon: Sliders, path: "/serviceoption" },
       { label: "SMS Alerts", icon: Bell, path: "/notificationsettings" },
-      { label: "Receipt Format", icon: FileCog, path: "/receiptssettings" },
-      { label: "Invoice Format", icon: ScrollText, path: "/invoicesettings" },
+      { label: "Receipts & Invoice Format", icon: ScrollText, path: "/documentsettings" },
       { label: "Payment Methods", icon: CreditCard, path: "/paymentmethod" },
     ],
   },

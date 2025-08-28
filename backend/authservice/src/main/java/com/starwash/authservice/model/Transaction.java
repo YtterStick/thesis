@@ -11,9 +11,9 @@ import java.util.List;
 public class Transaction {
 
     @Id
-    private String id;
+    private String id; // ✅ MongoDB document ID
 
-    private String receiptCode; // ✅ Printable receipt ID
+    private String invoiceNumber; // ✅ Timestamped traceable ID
 
     private String customerName;
     private String contact;
@@ -25,20 +25,29 @@ public class Transaction {
     private List<ServiceEntry> consumables;
     private Double totalPrice;
 
-    private String status;
+    private String paymentMethod;
     private Double amountGiven;
     private Double change;
 
+    private LocalDateTime issueDate; // ✅ Explicit invoice issue date
+    private LocalDateTime dueDate;   // ✅ Explicit due date
+    private String staffId;          // ✅ Staff attribution for traceability
+
     @CreatedDate
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt; // ✅ System timestamp
 
     public Transaction() {}
 
-    public Transaction(String customerName, String contact,
+    public Transaction(String id,
+                       String invoiceNumber,
+                       String customerName, String contact,
                        String serviceName, Double servicePrice, Integer serviceQuantity,
                        List<ServiceEntry> consumables, Double totalPrice,
-                       String status, Double amountGiven, Double change,
-                       LocalDateTime createdAt) {
+                       String paymentMethod, Double amountGiven, Double change,
+                       LocalDateTime issueDate, LocalDateTime dueDate,
+                       String staffId, LocalDateTime createdAt) {
+        this.id = id;
+        this.invoiceNumber = invoiceNumber;
         this.customerName = customerName;
         this.contact = contact;
         this.serviceName = serviceName;
@@ -46,15 +55,18 @@ public class Transaction {
         this.serviceQuantity = serviceQuantity;
         this.consumables = consumables;
         this.totalPrice = totalPrice;
-        this.status = status;
+        this.paymentMethod = paymentMethod;
         this.amountGiven = amountGiven;
         this.change = change;
+        this.issueDate = issueDate;
+        this.dueDate = dueDate;
+        this.staffId = staffId;
         this.createdAt = createdAt;
     }
 
     // Getters
     public String getId() { return id; }
-    public String getReceiptCode() { return receiptCode; }
+    public String getInvoiceNumber() { return invoiceNumber; }
     public String getCustomerName() { return customerName; }
     public String getContact() { return contact; }
     public String getServiceName() { return serviceName; }
@@ -62,14 +74,17 @@ public class Transaction {
     public Integer getServiceQuantity() { return serviceQuantity; }
     public List<ServiceEntry> getConsumables() { return consumables; }
     public Double getTotalPrice() { return totalPrice; }
-    public String getStatus() { return status; }
+    public String getPaymentMethod() { return paymentMethod; }
     public Double getAmountGiven() { return amountGiven; }
     public Double getChange() { return change; }
+    public LocalDateTime getIssueDate() { return issueDate; }
+    public LocalDateTime getDueDate() { return dueDate; }
+    public String getStaffId() { return staffId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
     // Setters
     public void setId(String id) { this.id = id; }
-    public void setReceiptCode(String receiptCode) { this.receiptCode = receiptCode; }
+    public void setInvoiceNumber(String invoiceNumber) { this.invoiceNumber = invoiceNumber; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
     public void setContact(String contact) { this.contact = contact; }
     public void setServiceName(String serviceName) { this.serviceName = serviceName; }
@@ -77,8 +92,11 @@ public class Transaction {
     public void setServiceQuantity(Integer serviceQuantity) { this.serviceQuantity = serviceQuantity; }
     public void setConsumables(List<ServiceEntry> consumables) { this.consumables = consumables; }
     public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
-    public void setStatus(String status) { this.status = status; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
     public void setAmountGiven(Double amountGiven) { this.amountGiven = amountGiven; }
     public void setChange(Double change) { this.change = change; }
+    public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
+    public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
+    public void setStaffId(String staffId) { this.staffId = staffId; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

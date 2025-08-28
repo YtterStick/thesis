@@ -5,8 +5,7 @@ import java.util.List;
 
 public class TransactionResponseDto {
 
-    private String transactionId;
-    private String receiptCode; // ✅ Printable receipt ID
+    private String id; // MongoDB document ID
 
     private String customerName;
     private String contact;
@@ -23,21 +22,17 @@ public class TransactionResponseDto {
     private LocalDateTime issueDate;
     private LocalDateTime dueDate;
 
-    private String invoiceNumber; // ✅ Added field
-
     public TransactionResponseDto() {}
 
-    public TransactionResponseDto(String transactionId, String receiptCode,
+    public TransactionResponseDto(String id,
                                   String customerName, String contact,
                                   ServiceEntryDto service, List<ServiceEntryDto> consumables,
                                   Double totalPrice, String status,
                                   Double amountGiven, Double change,
                                   LocalDateTime createdAt,
                                   LocalDateTime issueDate,
-                                  LocalDateTime dueDate,
-                                  String invoiceNumber) { // ✅ Added to constructor
-        this.transactionId = transactionId;
-        this.receiptCode = receiptCode;
+                                  LocalDateTime dueDate) {
+        this.id = id;
         this.customerName = customerName;
         this.contact = contact;
         this.service = service;
@@ -49,12 +44,10 @@ public class TransactionResponseDto {
         this.createdAt = createdAt;
         this.issueDate = issueDate;
         this.dueDate = dueDate;
-        this.invoiceNumber = invoiceNumber;
     }
 
     // Getters
-    public String getTransactionId() { return transactionId; }
-    public String getReceiptCode() { return receiptCode; }
+    public String getId() { return id; }
     public String getCustomerName() { return customerName; }
     public String getContact() { return contact; }
     public ServiceEntryDto getService() { return service; }
@@ -66,11 +59,9 @@ public class TransactionResponseDto {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getIssueDate() { return issueDate; }
     public LocalDateTime getDueDate() { return dueDate; }
-    public String getInvoiceNumber() { return invoiceNumber; } // ✅ Getter
 
     // Setters
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
-    public void setReceiptCode(String receiptCode) { this.receiptCode = receiptCode; }
+    public void setId(String id) { this.id = id; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
     public void setContact(String contact) { this.contact = contact; }
     public void setService(ServiceEntryDto service) { this.service = service; }
@@ -82,5 +73,4 @@ public class TransactionResponseDto {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
     public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
-    public void setInvoiceNumber(String invoiceNumber) { this.invoiceNumber = invoiceNumber; } // ✅ Setter
 }

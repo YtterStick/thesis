@@ -1,11 +1,11 @@
 package com.starwash.authservice.model;
 
-import com.starwash.authservice.dto.ReceiptSettingsDto;
+import com.starwash.authservice.dto.FormatSettingsDto;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "receipt_settings")
-public class ReceiptSettings {
+@Document(collection = "format_settings")
+public class FormatSettings {
 
     @Id
     private String id;
@@ -16,10 +16,10 @@ public class ReceiptSettings {
     private String footerNote;
     private String trackingUrl;
 
-    public ReceiptSettings() {}
+    public FormatSettings() {}
 
-    public ReceiptSettings(String storeName, String address, String phone,
-                           String footerNote, String trackingUrl) {
+    public FormatSettings(String storeName, String address, String phone,
+                          String footerNote, String trackingUrl) {
         this.storeName = storeName;
         this.address = address;
         this.phone = phone;
@@ -27,14 +27,13 @@ public class ReceiptSettings {
         this.trackingUrl = trackingUrl;
     }
 
-    public ReceiptSettings(String id, String storeName, String address, String phone,
-                           String footerNote, String trackingUrl) {
+    public FormatSettings(String id, String storeName, String address, String phone,
+                          String footerNote, String trackingUrl) {
         this(storeName, address, phone, footerNote, trackingUrl);
         this.id = id;
     }
 
-    // 🧱 Convenience constructor from DTO
-    public ReceiptSettings(ReceiptSettingsDto dto) {
+    public FormatSettings(FormatSettingsDto dto) {
         this.storeName = dto.getStoreName();
         this.address = dto.getAddress();
         this.phone = dto.getPhone();

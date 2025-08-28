@@ -3,7 +3,7 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import QRCode from "react-qr-code";
 
-const ReceiptPreview = ({ transaction }) => {
+const ServiceReceiptPreview = ({ transaction }) => {
   const {
     name,
     contact,
@@ -106,8 +106,8 @@ const ReceiptPreview = ({ transaction }) => {
   );
 };
 
-ReceiptPreview.propTypes = {
+ServiceReceiptPreview.propTypes = {
   transaction: PropTypes.object.isRequired,
 };
 
-export default ReceiptPreview;
+export default ServiceReceiptPreview;

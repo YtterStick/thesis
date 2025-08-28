@@ -1,8 +1,8 @@
 package com.starwash.authservice.dto;
 
-import com.starwash.authservice.model.ReceiptSettings;
+import com.starwash.authservice.model.FormatSettings;
 
-public class ReceiptSettingsDto {
+public class FormatSettingsDto {
 
     private String storeName;
     private String address;
@@ -10,10 +10,10 @@ public class ReceiptSettingsDto {
     private String footerNote;
     private String trackingUrl;
 
-    public ReceiptSettingsDto() {}
+    public FormatSettingsDto() {}
 
-    public ReceiptSettingsDto(String storeName, String address, String phone,
-                              String footerNote, String trackingUrl) {
+    public FormatSettingsDto(String storeName, String address, String phone,
+                             String footerNote, String trackingUrl) {
         this.storeName = storeName;
         this.address = address;
         this.phone = phone;
@@ -21,8 +21,7 @@ public class ReceiptSettingsDto {
         this.trackingUrl = trackingUrl;
     }
 
-    // 🧱 Convenience constructor from model
-    public ReceiptSettingsDto(ReceiptSettings model) {
+    public FormatSettingsDto(FormatSettings model) {
         this.storeName = model.getStoreName();
         this.address = model.getAddress();
         this.phone = model.getPhone();

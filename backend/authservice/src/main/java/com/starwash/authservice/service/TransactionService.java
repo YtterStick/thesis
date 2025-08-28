@@ -2,9 +2,7 @@ package com.starwash.authservice.service;
 
 import com.starwash.authservice.dto.*;
 import com.starwash.authservice.model.*;
-import com.starwash.authservice.repository.ServiceRepository;
-import com.starwash.authservice.repository.StockRepository;
-import com.starwash.authservice.repository.TransactionRepository;
+import com.starwash.authservice.repository.*;
 
 import org.springframework.stereotype.Service;
 
@@ -18,29 +16,24 @@ public class TransactionService {
     private final ServiceRepository serviceRepository;
     private final StockRepository stockRepository;
     private final TransactionRepository transactionRepository;
-    private final InvoiceService invoiceService;
+    private final FormatSettingsRepository formatSettingsRepository;
 
     public TransactionService(ServiceRepository serviceRepository,
                               StockRepository stockRepository,
                               TransactionRepository transactionRepository,
-                              InvoiceService invoiceService) {
+                              FormatSettingsRepository formatSettingsRepository) {
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
         this.transactionRepository = transactionRepository;
-        this.invoiceService = invoiceService;
+        this.formatSettingsRepository = formatSettingsRepository;
     }
 
-    public TransactionResponseDto createTransaction(TransactionRequestDto request) {
+    public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request) {
         ServiceItem service = serviceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
-        int loads = request.getLoads() != null ? request.getLoads() : 1;
-
-        ServiceEntryDto serviceDto = new ServiceEntryDto(
-                service.getName(),
-                service.getPrice(),
-                loads);
-
+        int loads = Optional.ofNullable(request.getLoads()).orElse(1);
+        ServiceEntryDto serviceDto = new ServiceEntryDto(service.getName(), service.getPrice(), loads);
         double total = service.getPrice() * loads;
 
         List<ServiceEntryDto> consumableDtos = new ArrayList<>();
@@ -48,7 +41,7 @@ public class TransactionService {
 
         for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
             String itemName = entry.getKey();
-            Integer quantity = entry.getValue();
+            int quantity = entry.getValue();
 
             StockItem item = stockRepository.findByName(itemName)
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
@@ -67,13 +60,18 @@ public class TransactionService {
             consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
         }
 
-        double amountGiven = request.getAmountGiven() != null ? request.getAmountGiven() : 0.0;
+        double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
         double change = amountGiven - total;
 
         LocalDateTime now = LocalDateTime.now();
-        String receiptCode = "R-" + Long.toString(System.currentTimeMillis(), 36);
+        LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
+        LocalDateTime dueDate = Optional.ofNullable(request.getDueDate()).orElse(issueDate.plusDays(7));
+
+        String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
 
         Transaction transaction = new Transaction(
+                null, // ✅ Let MongoDB assign the ID
+                invoiceNumber,
                 request.getCustomerName(),
                 request.getContact(),
                 service.getName(),
@@ -81,90 +79,117 @@ public class TransactionService {
                 loads,
                 consumables,
                 total,
-                request.getStatus(),
+                request.getPaymentMethod(),
                 amountGiven,
                 change,
-                now);
-        transaction.setReceiptCode(receiptCode);
+                issueDate,
+                dueDate,
+                request.getStaffId(),
+                now
+        );
 
         transactionRepository.save(transaction);
 
-        InvoiceItem invoice = invoiceService.createInvoiceFromTransaction(transaction, request);
+        FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
+                .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
-        return new TransactionResponseDto(
-                transaction.getId(),
-                transaction.getReceiptCode(),
+        ServiceInvoiceDto dto = new ServiceInvoiceDto(
+                invoiceNumber,
                 transaction.getCustomerName(),
                 transaction.getContact(),
                 serviceDto,
                 consumableDtos,
                 total,
-                transaction.getStatus(),
-                amountGiven,
-                change,
-                transaction.getCreatedAt(),
-                invoice.getIssueDate(),
-                invoice.getDueDate(),
-                invoice.getInvoiceNumber());
+                0.0,
+                0.0,
+                total,
+                request.getPaymentMethod(),
+                issueDate,
+                dueDate,
+                new FormatSettingsDto(settings)
+        );
+
+        // 🆕 Populate new fields
+        dto.setDetergentQty(consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum());
+
+        dto.setFabricQty(consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum());
+
+        dto.setPlasticQty(consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("plastic"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum());
+
+        dto.setLoads(loads);
+
+        return dto;
     }
 
-    public TransactionResponseDto getTransactionById(String id) {
-        Transaction transaction = transactionRepository.findById(id)
+    public ServiceInvoiceDto getServiceInvoiceByTransactionId(String id) {
+        Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
 
-        ServiceEntryDto serviceDto = new ServiceEntryDto(
-                transaction.getServiceName(),
-                transaction.getServicePrice(),
-                transaction.getServiceQuantity());
-
-        List<ServiceEntryDto> consumableDtos = transaction.getConsumables().stream()
-                .map(entry -> new ServiceEntryDto(entry.getName(), entry.getPrice(), entry.getQuantity()))
-                .collect(Collectors.toList());
-
-        InvoiceItem invoice = null;
-        try {
-            invoice = invoiceService.getInvoiceByTransactionId(transaction.getId());
-        } catch (RuntimeException e) {
-            // Invoice not found — fallback will apply
-        }
-
-        return new TransactionResponseDto(
-                transaction.getId(),
-                transaction.getReceiptCode(),
-                transaction.getCustomerName(),
-                transaction.getContact(),
-                serviceDto,
-                consumableDtos,
-                transaction.getTotalPrice(),
-                transaction.getStatus(),
-                transaction.getAmountGiven(),
-                transaction.getChange(),
-                transaction.getCreatedAt(),
-                invoice != null ? invoice.getIssueDate() : transaction.getCreatedAt(),
-                invoice != null ? invoice.getDueDate() : transaction.getCreatedAt().plusDays(7),
-                invoice != null ? invoice.getInvoiceNumber() : null);
+        return buildInvoice(tx);
     }
 
-    // ✅ Updated: Get all transaction records for frontend table
+    private ServiceInvoiceDto buildInvoice(Transaction tx) {
+        ServiceEntryDto serviceDto = new ServiceEntryDto(
+                tx.getServiceName(),
+                tx.getServicePrice(),
+                tx.getServiceQuantity()
+        );
+
+        List<ServiceEntryDto> consumableDtos = tx.getConsumables().stream()
+                .map(c -> new ServiceEntryDto(c.getName(), c.getPrice(), c.getQuantity()))
+                .collect(Collectors.toList());
+
+        FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
+                .orElseThrow(() -> new RuntimeException("Format settings not found"));
+
+        ServiceInvoiceDto dto = new ServiceInvoiceDto(
+                tx.getInvoiceNumber(),
+                tx.getCustomerName(),
+                tx.getContact(),
+                serviceDto,
+                consumableDtos,
+                tx.getTotalPrice(),
+                0.0,
+                0.0,
+                tx.getTotalPrice(),
+                tx.getPaymentMethod(),
+                tx.getIssueDate(),
+                tx.getDueDate(),
+                new FormatSettingsDto(settings)
+        );
+
+        // 🆕 Populate new fields
+        dto.setDetergentQty(consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum());
+
+        dto.setFabricQty(consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum());
+
+        dto.setPlasticQty(consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("plastic"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum());
+
+        dto.setLoads(tx.getServiceQuantity());
+
+        return dto;
+    }
+
     public List<RecordResponseDto> getAllRecords() {
         List<Transaction> allTransactions = transactionRepository.findAll();
-        System.out.println("🧾 Total transactions found: " + allTransactions.size());
-
-        allTransactions.forEach(tx -> {
-            System.out.println("— Transaction —");
-            System.out.println("ID: " + tx.getId());
-            System.out.println("Customer: " + tx.getCustomerName());
-            System.out.println("Service: " + tx.getServiceName());
-            System.out.println("Loads: " + tx.getServiceQuantity());
-            System.out.println("Status: " + tx.getStatus());
-            System.out.println("Total: ₱" + tx.getTotalPrice());
-            System.out.println("Created At: " + tx.getCreatedAt());
-            System.out.println("Consumables:");
-            tx.getConsumables().forEach(c -> {
-                System.out.println("  - " + c.getName() + ": " + c.getQuantity() + " pcs @ ₱" + c.getPrice());
-            });
-            System.out.println("——————————————");
-        });
 
         return allTransactions.stream().map(tx -> {
             RecordResponseDto dto = new RecordResponseDto();
@@ -179,15 +204,15 @@ public class TransactionService {
                     .findFirst().orElse("—"));
 
             dto.setFabric(tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("fabric")) // ✅ now matches "fabrics"
+                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
                     .map(c -> String.valueOf(c.getQuantity()))
                     .findFirst().orElse("—"));
 
             dto.setTotalPrice(tx.getTotalPrice());
-            dto.setStatus(tx.getStatus());
+            dto.setPaymentMethod(tx.getPaymentMethod());
             dto.setPickupStatus("Unclaimed");
             dto.setWashed(false);
-            dto.setExpired(tx.getCreatedAt().plusDays(7).isBefore(LocalDateTime.now()));
+            dto.setExpired(tx.getDueDate().isBefore(LocalDateTime.now()));
             dto.setCreatedAt(tx.getCreatedAt());
 
             return dto;

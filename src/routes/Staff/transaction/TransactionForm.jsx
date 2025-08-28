@@ -1,26 +1,29 @@
-import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef, useLayoutEffect } from "react";
 import PropTypes from "prop-types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import PaymentSection from "./PaymentSection";
+import ServiceSelector from "./ServiceSelector";
+import ConsumablesSection from "./ConsumablesSection";
 
-const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
+const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, isLocked }, ref) => {
     const [form, setForm] = useState({
-        transactionId: "",
         name: "",
         contact: "",
         serviceId: "",
-        loads: 1,
-        paymentStatus: "Unpaid",
         amountGiven: 0,
+        paymentMethod: "Cash",
     });
 
+    const [loads, setLoads] = useState(1);
+    const [supplySource, setSupplySource] = useState("in-store");
     const [consumables, setConsumables] = useState({});
+    const [plasticOverrides, setPlasticOverrides] = useState({});
     const [services, setServices] = useState([]);
     const [stockItems, setStockItems] = useState([]);
     const { toast } = useToast();
@@ -29,36 +32,23 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
         resetForm: () => {
             const defaultService = services[0];
             setForm({
-                transactionId: "",
                 name: "",
                 contact: "",
                 serviceId: defaultService?.id || "",
-                loads: 1,
-                paymentStatus: "Unpaid",
                 amountGiven: 0,
+                paymentMethod: "Cash",
             });
-
+            setLoads(1);
+            setSupplySource("in-store");
+            setPlasticOverrides({});
             const initialConsumables = {};
             stockItems.forEach((item) => {
-                const isPlastic = item.name.toLowerCase().includes("plastic");
-                initialConsumables[item.name] = isPlastic ? 1 : 0;
+                initialConsumables[item.name] = item.name.toLowerCase().includes("plastic") ? 1 : 0;
             });
             setConsumables(initialConsumables);
             onPreviewChange?.(null);
         },
     }));
-
-    useEffect(() => {
-        setConsumables((prev) => {
-            const updated = { ...prev };
-            Object.keys(updated).forEach((key) => {
-                if (key.toLowerCase().includes("plastic")) {
-                    updated[key] = form.loads;
-                }
-            });
-            return updated;
-        });
-    }, [form.loads]);
 
     useEffect(() => {
         const token = localStorage.getItem("authToken");
@@ -105,11 +95,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                 const data = await res.json();
                 const safeItems = Array.isArray(data) ? data : (data.items ?? []);
                 setStockItems(safeItems);
-
                 const initial = {};
                 safeItems.forEach((item) => {
-                    const isPlastic = item.name.toLowerCase().includes("plastic");
-                    initial[item.name] = isPlastic ? form.loads : 0;
+                    initial[item.name] = item.name.toLowerCase().includes("plastic") ? loads : 0;
                 });
                 setConsumables(initial);
             } catch {
@@ -125,6 +113,28 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
         fetchStockItems();
     }, []);
 
+    useEffect(() => {
+        if (!stockItems.length) return;
+
+        const expected = parseInt(loads) || 1;
+        const plasticItems = stockItems.filter((item) => item.name.toLowerCase().includes("plastic"));
+
+        let changed = false;
+        const updated = { ...consumables };
+
+        plasticItems.forEach((item) => {
+            const name = item.name;
+            if (!plasticOverrides[name] && consumables[name] !== expected) {
+                updated[name] = expected;
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            setConsumables(updated);
+        }
+    }, [loads, stockItems, plasticOverrides, consumables]);
+
     const handleChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
@@ -134,10 +144,18 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
             ...prev,
             [name]: parseInt(value) || 0,
         }));
+
+        if (name.toLowerCase().includes("plastic")) {
+            setPlasticOverrides((prev) => ({
+                ...prev,
+                [name]: true,
+            }));
+        }
     };
 
     const selectedService = services.find((s) => s.id === form.serviceId);
-    const serviceTotal = selectedService ? selectedService.price * form.loads : 0;
+    const servicePrice = selectedService?.price || 0;
+    const serviceTotal = servicePrice * parseInt(loads);
 
     const consumablesTotal = Object.entries(consumables).reduce((sum, [name, qty]) => {
         const item = stockItems.find((i) => i.name === name);
@@ -147,23 +165,21 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
     const totalAmount = serviceTotal + consumablesTotal;
 
     useEffect(() => {
-        const isValid = form.name && form.contact && form.serviceId && form.loads >= 1 && Object.keys(consumables).length > 0;
+        const parsedAmount = parseFloat(form.amountGiven || 0);
+        const change = parsedAmount - totalAmount;
 
-        if (isValid) {
-            const change = form.paymentStatus === "Paid" ? parseFloat(form.amountGiven || 0) - totalAmount : 0;
-
-            onPreviewChange?.({
-                totalAmount,
-                amountGiven: parseFloat(form.amountGiven || 0),
-                change,
-            });
-        }
-    }, [form, consumablesTotal, serviceTotal]);
+        onPreviewChange?.({
+            totalAmount,
+            amountGiven: parsedAmount,
+            change, // ✅ pass raw value, even if negative
+        });
+    }, [form.amountGiven, totalAmount]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
 
-        if (!form.name || !form.contact || !form.serviceId || form.loads < 1) {
+        if (!form.name || !form.contact || !form.serviceId) {
             toast({
                 title: "Missing Fields",
                 description: "Please fill all required fields.",
@@ -182,7 +198,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
             return;
         }
 
-        if (form.paymentStatus === "Paid" && parseFloat(form.amountGiven || 0) < totalAmount) {
+        if (parseFloat(form.amountGiven || 0) < totalAmount) {
             toast({
                 title: "Insufficient Payment",
                 description: `Amount given (₱${form.amountGiven}) is less than total (₱${totalAmount.toFixed(2)}).`,
@@ -191,55 +207,39 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
             return;
         }
 
+        const consumableQuantities = Object.entries(consumables).reduce((acc, [name, qty]) => {
+            acc[name] = qty;
+            return acc;
+        }, {});
+
         const payload = {
-            transactionId: form.transactionId,
             customerName: form.name,
             contact: form.contact,
             serviceId: form.serviceId,
-            loads: form.loads,
-            consumableQuantities: { ...consumables },
-            status: form.paymentStatus,
+            serviceName: selectedService?.name || "—",
+            servicePrice,
+            loads: parseInt(loads),
+            serviceTotal,
+            consumables: Object.entries(consumables).map(([name, qty]) => {
+                const item = stockItems.find((i) => i.name === name);
+                return {
+                    name,
+                    quantity: qty,
+                    price: item?.price || 0,
+                };
+            }),
+            consumableQuantities,
+            consumablesPrice: consumablesTotal,
+            paymentMethod: form.paymentMethod,
             amountGiven: parseFloat(form.amountGiven) || 0,
+            change: parseFloat(form.amountGiven || 0) - totalAmount,
+            totalPrice: totalAmount,
             issueDate: new Date().toISOString(),
             dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         };
 
-        try {
-            const token = localStorage.getItem("authToken");
-            const res = await fetch("http://localhost:8080/api/transactions", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!res.ok) throw new Error("Transaction failed");
-
-            const transaction = await res.json();
-            const change = form.paymentStatus === "Paid" ? parseFloat(form.amountGiven || 0) - transaction.totalPrice : 0;
-
-            onSubmit({
-                ...transaction,
-                paymentStatus: form.paymentStatus,
-                amountGiven: parseFloat(form.amountGiven) || 0,
-                change,
-            });
-        } catch (error) {
-            toast({
-                title: "Transaction Error",
-                description: error.message,
-                variant: "destructive",
-            });
-        }
+        onSubmit(payload);
     };
-
-    const nonPlasticItems = stockItems.filter((item) => !item.name.toLowerCase().includes("plastic"));
-    const chunkedConsumables = [];
-    for (let i = 0; i < nonPlasticItems.length; i += 2) {
-        chunkedConsumables.push(nonPlasticItems.slice(i, i + 2));
-    }
 
     return (
         <Card className="card max-h-[620px] overflow-y-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
@@ -256,151 +256,104 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
                     className="space-y-4"
                 >
                     {/* 👤 Customer Info */}
-                    {/* 🧼 Service Selection */}
-                    {/* 🧼 Loads + Plastic */}
-                    <div className="space-y-3">
-                        <div>
-                            <Label className="mb-1 block">Name</Label>
-                            <Input
-                                placeholder="Customer Name"
-                                value={form.name}
-                                onChange={(e) => handleChange("name", e.target.value)}
-                                required
-                                className="input"
-                            />
-                        </div>
-
-                        <div>
-                            <Label className="mb-1 block">Contact Number</Label>
-                            <Input
-                                type="tel"
-                                inputMode="numeric"
-                                pattern="^09\d{9}$"
-                                maxLength={11}
-                                placeholder="09XXXXXXXXX"
-                                value={form.contact}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    if (/^\d{0,11}$/.test(value)) {
-                                        handleChange("contact", value);
-                                    }
-                                }}
-                                required
-                                className="input"
-                            />
-                        </div>
-
-                        <div>
-                            <Label className="mb-1 block">Service Type</Label>
-                            <Select
-                                value={form.serviceId}
-                                onValueChange={(value) => handleChange("serviceId", value)}
-                            >
-                                <SelectTrigger className="input">
-                                    <SelectValue placeholder="Select service" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {services.map((service) => (
-                                        <SelectItem
-                                            key={service.id}
-                                            value={service.id}
-                                        >
-                                            {service.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label className="mb-1 block">Loads</Label>
-                                <Input
-                                    type="number"
-                                    inputMode="numeric"
-                                    min={1}
-                                    value={form.loads}
-                                    onChange={(e) => {
-                                        const raw = e.target.value;
-                                        const cleaned = raw.replace(/^0+/, "") || "1";
-                                        handleChange("loads", cleaned);
-                                    }}
-                                    onBlur={(e) => {
-                                        const numeric = parseInt(e.target.value, 10);
-                                        handleChange("loads", isNaN(numeric) || numeric < 1 ? 1 : numeric);
-                                    }}
-                                    required
-                                    className="input"
-                                />
-                            </div>
-
-                            {stockItems
-                                .filter((item) => item.name.toLowerCase().includes("plastic"))
-                                .map((item) => (
-                                    <div key={item.id}>
-                                        <Label className="mb-1 block">{item.name}</Label>
-                                        <Input
-                                            type="number"
-                                            inputMode="numeric"
-                                            min={0}
-                                            value={consumables[item.name]?.toString() ?? "0"}
-                                            onChange={(e) => handleConsumableChange(item.name, e.target.value)}
-                                            onBlur={(e) => {
-                                                const cleaned = e.target.value.replace(/^0+/, "") || "0";
-                                                const numeric = parseInt(cleaned, 10);
-                                                handleConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
-                                            }}
-                                            className="input"
-                                        />
-                                    </div>
-                                ))}
-                        </div>
-
-                        {chunkedConsumables.map((pair, index) => (
-                            <div
-                                key={index}
-                                className="grid grid-cols-2 gap-4"
-                            >
-                                {pair.map((item) => (
-                                    <div key={item.id}>
-                                        <Label className="mb-1 block">{item.name}</Label>
-                                        <Input
-                                            type="number"
-                                            inputMode="numeric"
-                                            min={0}
-                                            value={consumables[item.name]?.toString() ?? "0"}
-                                            onChange={(e) => handleConsumableChange(item.name, e.target.value)}
-                                            onBlur={(e) => {
-                                                const cleaned = e.target.value.replace(/^0+/, "") || "0";
-                                                const numeric = parseInt(cleaned, 10);
-                                                handleConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
-                                            }}
-                                            className="input"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-
-                        <PaymentSection
-                            paymentStatus={form.paymentStatus}
-                            amountGiven={form.amountGiven}
-                            totalAmount={totalAmount}
-                            onStatusChange={(value) => {
-                                handleChange("paymentStatus", value);
-                                if (value === "Unpaid") {
-                                    handleChange("amountGiven", 0);
-                                }
-                            }}
-                            onAmountChange={(value) => handleChange("amountGiven", value)}
+                    <div>
+                        <Label className="mb-1 block">Name</Label>
+                        <Input
+                            placeholder="Customer Name"
+                            value={form.name}
+                            onChange={(e) => handleChange("name", e.target.value)}
+                            required
+                            disabled={isLocked}
+                            className="input"
                         />
                     </div>
 
+                    <div>
+                        <Label className="mb-1 block">Contact Number</Label>
+                        <Input
+                            type="tel"
+                            inputMode="numeric"
+                            pattern={"^09\\d{9}$"}
+                            maxLength={11}
+                            placeholder="09XXXXXXXXX"
+                            value={form.contact}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d{0,11}$/.test(value)) {
+                                    handleChange("contact", value);
+                                }
+                            }}
+                            required
+                            disabled={isLocked}
+                            className="input"
+                        />
+                    </div>
+
+                    {/* 🧼 Service Selection */}
+                    <ServiceSelector
+                        services={services}
+                        serviceId={form.serviceId}
+                        onChange={handleChange}
+                        isLocked={isLocked}
+                    />
+
+                    {/* 🧺 Supply Source Selector */}
+                    <div className="space-y-2 pt-4">
+                        <Label className="mb-1 block">Supply Source</Label>
+                        <Select
+                            value={supplySource}
+                            onValueChange={setSupplySource}
+                            disabled={isLocked}
+                        >
+                            <SelectTrigger className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
+                                <SelectValue placeholder="Select source" />
+                            </SelectTrigger>
+                            <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                                <SelectItem
+                                    value="in-store"
+                                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    In-store
+                                </SelectItem>
+                                <SelectItem
+                                    value="customer"
+                                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    Customer-provided
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* 🧼 Loads + Consumables */}
+                    <ConsumablesSection
+                        stockItems={stockItems}
+                        consumables={consumables}
+                        loads={loads}
+                        onLoadsChange={setLoads}
+                        onConsumableChange={handleConsumableChange}
+                        plasticOverrides={plasticOverrides}
+                        setPlasticOverrides={setPlasticOverrides}
+                        supplySource={supplySource}
+                        isLocked={isLocked}
+                    />
+
+                    {/* 💳 Payment Section */}
+                    <PaymentSection
+                        paymentMethod={form.paymentMethod}
+                        amountGiven={form.amountGiven}
+                        totalAmount={totalAmount}
+                        onMethodChange={(value) => handleChange("paymentMethod", value)}
+                        onAmountChange={(value) => handleChange("amountGiven", value)}
+                        isLocked={isLocked}
+                    />
+
                     <Button
                         type="submit"
+                        disabled={isSubmitting || isLocked}
                         className="mt-2 w-full rounded-md bg-[#60A5FA] px-4 py-2 text-white transition-colors hover:bg-[#3B82F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
                     >
-                        Save Transaction
+                        {isSubmitting ? "Processing..." : "Save Transaction"}
                     </Button>
                 </form>
             </CardContent>
@@ -411,6 +364,8 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange }, ref) => {
 TransactionForm.propTypes = {
     onSubmit: PropTypes.func.isRequired,
     onPreviewChange: PropTypes.func,
+    isSubmitting: PropTypes.bool,
+    isLocked: PropTypes.bool, // ✅ Add this line
 };
 
 export default TransactionForm;

@@ -64,6 +64,7 @@
     width: 64px !important;
     height: 64px !important;
     margin: 8px auto !important;
+    transform: none !important; /* ✅ Ensures QR code prints correctly */
   }
 
   .printable-area {

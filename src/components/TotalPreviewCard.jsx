@@ -1,10 +1,10 @@
 import PropTypes from "prop-types";
 import { Eye } from "lucide-react";
 
-const TotalPreviewCard = ({ amount, amountGiven, change }) => {
+const TotalPreviewCard = ({ amount = 0, amountGiven = 0, change = 0 }) => {
   const isPaid = amountGiven > 0;
   const isUnderpaid = isPaid && change < 0;
-  const isOverpaid = isPaid && change >= 0;
+  const isOverpaid = isPaid && change > 0;
 
   const changeColor = isUnderpaid
     ? "text-red-600 dark:text-red-400"
@@ -12,12 +12,10 @@ const TotalPreviewCard = ({ amount, amountGiven, change }) => {
     ? "text-green-700 dark:text-green-400"
     : "text-slate-700 dark:text-slate-300";
 
-  const currencyDisplay = (value) => (
-    <div className="flex items-center justify-end gap-1">
+  const currencyDisplay = (value, colorClass = "") => (
+    <div className={`flex items-center justify-end gap-1 ${colorClass}`}>
       <span className="text-slate-500 dark:text-slate-400">₱</span>
-      <span className="font-bold text-slate-900 dark:text-white">
-        {value.toFixed(2)}
-      </span>
+      <span className="font-bold">{value.toFixed(2)}</span>
     </div>
   );
 
@@ -47,7 +45,7 @@ const TotalPreviewCard = ({ amount, amountGiven, change }) => {
           <div className="flex justify-between items-center">
             <span>Change:</span>
             <div className={`flex items-center gap-1 ${changeColor}`}>
-              <span>{change < 0 ? "−" : "₱"}</span>
+              <span>{change < 0 ? "−₱" : "₱"}</span>
               <span className="font-bold">{Math.abs(change).toFixed(2)}</span>
             </div>
           </div>
@@ -64,9 +62,9 @@ const TotalPreviewCard = ({ amount, amountGiven, change }) => {
 };
 
 TotalPreviewCard.propTypes = {
-  amount: PropTypes.number.isRequired,
-  amountGiven: PropTypes.number.isRequired,
-  change: PropTypes.number.isRequired,
+  amount: PropTypes.number,
+  amountGiven: PropTypes.number,
+  change: PropTypes.number,
 };
 
 export default TotalPreviewCard;

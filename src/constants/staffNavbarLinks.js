@@ -23,7 +23,6 @@ export const staffNavbarLinks = [
     Links: [
       { label: "New Transaction", icon: PlusCircle, path: "/staff/transactions/new" },
       { label: "Transaction Records", icon: ClipboardList, path: "/staff/records" },
-      { label: "Unpaid Transactions", icon: Receipt, path: "/staff/unpaid" },
     ],
   },
   {

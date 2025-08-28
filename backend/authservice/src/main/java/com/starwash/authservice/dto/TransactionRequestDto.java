@@ -17,8 +17,8 @@ public class TransactionRequestDto {
     // Map of consumable item names to quantities (e.g. "Plastic" -> 2)
     private Map<String, Integer> consumableQuantities;
 
-    // ✅ Payment status ("Paid" or "Unpaid")
-    private String status;
+    // ✅ Payment method (e.g. "Cash", "GCash", "Card")
+    private String paymentMethod;
 
     // ✅ Amount given by customer (used to compute change)
     private Double amountGiven;
@@ -27,22 +27,35 @@ public class TransactionRequestDto {
     private LocalDateTime issueDate;
     private LocalDateTime dueDate;
 
+    // 🔒 Optional: trigger invoice generation (default true)
+    private boolean generateInvoice = true;
+
+    // 👤 Optional: staff ID for traceability
+    private String staffId;
+
+    // 📝 Optional: notes or override reason
+    private String notes;
+
     public TransactionRequestDto() {}
 
     public TransactionRequestDto(String customerName, String contact,
                                  String serviceId, Integer loads,
                                  Map<String, Integer> consumableQuantities,
-                                 String status, Double amountGiven,
-                                 LocalDateTime issueDate, LocalDateTime dueDate) {
+                                 String paymentMethod, Double amountGiven,
+                                 LocalDateTime issueDate, LocalDateTime dueDate,
+                                 boolean generateInvoice, String staffId, String notes) {
         this.customerName = customerName;
         this.contact = contact;
         this.serviceId = serviceId;
         this.loads = loads;
         this.consumableQuantities = consumableQuantities;
-        this.status = status;
+        this.paymentMethod = paymentMethod;
         this.amountGiven = amountGiven;
         this.issueDate = issueDate;
         this.dueDate = dueDate;
+        this.generateInvoice = generateInvoice;
+        this.staffId = staffId;
+        this.notes = notes;
     }
 
     // Getters and Setters
@@ -59,10 +72,12 @@ public class TransactionRequestDto {
     public void setLoads(Integer loads) { this.loads = loads; }
 
     public Map<String, Integer> getConsumableQuantities() { return consumableQuantities; }
-    public void setConsumableQuantities(Map<String, Integer> consumableQuantities) { this.consumableQuantities = consumableQuantities; }
+    public void setConsumableQuantities(Map<String, Integer> consumableQuantities) {
+        this.consumableQuantities = consumableQuantities;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
     public Double getAmountGiven() { return amountGiven; }
     public void setAmountGiven(Double amountGiven) { this.amountGiven = amountGiven; }
@@ -72,4 +87,13 @@ public class TransactionRequestDto {
 
     public LocalDateTime getDueDate() { return dueDate; }
     public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
+
+    public boolean isGenerateInvoice() { return generateInvoice; }
+    public void setGenerateInvoice(boolean generateInvoice) { this.generateInvoice = generateInvoice; }
+
+    public String getStaffId() { return staffId; }
+    public void setStaffId(String staffId) { this.staffId = staffId; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

@@ -15,11 +15,10 @@ import ManageStaffPage from "@/routes/Admin/MngStaff/MainPage";
 import ManageInventoryPage from "@/routes/Admin/MngInventory/MainPage";
 import LoginPage from "@/routes/Auth/LoginPage";
 import ServiceOptionPage from "@/routes/Admin/SvcOption/MainPage";
-import ReceiptSettingsPage from "@/routes/Admin/ReceiptSettings/MainPage";
-import InvoiceSettingsPage from "@/routes/Admin/InvoiceSettings/MainPage";
 import ManageReceiptPage from "@/routes/Admin/MngReceipt/MainPage";
 import MachineMainPage from "@/routes/Admin/Machine/MainPage";
 import TermsSettingsPage from "@/routes/Admin/TermsSettings/MainPage";
+import DocumentSettingsPage from "@/routes/Admin/Format/MainPage"; // ✅ NEW unified format page
 
 // 👕 Staff Pages
 import StaffDashboardPage from "@/routes/Staff/dashboard/page";
@@ -74,8 +73,7 @@ function App() {
     { path: "/serviceoption", element: <AdminRoute element={<ServiceOptionPage />} /> },
     { path: "/notificationsettings", element: <AdminRoute element={<h1 className="title">Notification Settings</h1>} /> },
     { path: "/paymentmethod", element: <AdminRoute element={<h1 className="title">Payment Method</h1>} /> },
-    { path: "/receiptssettings", element: <AdminRoute element={<ReceiptSettingsPage />} /> },
-    { path: "/invoicesettings", element: <AdminRoute element={<InvoiceSettingsPage />} /> },
+    { path: "/documentsettings", element: <AdminRoute element={<DocumentSettingsPage />} /> }, // ✅ NEW route
     { path: "/machines", element: <AdminRoute element={<MachineMainPage />} /> },
     { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
 
@@ -95,7 +93,7 @@ function App() {
     <ThemeProvider storageKey="theme">
       <AuthProvider>
         <RouterProvider router={router} />
-        <Toaster /> {/* ✅ Toast system is active here */}
+        <Toaster />
       </AuthProvider>
     </ThemeProvider>
   );
