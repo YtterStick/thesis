@@ -20,18 +20,11 @@ const decodeToken = (token) => {
   try {
     const payload = token.split(".")[1];
     const decoded = JSON.parse(atob(payload));
-
     const issuedAt = new Date(decoded.iat * 1000);
     const expiresAt = new Date(decoded.exp * 1000);
     const isExpired = expiresAt.getTime() < Date.now();
-
     if (isExpired) return null;
-
-    return {
-      ...decoded,
-      issuedAt,
-      expiresAt,
-    };
+    return { ...decoded, issuedAt, expiresAt };
   } catch {
     return null;
   }
@@ -47,23 +40,6 @@ const LoginPage = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [loginMeta, setLoginMeta] = useState(null);
-
-  useEffect(() => {
-    setIsAuthenticating(false); // 🧼 Reset on mount
-  }, []);
-
-  useEffect(() => {
-    if (!loading && isAuthenticated && role) {
-      const normalizedRole = role.toUpperCase();
-      if (normalizedRole === "ADMIN") {
-        navigate("/dashboard", { replace: true });
-      } else if (normalizedRole === "STAFF") {
-        navigate("/staff/dashboard", { replace: true });
-      } else {
-        navigate("/unauthorized", { replace: true });
-      }
-    }
-  }, [isAuthenticated, role, loading, navigate]);
 
   useEffect(() => {
     const handleMouse = (e) => {
@@ -101,9 +77,6 @@ const LoginPage = () => {
       const decoded = decodeToken(token);
       if (!decoded) throw new Error("Token expired or invalid");
 
-      console.log("🕒 Login time:", decoded.issuedAt.toLocaleString());
-      console.log("⏳ Token expires at:", decoded.expiresAt.toLocaleString());
-
       setLoginMeta({
         issuedAt: decoded.issuedAt,
         expiresAt: decoded.expiresAt,
@@ -112,18 +85,19 @@ const LoginPage = () => {
       localStorage.setItem("authToken", token);
       await login(token);
 
-      const normalizedRole = decoded.role?.toUpperCase();
-      if (normalizedRole === "ADMIN") {
-        navigate("/dashboard");
-      } else if (normalizedRole === "STAFF") {
-        navigate("/staff/dashboard");
-      } else {
-        navigate("/unauthorized");
-      }
+      setTimeout(() => {
+        const normalizedRole = decoded.role?.toUpperCase();
+        if (normalizedRole === "ADMIN") {
+          navigate("/dashboard");
+        } else if (normalizedRole === "STAFF") {
+          navigate("/staff/dashboard");
+        } else {
+          navigate("/unauthorized");
+        }
+      }, 3000);
     } catch (err) {
       console.error("❌ Login error:", err);
       setError("Invalid username or password");
-    } finally {
       setIsAuthenticating(false);
     }
   };
@@ -141,11 +115,13 @@ const LoginPage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className={`relative z-10 w-full max-w-[400px] ${
-          isAuthenticating ? "pointer-events-none blur-sm" : ""
-        }`}
+        className="relative z-10 w-full max-w-[400px]"
       >
-        <Card className="animate-cardglow border border-[#00B5FF] bg-[#181818]/80 backdrop-blur-md">
+        <Card
+  className={`animate-cardglow ${
+    isAuthenticating ? "border-none opacity-30" : "border border-[#00B5FF]"
+  } bg-[#181818]/80 backdrop-blur-md transition-opacity duration-300`}
+>
           <CardHeader className="space-y-3">
             <div className="flex items-center gap-4">
               <img
@@ -206,7 +182,7 @@ const LoginPage = () => {
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3 top-3 text-white transition-colors hover:text-[#00B5FF]"
-                                    aria-label="Toggle password visibility"
+                  aria-label="Toggle password visibility"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -223,29 +199,31 @@ const LoginPage = () => {
               <Button
                 type="submit"
                 disabled={isAuthenticating}
-                className="w-full bg-gradient-to-r from-[#0077CC] via-[#00B5FF] to-[#0077CC] px-4 py-2 text-xs font-medium text-slate-900 shadow-[0_0_8px_#00B5FF80] transition-transform hover:scale-[1.01] hover:shadow-[0_0_12px_#00B5FF80]"
+                className="w-full bg-gradient-to-r from-[#0077CC] via-[#00B5FF] to-[#0077CC] px-4 py-2 text-xs font-medium text-white shadow-md hover:brightness-110 disabled:opacity-50"
               >
-                Login
+                {isAuthenticating ? "Authenticating..." : "Login"}
               </Button>
             </form>
 
-            {/* 🕒 Optional Login Metadata */}
-            {loginMeta && (
-              <div className="mt-4 space-y-1 text-xs text-slate-400">
-                <p>🕒 Logged in at: {loginMeta.issuedAt.toLocaleString()}</p>
-                <p>⏳ Token expires at: {loginMeta.expiresAt.toLocaleString()}</p>
+            {/* 🧾 Login Metadata */}
+                        {loginMeta && !isAuthenticating && (
+              <div className="mt-6 rounded-md border border-slate-700 bg-[#1f1f1f] p-3 text-xs text-slate-400">
+                <div>
+                  <span className="font-semibold text-slate-300">Issued:</span>{" "}
+                  {loginMeta.issuedAt.toLocaleString()}
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-300">Expires:</span>{" "}
+                  {loginMeta.expiresAt.toLocaleString()}
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* ⏳ Auth Loader Overlay */}
-      {isAuthenticating && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <AuthLoader />
-        </div>
-      )}
+      {/* 🔒 Fullscreen Loader Overlay */}
+      {isAuthenticating && <AuthLoader />}
     </div>
   );
 };

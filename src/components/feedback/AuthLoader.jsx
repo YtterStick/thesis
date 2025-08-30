@@ -1,37 +1,9 @@
-import { useSprings, animated, useSpring } from "@react-spring/web";
-import chibiAsset from "@/assets/chibiAsset.png";
+import React from "react";
+import Lottie from "lottie-react";
+import waterLoadingAnimation from "@/assets/lottie/water-loading.json"; // Replace with your actual path
+import { animated, useSpring } from "@react-spring/web";
 
 const AuthLoader = () => {
-  // Bouncing dots animation
-  const springs = useSprings(
-    3,
-    Array(3)
-      .fill()
-      .map((_, i) => ({
-        from: { transform: "translateY(0px)" },
-        to: async (next) => {
-          while (1) {
-            await next({ transform: "translateY(-10px)" });
-            await next({ transform: "translateY(0px)" });
-          }
-        },
-        delay: i * 200,
-        config: { tension: 200, friction: 12 },
-      }))
-  );
-
-  // Floating chibi Vader animation
-  const float = useSpring({
-    loop: true,
-    from: { transform: "translateY(0px)" },
-    to: [
-      { transform: "translateY(-12px)" },
-      { transform: "translateY(0px)" },
-    ],
-    config: { tension: 120, friction: 14 },
-  });
-
-  // Fade-in animation for the whole loader block
   const fadeIn = useSpring({
     from: { opacity: 0, scale: 0.95 },
     to: { opacity: 1, scale: 1 },
@@ -42,33 +14,16 @@ const AuthLoader = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
       <animated.div
         style={fadeIn}
-        className="relative z-10 flex flex-col items-center justify-center gap-6 text-center"
+        className="relative z-10 flex flex-col items-center justify-center"
       >
-        {/* 🛸 Chibi Vader floating */}
-        <animated.img
-          src={chibiAsset}
-          alt="Chibi Darth Vader"
-          style={float}
-          className="h-28 w-auto drop-shadow-[0_0_16px_#00B5FF]"
-        />
-
-        {/* ✨ Caption with Death Star font */}
-        <p
-          className="text-xl uppercase tracking-[0.25em] text-[#00B5FF] drop-shadow-[0_0_8px_#00B5FF80]"
-          style={{ fontFamily: 'DeathStar' }}
-        >
-          Loading...
-        </p>
-
-        {/* 🫧 Bouncing dots */}
-        <div className="flex gap-4">
-          {springs.map((style, index) => (
-            <animated.div
-              key={index}
-              style={style}
-              className="h-5 w-5 rounded-full bg-[#00B5FF] shadow-[0_0_12px_#00B5FF80]"
-            />
-          ))}
+        {/* 🌊 Enlarged Water-themed Lottie animation */}
+        <div className="h-64 w-64">
+          <Lottie
+            animationData={waterLoadingAnimation}
+            loop
+            autoplay
+            className="h-full w-full"
+          />
         </div>
       </animated.div>
     </div>

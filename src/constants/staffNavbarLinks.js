@@ -28,7 +28,7 @@ export const staffNavbarLinks = [
   {
     title: "Laundry Operations",
     Links: [
-      { label: "Service Tracking", icon: Timer, path: "/staff/service-tracking" },
+      { label: "Service Tracking", icon: Timer, path: "/staff/tracking" },
       { label: "Claiming Center", icon: PackageCheck, path: "/staff/claiming" },
       { label: "Expired Loads", icon: AlertTriangle, path: "/staff/expired-loads" },
       { label: "Missing Items", icon: Users, path: "/staff/missing-items" },
@@ -43,7 +43,7 @@ export const staffNavbarLinks = [
   {
     title: "Inventory",
     Links: [
-      { label: "Supply Monitoring", icon: Boxes, path: "/staff/inventory" },
+      { label: "Inventory Monitoring", icon: Boxes, path: "/staff/inventory" },
     ],
   },
 ];

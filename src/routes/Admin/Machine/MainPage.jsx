@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { WashingMachine, Sparkles, Flame, X } from "lucide-react";
+import { WashingMachine, WrenchIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AddMachineModal from "./AddMachineModal";
 import { Button } from "@/components/ui/button";
+import Lottie from "lottie-react";
+import washingAnimation from "@/assets/lottie/washing-machine.json";
+import dryerAnimation from "@/assets/lottie/dryer-machine.json";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const initialForm = {
     name: "",
@@ -46,13 +49,12 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
     const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
 
     if (!response.ok) {
-        const errorText = await response.text(); // fallback if no JSON
+        const errorText = await response.text();
         throw new Error(`Request failed: ${response.status} - ${errorText}`);
     }
 
     const contentType = response.headers.get("content-type");
 
-    // ✅ Gracefully handle empty or non-JSON responses
     if (contentType && contentType.includes("application/json")) {
         try {
             return await response.json();
@@ -62,8 +64,78 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
         }
     }
 
-    return null; // for 204 No Content or application/octet-stream
+    return null;
 };
+
+// ✅ Inline MachineCard component
+function MachineCard({ machine, animationData, onEdit, onDelete }) {
+    const lottieRef = useRef();
+
+    useEffect(() => {
+        if (lottieRef.current) {
+            if (machine.status === "In Use") {
+                lottieRef.current.play();
+            } else {
+                lottieRef.current.stop();
+            }
+        }
+    }, [machine.status]);
+
+    const statusColor = {
+        Available: "text-green-600 dark:text-green-400",
+        "In Use": "text-yellow-500 dark:text-yellow-400",
+        Maintenance: "text-red-500 dark:text-red-400",
+    };
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <div
+                    onClick={() => onEdit(machine)}
+                    className="scroll-snap-align-start relative flex h-[240px] w-[200px] shrink-0 cursor-pointer flex-col items-center justify-between rounded-md bg-slate-100 p-4 shadow-md transition-transform hover:scale-105 dark:bg-slate-800"
+                >
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(machine.id);
+                        }}
+                        className="absolute right-2 top-2 rounded-full p-1 text-slate-400 transition-colors hover:text-red-600"
+                        title="Delete machine"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+
+                    <div className="relative h-[120px] w-[120px]">
+                        <Lottie
+                            lottieRef={lottieRef}
+                            animationData={animationData}
+                            loop
+                            className={`h-full w-full ${machine.status === "Maintenance" ? "opacity-40" : ""}`}
+                        />
+                        {machine.status === "Maintenance" && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center">
+                                <WrenchIcon className="h-8 w-8 text-red-500" />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-2 text-center text-sm text-slate-700 dark:text-slate-300">
+                        <div className="font-semibold">{machine.name}</div>
+                        <div>{machine.capacityKg} kg</div>
+                        <div className={`text-xs italic ${statusColor[machine.status]}`}>{machine.status}</div>
+                    </div>
+                </div>
+            </TooltipTrigger>
+            <TooltipContent className="text-xs">
+                <div>
+                    {machine.type === "Washer" ? "🧺" : "🔥"} Type: {machine.type}
+                </div>
+                <div>⚖️ Capacity: {machine.capacityKg} kg</div>
+                <div className={`italic ${statusColor[machine.status]}`}>📌 Status: {machine.status}</div>
+            </TooltipContent>
+        </Tooltip>
+    );
+}
 
 export default function MachineMainPage() {
     const [form, setForm] = useState(initialForm);
@@ -183,73 +255,6 @@ export default function MachineMainPage() {
     const washers = machines.filter((m) => m.type === "Washer");
     const dryers = machines.filter((m) => m.type === "Dryer");
 
-    const statusColorMap = {
-        Available: "text-[#3DD9B6] dark:text-[#28b99a]",
-        "In Use": "text-yellow-500 dark:text-yellow-400",
-        Maintenance: "text-red-500 dark:text-red-400",
-    };
-
-    const typeColorMap = {
-        Washer: "border-blue-400 bg-white dark:bg-slate-900",
-        Dryer: "border-orange-400 bg-white dark:bg-slate-900",
-    };
-
-    const iconColorMap = {
-        Washer: "text-blue-400",
-        Dryer: "text-orange-400",
-    };
-
-    const renderMachineCard = (machine) => {
-        const statusColor = statusColorMap[machine.status] || "text-muted-foreground";
-        const typeColor = typeColorMap[machine.type] || "border-slate-800 bg-white dark:bg-slate-900";
-        const iconColor = iconColorMap[machine.type] || "text-white";
-
-        return (
-            <Card
-                key={machine.id}
-                onClick={() => {
-                    setSelectedMachine(machine);
-                    setForm({
-                        id: machine.id,
-                        name: machine.name,
-                        type: machine.type,
-                        capacityKg: machine.capacityKg.toString(),
-                        status: machine.status,
-                    });
-                    setOpen(true);
-                }}
-                className={`scroll-snap-align-start relative w-[300px] shrink-0 rounded-md border ${typeColor} text-slate-900 transition-transform duration-200 hover:scale-[1.04] hover:cursor-pointer dark:text-white`}
-                style={{ transformOrigin: "center" }}
-            >
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmDeleteId(machine.id);
-                    }}
-                    className="absolute right-2 top-2 rounded-full p-1 hover:bg-slate-200 dark:hover:bg-slate-800"
-                    title="Delete machine"
-                >
-                    <X
-                        size={16}
-                        className="text-red-500 dark:text-red-400"
-                    />
-                </button>
-
-                <CardHeader className="flex items-center gap-2">
-                    {machine.type === "Washer" ? <Sparkles className={`h-5 w-5 ${iconColor}`} /> : <Flame className={`h-5 w-5 ${iconColor}`} />}
-                    <CardTitle className="text-base font-semibold">{machine.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm text-muted-foreground dark:text-slate-400">
-                    <div>Type: {machine.type}</div>
-                    <div>Capacity: {machine.capacityKg} kg</div>
-                    <div>
-                        Status: <span className={`font-medium ${statusColor}`}>{machine.status}</span>
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    };
-
     return (
         <div className="space-y-6 overflow-visible px-6 pb-6 pt-4 text-slate-900 dark:text-white">
             <div className="mb-2 flex items-center justify-between">
@@ -277,56 +282,99 @@ export default function MachineMainPage() {
             {/* 🧺 Washer Section */}
             <div className="space-y-2">
                 <h3 className="text-lg font-semibold text-blue-500 dark:text-blue-400">Washers</h3>
-                <div
-                    ref={washerRef}
-                    className="relative z-0 overflow-x-auto scroll-smooth px-4 py-2"
-                >
+                <TooltipProvider>
                     <div
-                        className="flex flex-nowrap gap-4"
-                        style={{ scrollSnapType: "x mandatory", touchAction: "pan-y" }}
+                        ref={washerRef}
+                        className="overflow-x-auto scroll-smooth px-4 py-2"
                     >
-                        {loading ? (
-                            <div className="flex gap-4">
-                                {[...Array(3)].map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className="h-[160px] w-[300px] animate-pulse rounded-md bg-slate-200 dark:bg-slate-800"
+                        <div
+                            className="flex flex-nowrap gap-6"
+                            style={{ scrollSnapType: "x mandatory" }}
+                        >
+                            {loading ? (
+                                <div className="flex gap-6">
+                                    {[...Array(3)].map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className="h-[240px] w-[200px] animate-pulse rounded-md bg-slate-200 dark:bg-slate-800"
+                                        />
+                                    ))}
+                                </div>
+                            ) : washers.length > 0 ? (
+                                washers.map((machine) => (
+                                    <MachineCard
+                                        key={machine.id}
+                                        machine={machine}
+                                        animationData={washingAnimation}
+                                        onEdit={(m) => {
+                                            setSelectedMachine(m);
+                                            setForm({
+                                                id: m.id,
+                                                name: m.name,
+                                                type: m.type,
+                                                capacityKg: m.capacityKg.toString(),
+                                                status: m.status,
+                                            });
+                                            setOpen(true);
+                                        }}
+                                        onDelete={(id) => setConfirmDeleteId(id)}
                                     />
-                                ))}
-                            </div>
-                        ) : washers.length > 0 ? (
-                            washers.map(renderMachineCard)
-                        ) : (
-                            <p className="text-muted-foreground dark:text-slate-400">No washers added yet.</p>
-                        )}
+                                ))
+                            ) : (
+                                <p className="text-muted-foreground dark:text-slate-400">No washers added yet.</p>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </TooltipProvider>
             </div>
 
             {/* 🔥 Dryer Section */}
             <div className="space-y-2">
                 <h3 className="text-lg font-semibold text-orange-500 dark:text-orange-400">Dryers</h3>
-                <div
-                    ref={dryerRef}
-                    className="relative z-0 overflow-x-auto scroll-smooth px-4 py-2"
-                >
+                <TooltipProvider>
                     <div
-                        className="flex flex-nowrap gap-4"
-                        style={{
-                            scrollSnapType: "x mandatory",
-                            touchAction: "pan-y",
-                            overflow: "visible",
-                        }}
+                        ref={dryerRef}
+                        className="overflow-x-auto scroll-smooth px-4 py-2"
                     >
-                        {loading ? (
-                            <div className="py-2 text-muted-foreground dark:text-slate-400">Loading machines...</div>
-                        ) : dryers.length > 0 ? (
-                            dryers.map(renderMachineCard)
-                        ) : (
-                            <p className="text-muted-foreground dark:text-slate-400">No dryers added yet.</p>
-                        )}
+                        <div
+                            className="flex flex-nowrap gap-6"
+                            style={{ scrollSnapType: "x mandatory" }}
+                        >
+                            {loading ? (
+                                <div className="flex gap-6">
+                                    {[...Array(3)].map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className="h-[240px] w-[200px] animate-pulse rounded-md bg-slate-200 dark:bg-slate-800"
+                                        />
+                                    ))}
+                                </div>
+                            ) : dryers.length > 0 ? (
+                                dryers.map((machine) => (
+                                    <MachineCard
+                                        key={machine.id}
+                                        machine={machine}
+                                        animationData={dryerAnimation}
+                                        onEdit={(m) => {
+                                            setSelectedMachine(m);
+                                            setForm({
+                                                id: m.id,
+                                                name: m.name,
+                                                type: m.type,
+                                                capacityKg: m.capacityKg.toString(),
+                                                status: m.status,
+                                            });
+                                            setOpen(true);
+                                        }}
+                                        onDelete={(id) => setConfirmDeleteId(id)}
+                                    />
+                                ))
+                            ) : (
+                                <p className="text-muted-foreground dark:text-slate-400">No dryers added yet.</p>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </TooltipProvider>
             </div>
 
             {/* ❓ Confirm Delete */}

@@ -25,6 +25,7 @@ import StaffDashboardPage from "@/routes/Staff/dashboard/page";
 import NewTransactionPage from "@/routes/Staff/transaction/MainPage";
 import StaffRecordsPage from "@/routes/Staff/records/MainPage";
 import StaffInventoryPage from "@/routes/Staff/inventory/MainPage";
+import StaffServiceTracking from "@/routes/Staff/tracking/MainPage";
 
 // ✅ Toast Provider
 import { Toaster } from "@/components/ui/toaster";
@@ -85,6 +86,7 @@ function App() {
     { path: "/staff/receipts", element: <StaffRoute element={<h1 className="title">Staff Receipts</h1>} /> },
     { path: "/staff/inventory", element: <StaffRoute element={<StaffInventoryPage/> } /> },
     { path: "/staff/records", element: <StaffRoute element={<StaffRecordsPage />} /> },
+    { path: "/staff/tracking", element: <StaffRoute element={<StaffServiceTracking />} /> },
 
     // ❌ Catch-all
     { path: "*", element: <NotFoundPage /> },
