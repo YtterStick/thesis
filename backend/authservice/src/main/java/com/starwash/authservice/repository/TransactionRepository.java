@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TransactionRepository extends MongoRepository<Transaction, String> {
@@ -17,4 +18,6 @@ public interface TransactionRepository extends MongoRepository<Transaction, Stri
     List<Transaction> findByPaymentMethod(String paymentMethod);
 
     List<Transaction> findByServiceNameIgnoreCase(String serviceName);
+
+    Optional<Transaction> findByInvoiceNumber(String invoiceNumber);
 }

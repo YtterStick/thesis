@@ -2,7 +2,9 @@ package com.starwash.authservice.controller;
 
 import com.starwash.authservice.dto.TransactionRequestDto;
 import com.starwash.authservice.dto.ServiceInvoiceDto;
+import com.starwash.authservice.dto.LaundryJobDto;
 import com.starwash.authservice.service.TransactionService;
+import com.starwash.authservice.service.LaundryJobService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,12 +19,14 @@ public class TransactionController {
     private static final Logger log = LoggerFactory.getLogger(TransactionController.class);
 
     private final TransactionService transactionService;
+    private final LaundryJobService laundryJobService;
 
-    public TransactionController(TransactionService transactionService) {
+    public TransactionController(TransactionService transactionService,
+                                 LaundryJobService laundryJobService) {
         this.transactionService = transactionService;
+        this.laundryJobService = laundryJobService;
     }
 
-    // ✅ Create transaction and return service invoice
     @PostMapping
     public ResponseEntity<ServiceInvoiceDto> createTransaction(@RequestBody TransactionRequestDto request,
                                                                @RequestHeader("Authorization") String authHeader) {
@@ -30,7 +34,6 @@ public class TransactionController {
             return ResponseEntity.status(401).build();
         }
 
-        // 🔒 Defensive guard: reject if frontend sends an ID
         try {
             var idField = request.getClass().getDeclaredField("id");
             idField.setAccessible(true);
@@ -39,9 +42,7 @@ public class TransactionController {
                 log.warn("❌ Rejected transaction with unexpected ID field");
                 return ResponseEntity.badRequest().build();
             }
-        } catch (NoSuchFieldException | IllegalAccessException ignored) {
-            // Safe to ignore if no ID field exists
-        }
+        } catch (NoSuchFieldException | IllegalAccessException ignored) {}
 
         try {
             ServiceInvoiceDto invoice = transactionService.createServiceInvoiceTransaction(request);
@@ -49,6 +50,21 @@ public class TransactionController {
                     invoice.getInvoiceNumber(),
                     invoice.getCustomerName()
             );
+
+            // ✅ Create corresponding LaundryJob
+            LaundryJobDto jobDto = new LaundryJobDto();
+            jobDto.setTransactionId(invoice.getInvoiceNumber());
+            jobDto.setCustomerName(invoice.getCustomerName());
+            jobDto.setLoads(invoice.getLoads());
+            jobDto.setDetergentQty(request.getDetergentQty());
+            jobDto.setFabricQty(request.getFabricQty());
+            jobDto.setMachineId(null);
+            jobDto.setStatusFlow(request.getStatusFlow());
+            jobDto.setCurrentStep(0);
+
+            laundryJobService.createJob(jobDto);
+            log.info("🧺 Laundry job created for transaction {}", invoice.getInvoiceNumber());
+
             return ResponseEntity.ok(invoice);
         } catch (RuntimeException e) {
             log.error("❌ Transaction creation failed: {}", e.getMessage());
@@ -56,7 +72,6 @@ public class TransactionController {
         }
     }
 
-    // ✅ Fetch service invoice by transaction ID
     @GetMapping("/{id}/service-invoice")
     public ResponseEntity<ServiceInvoiceDto> getServiceInvoice(@PathVariable String id,
                                                                @RequestHeader("Authorization") String authHeader) {
@@ -72,7 +87,4 @@ public class TransactionController {
             return ResponseEntity.notFound().build();
         }
     }
-
-    // ❌ Removed: Lookup by receipt code
-    // If you still need QR-based lookup, refactor it to use invoiceNumber instead
 }

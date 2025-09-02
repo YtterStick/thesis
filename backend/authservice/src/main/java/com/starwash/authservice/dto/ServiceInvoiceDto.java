@@ -39,7 +39,8 @@ public class ServiceInvoiceDto {
                              Double subtotal, Double tax, Double discount, Double total,
                              String paymentMethod,
                              LocalDateTime issueDate, LocalDateTime dueDate,
-                             FormatSettingsDto formatSettings) {
+                             FormatSettingsDto formatSettings,
+                             int detergentQty, int fabricQty, int plasticQty, int loads) {
         this.invoiceNumber = invoiceNumber;
         this.customerName = customerName;
         this.contact = contact;
@@ -53,6 +54,10 @@ public class ServiceInvoiceDto {
         this.issueDate = issueDate;
         this.dueDate = dueDate;
         this.formatSettings = formatSettings;
+        this.detergentQty = detergentQty;
+        this.fabricQty = fabricQty;
+        this.plasticQty = plasticQty;
+        this.loads = loads;
     }
 
     // Getters

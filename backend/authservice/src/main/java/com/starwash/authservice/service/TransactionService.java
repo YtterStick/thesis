@@ -93,7 +93,22 @@ public class TransactionService {
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
-        ServiceInvoiceDto dto = new ServiceInvoiceDto(
+        int detergentQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        int fabricQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        int plasticQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("plastic"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        return new ServiceInvoiceDto(
                 invoiceNumber,
                 transaction.getCustomerName(),
                 transaction.getContact(),
@@ -106,28 +121,12 @@ public class TransactionService {
                 request.getPaymentMethod(),
                 issueDate,
                 dueDate,
-                new FormatSettingsDto(settings)
+                new FormatSettingsDto(settings),
+                detergentQty,
+                fabricQty,
+                plasticQty,
+                loads
         );
-
-        // 🆕 Populate new fields
-        dto.setDetergentQty(consumableDtos.stream()
-                .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                .mapToInt(ServiceEntryDto::getQuantity)
-                .sum());
-
-        dto.setFabricQty(consumableDtos.stream()
-                .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                .mapToInt(ServiceEntryDto::getQuantity)
-                .sum());
-
-        dto.setPlasticQty(consumableDtos.stream()
-                .filter(c -> c.getName().toLowerCase().contains("plastic"))
-                .mapToInt(ServiceEntryDto::getQuantity)
-                .sum());
-
-        dto.setLoads(loads);
-
-        return dto;
     }
 
     public ServiceInvoiceDto getServiceInvoiceByTransactionId(String id) {
@@ -151,7 +150,22 @@ public class TransactionService {
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
-        ServiceInvoiceDto dto = new ServiceInvoiceDto(
+        int detergentQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        int fabricQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        int plasticQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("plastic"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        return new ServiceInvoiceDto(
                 tx.getInvoiceNumber(),
                 tx.getCustomerName(),
                 tx.getContact(),
@@ -164,28 +178,12 @@ public class TransactionService {
                 tx.getPaymentMethod(),
                 tx.getIssueDate(),
                 tx.getDueDate(),
-                new FormatSettingsDto(settings)
+                new FormatSettingsDto(settings),
+                detergentQty,
+                fabricQty,
+                plasticQty,
+                tx.getServiceQuantity()
         );
-
-        // 🆕 Populate new fields
-        dto.setDetergentQty(consumableDtos.stream()
-                .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                .mapToInt(ServiceEntryDto::getQuantity)
-                .sum());
-
-        dto.setFabricQty(consumableDtos.stream()
-                .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                .mapToInt(ServiceEntryDto::getQuantity)
-                .sum());
-
-        dto.setPlasticQty(consumableDtos.stream()
-                .filter(c -> c.getName().toLowerCase().contains("plastic"))
-                .mapToInt(ServiceEntryDto::getQuantity)
-                .sum());
-
-        dto.setLoads(tx.getServiceQuantity());
-
-        return dto;
     }
 
     public List<RecordResponseDto> getAllRecords() {

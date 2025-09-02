@@ -1,9 +1,13 @@
 package com.starwash.authservice.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 public class TransactionRequestDto {
+
+    // 🔒 Defensive: ID should not be passed by client
+    private String id;
 
     private String customerName;
     private String contact;
@@ -36,6 +40,11 @@ public class TransactionRequestDto {
     // 📝 Optional: notes or override reason
     private String notes;
 
+    // 🧼 Laundry job fields
+    private Integer detergentQty;
+    private Integer fabricQty;
+    private List<String> statusFlow;
+
     public TransactionRequestDto() {}
 
     public TransactionRequestDto(String customerName, String contact,
@@ -43,7 +52,8 @@ public class TransactionRequestDto {
                                  Map<String, Integer> consumableQuantities,
                                  String paymentMethod, Double amountGiven,
                                  LocalDateTime issueDate, LocalDateTime dueDate,
-                                 boolean generateInvoice, String staffId, String notes) {
+                                 boolean generateInvoice, String staffId, String notes,
+                                 Integer detergentQty, Integer fabricQty, List<String> statusFlow) {
         this.customerName = customerName;
         this.contact = contact;
         this.serviceId = serviceId;
@@ -56,9 +66,15 @@ public class TransactionRequestDto {
         this.generateInvoice = generateInvoice;
         this.staffId = staffId;
         this.notes = notes;
+        this.detergentQty = detergentQty;
+        this.fabricQty = fabricQty;
+        this.statusFlow = statusFlow;
     }
 
     // Getters and Setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
 
@@ -96,4 +112,13 @@ public class TransactionRequestDto {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public Integer getDetergentQty() { return detergentQty; }
+    public void setDetergentQty(Integer detergentQty) { this.detergentQty = detergentQty; }
+
+    public Integer getFabricQty() { return fabricQty; }
+    public void setFabricQty(Integer fabricQty) { this.fabricQty = fabricQty; }
+
+    public List<String> getStatusFlow() { return statusFlow; }
+    public void setStatusFlow(List<String> statusFlow) { this.statusFlow = statusFlow; }
 }
