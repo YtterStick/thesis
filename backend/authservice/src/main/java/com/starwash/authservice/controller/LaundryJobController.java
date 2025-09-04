@@ -3,7 +3,6 @@ package com.starwash.authservice.controller;
 import com.starwash.authservice.dto.LaundryJobDto;
 import com.starwash.authservice.model.LaundryJob;
 import com.starwash.authservice.service.LaundryJobService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,14 +13,16 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:3000")
 public class LaundryJobController {
 
-    @Autowired
-    private LaundryJobService laundryJobService;
+    private final LaundryJobService laundryJobService;
+
+    public LaundryJobController(LaundryJobService laundryJobService) {
+        this.laundryJobService = laundryJobService;
+    }
 
     // GET all laundry jobs
     @GetMapping
     public ResponseEntity<List<LaundryJobDto>> getAllJobs() {
-        List<LaundryJobDto> dtos = laundryJobService.getAllJobs();
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(laundryJobService.getAllJobs());
     }
 
     // GET single job by transactionId
@@ -38,9 +39,10 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
-    // UPDATE job
+    // UPDATE job (replace core fields)
     @PutMapping("/{transactionId}")
-    public ResponseEntity<LaundryJobDto> updateJob(@PathVariable String transactionId, @RequestBody LaundryJobDto dto) {
+    public ResponseEntity<LaundryJobDto> updateJob(@PathVariable String transactionId,
+                                                   @RequestBody LaundryJobDto dto) {
         LaundryJob existing = laundryJobService.findSingleJobByTransaction(transactionId);
 
         existing.setDetergentQty(dto.getDetergentQty());
@@ -57,46 +59,54 @@ public class LaundryJobController {
     @DeleteMapping("/{transactionId}")
     public ResponseEntity<Void> deleteJob(@PathVariable String transactionId) {
         boolean deleted = laundryJobService.deleteJobById(transactionId);
-        if (!deleted) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok().build();
+        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     // Assign machine
     @PatchMapping("/{transactionId}/assign-machine")
-    public ResponseEntity<Void> assignMachine(@PathVariable String transactionId,
-                                              @RequestParam int loadNumber,
-                                              @RequestParam String machineId) {
-        laundryJobService.assignMachine(transactionId, loadNumber, machineId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<LaundryJobDto> assignMachine(@PathVariable String transactionId,
+                                                       @RequestParam int loadNumber,
+                                                       @RequestParam String machineId) {
+        LaundryJob job = laundryJobService.assignMachine(transactionId, loadNumber, machineId);
+        return ResponseEntity.ok(toDto(job));
     }
 
     // Start load
     @PatchMapping("/{transactionId}/start-load")
-    public ResponseEntity<Void> startLoad(@PathVariable String transactionId,
-                                          @RequestParam int loadNumber,
-                                          @RequestParam Integer durationMinutes) {
-        laundryJobService.startLoad(transactionId, loadNumber, durationMinutes);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<LaundryJobDto> startLoad(@PathVariable String transactionId,
+                                                   @RequestParam int loadNumber,
+                                                   @RequestParam(required = false) Integer durationMinutes) {
+        LaundryJob job = laundryJobService.startLoad(transactionId, loadNumber, durationMinutes);
+        return ResponseEntity.ok(toDto(job));
+    }
+
+    // Advance load
+    @PatchMapping("/{transactionId}/advance-load")
+    public ResponseEntity<LaundryJobDto> advanceLoad(@PathVariable String transactionId,
+                                                     @RequestParam int loadNumber,
+                                                     @RequestParam String status) {
+        LaundryJob job = laundryJobService.advanceLoad(transactionId, loadNumber, status);
+        return ResponseEntity.ok(toDto(job));
     }
 
     // Complete load
     @PatchMapping("/{transactionId}/complete-load")
-    public ResponseEntity<Void> completeLoad(@PathVariable String transactionId,
-                                             @RequestParam int loadNumber) {
-        laundryJobService.completeLoad(transactionId, loadNumber);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<LaundryJobDto> completeLoad(@PathVariable String transactionId,
+                                                      @RequestParam int loadNumber) {
+        LaundryJob job = laundryJobService.completeLoad(transactionId, loadNumber);
+        return ResponseEntity.ok(toDto(job));
     }
 
     // Update load duration
     @PatchMapping("/{transactionId}/update-duration")
-    public ResponseEntity<Void> updateLoadDuration(@PathVariable String transactionId,
-                                                   @RequestParam int loadNumber,
-                                                   @RequestParam int durationMinutes) {
-        laundryJobService.updateLoadDuration(transactionId, loadNumber, durationMinutes);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<LaundryJobDto> updateLoadDuration(@PathVariable String transactionId,
+                                                            @RequestParam int loadNumber,
+                                                            @RequestParam int durationMinutes) {
+        LaundryJob job = laundryJobService.updateLoadDuration(transactionId, loadNumber, durationMinutes);
+        return ResponseEntity.ok(toDto(job));
     }
 
-    // Convert LaundryJob to DTO
+    // ========== DTO Conversion ==========
     private LaundryJobDto toDto(LaundryJob job) {
         LaundryJobDto dto = new LaundryJobDto();
         dto.setTransactionId(job.getTransactionId());
@@ -108,5 +118,11 @@ public class LaundryJobController {
         dto.setCurrentStep(job.getCurrentStep());
         dto.setTotalLoads(job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0);
         return dto;
+    }
+
+    // ========== Exception Handling (basic) ==========
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> handleRuntime(RuntimeException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
     }
 }
