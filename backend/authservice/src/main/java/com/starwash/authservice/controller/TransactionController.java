@@ -3,6 +3,7 @@ package com.starwash.authservice.controller;
 import com.starwash.authservice.dto.TransactionRequestDto;
 import com.starwash.authservice.dto.ServiceInvoiceDto;
 import com.starwash.authservice.dto.LaundryJobDto;
+import com.starwash.authservice.model.LaundryJob.LoadAssignment;
 import com.starwash.authservice.service.TransactionService;
 import com.starwash.authservice.service.LaundryJobService;
 
@@ -10,6 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -27,6 +31,9 @@ public class TransactionController {
         this.laundryJobService = laundryJobService;
     }
 
+    /**
+     * Create a transaction and corresponding laundry job
+     */
     @PostMapping
     public ResponseEntity<ServiceInvoiceDto> createTransaction(@RequestBody TransactionRequestDto request,
                                                                @RequestHeader("Authorization") String authHeader) {
@@ -35,35 +42,35 @@ public class TransactionController {
         }
 
         try {
-            var idField = request.getClass().getDeclaredField("id");
-            idField.setAccessible(true);
-            Object idValue = idField.get(request);
-            if (idValue != null) {
-                log.warn("❌ Rejected transaction with unexpected ID field");
-                return ResponseEntity.badRequest().build();
-            }
-        } catch (NoSuchFieldException | IllegalAccessException ignored) {}
-
-        try {
+            // ✅ Create the service invoice
             ServiceInvoiceDto invoice = transactionService.createServiceInvoiceTransaction(request);
             log.info("🧾 Service invoice created | invoiceNumber={} | customer={}",
                     invoice.getInvoiceNumber(),
                     invoice.getCustomerName()
             );
 
-            // ✅ Create corresponding LaundryJob
+            // ✅ Build per-load assignments
+            List<LoadAssignment> loadAssignments = new ArrayList<>();
+            for (int i = 1; i <= request.getLoads(); i++) {
+                LoadAssignment load = new LoadAssignment();
+                load.setLoadNumber(i);
+                load.setStatus("UNWASHED");
+                loadAssignments.add(load);
+            }
+
+            // ✅ Create a corresponding LaundryJobDto
             LaundryJobDto jobDto = new LaundryJobDto();
             jobDto.setTransactionId(invoice.getInvoiceNumber());
             jobDto.setCustomerName(invoice.getCustomerName());
-            jobDto.setLoads(invoice.getLoads());
             jobDto.setDetergentQty(request.getDetergentQty());
             jobDto.setFabricQty(request.getFabricQty());
-            jobDto.setMachineId(null);
+            jobDto.setLoadAssignments(loadAssignments);
             jobDto.setStatusFlow(request.getStatusFlow());
             jobDto.setCurrentStep(0);
 
+            // ✅ Save the job
             laundryJobService.createJob(jobDto);
-            log.info("🧺 Laundry job created for transaction {}", invoice.getInvoiceNumber());
+            log.info("🧺 Laundry job initialized for transaction {}", invoice.getInvoiceNumber());
 
             return ResponseEntity.ok(invoice);
         } catch (RuntimeException e) {
@@ -72,6 +79,9 @@ public class TransactionController {
         }
     }
 
+    /**
+     * Get service invoice by transaction ID
+     */
     @GetMapping("/{id}/service-invoice")
     public ResponseEntity<ServiceInvoiceDto> getServiceInvoice(@PathVariable String id,
                                                                @RequestHeader("Authorization") String authHeader) {

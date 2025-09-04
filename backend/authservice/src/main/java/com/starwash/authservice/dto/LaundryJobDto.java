@@ -1,60 +1,81 @@
 package com.starwash.authservice.dto;
 
+import com.starwash.authservice.model.LaundryJob.LoadAssignment;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class LaundryJobDto {
 
-  private String transactionId;
-  private String customerName;
-  private Integer loads;
-  private Integer detergentQty;
-  private Integer fabricQty;
-  private String machineId;
-  private List<String> statusFlow;
-  private Integer currentStep;
-  private LocalDateTime issueDate; // ✅ NEW FIELD
+    private String transactionId;
+    private String customerName;
+    private List<LoadAssignment> loadAssignments;
+    private Integer detergentQty;
+    private Integer fabricQty;
+    private List<String> statusFlow;
+    private Integer currentStep;
+    private LocalDateTime issueDate;
+    private String serviceType;
 
-  public LaundryJobDto() {}
+    // ✅ Total loads for convenience
+    private Integer totalLoads;
 
-  public LaundryJobDto(String transactionId, String customerName, Integer loads,
-                       Integer detergentQty, Integer fabricQty, String machineId,
-                       List<String> statusFlow, Integer currentStep, LocalDateTime issueDate) {
-    this.transactionId = transactionId;
-    this.customerName = customerName;
-    this.loads = loads;
-    this.detergentQty = detergentQty;
-    this.fabricQty = fabricQty;
-    this.machineId = machineId;
-    this.statusFlow = statusFlow;
-    this.currentStep = currentStep;
-    this.issueDate = issueDate; // ✅ INIT
-  }
+    public LaundryJobDto() {}
 
-  public String getTransactionId() { return transactionId; }
-  public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public LaundryJobDto(
+            String transactionId,
+            String customerName,
+            List<LoadAssignment> loadAssignments,
+            Integer detergentQty,
+            Integer fabricQty,
+            List<String> statusFlow,
+            Integer currentStep,
+            LocalDateTime issueDate,
+            String serviceType
+    ) {
+        this.transactionId = transactionId;
+        this.customerName = customerName;
+        this.loadAssignments = loadAssignments;
+        this.detergentQty = detergentQty;
+        this.fabricQty = fabricQty;
+        this.statusFlow = statusFlow;
+        this.currentStep = currentStep;
+        this.issueDate = issueDate;
+        this.serviceType = serviceType;
+        this.totalLoads = loadAssignments != null ? loadAssignments.size() : 0;
+    }
 
-  public String getCustomerName() { return customerName; }
-  public void setCustomerName(String customerName) { this.customerName = customerName; }
+    // 🔹 Getters and setters
+    public String getTransactionId() { return transactionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
 
-  public Integer getLoads() { return loads; }
-  public void setLoads(Integer loads) { this.loads = loads; }
+    public String getCustomerName() { return customerName; }
+    public void setCustomerName(String customerName) { this.customerName = customerName; }
 
-  public Integer getDetergentQty() { return detergentQty; }
-  public void setDetergentQty(Integer detergentQty) { this.detergentQty = detergentQty; }
+    public List<LoadAssignment> getLoadAssignments() { return loadAssignments; }
+    public void setLoadAssignments(List<LoadAssignment> loadAssignments) { 
+        this.loadAssignments = loadAssignments; 
+        this.totalLoads = loadAssignments != null ? loadAssignments.size() : 0;
+    }
 
-  public Integer getFabricQty() { return fabricQty; }
-  public void setFabricQty(Integer fabricQty) { this.fabricQty = fabricQty; }
+    public Integer getDetergentQty() { return detergentQty; }
+    public void setDetergentQty(Integer detergentQty) { this.detergentQty = detergentQty; }
 
-  public String getMachineId() { return machineId; }
-  public void setMachineId(String machineId) { this.machineId = machineId; }
+    public Integer getFabricQty() { return fabricQty; }
+    public void setFabricQty(Integer fabricQty) { this.fabricQty = fabricQty; }
 
-  public List<String> getStatusFlow() { return statusFlow; }
-  public void setStatusFlow(List<String> statusFlow) { this.statusFlow = statusFlow; }
+    public List<String> getStatusFlow() { return statusFlow; }
+    public void setStatusFlow(List<String> statusFlow) { this.statusFlow = statusFlow; }
 
-  public Integer getCurrentStep() { return currentStep; }
-  public void setCurrentStep(Integer currentStep) { this.currentStep = currentStep; }
+    public Integer getCurrentStep() { return currentStep; }
+    public void setCurrentStep(Integer currentStep) { this.currentStep = currentStep; }
 
-  public LocalDateTime getIssueDate() { return issueDate; } // ✅ GETTER
-  public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; } // ✅ SETTER
+    public LocalDateTime getIssueDate() { return issueDate; }
+    public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
+
+    public String getServiceType() { return serviceType; }
+    public void setServiceType(String serviceType) { this.serviceType = serviceType; }
+
+    public Integer getTotalLoads() { return totalLoads; }
+    public void setTotalLoads(Integer totalLoads) { this.totalLoads = totalLoads; } // ✅ Add this
 }

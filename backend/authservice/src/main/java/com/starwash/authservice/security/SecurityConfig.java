@@ -35,11 +35,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/register", "/logout").permitAll()
-                        .requestMatchers("/me").authenticated()
-                        .requestMatchers("/api/accounts/**").hasRole("ADMIN")
-                        .requestMatchers("/api/stock/**").hasAnyRole("ADMIN", "STAFF") // ✅ updated here
-                        .anyRequest().authenticated())
+                .requestMatchers("/login", "/register", "/logout").permitAll()
+                .requestMatchers("/me").authenticated()
+                .requestMatchers("/api/accounts/**").hasRole("ADMIN")
+                .requestMatchers("/api/stock/**").hasAnyRole("ADMIN", "STAFF")
+                .requestMatchers("/api/laundry-jobs/**", "/api/machines/**").permitAll()
+                .anyRequest().authenticated()
+            )
+
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .logout(logout -> logout.disable())
                 .authenticationProvider(authenticationProvider())
