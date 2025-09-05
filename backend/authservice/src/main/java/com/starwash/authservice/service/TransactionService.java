@@ -186,34 +186,38 @@ public class TransactionService {
         );
     }
 
-    public List<RecordResponseDto> getAllRecords() {
-        List<Transaction> allTransactions = transactionRepository.findAll();
+   public List<RecordResponseDto> getAllRecords() {
+    List<Transaction> allTransactions = transactionRepository.findAll();
 
-        return allTransactions.stream().map(tx -> {
-            RecordResponseDto dto = new RecordResponseDto();
-            dto.setId(tx.getId());
-            dto.setCustomerName(tx.getCustomerName());
-            dto.setServiceName(tx.getServiceName());
-            dto.setLoads(tx.getServiceQuantity());
+    return allTransactions.stream().map(tx -> {
+        RecordResponseDto dto = new RecordResponseDto();
+        dto.setId(tx.getId());
+        dto.setCustomerName(tx.getCustomerName());
+        dto.setServiceName(tx.getServiceName());
+        dto.setLoads(tx.getServiceQuantity());
+        
+        // ✅ Add contact
+        dto.setContact(tx.getContact());
 
-            dto.setDetergent(tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                    .map(c -> String.valueOf(c.getQuantity()))
-                    .findFirst().orElse("—"));
+        dto.setDetergent(tx.getConsumables().stream()
+                .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                .map(c -> String.valueOf(c.getQuantity()))
+                .findFirst().orElse("—"));
 
-            dto.setFabric(tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                    .map(c -> String.valueOf(c.getQuantity()))
-                    .findFirst().orElse("—"));
+        dto.setFabric(tx.getConsumables().stream()
+                .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                .map(c -> String.valueOf(c.getQuantity()))
+                .findFirst().orElse("—"));
 
-            dto.setTotalPrice(tx.getTotalPrice());
-            dto.setPaymentMethod(tx.getPaymentMethod());
-            dto.setPickupStatus("Unclaimed");
-            dto.setWashed(false);
-            dto.setExpired(tx.getDueDate().isBefore(LocalDateTime.now()));
-            dto.setCreatedAt(tx.getCreatedAt());
+        dto.setTotalPrice(tx.getTotalPrice());
+        dto.setPaymentMethod(tx.getPaymentMethod());
+        dto.setPickupStatus("Unclaimed");
+        dto.setWashed(false);
+        dto.setExpired(tx.getDueDate().isBefore(LocalDateTime.now()));
+        dto.setCreatedAt(tx.getCreatedAt());
 
-            return dto;
-        }).collect(Collectors.toList());
-    }
+        return dto;
+    }).collect(Collectors.toList());
+}
+
 }

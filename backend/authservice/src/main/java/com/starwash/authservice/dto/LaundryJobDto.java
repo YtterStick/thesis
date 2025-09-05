@@ -9,6 +9,7 @@ public class LaundryJobDto {
 
     private String transactionId;
     private String customerName;
+    private String contact; // ✅ New field for customer contact
     private List<LoadAssignment> loadAssignments;
     private Integer detergentQty;
     private Integer fabricQty;
@@ -25,6 +26,7 @@ public class LaundryJobDto {
     public LaundryJobDto(
             String transactionId,
             String customerName,
+            String contact, // ✅ Add in constructor
             List<LoadAssignment> loadAssignments,
             Integer detergentQty,
             Integer fabricQty,
@@ -35,6 +37,7 @@ public class LaundryJobDto {
     ) {
         this.transactionId = transactionId;
         this.customerName = customerName;
+        this.contact = contact;
         this.loadAssignments = loadAssignments;
         this.detergentQty = detergentQty;
         this.fabricQty = fabricQty;
@@ -51,6 +54,9 @@ public class LaundryJobDto {
 
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
+
+    public String getContact() { return contact; } // ✅ Getter
+    public void setContact(String contact) { this.contact = contact; } // ✅ Setter
 
     public List<LoadAssignment> getLoadAssignments() { return loadAssignments; }
     public void setLoadAssignments(List<LoadAssignment> loadAssignments) { 
@@ -77,5 +83,5 @@ public class LaundryJobDto {
     public void setServiceType(String serviceType) { this.serviceType = serviceType; }
 
     public Integer getTotalLoads() { return totalLoads; }
-    public void setTotalLoads(Integer totalLoads) { this.totalLoads = totalLoads; } // ✅ Add this
+    public void setTotalLoads(Integer totalLoads) { this.totalLoads = totalLoads; }
 }

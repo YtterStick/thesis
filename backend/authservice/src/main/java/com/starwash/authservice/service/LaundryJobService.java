@@ -72,6 +72,7 @@ public class LaundryJobService {
         LaundryJob job = new LaundryJob();
         job.setTransactionId(dto.getTransactionId());
         job.setCustomerName(txn.getCustomerName());
+        job.setContact(txn.getContact()); // ✅ Save customer contact
         job.setLoadAssignments(assignments);
         job.setDetergentQty(dto.getDetergentQty());
         job.setFabricQty(dto.getFabricQty());
@@ -245,6 +246,7 @@ public class LaundryJobService {
             int fabricQty = 0;
             LocalDateTime issueDate = null;
             String serviceType = null;
+            String contact = job.getContact(); // ✅ Get contact
 
             if (tx != null) {
                 issueDate = tx.getIssueDate();
@@ -277,6 +279,7 @@ public class LaundryJobService {
                 LaundryJobDto dto = new LaundryJobDto();
                 dto.setTransactionId(job.getTransactionId());
                 dto.setCustomerName(job.getCustomerName());
+                dto.setContact(contact); // ✅ Include contact in DTO
                 dto.setLoadAssignments(unfinishedLoads);
                 dto.setCurrentStep(job.getCurrentStep());
                 dto.setStatusFlow(job.getStatusFlow());

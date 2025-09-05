@@ -15,24 +15,25 @@ public class LaundryJob {
 
     private String transactionId;
     private String customerName;
+    private String contact;
 
-    // ✅ Track per-load details
     private List<LoadAssignment> loadAssignments = new ArrayList<>();
 
     private Integer detergentQty;
     private Integer fabricQty;
 
-    private List<String> statusFlow = new ArrayList<>(); // global flow
+    private List<String> statusFlow = new ArrayList<>();
     private Integer currentStep = 0;
 
     public LaundryJob() {}
 
-    public LaundryJob(String transactionId, String customerName,
+    public LaundryJob(String transactionId, String customerName, String contact,
                       List<LoadAssignment> loadAssignments,
                       Integer detergentQty, Integer fabricQty,
                       List<String> statusFlow, Integer currentStep) {
         this.transactionId = transactionId;
         this.customerName = customerName;
+        this.contact = contact;
         this.loadAssignments = loadAssignments != null ? loadAssignments : new ArrayList<>();
         this.detergentQty = detergentQty;
         this.fabricQty = fabricQty;
@@ -48,6 +49,9 @@ public class LaundryJob {
 
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
+
+    public String getContact() { return contact; } // ✅ Getter
+    public void setContact(String contact) { this.contact = contact; } // ✅ Setter
 
     public List<LoadAssignment> getLoadAssignments() { return loadAssignments; }
     public void setLoadAssignments(List<LoadAssignment> loadAssignments) { this.loadAssignments = loadAssignments; }
@@ -70,6 +74,7 @@ public class LaundryJob {
                 "id='" + id + '\'' +
                 ", transactionId='" + transactionId + '\'' +
                 ", customerName='" + customerName + '\'' +
+                ", contact='" + contact + '\'' + // ✅ Show contact in debug
                 ", loads=" + (loadAssignments != null ? loadAssignments.size() : 0) +
                 ", detergentQty=" + detergentQty +
                 ", fabricQty=" + fabricQty +

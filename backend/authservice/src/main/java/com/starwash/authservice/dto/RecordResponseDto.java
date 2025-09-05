@@ -6,14 +6,15 @@ public class RecordResponseDto {
 
     private String id;
     private String customerName;
+    private String contact;        // ✅ Add contact
     private String serviceName;
     private int loads;
     private String detergent;
-    private String fabric; // ✅ Renamed from fabricSoftener
+    private String fabric; 
     private double totalPrice;
 
-    private String paymentMethod;   // ✅ Replaces status
-    private String pickupStatus;    // Unclaimed / Claimed / Expired
+    private String paymentMethod;  
+    private String pickupStatus;    
     private boolean washed;
     private boolean expired;
     private LocalDateTime createdAt;
@@ -21,12 +22,13 @@ public class RecordResponseDto {
     // Constructors
     public RecordResponseDto() {}
 
-    public RecordResponseDto(String id, String customerName, String serviceName, int loads,
+    public RecordResponseDto(String id, String customerName, String contact, String serviceName, int loads,
                              String detergent, String fabric, double totalPrice,
                              String paymentMethod, String pickupStatus, boolean washed,
                              boolean expired, LocalDateTime createdAt) {
         this.id = id;
         this.customerName = customerName;
+        this.contact = contact; // ✅ assign contact
         this.serviceName = serviceName;
         this.loads = loads;
         this.detergent = detergent;
@@ -45,6 +47,9 @@ public class RecordResponseDto {
 
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
+
+    public String getContact() { return contact; } // ✅ getter
+    public void setContact(String contact) { this.contact = contact; } // ✅ setter
 
     public String getServiceName() { return serviceName; }
     public void setServiceName(String serviceName) { this.serviceName = serviceName; }

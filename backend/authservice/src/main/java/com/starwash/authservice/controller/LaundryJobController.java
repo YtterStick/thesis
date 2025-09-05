@@ -50,6 +50,7 @@ public class LaundryJobController {
         existing.setStatusFlow(dto.getStatusFlow());
         existing.setCurrentStep(dto.getCurrentStep());
         existing.setLoadAssignments(dto.getLoadAssignments());
+        existing.setContact(dto.getContact()); // ✅ added contact
 
         LaundryJob updated = laundryJobService.updateJob(existing);
         return ResponseEntity.ok(toDto(updated));
@@ -111,6 +112,7 @@ public class LaundryJobController {
         LaundryJobDto dto = new LaundryJobDto();
         dto.setTransactionId(job.getTransactionId());
         dto.setCustomerName(job.getCustomerName());
+        dto.setContact(job.getContact()); // ✅ include contact in DTO response
         dto.setLoadAssignments(job.getLoadAssignments());
         dto.setDetergentQty(job.getDetergentQty());
         dto.setFabricQty(job.getFabricQty());
