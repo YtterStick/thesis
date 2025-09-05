@@ -40,10 +40,8 @@ public class LaundryJobService {
     private static final String STATUS_FOLDING = "FOLDING";
     private static final String STATUS_COMPLETED = "COMPLETED";
 
-    /** Scheduler for auto-advance */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
-    /** Define service flows */
     private static final Map<String, List<String>> SERVICE_FLOWS = Map.of(
             "wash & dry", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED,
                     STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED),
@@ -118,12 +116,18 @@ public class LaundryJobService {
 
         Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
         String serviceType = (txn != null ? txn.getServiceName() : "wash");
+
+        // Determine next status
         String nextStatus = determineNextStatus(serviceType, load);
 
-        int defaultDuration = nextStatus.equals(STATUS_WASHING) ? 35 : 40;
-        int finalDuration = (durationMinutes != null && durationMinutes > 0)
-                ? durationMinutes
-                : defaultDuration;
+        int defaultDuration;
+        switch (nextStatus) {
+            case STATUS_WASHING -> defaultDuration = 35;
+            case STATUS_DRYING -> defaultDuration = 40;
+            default -> defaultDuration = 20;
+        }
+
+        int finalDuration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : defaultDuration;
 
         LocalDateTime now = LocalDateTime.now();
         load.setStatus(nextStatus);
@@ -131,6 +135,7 @@ public class LaundryJobService {
         load.setDurationMinutes(finalDuration);
         load.setEndTime(now.plusMinutes(finalDuration));
 
+        // Set machine to in-use
         MachineItem machine = machineRepository.findById(load.getMachineId())
                 .orElseThrow(() -> new RuntimeException("Machine not found"));
         machine.setStatus(STATUS_IN_USE);
@@ -138,27 +143,34 @@ public class LaundryJobService {
 
         LaundryJob saved = laundryJobRepository.save(job);
 
+        // Schedule auto-advance after duration
         scheduler.schedule(() -> autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber),
                 finalDuration, TimeUnit.MINUTES);
 
         return saved;
     }
 
-    /** Decide which cycle comes next */
+    /** Decide next status properly for Wash & Dry */
     private String determineNextStatus(String serviceType, LoadAssignment load) {
-        if ("dry".equalsIgnoreCase(serviceType))
-            return STATUS_DRYING;
-        if ("wash".equalsIgnoreCase(serviceType))
-            return STATUS_WASHING;
+        serviceType = serviceType.toLowerCase();
 
-        return (load.getStatus() == null || STATUS_NOT_STARTED.equals(load.getStatus()))
-                ? STATUS_WASHING
-                : STATUS_DRYING;
+        switch (serviceType) {
+            case "wash":
+                if (STATUS_NOT_STARTED.equals(load.getStatus())) return STATUS_WASHING;
+                break;
+            case "dry":
+                if (STATUS_NOT_STARTED.equals(load.getStatus())) return STATUS_DRYING;
+                break;
+            case "wash & dry":
+                if (STATUS_NOT_STARTED.equals(load.getStatus())) return STATUS_WASHING;
+                if (STATUS_WASHED.equals(load.getStatus())) return STATUS_DRYING;
+                break;
+        }
+        return load.getStatus(); // already in progress or completed
     }
 
     /** Manual advance */
     public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus) {
-        // ✅ Normalize status
         if ("COMPLETE".equalsIgnoreCase(newStatus)) {
             newStatus = STATUS_COMPLETED;
         }
@@ -201,7 +213,7 @@ public class LaundryJobService {
         return laundryJobRepository.save(job);
     }
 
-    /** Update step */
+    /** Update current step */
     public LaundryJob updateCurrentStep(String transactionId, int newStep) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
         job.setCurrentStep(newStep);
@@ -213,7 +225,7 @@ public class LaundryJobService {
         return laundryJobRepository.save(job);
     }
 
-    /** Delete by ID */
+    /** Delete job by ID */
     public boolean deleteJobById(String id) {
         if (!laundryJobRepository.existsById(id))
             return false;
@@ -223,66 +235,64 @@ public class LaundryJobService {
 
     /** Get all jobs */
     public List<LaundryJobDto> getAllJobs() {
-    List<LaundryJob> jobs = laundryJobRepository.findAll();
-    List<LaundryJobDto> result = new ArrayList<>();
+        List<LaundryJob> jobs = laundryJobRepository.findAll();
+        List<LaundryJobDto> result = new ArrayList<>();
 
-    for (LaundryJob job : jobs) {
-        Transaction tx = transactionRepository.findByInvoiceNumber(job.getTransactionId()).orElse(null);
+        for (LaundryJob job : jobs) {
+            Transaction tx = transactionRepository.findByInvoiceNumber(job.getTransactionId()).orElse(null);
 
-        int detergentQty = 0;
-        int fabricQty = 0;
-        LocalDateTime issueDate = null;
-        String serviceType = null;
+            int detergentQty = 0;
+            int fabricQty = 0;
+            LocalDateTime issueDate = null;
+            String serviceType = null;
 
-        if (tx != null) {
-            issueDate = tx.getIssueDate();
-            serviceType = tx.getServiceName();
+            if (tx != null) {
+                issueDate = tx.getIssueDate();
+                serviceType = tx.getServiceName();
 
-            if (tx.getConsumables() != null) {
-                detergentQty = tx.getConsumables().stream()
-                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                        .mapToInt(c -> c.getQuantity())
-                        .sum();
+                if (tx.getConsumables() != null) {
+                    detergentQty = tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                            .mapToInt(c -> c.getQuantity())
+                            .sum();
 
-                fabricQty = tx.getConsumables().stream()
-                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                        .mapToInt(c -> c.getQuantity())
-                        .sum();
-            }
-        }
-
-        // ✅ Filter out completed loads
-        List<LoadAssignment> unfinishedLoads = new ArrayList<>();
-        if (job.getLoadAssignments() != null) {
-            for (LoadAssignment load : job.getLoadAssignments()) {
-                if (!"COMPLETED".equalsIgnoreCase(load.getStatus())) {
-                    unfinishedLoads.add(load);
+                    fabricQty = tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                            .mapToInt(c -> c.getQuantity())
+                            .sum();
                 }
             }
+
+            // Filter unfinished loads
+            List<LoadAssignment> unfinishedLoads = new ArrayList<>();
+            if (job.getLoadAssignments() != null) {
+                for (LoadAssignment load : job.getLoadAssignments()) {
+                    if (!STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())) {
+                        unfinishedLoads.add(load);
+                    }
+                }
+            }
+
+            if (!unfinishedLoads.isEmpty()) {
+                LaundryJobDto dto = new LaundryJobDto();
+                dto.setTransactionId(job.getTransactionId());
+                dto.setCustomerName(job.getCustomerName());
+                dto.setLoadAssignments(unfinishedLoads);
+                dto.setCurrentStep(job.getCurrentStep());
+                dto.setStatusFlow(job.getStatusFlow());
+                dto.setDetergentQty(detergentQty);
+                dto.setFabricQty(fabricQty);
+                dto.setIssueDate(issueDate);
+                dto.setServiceType(serviceType);
+
+                result.add(dto);
+            }
         }
 
-        // Only include job if it has unfinished loads
-        if (!unfinishedLoads.isEmpty()) {
-            LaundryJobDto dto = new LaundryJobDto();
-            dto.setTransactionId(job.getTransactionId());
-            dto.setCustomerName(job.getCustomerName());
-            dto.setLoadAssignments(unfinishedLoads);
-            dto.setCurrentStep(job.getCurrentStep());
-            dto.setStatusFlow(job.getStatusFlow());
-            dto.setDetergentQty(detergentQty);
-            dto.setFabricQty(fabricQty);
-            dto.setIssueDate(issueDate);
-            dto.setServiceType(serviceType);
-
-            result.add(dto);
-        }
+        return result;
     }
 
-    return result;
-}
-
-
-    /** Find by transaction */
+    /** Find single job by transaction */
     public LaundryJob findSingleJobByTransaction(String transactionId) {
         return laundryJobRepository.findByTransactionId(transactionId)
                 .stream()
@@ -290,8 +300,7 @@ public class LaundryJobService {
                 .orElseThrow(() -> new RuntimeException("Laundry job not found for transaction: " + transactionId));
     }
 
-    /* ================= Helpers ================= */
-
+    /** Release machine */
     private void releaseMachine(LoadAssignment load) {
         if (load.getMachineId() != null) {
             machineRepository.findById(load.getMachineId()).ifPresent(machine -> {
@@ -301,7 +310,7 @@ public class LaundryJobService {
         }
     }
 
-    /** Auto advance only for washing/drying */
+    /** Auto advance after step ends (only WASHING/DRYING) */
     private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
         Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
@@ -315,33 +324,17 @@ public class LaundryJobService {
         if (load == null) return;
 
         String status = load.getStatus();
+        if (STATUS_COMPLETED.equals(status) || STATUS_FOLDING.equals(status)) return;
 
-        // 🚨 Prevent overwriting if already advanced
-        if (STATUS_COMPLETED.equals(status) || STATUS_FOLDING.equals(status)) {
-            return;
-        }
-        if (STATUS_WASHED.equals(status) && !"wash & dry".equalsIgnoreCase(svc)) {
-            return;
-        }
-        if (STATUS_DRIED.equals(status) && "dry".equalsIgnoreCase(svc)) {
-            return;
-        }
-
-        if (STATUS_WASHING.equalsIgnoreCase(status)) {
-            load.setStatus(STATUS_WASHED);
-            releaseMachine(load);
-
-            if ("wash & dry".equalsIgnoreCase(svc)) {
-                load.setStatus(STATUS_DRYING);
-            }
-
-        } else if (STATUS_DRYING.equalsIgnoreCase(status)) {
-            load.setStatus(STATUS_DRIED);
-            releaseMachine(load);
-
-            if ("wash & dry".equalsIgnoreCase(svc)) {
-                load.setStatus(STATUS_FOLDING);
-            }
+        switch (status.toUpperCase()) {
+            case STATUS_WASHING:
+                load.setStatus(STATUS_WASHED);
+                releaseMachine(load); // free machine after washing
+                break;
+            case STATUS_DRYING:
+                load.setStatus(STATUS_DRIED);
+                releaseMachine(load); // free machine after drying
+                break;
         }
 
         laundryJobRepository.save(job);

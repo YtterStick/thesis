@@ -15,7 +15,7 @@ const normalizeStatus = (raw) => {
     if (!raw) return "UNWASHED";
     const s = raw.toUpperCase();
     if (s === "NOT_STARTED") return "UNWASHED";
-    if (s === "COMPLETED") return "COMPLETED"; // ✅ match backend
+    if (s === "COMPLETED") return "COMPLETED";
     return s;
 };
 
@@ -172,12 +172,14 @@ export default function ServiceTrackingPage() {
         if (!load.machineId) return alert("Please assign a machine first.");
 
         let status = load.status;
+
         if (job.serviceType === "Wash") {
             if (load.status === "UNWASHED") status = "WASHING";
         } else if (job.serviceType === "Dry") {
             if (load.status === "UNWASHED") status = "DRYING";
         } else if (job.serviceType === "Wash & Dry") {
-            if (load.status === "UNWASHED") status = "WASHING";
+            if (load.status === "UNWASHED")
+                status = "WASHING";
             else if (load.status === "WASHED") status = "DRYING";
         }
 
@@ -225,12 +227,7 @@ export default function ServiceTrackingPage() {
 
         setJobs((prev) =>
             prev.map((j) =>
-                getJobKey(j) === jobKey
-                    ? {
-                          ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status: nextStatus } : l)),
-                      }
-                    : j,
+                getJobKey(j) === jobKey ? { ...j, loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status: nextStatus } : l)) } : j,
             ),
         );
 
@@ -249,21 +246,12 @@ export default function ServiceTrackingPage() {
     const markCompleted = async (jobKey, loadNumber) => {
         setUpdatingId(jobKey);
         try {
-            // Call API to mark load as completed
             await fetch(`http://localhost:8080/api/laundry-jobs/${jobKey}/advance-load?loadNumber=${loadNumber}&status=COMPLETED`, {
                 method: "PATCH",
             });
 
-            // Remove the completed load from state so it disappears from the table
             setJobs((prevJobs) =>
-                prevJobs.map((job) =>
-                    getJobKey(job) === jobKey
-                        ? {
-                              ...job,
-                              loads: job.loads.filter((l) => l.loadNumber !== loadNumber),
-                          }
-                        : job,
-                ),
+                prevJobs.map((job) => (getJobKey(job) === jobKey ? { ...job, loads: job.loads.filter((l) => l.loadNumber !== loadNumber) } : job)),
             );
         } catch (e) {
             console.error("Failed to mark load completed:", e);
@@ -365,7 +353,12 @@ export default function ServiceTrackingPage() {
                                                 <Select
                                                     value={load.machineId ?? ""}
                                                     onValueChange={(val) => assignMachine(jobKey, i, val)}
-                                                    disabled={isLoadRunning(load)}
+                                                    disabled={
+                                                        isLoadRunning(load) ||
+                                                        load.status === "WASHED" ||
+                                                        load.status === "DRIED" ||
+                                                        load.status === "FOLDING"
+                                                    }
                                                 >
                                                     <SelectTrigger className="w-[160px]">
                                                         <SelectValue placeholder="Select machine" />
@@ -377,7 +370,7 @@ export default function ServiceTrackingPage() {
                                                                 value={m.id}
                                                                 disabled={(m.status || "").toLowerCase() !== "available"}
                                                             >
-                                                                {`${m.name} – ${m.status}`}
+                                                                {m.name} {/* removed -status */}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -385,9 +378,15 @@ export default function ServiceTrackingPage() {
                                             </td>
                                             <td className="p-3">
                                                 <Select
-                                                    value={load.duration?.toString() ?? ""}
+                                                    value={load.machineId ? (load.duration?.toString() ?? "") : ""}
                                                     onValueChange={(val) => updateDuration(jobKey, i, parseInt(val))}
-                                                    disabled={!load.machineId || isLoadRunning(load)}
+                                                    disabled={
+                                                        !load.machineId ||
+                                                        isLoadRunning(load) ||
+                                                        load.status === "WASHED" ||
+                                                        load.status === "DRIED" ||
+                                                        load.status === "FOLDING"
+                                                    }
                                                 >
                                                     <SelectTrigger className="w-[90px]">
                                                         <SelectValue placeholder="min" />
@@ -404,10 +403,13 @@ export default function ServiceTrackingPage() {
                                                     </SelectContent>
                                                 </Select>
                                             </td>
-
                                             <td className="p-3">
                                                 {(() => {
-                                                    if (load.status === "COMPLETED") {
+                                                    if (
+                                                        (job.serviceType === "Wash" && load.status === "WASHED") ||
+                                                        (job.serviceType === "Dry" && load.status === "FOLDING") ||
+                                                        (job.serviceType === "Wash & Dry" && load.status === "FOLDING")
+                                                    ) {
                                                         return (
                                                             <button
                                                                 className="flex items-center gap-1 rounded bg-green-500 px-2 py-1 text-white hover:bg-green-600"
@@ -430,8 +432,12 @@ export default function ServiceTrackingPage() {
                                                         );
                                                     }
 
-                                                    // Wash → Next after Washed
-                                                    if (job.serviceType === "Wash" && load.status === "WASHED") {
+                                                    // Next buttons
+                                                    if (
+                                                        (job.serviceType === "Wash" && load.status === "WASHED") ||
+                                                        (job.serviceType === "Dry" && (load.status === "DRIED" || load.status === "FOLDING")) ||
+                                                        (job.serviceType === "Wash & Dry" && (load.status === "WASHED" || load.status === "DRIED"))
+                                                    ) {
                                                         return (
                                                             <button
                                                                 className="flex items-center gap-1 rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600"
@@ -443,37 +449,6 @@ export default function ServiceTrackingPage() {
                                                         );
                                                     }
 
-                                                    // Dry → Next after Dried → Fold → Next after Folding → Complete
-                                                    if (job.serviceType === "Dry") {
-                                                        if (load.status === "DRIED" || load.status === "FOLDING") {
-                                                            return (
-                                                                <button
-                                                                    className="flex items-center gap-1 rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600"
-                                                                    onClick={() => advanceStatus(jobKey, i)}
-                                                                    disabled={isLoading}
-                                                                >
-                                                                    <ArrowRight className="h-4 w-4" /> Next
-                                                                </button>
-                                                            );
-                                                        }
-                                                    }
-
-                                                    // Wash & Dry → Next after Washed → Next after Dried → Next after Folding → Complete
-                                                    if (job.serviceType === "Wash & Dry") {
-                                                        if (load.status === "WASHED" || load.status === "DRIED" || load.status === "FOLDING") {
-                                                            return (
-                                                                <button
-                                                                    className="flex items-center gap-1 rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600"
-                                                                    onClick={() => advanceStatus(jobKey, i)}
-                                                                    disabled={isLoading}
-                                                                >
-                                                                    <ArrowRight className="h-4 w-4" /> Next
-                                                                </button>
-                                                            );
-                                                        }
-                                                    }
-
-                                                    // Default → show Start if not started
                                                     return (
                                                         <button
                                                             className="flex items-center gap-1 rounded bg-cyan-500 px-2 py-1 text-white hover:bg-cyan-600"
