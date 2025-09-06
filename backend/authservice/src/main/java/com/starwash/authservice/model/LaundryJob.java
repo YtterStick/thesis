@@ -50,8 +50,8 @@ public class LaundryJob {
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
 
-    public String getContact() { return contact; } // ✅ Getter
-    public void setContact(String contact) { this.contact = contact; } // ✅ Setter
+    public String getContact() { return contact; }
+    public void setContact(String contact) { this.contact = contact; }
 
     public List<LoadAssignment> getLoadAssignments() { return loadAssignments; }
     public void setLoadAssignments(List<LoadAssignment> loadAssignments) { this.loadAssignments = loadAssignments; }

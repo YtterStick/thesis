@@ -70,7 +70,7 @@ public class TransactionService {
         String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
 
         Transaction transaction = new Transaction(
-                null, // ✅ Let MongoDB assign the ID
+                null,
                 invoiceNumber,
                 request.getCustomerName(),
                 request.getContact(),

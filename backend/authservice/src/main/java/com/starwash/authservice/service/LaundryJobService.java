@@ -332,11 +332,11 @@ public class LaundryJobService {
         switch (status.toUpperCase()) {
             case STATUS_WASHING:
                 load.setStatus(STATUS_WASHED);
-                releaseMachine(load); // free machine after washing
+                releaseMachine(load);
                 break;
             case STATUS_DRYING:
                 load.setStatus(STATUS_DRIED);
-                releaseMachine(load); // free machine after drying
+                releaseMachine(load);
                 break;
         }
 

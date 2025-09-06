@@ -13,7 +13,7 @@ import {
 
 export const staffNavbarLinks = [
   {
-    title: "Dashboard",
+    title: "Overview",
     Links: [
       { label: "Dashboard", icon: Home, path: "/staff/dashboard" },
     ],
@@ -34,16 +34,11 @@ export const staffNavbarLinks = [
       { label: "Missing Items", icon: Users, path: "/staff/missing-items" },
     ],
   },
+
   {
-    title: "Customer Notifications",
+    title: "Monitoring",
     Links: [
-      { label: "SMS Alerts", icon: Bell, path: "/staff/notifications" },
-    ],
-  },
-  {
-    title: "Inventory",
-    Links: [
-      { label: "Inventory Monitoring", icon: Boxes, path: "/staff/inventory" },
+      { label: "Inventory", icon: Boxes, path: "/staff/inventory" },
     ],
   },
 ];

@@ -87,6 +87,9 @@ function App() {
     { path: "/staff/inventory", element: <StaffRoute element={<StaffInventoryPage/> } /> },
     { path: "/staff/records", element: <StaffRoute element={<StaffRecordsPage />} /> },
     { path: "/staff/tracking", element: <StaffRoute element={<StaffServiceTracking />} /> },
+    { path: "/staff/claiming", element: <StaffRoute element={<h1 className="title">Claiming Center</h1>} /> },
+    { path: "/staff/expired-loads", element: <StaffRoute element={<h1 className="title">Expired Loads</h1>} /> },
+    { path: "/staff/missing-items", element: <StaffRoute element={<h1 className="title">Missing Items</h1>} /> },
 
     // ❌ Catch-all
     { path: "*", element: <NotFoundPage /> },
