@@ -151,6 +151,63 @@ public class LaundryJobService {
         return saved;
     }
 
+    /** Dry Again - Reset drying timer */
+    public LaundryJob dryAgain(String transactionId, int loadNumber) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        if (!STATUS_DRIED.equalsIgnoreCase(load.getStatus())) {
+            throw new RuntimeException("Can only dry again from DRIED status");
+        }
+
+        // Reset to DRYING status with new timer
+        load.setStatus(STATUS_DRYING);
+        load.setStartTime(LocalDateTime.now());
+        
+        // Use previous duration or default
+        int duration = (load.getDurationMinutes() != null && load.getDurationMinutes() > 0) 
+                ? load.getDurationMinutes() 
+                : 40; // Default drying time
+        
+        load.setEndTime(LocalDateTime.now().plusMinutes(duration));
+
+        // Assign machine if not already assigned
+        if (load.getMachineId() == null) {
+            // Find an available dryer
+            Optional<MachineItem> availableDryer = machineRepository.findAll().stream()
+                    .filter(m -> "DRYER".equalsIgnoreCase(m.getType()))
+                    .filter(m -> STATUS_AVAILABLE.equalsIgnoreCase(m.getStatus()))
+                    .findFirst();
+            
+            if (availableDryer.isPresent()) {
+                MachineItem dryer = availableDryer.get();
+                load.setMachineId(dryer.getId());
+                dryer.setStatus(STATUS_IN_USE);
+                machineRepository.save(dryer);
+            } else {
+                throw new RuntimeException("No available dryers found");
+            }
+        } else {
+            // Reuse existing machine, set to in-use
+            machineRepository.findById(load.getMachineId()).ifPresent(machine -> {
+                machine.setStatus(STATUS_IN_USE);
+                machineRepository.save(machine);
+            });
+        }
+
+        LaundryJob saved = laundryJobRepository.save(job);
+
+        // Schedule auto-advance after duration
+        scheduler.schedule(() -> autoAdvanceAfterStepEnds("dry", transactionId, loadNumber),
+                duration, TimeUnit.MINUTES);
+
+        return saved;
+    }
+
     /** Decide next status properly for Wash & Dry */
     private String determineNextStatus(String serviceType, LoadAssignment load) {
         serviceType = serviceType.toLowerCase();

@@ -81,6 +81,14 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
+    // Dry Again - Reset drying timer
+    @PatchMapping("/{transactionId}/dry-again")
+    public ResponseEntity<LaundryJobDto> dryAgain(@PathVariable String transactionId,
+                                                  @RequestParam int loadNumber) {
+        LaundryJob job = laundryJobService.dryAgain(transactionId, loadNumber);
+        return ResponseEntity.ok(toDto(job));
+    }
+
     // Advance load
     @PatchMapping("/{transactionId}/advance-load")
     public ResponseEntity<LaundryJobDto> advanceLoad(@PathVariable String transactionId,
