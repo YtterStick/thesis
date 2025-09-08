@@ -27,6 +27,9 @@ public class LaundryJob {
 
     private String pickupStatus = "UNCLAIMED"; // UNCLAIMED, CLAIMED
 
+    // ✅ Added serviceType field
+    private String serviceType;
+
     public LaundryJob() {}
 
     public LaundryJob(String transactionId, String customerName, String contact,
@@ -71,8 +74,11 @@ public class LaundryJob {
     public void setCurrentStep(Integer currentStep) { this.currentStep = currentStep; }
 
     public String getPickupStatus() { return pickupStatus; }
-    
     public void setPickupStatus(String pickupStatus) { this.pickupStatus = pickupStatus; }
+
+    // ✅ Getter & Setter for serviceType
+    public String getServiceType() { return serviceType; }
+    public void setServiceType(String serviceType) { this.serviceType = serviceType; }
 
     @Override
     public String toString() {
@@ -80,11 +86,12 @@ public class LaundryJob {
                 "id='" + id + '\'' +
                 ", transactionId='" + transactionId + '\'' +
                 ", customerName='" + customerName + '\'' +
-                ", contact='" + contact + '\'' + // ✅ Show contact in debug
+                ", contact='" + contact + '\'' +
                 ", loads=" + (loadAssignments != null ? loadAssignments.size() : 0) +
                 ", detergentQty=" + detergentQty +
                 ", fabricQty=" + fabricQty +
                 ", currentStep=" + currentStep +
+                ", serviceType='" + serviceType + '\'' +
                 '}';
     }
 
