@@ -30,7 +30,7 @@ const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
             >
               {service.name}
             </SelectItem>
-          ))}
+          ))} 
         </SelectContent>
       </Select>
     </div>

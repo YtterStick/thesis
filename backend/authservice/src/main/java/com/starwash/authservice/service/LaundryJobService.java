@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class LaundryJobService {
@@ -167,12 +168,12 @@ public class LaundryJobService {
         // Reset to DRYING status with new timer
         load.setStatus(STATUS_DRYING);
         load.setStartTime(LocalDateTime.now());
-        
+
         // Use previous duration or default
-        int duration = (load.getDurationMinutes() != null && load.getDurationMinutes() > 0) 
-                ? load.getDurationMinutes() 
+        int duration = (load.getDurationMinutes() != null && load.getDurationMinutes() > 0)
+                ? load.getDurationMinutes()
                 : 40; // Default drying time
-        
+
         load.setEndTime(LocalDateTime.now().plusMinutes(duration));
 
         // Assign machine if not already assigned
@@ -182,7 +183,7 @@ public class LaundryJobService {
                     .filter(m -> "DRYER".equalsIgnoreCase(m.getType()))
                     .filter(m -> STATUS_AVAILABLE.equalsIgnoreCase(m.getStatus()))
                     .findFirst();
-            
+
             if (availableDryer.isPresent()) {
                 MachineItem dryer = availableDryer.get();
                 load.setMachineId(dryer.getId());
@@ -214,14 +215,18 @@ public class LaundryJobService {
 
         switch (serviceType) {
             case "wash":
-                if (STATUS_NOT_STARTED.equals(load.getStatus())) return STATUS_WASHING;
+                if (STATUS_NOT_STARTED.equals(load.getStatus()))
+                    return STATUS_WASHING;
                 break;
             case "dry":
-                if (STATUS_NOT_STARTED.equals(load.getStatus())) return STATUS_DRYING;
+                if (STATUS_NOT_STARTED.equals(load.getStatus()))
+                    return STATUS_DRYING;
                 break;
             case "wash & dry":
-                if (STATUS_NOT_STARTED.equals(load.getStatus())) return STATUS_WASHING;
-                if (STATUS_WASHED.equals(load.getStatus())) return STATUS_DRYING;
+                if (STATUS_NOT_STARTED.equals(load.getStatus()))
+                    return STATUS_WASHING;
+                if (STATUS_WASHED.equals(load.getStatus()))
+                    return STATUS_DRYING;
                 break;
         }
         return load.getStatus(); // already in progress or completed
@@ -381,10 +386,12 @@ public class LaundryJobService {
                 .findFirst()
                 .orElse(null);
 
-        if (load == null) return;
+        if (load == null)
+            return;
 
         String status = load.getStatus();
-        if (STATUS_COMPLETED.equals(status) || STATUS_FOLDING.equals(status)) return;
+        if (STATUS_COMPLETED.equals(status) || STATUS_FOLDING.equals(status))
+            return;
 
         switch (status.toUpperCase()) {
             case STATUS_WASHING:
@@ -398,5 +405,52 @@ public class LaundryJobService {
         }
 
         laundryJobRepository.save(job);
+    }
+
+    public List<LaundryJob> getCompletedUnclaimedJobs() {
+        // Find all jobs where all loads are completed and pickup status is unclaimed
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
+
+        return allJobs.stream()
+                .filter(job -> {
+                    // Check if all loads are completed
+                    boolean allCompleted = job.getLoadAssignments() != null &&
+                            job.getLoadAssignments().stream()
+                                    .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()));
+
+                    // Check if pickup status is unclaimed
+                    boolean isUnclaimed = "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus());
+
+                    return allCompleted && isUnclaimed;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Mark a laundry job as claimed
+     */
+    public LaundryJob markAsClaimed(String transactionId) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        // Verify all loads are completed before allowing claim
+        boolean allCompleted = job.getLoadAssignments() != null &&
+                job.getLoadAssignments().stream()
+                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()));
+
+        if (!allCompleted) {
+            throw new RuntimeException("Cannot claim laundry - not all loads are completed");
+        }
+
+        job.setPickupStatus("CLAIMED");
+        return laundryJobRepository.save(job);
+    }
+
+    /**
+     * Get all claimed laundry jobs
+     */
+    public List<LaundryJob> getClaimedJobs() {
+        return laundryJobRepository.findAll().stream()
+                .filter(job -> "CLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                .collect(Collectors.toList());
     }
 }

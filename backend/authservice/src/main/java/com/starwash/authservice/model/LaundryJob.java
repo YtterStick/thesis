@@ -25,6 +25,8 @@ public class LaundryJob {
     private List<String> statusFlow = new ArrayList<>();
     private Integer currentStep = 0;
 
+    private String pickupStatus = "UNCLAIMED"; // UNCLAIMED, CLAIMED
+
     public LaundryJob() {}
 
     public LaundryJob(String transactionId, String customerName, String contact,
@@ -67,6 +69,10 @@ public class LaundryJob {
 
     public Integer getCurrentStep() { return currentStep; }
     public void setCurrentStep(Integer currentStep) { this.currentStep = currentStep; }
+
+    public String getPickupStatus() { return pickupStatus; }
+    
+    public void setPickupStatus(String pickupStatus) { this.pickupStatus = pickupStatus; }
 
     @Override
     public String toString() {

@@ -21,4 +21,10 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
 
     // ✅ (Optional) Check if a machine is currently assigned to any load
     Optional<LaundryJob> findByLoadAssignmentsMachineId(String machineId);
+    
+     // ✅ Add method to find by pickup status
+    List<LaundryJob> findByPickupStatus(String pickupStatus);
+    
+    // ✅ Add method to find completed and unclaimed jobs
+    List<LaundryJob> findByPickupStatusAndLoadAssignmentsStatus(String pickupStatus, String loadStatus);
 }

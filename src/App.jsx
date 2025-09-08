@@ -26,6 +26,7 @@ import NewTransactionPage from "@/routes/Staff/transaction/MainPage";
 import StaffRecordsPage from "@/routes/Staff/records/MainPage";
 import StaffInventoryPage from "@/routes/Staff/inventory/MainPage";
 import StaffServiceTracking from "@/routes/Staff/tracking/MainPage";
+import StaffClaimingLaundry from "@/routes/Staff/claiming/MainPage";
 
 // ✅ Toast Provider
 import { Toaster } from "@/components/ui/toaster";
@@ -87,7 +88,7 @@ function App() {
     { path: "/staff/inventory", element: <StaffRoute element={<StaffInventoryPage/> } /> },
     { path: "/staff/records", element: <StaffRoute element={<StaffRecordsPage />} /> },
     { path: "/staff/tracking", element: <StaffRoute element={<StaffServiceTracking />} /> },
-    { path: "/staff/claiming", element: <StaffRoute element={<h1 className="title">Claiming Center</h1>} /> },
+    { path: "/staff/claiming", element: <StaffRoute element={<StaffClaimingLaundry/>} /> },
     { path: "/staff/expired-loads", element: <StaffRoute element={<h1 className="title">Expired Loads</h1>} /> },
     { path: "/staff/missing-items", element: <StaffRoute element={<h1 className="title">Missing Items</h1>} /> },
 
