@@ -19,6 +19,7 @@ import ManageReceiptPage from "@/routes/Admin/MngReceipt/MainPage";
 import MachineMainPage from "@/routes/Admin/Machine/MainPage";
 import TermsSettingsPage from "@/routes/Admin/TermsSettings/MainPage";
 import DocumentSettingsPage from "@/routes/Admin/Format/MainPage"; // ✅ NEW unified format page
+import PaymentMethodsPage from "./routes/Admin/Payment/MainPage";
 
 // 👕 Staff Pages
 import StaffDashboardPage from "@/routes/Staff/dashboard/page";
@@ -27,6 +28,7 @@ import StaffRecordsPage from "@/routes/Staff/records/MainPage";
 import StaffInventoryPage from "@/routes/Staff/inventory/MainPage";
 import StaffServiceTracking from "@/routes/Staff/tracking/MainPage";
 import StaffClaimingLaundry from "@/routes/Staff/claiming/MainPage";
+import StaffMissingItem from "@/routes/Staff/missing/MainPage";
 
 // ✅ Toast Provider
 import { Toaster } from "@/components/ui/toaster";
@@ -75,7 +77,7 @@ function App() {
     { path: "/managereceipts", element: <AdminRoute element={<ManageReceiptPage />} /> },
     { path: "/serviceoption", element: <AdminRoute element={<ServiceOptionPage />} /> },
     { path: "/notificationsettings", element: <AdminRoute element={<h1 className="title">Notification Settings</h1>} /> },
-    { path: "/paymentmethod", element: <AdminRoute element={<h1 className="title">Payment Method</h1>} /> },
+    { path: "/paymentmethod", element: <AdminRoute element={<PaymentMethodsPage/>} /> },
     { path: "/documentsettings", element: <AdminRoute element={<DocumentSettingsPage />} /> }, // ✅ NEW route
     { path: "/machines", element: <AdminRoute element={<MachineMainPage />} /> },
     { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
@@ -89,8 +91,7 @@ function App() {
     { path: "/staff/records", element: <StaffRoute element={<StaffRecordsPage />} /> },
     { path: "/staff/tracking", element: <StaffRoute element={<StaffServiceTracking />} /> },
     { path: "/staff/claiming", element: <StaffRoute element={<StaffClaimingLaundry/>} /> },
-    { path: "/staff/expired-loads", element: <StaffRoute element={<h1 className="title">Expired Loads</h1>} /> },
-    { path: "/staff/missing-items", element: <StaffRoute element={<h1 className="title">Missing Items</h1>} /> },
+    { path: "/staff/missing-items", element: <StaffRoute element={<StaffMissingItem />} /> },
 
     // ❌ Catch-all
     { path: "*", element: <NotFoundPage /> },
