@@ -202,7 +202,6 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
         </Table>
       </div>
 
-      {/* Receipt Modal */}
       {showReceipt && selectedTransaction && formatSettings && (
         <ServiceReceiptCard
           transaction={selectedTransaction}
@@ -211,7 +210,6 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
         />
       )}
 
-      {/* Loading overlay for settings */}
       {loadingSettings && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
