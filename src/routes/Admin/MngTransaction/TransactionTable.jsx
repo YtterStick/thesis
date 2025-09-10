@@ -3,61 +3,15 @@ import ExportCSV from "@/constants/ExportCSV";
 import CustomDateInput from "../../../constants/CustomDateInput";
 import TransactionActionMenu from "./components/TransactionActionMenu";
 import StatusCheckboxGroup from "./components/StatusCheckBoxGroup";
-import { Search, Filter, MoreVertical, XCircle, AlertCircle, CircleCheck, CheckCircle2 } from "lucide-react";
-import { tableHeaders, statusFilters } from "@/constants";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Search, Filter, MoreVertical } from "lucide-react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-const renderStatusBadge = (status) => {
-    let icon = null;
-    let tooltipClass = "";
-
-    switch (status) {
-        case "Unpaid":
-        case "Expired":
-            icon = <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />;
-            tooltipClass = "text-red-600 dark:text-red-400";
-            break;
-        case "Pending":
-        case "Unclaimed":
-            icon = <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400" />;
-            tooltipClass = "text-orange-600 dark:text-orange-400";
-            break;
-        case "Washing":
-            icon = <CircleCheck className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
-            tooltipClass = "text-blue-600 dark:text-blue-400";
-            break;
-        case "Paid":
-        case "Done":
-        case "Claimed":
-            icon = <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />;
-            tooltipClass = "text-green-600 dark:text-green-400";
-            break;
-        default:
-            icon = null;
-            tooltipClass = "text-slate-600 dark:text-slate-300";
-    }
-
-    return icon ? (
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <span className="inline-flex items-center justify-center">{icon}</span>
-            </TooltipTrigger>
-            <TooltipContent
-                side="top"
-                className={tooltipClass}
-            >
-                {status}
-            </TooltipContent>
-        </Tooltip>
-    ) : null;
-};
-
-const TransactionTable = ({ items = [], onEdit }) => {
+const TransactionTableAdmin = ({ items = [], onEdit }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRange, setSelectedRange] = useState({ from: "", to: "" });
-    const [selectedPayment, setSelectedPayment] = useState([]);
     const [selectedLaundry, setSelectedLaundry] = useState([]);
     const [selectedPickup, setSelectedPickup] = useState([]);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const filterRef = useRef(null);
@@ -70,13 +24,11 @@ const TransactionTable = ({ items = [], onEdit }) => {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, selectedRange, selectedPayment, selectedLaundry, selectedPickup]);
+    }, [searchTerm, selectedRange, selectedLaundry, selectedPickup, selectedPaymentMethod]);
 
     useEffect(() => {
         const handlePointerDown = (e) => {
-            if (filterRef.current?.contains(e.target) || dropdownRef.current?.contains(e.target)) {
-                return;
-            }
+            if (filterRef.current?.contains(e.target) || dropdownRef.current?.contains(e.target)) return;
             setShowFilters(false);
             setShowDatePicker(false);
             setOpenItem(null);
@@ -88,9 +40,9 @@ const TransactionTable = ({ items = [], onEdit }) => {
 
     const toggleStatus = (type, value) => {
         const map = {
-            payment: [selectedPayment, setSelectedPayment],
             laundry: [selectedLaundry, setSelectedLaundry],
             pickup: [selectedPickup, setSelectedPickup],
+            paymentMethod: [selectedPaymentMethod, setSelectedPaymentMethod],
         };
         const [selected, setSelected] = map[type];
         setSelected((prev) => (prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]));
@@ -109,10 +61,10 @@ const TransactionTable = ({ items = [], onEdit }) => {
     const filtered = items.filter((t) => {
         const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesDate = isInRange(t.createdAt);
-        const matchesPayment = selectedPayment.length === 0 || selectedPayment.includes(t.paymentStatus);
         const matchesLaundry = selectedLaundry.length === 0 || selectedLaundry.includes(t.laundryStatus);
         const matchesPickup = selectedPickup.length === 0 || selectedPickup.includes(t.pickupStatus);
-        return matchesSearch && matchesDate && matchesPayment && matchesLaundry && matchesPickup;
+        const matchesPayment = selectedPaymentMethod.length === 0 || selectedPaymentMethod.includes(t.paymentMethod);
+        return matchesSearch && matchesDate && matchesLaundry && matchesPickup && matchesPayment;
     });
 
     const totalPages = Math.ceil(filtered.length / rowsPerPage);
@@ -144,10 +96,7 @@ const TransactionTable = ({ items = [], onEdit }) => {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="relative h-[38px] w-full lg:w-[250px]">
                         <div className="flex h-full items-center rounded-md border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-cyan-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:focus-within:ring-cyan-400 dark:focus-within:ring-offset-slate-950">
-                            <Search
-                                size={16}
-                                className="text-[#0891B2] dark:text-[#0891B2]"
-                            />
+                            <Search size={16} className="text-[#0891B2] dark:text-[#0891B2]" />
                             <input
                                 type="text"
                                 value={searchTerm}
@@ -171,9 +120,7 @@ const TransactionTable = ({ items = [], onEdit }) => {
                                         : "bg-slate-100 text-slate-800 hover:bg-slate-200 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
                                 }`}
                             >
-                                <Filter
-                                    className={`h-4 w-4 transition-colors ${showFilters ? "text-white" : "text-[#0891B2] dark:text-[#0891B2]"}`}
-                                />
+                                <Filter className={`h-4 w-4 ${showFilters ? "text-white" : "text-[#0891B2] dark:text-[#0891B2]"}`} />
                                 Filters
                             </button>
                             {showFilters && (
@@ -183,12 +130,11 @@ const TransactionTable = ({ items = [], onEdit }) => {
                                     style={{ minWidth: "220px", maxWidth: "280px", width: "100%" }}
                                 >
                                     <div className="flex flex-col gap-2">
-                                        <span className="text-sm font-semibold text-slate-700 dark:text-white">Payment</span>
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-white">Payment Method</span>
                                         <StatusCheckboxGroup
-                                            label=""
-                                            type="payment"
-                                            options={statusFilters.payment}
-                                            selected={selectedPayment}
+                                            type="paymentMethod"
+                                            options={["Cash", "GCash"]}
+                                            selected={selectedPaymentMethod}
                                             toggleFn={toggleStatus}
                                         />
                                     </div>
@@ -196,9 +142,8 @@ const TransactionTable = ({ items = [], onEdit }) => {
                                     <div className="flex flex-col gap-2">
                                         <span className="text-sm font-semibold text-slate-700 dark:text-white">Laundry Status</span>
                                         <StatusCheckboxGroup
-                                            label=""
                                             type="laundry"
-                                            options={statusFilters.laundry}
+                                            options={["Pending", "Washing", "Done"]}
                                             selected={selectedLaundry}
                                             toggleFn={toggleStatus}
                                         />
@@ -207,9 +152,8 @@ const TransactionTable = ({ items = [], onEdit }) => {
                                     <div className="flex flex-col gap-2">
                                         <span className="text-sm font-semibold text-slate-700 dark:text-white">Pickup Status</span>
                                         <StatusCheckboxGroup
-                                            label=""
                                             type="pickup"
-                                            options={statusFilters.pickup}
+                                            options={["Unclaimed", "Claimed"]}
                                             selected={selectedPickup}
                                             toggleFn={toggleStatus}
                                         />
@@ -226,10 +170,7 @@ const TransactionTable = ({ items = [], onEdit }) => {
                             closeOther={() => setShowFilters(false)}
                         />
 
-                        <ExportCSV
-                            data={filtered}
-                            filename="transactions.csv"
-                        />
+                        <ExportCSV data={filtered} filename="transactions_admin.csv" />
                     </div>
                 </div>
 
@@ -238,14 +179,18 @@ const TransactionTable = ({ items = [], onEdit }) => {
                     <table className="min-w-full text-left text-sm">
                         <thead className="bg-slate-200 text-xs uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             <tr>
-                                {tableHeaders.map((header) => (
-                                    <th
-                                        key={header}
-                                        className="p-2"
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
+                                <th className="p-2">Customer</th>
+                                <th className="p-2">Service</th>
+                                <th className="p-2">Loads</th>
+                                <th className="p-2">Detergent</th>
+                                <th className="p-2">Softener</th>
+                                <th className="p-2">Price</th>
+                                <th className="p-2">Date</th>
+                                <th className="p-2">Laundry Status</th>
+                                <th className="p-2">Pickup Status</th>
+                                <th className="p-2">Processed By</th>
+                                <th className="p-2">Payment Method</th>
+                                <th className="p-2 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -264,24 +209,10 @@ const TransactionTable = ({ items = [], onEdit }) => {
                                         <td className="p-2 text-xs text-slate-500 dark:text-slate-400">
                                             {new Date(t.createdAt).toLocaleDateString("en-US")}
                                         </td>
-                                        <td className="whitespace-nowrap p-2 text-slate-600 dark:text-slate-300">
-                                            <div className="inline-flex items-center gap-2">
-                                                <span>{t.paymentStatus}</span>
-                                                {renderStatusBadge(t.paymentStatus)}
-                                            </div>
-                                        </td>
-                                        <td className="whitespace-nowrap p-2 text-slate-600 dark:text-slate-300">
-                                            <div className="inline-flex items-center gap-2">
-                                                <span>{t.laundryStatus}</span>
-                                                {renderStatusBadge(t.laundryStatus)}
-                                            </div>
-                                        </td>
-                                        <td className="whitespace-nowrap p-2 text-slate-600 dark:text-slate-300">
-                                            <div className="inline-flex items-center gap-2">
-                                                <span>{t.pickupStatus}</span>
-                                                {renderStatusBadge(t.pickupStatus)}
-                                            </div>
-                                        </td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">{t.laundryStatus}</td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">{t.pickupStatus}</td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">{t.processedBy || "—"}</td>
+                                        <td className="p-2 text-slate-600 dark:text-slate-300">{t.paymentMethod || "—"}</td>
                                         <td className="p-2 text-center">
                                             <button
                                                 ref={(el) => (triggerRefs.current[t.id] = el)}
@@ -295,10 +226,7 @@ const TransactionTable = ({ items = [], onEdit }) => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td
-                                        colSpan={11}
-                                        className="p-4 text-center text-slate-500 dark:text-slate-400"
-                                    >
+                                    <td colSpan={12} className="p-4 text-center text-slate-500 dark:text-slate-400">
                                         No transactions found.
                                     </td>
                                 </tr>
@@ -353,7 +281,7 @@ const TransactionTable = ({ items = [], onEdit }) => {
                         <TransactionActionMenu
                             onEdit={handleEdit}
                             onDelete={() => {
-                                console.log("[TransactionTable] Delete triggered:", openItem);
+                                console.log("[TransactionTableAdmin] Delete triggered:", openItem);
                                 setOpenItem(null);
                             }}
                         />
@@ -364,4 +292,4 @@ const TransactionTable = ({ items = [], onEdit }) => {
     );
 };
 
-export default TransactionTable;
+export default TransactionTableAdmin;

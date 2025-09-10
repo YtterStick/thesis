@@ -6,7 +6,7 @@ public class RecordResponseDto {
 
     private String id;
     private String customerName;
-    private String contact;        // ✅ Add contact
+    private String contact;
     private String serviceName;
     private int loads;
     private String detergent;

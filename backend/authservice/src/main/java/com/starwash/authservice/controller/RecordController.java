@@ -17,8 +17,6 @@ public class RecordController {
     public RecordController(TransactionService transactionService) {
         this.transactionService = transactionService;
     }
-
-    // ✅ GET /api/records — returns all transaction records
     @GetMapping("/records")
     public ResponseEntity<List<RecordResponseDto>> getAllRecords() {
         List<RecordResponseDto> records = transactionService.getAllRecords();
