@@ -43,7 +43,7 @@ public class ClaimingController {
         }
 
         try {
-            List<LaundryJob> completedJobs = laundryJobService.getCompletedUnclaimedJobs();
+            List<LaundryJob> completedJobs = claimingService.getCompletedUnclaimedJobs();
             return ResponseEntity.ok(completedJobs);
         } catch (Exception e) {
             log.error("❌ Failed to fetch completed unclaimed jobs: {}", e.getMessage(), e);
@@ -84,10 +84,104 @@ public class ClaimingController {
                 log.warn("⚠️ Claim attempt failed (already claimed) | transactionId={}", transactionId);
                 return ResponseEntity.badRequest().body(null);
             }
+            if (message.contains("expired")) {
+                log.warn("⚠️ Claim attempt failed (expired) | transactionId={}", transactionId);
+                return ResponseEntity.badRequest().body(null);
+            }
+            if (message.contains("disposed")) {
+                log.warn("⚠️ Claim attempt failed (disposed) | transactionId={}", transactionId);
+                return ResponseEntity.badRequest().body(null);
+            }
             log.error("❌ Failed to claim laundry for transaction {}: {}", transactionId, message);
             return ResponseEntity.internalServerError().build();
         } catch (Exception e) {
             log.error("❌ Error claiming laundry: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Dispose expired laundry
+     */
+    @PatchMapping("/{transactionId}/dispose")
+    public ResponseEntity<Void> disposeExpiredLaundry(
+            @PathVariable String transactionId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            String staffId = jwtUtil.extractUsername(token);
+
+            claimingService.disposeExpiredLaundry(transactionId, staffId);
+
+            log.info("✅ Expired laundry disposed | transactionId={} | staff={}", 
+                    transactionId, staffId);
+
+            return ResponseEntity.ok().build();
+
+        } catch (RuntimeException e) {
+            String message = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            if (message.contains("not found")) {
+                return ResponseEntity.notFound().build();
+            }
+            if (message.contains("not expired")) {
+                return ResponseEntity.badRequest().build();
+            }
+            if (message.contains("already disposed")) {
+                return ResponseEntity.badRequest().build();
+            }
+            log.error("❌ Failed to dispose laundry: {}", message);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get expired unclaimed jobs (admin view)
+     */
+    @GetMapping("/expired-unclaimed")
+    public ResponseEntity<List<LaundryJob>> getExpiredUnclaimedJobs(
+            @RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            List<LaundryJob> expiredJobs = claimingService.getExpiredUnclaimedJobs();
+            return ResponseEntity.ok(expiredJobs);
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch expired unclaimed jobs: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Bulk dispose all expired jobs (admin function)
+     */
+    @PatchMapping("/bulk-dispose")
+    public ResponseEntity<Integer> bulkDisposeExpiredJobs(
+            @RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            String staffId = jwtUtil.extractUsername(token);
+
+            int disposedCount = claimingService.bulkDisposeExpiredJobs(staffId);
+
+            log.info("✅ Bulk disposed {} expired jobs | staff={}", disposedCount, staffId);
+
+            return ResponseEntity.ok(disposedCount);
+
+        } catch (Exception e) {
+            log.error("❌ Failed to bulk dispose expired jobs: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -134,6 +228,26 @@ public class ClaimingController {
             return ResponseEntity.ok(claimedJobs);
         } catch (Exception e) {
             log.error("❌ Failed to fetch claimed jobs: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get disposal history
+     */
+    @GetMapping("/disposal-history")
+    public ResponseEntity<List<LaundryJob>> getDisposalHistory(
+            @RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            List<LaundryJob> disposalHistory = claimingService.getDisposalHistory();
+            return ResponseEntity.ok(disposalHistory);
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch disposal history: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

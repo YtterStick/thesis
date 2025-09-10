@@ -10,13 +10,14 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Loader, Calendar, Shirt, Printer } from "lucide-react";
+import { CheckCircle2, Clock, Loader, Calendar, Shirt, Printer, AlertTriangle } from "lucide-react";
 import ServiceReceiptCard from "@/components/ServiceReceiptCard";
 
-const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
+const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose }) => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [loadingTransactionId, setLoadingTransactionId] = useState(null);
+  const [disposingTransactionId, setDisposingTransactionId] = useState(null);
   const [formatSettings, setFormatSettings] = useState(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
@@ -63,6 +64,38 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
     }
   };
 
+  const isTransactionExpired = (transaction) => {
+    if (transaction.expiryDate) {
+      return new Date() > new Date(transaction.expiryDate);
+    }
+    
+    // Calculate expiry if not set
+    const completionDate = transaction.loadAssignments?.reduce((latest, load) => {
+      if (load.endTime) {
+        const loadDate = new Date(load.endTime);
+        return !latest || loadDate > latest ? loadDate : latest;
+      }
+      return latest;
+    }, null);
+    
+    if (!completionDate) return false;
+    
+    const expiryDate = new Date(completionDate);
+    expiryDate.setDate(expiryDate.getDate() + 7);
+    
+    return new Date() > expiryDate;
+  };
+
+  const getDaysUntilExpiry = (transaction) => {
+    if (transaction.expiryDate) {
+      const expiryDate = new Date(transaction.expiryDate);
+      const today = new Date();
+      const diffTime = expiryDate - today;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+    return null;
+  };
+
   if (!hasFetched) return null;
 
   const handleClaimClick = async (transaction) => {
@@ -79,6 +112,17 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
       console.error(error);
     } finally {
       setLoadingTransactionId(null);
+    }
+  };
+
+  const handleDisposeClick = async (transaction) => {
+    setDisposingTransactionId(transaction.id);
+    try {
+      await onDispose(transaction.id);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setDisposingTransactionId(null);
     }
   };
 
@@ -127,14 +171,22 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
                   null
                 );
 
+                const isExpired = isTransactionExpired(transaction);
+                const daysUntilExpiry = getDaysUntilExpiry(transaction);
+
                 return (
                   <TableRow
                     key={transaction.id || transaction.transactionId}
-                    className="border-t border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                    className={`border-t border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/50 ${
+                      isExpired ? "bg-red-50 dark:bg-red-950/20" : ""
+                    }`}
                   >
                     <TableCell className="font-medium text-slate-900 dark:text-slate-100 flex items-center">
                       <Shirt className="h-4 w-4 mr-2 text-cyan-600 dark:text-cyan-400" />
                       {transaction.customerName}
+                      {isExpired && (
+                        <AlertTriangle className="h-4 w-4 ml-2 text-red-500" />
+                      )}
                     </TableCell>
                     <TableCell className="text-slate-700 dark:text-slate-300">
                       {transaction.contact || "N/A"}
@@ -154,11 +206,29 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
                     <TableCell className="flex items-center text-slate-600 dark:text-slate-300">
                       <Calendar className="h-4 w-4 mr-1 text-slate-400 dark:text-slate-500" />
                       {completionDate ? completionDate.toLocaleDateString() : "N/A"}
+                      {daysUntilExpiry !== null && daysUntilExpiry <= 3 && (
+                        <Badge variant="outline" className="ml-2 text-xs" style={{ 
+                          backgroundColor: daysUntilExpiry <= 1 ? '#fef2f2' : '#fffbeb',
+                          color: daysUntilExpiry <= 1 ? '#dc2626' : '#d97706',
+                          borderColor: daysUntilExpiry <= 1 ? '#fecaca' : '#fed7aa'
+                        }}>
+                          {daysUntilExpiry <= 0 ? 'Expired' : `${daysUntilExpiry}d left`}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {transaction.pickupStatus === "UNCLAIMED" ? (
-                        <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 flex items-center gap-1 justify-center w-24">
-                          <Clock className="h-3 w-3" /> Unclaimed
+                        <Badge className={
+                          isExpired 
+                            ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 flex items-center gap-1 justify-center w-24"
+                            : "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 flex items-center gap-1 justify-center w-24"
+                        }>
+                          {isExpired ? (
+                            <AlertTriangle className="h-3 w-3" />
+                          ) : (
+                            <Clock className="h-3 w-3" />
+                          )}
+                          {isExpired ? "Expired" : "Unclaimed"}
                         </Badge>
                       ) : (
                         <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 flex items-center gap-1 justify-center w-24">
@@ -167,21 +237,43 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
                       )}
                     </TableCell>
                     <TableCell className="text-right flex flex-col gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleClaimClick(transaction)}
-                        disabled={transaction.pickupStatus !== "UNCLAIMED" || loadingTransactionId === transaction.id}
-                        className="bg-cyan-600 hover:bg-cyan-700 dark:bg-cyan-700 dark:hover:bg-cyan-600 text-white"
-                      >
-                        {loadingTransactionId === transaction.id ? (
-                          <>
-                            <Loader className="h-3 w-3 mr-1 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          "Mark as Claimed"
-                        )}
-                      </Button>
+                      {transaction.pickupStatus === "UNCLAIMED" && !isExpired && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleClaimClick(transaction)}
+                          disabled={loadingTransactionId === transaction.id}
+                          className="bg-cyan-600 hover:bg-cyan-700 dark:bg-cyan-700 dark:hover:bg-cyan-600 text-white"
+                        >
+                          {loadingTransactionId === transaction.id ? (
+                            <>
+                              <Loader className="h-3 w-3 mr-1 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            "Mark as Claimed"
+                          )}
+                        </Button>
+                      )}
+                      
+                      {transaction.pickupStatus === "UNCLAIMED" && isExpired && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDisposeClick(transaction)}
+                          disabled={disposingTransactionId === transaction.id}
+                          className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white"
+                        >
+                          {disposingTransactionId === transaction.id ? (
+                            <>
+                              <Loader className="h-3 w-3 mr-1 animate-spin" />
+                              Disposing...
+                            </>
+                          ) : (
+                            "Dispose"
+                          )}
+                        </Button>
+                      )}
+
                       {transaction.pickupStatus === "CLAIMED" && (
                         <Button
                           size="sm"
@@ -227,6 +319,7 @@ ClaimingTable.propTypes = {
   isLoading: PropTypes.bool.isRequired,
   hasFetched: PropTypes.bool.isRequired,
   onClaim: PropTypes.func.isRequired,
+  onDispose: PropTypes.func.isRequired,
 };
 
 export default ClaimingTable;

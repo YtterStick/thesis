@@ -31,6 +31,12 @@ public class LaundryJob {
     private String claimReceiptNumber;
     private String claimedByStaffId;
 
+    // ✅ Expiration fields
+    private LocalDateTime expiryDate;
+    private boolean disposed = false;
+    private LocalDateTime disposalDate;
+    private String disposedByStaffId;
+
     private String serviceType;
 
     public LaundryJob() {
@@ -41,6 +47,7 @@ public class LaundryJob {
                       Integer detergentQty, Integer fabricQty,
                       List<String> statusFlow, Integer currentStep) {
         this.transactionId = transactionId;
+        this.transactionId = transactionId;
         this.customerName = customerName;
         this.contact = contact;
         this.loadAssignments = loadAssignments != null ? loadAssignments : new ArrayList<>();
@@ -48,6 +55,39 @@ public class LaundryJob {
         this.fabricQty = fabricQty;
         this.statusFlow = statusFlow != null ? statusFlow : new ArrayList<>();
         this.currentStep = currentStep != null ? currentStep : 0;
+    }
+
+    // ✅ Expiration getters/setters
+    public LocalDateTime getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(LocalDateTime expiryDate) {
+        this.expiryDate = expiryDate;
+    }
+
+    public boolean isDisposed() {
+        return disposed;
+    }
+
+    public void setDisposed(boolean disposed) {
+        this.disposed = disposed;
+    }
+
+    public LocalDateTime getDisposalDate() {
+        return disposalDate;
+    }
+
+    public void setDisposalDate(LocalDateTime disposalDate) {
+        this.disposalDate = disposalDate;
+    }
+
+    public String getDisposedByStaffId() {
+        return disposedByStaffId;
+    }
+
+    public void setDisposedByStaffId(String disposedByStaffId) {
+        this.disposedByStaffId = disposedByStaffId;
     }
 
     // ✅ Claiming getters/setters
@@ -176,8 +216,33 @@ public class LaundryJob {
                 ", fabricQty=" + fabricQty +
                 ", currentStep=" + currentStep +
                 ", pickupStatus=" + pickupStatus +
+                ", expiryDate=" + expiryDate +
+                ", disposed=" + disposed +
                 ", serviceType='" + serviceType + '\'' +
                 '}';
+    }
+
+    // ✅ Helper method to check if job is expired
+    public boolean isExpired() {
+        if (expiryDate == null) {
+            return false;
+        }
+        return LocalDateTime.now().isAfter(expiryDate);
+    }
+
+    // ✅ Helper method to calculate expiry date (7 days from completion)
+    public void calculateExpiryDate() {
+        if (this.loadAssignments != null && !this.loadAssignments.isEmpty()) {
+            LocalDateTime latestCompletion = this.loadAssignments.stream()
+                .map(LoadAssignment::getEndTime)
+                .filter(endTime -> endTime != null)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+            
+            if (latestCompletion != null) {
+                this.expiryDate = latestCompletion.plusDays(7);
+            }
+        }
     }
 
     // ✅ Inner class for per-load tracking

@@ -35,6 +35,15 @@ public class ClaimingService {
             throw new RuntimeException("Job already claimed");
         }
 
+        if (job.isDisposed()) {
+            throw new RuntimeException("Job has been disposed");
+        }
+
+        // Check if job is expired
+        if (job.isExpired()) {
+            throw new RuntimeException("Job has expired and cannot be claimed");
+        }
+
         // Generate claim receipt number
         String claimReceiptNumber = "CLM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
@@ -95,5 +104,77 @@ public class ClaimingService {
      */
     public List<LaundryJob> getClaimedJobs() {
         return laundryJobRepository.findByPickupStatus("CLAIMED");
+    }
+
+    /**
+     * Get completed unclaimed jobs (including expiration status)
+     */
+    public List<LaundryJob> getCompletedUnclaimedJobs() {
+        // First, calculate expiry dates for jobs that need it
+        List<LaundryJob> jobsNeedingExpiry = laundryJobRepository.findJobsNeedingExpiryCalculation();
+        jobsNeedingExpiry.forEach(job -> {
+            job.calculateExpiryDate();
+            if (job.getExpiryDate() != null) {
+                laundryJobRepository.save(job);
+            }
+        });
+        
+        // Return all active unclaimed jobs
+        return laundryJobRepository.findActiveUnclaimedJobs();
+    }
+
+    /**
+     * Dispose expired laundry
+     */
+    public void disposeExpiredLaundry(String transactionId, String staffName) {
+        LaundryJob job = laundryJobRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("Laundry job not found: " + transactionId));
+
+        if (!"UNCLAIMED".equals(job.getPickupStatus())) {
+            throw new RuntimeException("Only unclaimed jobs can be disposed");
+        }
+
+        if (job.isDisposed()) {
+            throw new RuntimeException("Job has already been disposed");
+        }
+
+        if (!job.isExpired()) {
+            throw new RuntimeException("Job has not expired yet");
+        }
+
+        job.setDisposed(true);
+        job.setDisposalDate(LocalDateTime.now());
+        job.setDisposedByStaffId(staffName);
+        laundryJobRepository.save(job);
+    }
+
+    /**
+     * Get all expired unclaimed jobs (for admin review)
+     */
+    public List<LaundryJob> getExpiredUnclaimedJobs() {
+        return laundryJobRepository.findExpiredUnclaimedJobs(LocalDateTime.now());
+    }
+
+    /**
+     * Bulk dispose expired jobs (admin function)
+     */
+    public int bulkDisposeExpiredJobs(String staffName) {
+        List<LaundryJob> expiredJobs = getExpiredUnclaimedJobs();
+        
+        expiredJobs.forEach(job -> {
+            job.setDisposed(true);
+            job.setDisposalDate(LocalDateTime.now());
+            job.setDisposedByStaffId(staffName);
+            laundryJobRepository.save(job);
+        });
+        
+        return expiredJobs.size();
+    }
+
+    /**
+     * Get disposal history
+     */
+    public List<LaundryJob> getDisposalHistory() {
+        return laundryJobRepository.findByDisposed(true);
     }
 }
