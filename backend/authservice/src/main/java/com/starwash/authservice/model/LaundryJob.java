@@ -25,12 +25,16 @@ public class LaundryJob {
     private List<String> statusFlow = new ArrayList<>();
     private Integer currentStep = 0;
 
-    private String pickupStatus = "UNCLAIMED"; // UNCLAIMED, CLAIMED
+    // ✅ Claiming fields
+    private String pickupStatus = "UNCLAIMED"; // UNCLAIMED | CLAIMED
+    private LocalDateTime claimDate;
+    private String claimReceiptNumber;
+    private String claimedByStaffId;
 
-    // ✅ Added serviceType field
     private String serviceType;
 
-    public LaundryJob() {}
+    public LaundryJob() {
+    }
 
     public LaundryJob(String transactionId, String customerName, String contact,
                       List<LoadAssignment> loadAssignments,
@@ -46,39 +50,119 @@ public class LaundryJob {
         this.currentStep = currentStep != null ? currentStep : 0;
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    // ✅ Claiming getters/setters
+    public LocalDateTime getClaimDate() {
+        return claimDate;
+    }
 
-    public String getTransactionId() { return transactionId; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public void setClaimDate(LocalDateTime claimDate) {
+        this.claimDate = claimDate;
+    }
 
-    public String getCustomerName() { return customerName; }
-    public void setCustomerName(String customerName) { this.customerName = customerName; }
+    public String getClaimReceiptNumber() {
+        return claimReceiptNumber;
+    }
 
-    public String getContact() { return contact; }
-    public void setContact(String contact) { this.contact = contact; }
+    public void setClaimReceiptNumber(String claimReceiptNumber) {
+        this.claimReceiptNumber = claimReceiptNumber;
+    }
 
-    public List<LoadAssignment> getLoadAssignments() { return loadAssignments; }
-    public void setLoadAssignments(List<LoadAssignment> loadAssignments) { this.loadAssignments = loadAssignments; }
+    public String getClaimedByStaffId() {
+        return claimedByStaffId;
+    }
 
-    public Integer getDetergentQty() { return detergentQty; }
-    public void setDetergentQty(Integer detergentQty) { this.detergentQty = detergentQty; }
+    public void setClaimedByStaffId(String claimedByStaffId) {
+        this.claimedByStaffId = claimedByStaffId;
+    }
 
-    public Integer getFabricQty() { return fabricQty; }
-    public void setFabricQty(Integer fabricQty) { this.fabricQty = fabricQty; }
+    // ✅ Core getters/setters
+    public String getId() {
+        return id;
+    }
 
-    public List<String> getStatusFlow() { return statusFlow; }
-    public void setStatusFlow(List<String> statusFlow) { this.statusFlow = statusFlow; }
+    public void setId(String id) {
+        this.id = id;
+    }
 
-    public Integer getCurrentStep() { return currentStep; }
-    public void setCurrentStep(Integer currentStep) { this.currentStep = currentStep; }
+    public String getTransactionId() {
+        return transactionId;
+    }
 
-    public String getPickupStatus() { return pickupStatus; }
-    public void setPickupStatus(String pickupStatus) { this.pickupStatus = pickupStatus; }
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
 
-    // ✅ Getter & Setter for serviceType
-    public String getServiceType() { return serviceType; }
-    public void setServiceType(String serviceType) { this.serviceType = serviceType; }
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public String getContact() {
+        return contact;
+    }
+
+    public void setContact(String contact) {
+        this.contact = contact;
+    }
+
+    public List<LoadAssignment> getLoadAssignments() {
+        return loadAssignments;
+    }
+
+    public void setLoadAssignments(List<LoadAssignment> loadAssignments) {
+        this.loadAssignments = loadAssignments;
+    }
+
+    public Integer getDetergentQty() {
+        return detergentQty;
+    }
+
+    public void setDetergentQty(Integer detergentQty) {
+        this.detergentQty = detergentQty;
+    }
+
+    public Integer getFabricQty() {
+        return fabricQty;
+    }
+
+    public void setFabricQty(Integer fabricQty) {
+        this.fabricQty = fabricQty;
+    }
+
+    public List<String> getStatusFlow() {
+        return statusFlow;
+    }
+
+    public void setStatusFlow(List<String> statusFlow) {
+        this.statusFlow = statusFlow;
+    }
+
+    public Integer getCurrentStep() {
+        return currentStep;
+    }
+
+    public void setCurrentStep(Integer currentStep) {
+        this.currentStep = currentStep;
+    }
+
+    public String getPickupStatus() {
+        return pickupStatus;
+    }
+
+    public void setPickupStatus(String pickupStatus) {
+        this.pickupStatus = pickupStatus;
+    }
+
+    public String getServiceType() {
+        return serviceType;
+    }
+
+    public void setServiceType(String serviceType) {
+        this.serviceType = serviceType;
+    }
 
     @Override
     public String toString() {
@@ -91,6 +175,7 @@ public class LaundryJob {
                 ", detergentQty=" + detergentQty +
                 ", fabricQty=" + fabricQty +
                 ", currentStep=" + currentStep +
+                ", pickupStatus=" + pickupStatus +
                 ", serviceType='" + serviceType + '\'' +
                 '}';
     }
@@ -99,12 +184,13 @@ public class LaundryJob {
     public static class LoadAssignment {
         private int loadNumber;
         private String machineId;
-        private String status; // e.g., UNWASHED, WASHING, DRYING, COMPLETED
+        private String status; // NOT_STARTED, WASHING, DRYING, COMPLETED
         private Integer durationMinutes;
         private LocalDateTime startTime;
         private LocalDateTime endTime;
 
-        public LoadAssignment() {}
+        public LoadAssignment() {
+        }
 
         public LoadAssignment(int loadNumber, String machineId, String status,
                               Integer durationMinutes, LocalDateTime startTime, LocalDateTime endTime) {
@@ -116,22 +202,52 @@ public class LaundryJob {
             this.endTime = endTime;
         }
 
-        public int getLoadNumber() { return loadNumber; }
-        public void setLoadNumber(int loadNumber) { this.loadNumber = loadNumber; }
+        public int getLoadNumber() {
+            return loadNumber;
+        }
 
-        public String getMachineId() { return machineId; }
-        public void setMachineId(String machineId) { this.machineId = machineId; }
+        public void setLoadNumber(int loadNumber) {
+            this.loadNumber = loadNumber;
+        }
 
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
+        public String getMachineId() {
+            return machineId;
+        }
 
-        public Integer getDurationMinutes() { return durationMinutes; }
-        public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
+        public void setMachineId(String machineId) {
+            this.machineId = machineId;
+        }
 
-        public LocalDateTime getStartTime() { return startTime; }
-        public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+        public String getStatus() {
+            return status;
+        }
 
-        public LocalDateTime getEndTime() { return endTime; }
-        public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        public Integer getDurationMinutes() {
+            return durationMinutes;
+        }
+
+        public void setDurationMinutes(Integer durationMinutes) {
+            this.durationMinutes = durationMinutes;
+        }
+
+        public LocalDateTime getStartTime() {
+            return startTime;
+        }
+
+        public void setStartTime(LocalDateTime startTime) {
+            this.startTime = startTime;
+        }
+
+        public LocalDateTime getEndTime() {
+            return endTime;
+        }
+
+        public void setEndTime(LocalDateTime endTime) {
+            this.endTime = endTime;
+        }
     }
 }

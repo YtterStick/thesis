@@ -77,8 +77,10 @@ public class LaundryJobService {
         job.setLoadAssignments(assignments);
         job.setDetergentQty(dto.getDetergentQty());
         job.setFabricQty(dto.getFabricQty());
+        job.setServiceType(txn.getServiceName());
         job.setStatusFlow(getFlowByServiceType(txn.getServiceName()));
         job.setCurrentStep(0);
+        job.setPickupStatus("UNCLAIMED"); // Default pickup status
 
         return laundryJobRepository.save(job);
     }
@@ -407,50 +409,13 @@ public class LaundryJobService {
         laundryJobRepository.save(job);
     }
 
+    /** Get completed but unclaimed jobs */
     public List<LaundryJob> getCompletedUnclaimedJobs() {
-        // Find all jobs where all loads are completed and pickup status is unclaimed
-        List<LaundryJob> allJobs = laundryJobRepository.findAll();
-
-        return allJobs.stream()
-                .filter(job -> {
-                    // Check if all loads are completed
-                    boolean allCompleted = job.getLoadAssignments() != null &&
-                            job.getLoadAssignments().stream()
-                                    .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()));
-
-                    // Check if pickup status is unclaimed
-                    boolean isUnclaimed = "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus());
-
-                    return allCompleted && isUnclaimed;
-                })
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Mark a laundry job as claimed
-     */
-    public LaundryJob markAsClaimed(String transactionId) {
-        LaundryJob job = findSingleJobByTransaction(transactionId);
-
-        // Verify all loads are completed before allowing claim
-        boolean allCompleted = job.getLoadAssignments() != null &&
-                job.getLoadAssignments().stream()
-                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()));
-
-        if (!allCompleted) {
-            throw new RuntimeException("Cannot claim laundry - not all loads are completed");
-        }
-
-        job.setPickupStatus("CLAIMED");
-        return laundryJobRepository.save(job);
-    }
-
-    /**
-     * Get all claimed laundry jobs
-     */
-    public List<LaundryJob> getClaimedJobs() {
         return laundryJobRepository.findAll().stream()
-                .filter(job -> "CLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                .filter(job -> job.getLoadAssignments() != null &&
+                        job.getLoadAssignments().stream()
+                                .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())))
+                .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
                 .collect(Collectors.toList());
     }
 }

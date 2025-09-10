@@ -11,9 +11,9 @@ import java.util.List;
 public class Transaction {
 
     @Id
-    private String id; // ✅ MongoDB document ID
+    private String id;
 
-    private String invoiceNumber; // ✅ Timestamped traceable ID
+    private String invoiceNumber;
 
     private String customerName;
     private String contact;
@@ -29,12 +29,13 @@ public class Transaction {
     private Double amountGiven;
     private Double change;
 
-    private LocalDateTime issueDate; // ✅ Explicit invoice issue date
-    private LocalDateTime dueDate;   // ✅ Explicit due date
-    private String staffId;          // ✅ Staff attribution for traceability
+    private LocalDateTime issueDate; //invoice
+    private LocalDateTime dueDate;   // due date
+    private String staffId;
 
+    
     @CreatedDate
-    private LocalDateTime createdAt; // ✅ System timestamp
+    private LocalDateTime createdAt;
 
     public Transaction() {}
 

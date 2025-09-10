@@ -62,11 +62,13 @@ public class TransactionController {
             LaundryJobDto jobDto = new LaundryJobDto();
             jobDto.setTransactionId(invoice.getInvoiceNumber());
             jobDto.setCustomerName(invoice.getCustomerName());
+            jobDto.setContact(invoice.getContact()); // ✅ Add contact
             jobDto.setDetergentQty(request.getDetergentQty());
             jobDto.setFabricQty(request.getFabricQty());
             jobDto.setLoadAssignments(loadAssignments);
             jobDto.setStatusFlow(request.getStatusFlow());
             jobDto.setCurrentStep(0);
+            jobDto.setServiceType(invoice.getService().getName()); // ✅ CRITICAL: Set service type from invoice
 
             // ✅ Save the job
             laundryJobService.createJob(jobDto);

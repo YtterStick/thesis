@@ -62,6 +62,11 @@ public class JwtUtil {
         return false;
     }
 
+    // ADD THIS METHOD - It's the same as getUsername but with a different name
+    public String extractUsername(String token) {
+        return getUsername(token);
+    }
+
     public String getUsername(String token) {
         try {
             return extractClaims(token).getSubject();
