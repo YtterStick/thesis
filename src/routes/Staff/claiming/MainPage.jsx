@@ -96,7 +96,15 @@ const MainPage = () => {
         { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
       );
 
-      if (!response.ok) throw new Error("Failed to claim transaction");
+      if (!response.ok) {
+        if (response.status === 400) {
+          const errorData = await response.json();
+          if (errorData.message && errorData.message.includes("expired")) {
+            throw new Error("Cannot claim expired job");
+          }
+        }
+        throw new Error("Failed to claim transaction");
+      }
 
       const claimedTransaction = await response.json();
 
@@ -110,8 +118,33 @@ const MainPage = () => {
       return claimedTransaction;
     } catch (error) {
       console.error(error);
-      toast({ title: "Error", description: "Failed to claim laundry", variant: "destructive" });
+      const errorMessage = error.message.includes("expired") 
+        ? "Cannot claim expired laundry. Please dispose instead." 
+        : "Failed to claim laundry";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
       return null;
+    }
+  };
+
+  const handleDispose = async (transactionId) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(
+        `http://localhost:8080/api/expired/${transactionId}/dispose`,
+        { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
+      );
+
+      if (!response.ok) throw new Error("Failed to dispose transaction");
+
+      toast({
+        title: "Success",
+        description: "Expired laundry has been disposed.",
+      });
+
+      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Failed to dispose expired laundry", variant: "destructive" });
     }
   };
 
@@ -165,6 +198,7 @@ const MainPage = () => {
             isLoading={isLoading}
             hasFetched={hasFetched}
             onClaim={handleClaim}
+            onDispose={handleDispose}
           />
         </CardContent>
       </Card>

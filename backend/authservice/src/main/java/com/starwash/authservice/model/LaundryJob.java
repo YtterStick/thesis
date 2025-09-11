@@ -33,6 +33,11 @@ public class LaundryJob {
 
     private String serviceType;
 
+    // ✅ Expiration fields
+    private LocalDateTime dueDate;
+    private boolean expired = false;
+    private LocalDateTime expirationDate;
+
     public LaundryJob() {
     }
 
@@ -48,6 +53,32 @@ public class LaundryJob {
         this.fabricQty = fabricQty;
         this.statusFlow = statusFlow != null ? statusFlow : new ArrayList<>();
         this.currentStep = currentStep != null ? currentStep : 0;
+        this.dueDate = LocalDateTime.now().plusDays(7); // Set due date to 7 days from now
+    }
+
+    // ✅ Expiration getters/setters
+    public LocalDateTime getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDateTime dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public boolean isExpired() {
+        return expired;
+    }
+
+    public void setExpired(boolean expired) {
+        this.expired = expired;
+    }
+
+    public LocalDateTime getExpirationDate() {
+        return expirationDate;
+    }
+
+    public void setExpirationDate(LocalDateTime expirationDate) {
+        this.expirationDate = expirationDate;
     }
 
     // ✅ Claiming getters/setters
@@ -177,6 +208,9 @@ public class LaundryJob {
                 ", currentStep=" + currentStep +
                 ", pickupStatus=" + pickupStatus +
                 ", serviceType='" + serviceType + '\'' +
+                ", dueDate=" + dueDate +
+                ", expired=" + expired +
+                ", expirationDate=" + expirationDate +
                 '}';
     }
 

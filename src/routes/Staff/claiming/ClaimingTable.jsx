@@ -10,13 +10,14 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Loader, Calendar, Shirt, Printer } from "lucide-react";
+import { CheckCircle2, Clock, Loader, Calendar, Shirt, Printer, Trash2, AlertTriangle } from "lucide-react";
 import ServiceReceiptCard from "@/components/ServiceReceiptCard";
 
-const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
+const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose }) => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [loadingTransactionId, setLoadingTransactionId] = useState(null);
+  const [disposingTransactionId, setDisposingTransactionId] = useState(null);
   const [formatSettings, setFormatSettings] = useState(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
@@ -82,6 +83,17 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
     }
   };
 
+  const handleDisposeClick = async (transaction) => {
+    setDisposingTransactionId(transaction.id);
+    try {
+      await onDispose(transaction.id);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setDisposingTransactionId(null);
+    }
+  };
+
   const handleViewReceipt = (transaction) => {
     setSelectedTransaction(transaction);
     setShowReceipt(true);
@@ -127,10 +139,14 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
                   null
                 );
 
+                const isExpired = transaction.expired;
+
                 return (
                   <TableRow
                     key={transaction.id || transaction.transactionId}
-                    className="border-t border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                    className={`border-t border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/50 ${
+                      isExpired ? "bg-rose-50 dark:bg-rose-950/30" : ""
+                    }`}
                   >
                     <TableCell className="font-medium text-slate-900 dark:text-slate-100 flex items-center">
                       <Shirt className="h-4 w-4 mr-2 text-cyan-600 dark:text-cyan-400" />
@@ -156,7 +172,11 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
                       {completionDate ? completionDate.toLocaleDateString() : "N/A"}
                     </TableCell>
                     <TableCell>
-                      {transaction.pickupStatus === "UNCLAIMED" ? (
+                      {isExpired ? (
+                        <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 flex items-center gap-1 justify-center w-24">
+                          <AlertTriangle className="h-3 w-3" /> Expired
+                        </Badge>
+                      ) : transaction.pickupStatus === "UNCLAIMED" ? (
                         <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 flex items-center gap-1 justify-center w-24">
                           <Clock className="h-3 w-3" /> Unclaimed
                         </Badge>
@@ -167,22 +187,43 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim }) => {
                       )}
                     </TableCell>
                     <TableCell className="text-right flex flex-col gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleClaimClick(transaction)}
-                        disabled={transaction.pickupStatus !== "UNCLAIMED" || loadingTransactionId === transaction.id}
-                        className="bg-cyan-600 hover:bg-cyan-700 dark:bg-cyan-700 dark:hover:bg-cyan-600 text-white"
-                      >
-                        {loadingTransactionId === transaction.id ? (
-                          <>
-                            <Loader className="h-3 w-3 mr-1 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          "Mark as Claimed"
-                        )}
-                      </Button>
-                      {transaction.pickupStatus === "CLAIMED" && (
+                      {isExpired ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDisposeClick(transaction)}
+                          disabled={disposingTransactionId === transaction.id}
+                          className="flex items-center gap-1"
+                        >
+                          {disposingTransactionId === transaction.id ? (
+                            <>
+                              <Loader className="h-3 w-3 mr-1 animate-spin" />
+                              Disposing...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Dispose
+                            </>
+                          )}
+                        </Button>
+                      ) : transaction.pickupStatus === "UNCLAIMED" ? (
+                        <Button
+                          size="sm"
+                          onClick={() => handleClaimClick(transaction)}
+                          disabled={loadingTransactionId === transaction.id}
+                          className="bg-cyan-600 hover:bg-cyan-700 dark:bg-cyan-700 dark:hover:bg-cyan-600 text-white"
+                        >
+                          {loadingTransactionId === transaction.id ? (
+                            <>
+                              <Loader className="h-3 w-3 mr-1 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            "Mark as Claimed"
+                          )}
+                        </Button>
+                      ) : (
                         <Button
                           size="sm"
                           variant="outline"
@@ -227,6 +268,7 @@ ClaimingTable.propTypes = {
   isLoading: PropTypes.bool.isRequired,
   hasFetched: PropTypes.bool.isRequired,
   onClaim: PropTypes.func.isRequired,
+  onDispose: PropTypes.func.isRequired,
 };
 
 export default ClaimingTable;

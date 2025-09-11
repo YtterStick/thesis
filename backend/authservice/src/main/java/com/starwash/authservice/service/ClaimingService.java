@@ -35,6 +35,11 @@ public class ClaimingService {
             throw new RuntimeException("Job already claimed");
         }
 
+        // Check if job is expired
+        if (job.isExpired()) {
+            throw new RuntimeException("Cannot claim expired job");
+        }
+
         // Generate claim receipt number
         String claimReceiptNumber = "CLM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 

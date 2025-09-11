@@ -9,6 +9,7 @@ import com.starwash.authservice.repository.LaundryJobRepository;
 import com.starwash.authservice.repository.MachineRepository;
 import com.starwash.authservice.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -81,6 +82,10 @@ public class LaundryJobService {
         job.setStatusFlow(getFlowByServiceType(txn.getServiceName()));
         job.setCurrentStep(0);
         job.setPickupStatus("UNCLAIMED"); // Default pickup status
+        
+        // Set due date (7 days from now)
+        job.setDueDate(LocalDateTime.now().plusDays(7));
+        job.setExpired(false);
 
         return laundryJobRepository.save(job);
     }
@@ -268,7 +273,7 @@ public class LaundryJobService {
         LoadAssignment load = job.getLoadAssignments().stream()
                 .filter(l -> l.getLoadNumber() == loadNumber)
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+                .orElseThrow(() -> new RuntimeException("Load number not found: : " + loadNumber));
 
         load.setDurationMinutes(durationMinutes);
         if (load.getStartTime() != null) {
@@ -416,6 +421,31 @@ public class LaundryJobService {
                         job.getLoadAssignments().stream()
                                 .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())))
                 .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                .filter(job -> !job.isExpired()) // Exclude expired jobs
                 .collect(Collectors.toList());
+    }
+    
+    /** Get expired jobs */
+    public List<LaundryJob> getExpiredJobs() {
+        return laundryJobRepository.findAll().stream()
+                .filter(job -> job.isExpired())
+                .collect(Collectors.toList());
+    }
+    
+    /** Scheduled task to check for expired jobs (runs every hour) */
+    @Scheduled(fixedRate = 3600000) // 1 hour in milliseconds
+    public void checkForExpiredJobs() {
+        LocalDateTime now = LocalDateTime.now();
+        List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
+        
+        for (LaundryJob job : unclaimedJobs) {
+            if (job.getDueDate() != null && now.isAfter(job.getDueDate()) && !job.isExpired()) {
+                job.setExpired(true);
+                job.setExpirationDate(now);
+                laundryJobRepository.save(job);
+                // Log the expiration
+                System.out.println("Job expired: " + job.getTransactionId() + " - " + job.getCustomerName());
+            }
+        }
     }
 }
