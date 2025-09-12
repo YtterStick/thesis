@@ -165,33 +165,25 @@ const StaffDashboardPage = () => {
       title: "Today's Income",
       icon: <PhilippinePeso size={26} />,
       value: formatCurrency(dashboardData.todayIncome),
-      growth: "+5% vs yesterday",
       color: "#3DD9B6",
-      growthColor: "text-emerald-700 dark:text-[#28b99a]",
     },
     {
       title: "Today's Loads",
       icon: <Package size={26} />,
       value: dashboardData.todayLoads.toString(),
-      growth: "+3% vs yesterday",
       color: "#60A5FA",
-      growthColor: "text-blue-600 dark:text-blue-400",
     },
     {
       title: "Unwashed",
       icon: <Clock8 size={26} />,
       value: dashboardData.unwashedCount.toString(),
-      growth: "-2%",
       color: "#FB923C",
-      growthColor: "text-orange-600 dark:text-orange-400",
     },
     {
       title: "Unclaimed",
       icon: <PackageX size={26} />,
       value: dashboardData.completedUnclaimedTransactions.length.toString(),
-      growth: "-1%",
       color: "#F87171",
-      growthColor: "text-red-600 dark:text-red-400",
     },
   ];
 

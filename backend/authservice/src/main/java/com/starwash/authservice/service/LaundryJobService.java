@@ -9,6 +9,12 @@ import com.starwash.authservice.repository.LaundryJobRepository;
 import com.starwash.authservice.repository.MachineRepository;
 import com.starwash.authservice.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +23,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,6 +67,7 @@ public class LaundryJobService {
     }
 
     /** Create a new laundry job with loads */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob createJob(LaundryJobDto dto) {
         Transaction txn = transactionRepository
                 .findByInvoiceNumber(dto.getTransactionId())
@@ -91,6 +99,7 @@ public class LaundryJobService {
     }
 
     /** Assign machine */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob assignMachine(String transactionId, int loadNumber, String machineId) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -111,6 +120,7 @@ public class LaundryJobService {
     }
 
     /** Start a load */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -160,6 +170,7 @@ public class LaundryJobService {
     }
 
     /** Dry Again - Reset drying timer */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob dryAgain(String transactionId, int loadNumber) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -240,6 +251,7 @@ public class LaundryJobService {
     }
 
     /** Manual advance */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus) {
         if ("COMPLETE".equalsIgnoreCase(newStatus)) {
             newStatus = STATUS_COMPLETED;
@@ -262,11 +274,13 @@ public class LaundryJobService {
     }
 
     /** Mark completed */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob completeLoad(String transactionId, int loadNumber) {
         return advanceLoad(transactionId, loadNumber, STATUS_COMPLETED);
     }
 
     /** Update duration */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob updateLoadDuration(String transactionId, int loadNumber, int durationMinutes) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -284,6 +298,7 @@ public class LaundryJobService {
     }
 
     /** Update current step */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob updateCurrentStep(String transactionId, int newStep) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
         job.setCurrentStep(newStep);
@@ -291,11 +306,13 @@ public class LaundryJobService {
     }
 
     /** Update whole job */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob updateJob(LaundryJob job) {
         return laundryJobRepository.save(job);
     }
 
     /** Delete job by ID */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public boolean deleteJobById(String id) {
         if (!laundryJobRepository.existsById(id))
             return false;
@@ -303,19 +320,48 @@ public class LaundryJobService {
         return true;
     }
 
-    /** Get all jobs */
+    /** Get all jobs with pagination */
+    @Cacheable(value = "laundryJobs", key = "'allJobs-' + #page + '-' + #size")
+    public List<LaundryJobDto> getAllJobs(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("dueDate").ascending());
+        Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
+        List<LaundryJob> jobs = jobPage.getContent();
+        
+        return processJobsToDtos(jobs);
+    }
+
+    /** Get all jobs without pagination (for backward compatibility) */
+    @Cacheable(value = "laundryJobs", key = "'allJobs'")
     public List<LaundryJobDto> getAllJobs() {
         List<LaundryJob> jobs = laundryJobRepository.findAll();
+        return processJobsToDtos(jobs);
+    }
+
+    /** Process jobs to DTOs with optimized database queries */
+    private List<LaundryJobDto> processJobsToDtos(List<LaundryJob> jobs) {
+        if (jobs.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Pre-fetch all transactions in a single query (solves N+1 problem)
+        Set<String> transactionIds = jobs.stream()
+                .map(LaundryJob::getTransactionId)
+                .collect(Collectors.toSet());
+        
+        List<Transaction> transactions = transactionRepository.findByInvoiceNumberIn(new ArrayList<>(transactionIds));
+        Map<String, Transaction> transactionMap = transactions.stream()
+                .collect(Collectors.toMap(Transaction::getInvoiceNumber, Function.identity()));
+
         List<LaundryJobDto> result = new ArrayList<>();
 
         for (LaundryJob job : jobs) {
-            Transaction tx = transactionRepository.findByInvoiceNumber(job.getTransactionId()).orElse(null);
+            Transaction tx = transactionMap.get(job.getTransactionId());
 
             int detergentQty = 0;
             int fabricQty = 0;
             LocalDateTime issueDate = null;
             String serviceType = null;
-            String contact = job.getContact(); // ✅ Get contact
+            String contact = job.getContact();
 
             if (tx != null) {
                 issueDate = tx.getIssueDate();
@@ -348,7 +394,7 @@ public class LaundryJobService {
                 LaundryJobDto dto = new LaundryJobDto();
                 dto.setTransactionId(job.getTransactionId());
                 dto.setCustomerName(job.getCustomerName());
-                dto.setContact(contact); // ✅ Include contact in DTO
+                dto.setContact(contact);
                 dto.setLoadAssignments(unfinishedLoads);
                 dto.setCurrentStep(job.getCurrentStep());
                 dto.setStatusFlow(job.getStatusFlow());
@@ -383,6 +429,7 @@ public class LaundryJobService {
     }
 
     /** Auto advance after step ends (only WASHING/DRYING) */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
         Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);

@@ -1,6 +1,9 @@
 package com.starwash.authservice.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -8,13 +11,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "laundry_jobs")
+@CompoundIndexes({
+    @CompoundIndex(name = "transaction_id_idx", def = "{'transactionId': 1}"),
+    @CompoundIndex(name = "status_idx", def = "{'loadAssignments.status': 1}"),
+    @CompoundIndex(name = "pickup_status_idx", def = "{'pickupStatus': 1}"),
+    @CompoundIndex(name = "due_date_idx", def = "{'dueDate': 1}"),
+    @CompoundIndex(name = "expired_idx", def = "{'expired': 1}"),
+    @CompoundIndex(name = "customer_name_idx", def = "{'customerName': 1}"),
+    @CompoundIndex(name = "service_type_idx", def = "{'serviceType': 1}")
+})
 public class LaundryJob {
 
     @Id
     private String id;
 
+    @Indexed
     private String transactionId;
+    
+    @Indexed
     private String customerName;
+    
     private String contact;
 
     private List<LoadAssignment> loadAssignments = new ArrayList<>();
@@ -26,15 +42,19 @@ public class LaundryJob {
     private Integer currentStep = 0;
 
     // ✅ Claiming fields
+    @Indexed
     private String pickupStatus = "UNCLAIMED"; // UNCLAIMED | CLAIMED
     private LocalDateTime claimDate;
     private String claimReceiptNumber;
     private String claimedByStaffId;
 
+    @Indexed
     private String serviceType;
 
     // ✅ Expiration fields
+    @Indexed
     private LocalDateTime dueDate;
+    @Indexed
     private boolean expired = false;
     private LocalDateTime expirationDate;
 
