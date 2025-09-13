@@ -178,33 +178,25 @@ const MainPage = () => {
             title: "Total Items",
             icon: <Boxes size={26} />,
             value: items.length,
-            growth: "+0% change today",
             color: "#3DD9B6",
-            growthColor: "text-emerald-700 dark:text-[#28b99a]",
           },
           {
             title: "Out of Stock",
             icon: <PackageX size={26} />,
             value: out,
-            growth: "-0% change today",
             color: "#F87171",
-            growthColor: "text-red-600 dark:text-red-400",
           },
           {
             title: "Low Stock",
             icon: <Package size={26} />,
             value: low,
-            growth: "+0% change today",
             color: "#FB923C",
-            growthColor: "text-orange-600 dark:text-orange-400",
           },
           {
             title: "Adequate Stock",
             icon: <Clock8 size={26} />,
             value: adequate,
-            growth: "+0% change today",
             color: "#60A5FA",
-            growthColor: "text-blue-600 dark:text-blue-400",
           },
         ].map(({ title, icon, value, growth, color, growthColor }) => (
           <div key={title} className="card">

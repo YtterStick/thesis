@@ -39,7 +39,6 @@ export const navbarLinks = [
     title: "System Settings",
     Links: [
       { label: "Services & Pricing", icon: Sliders, path: "/serviceoption" },
-      { label: "SMS Alerts", icon: Bell, path: "/notificationsettings" },
       { label: "Receipts & Invoice Format", icon: ScrollText, path: "/documentsettings" },
       { label: "Payment Methods", icon: CreditCard, path: "/paymentmethod" },
     ],

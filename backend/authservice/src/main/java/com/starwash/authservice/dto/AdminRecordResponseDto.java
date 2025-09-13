@@ -1,3 +1,4 @@
+// AdminRecordResponseDto.java
 package com.starwash.authservice.dto;
 
 import java.time.LocalDateTime;
@@ -12,31 +13,22 @@ public class AdminRecordResponseDto {
     private String detergent;
     private String fabric;
     private double totalPrice;
-
     private String paymentMethod;
     private String pickupStatus;
-    private boolean washed;
+    private String laundryStatus;
+    private String processedByStaff;
+    private boolean paid;
     private boolean expired;
-
     private LocalDateTime createdAt;
-    private LocalDateTime issueDate;
-    private LocalDateTime dueDate;
-
-    // 🧑 Staff who processed this transaction
-    private String staffId;
-    private String staffName;
 
     // Constructors
     public AdminRecordResponseDto() {}
 
-    public AdminRecordResponseDto(String id, String customerName, String contact,
-                                  String serviceName, int loads,
-                                  String detergent, String fabric, double totalPrice,
-                                  String paymentMethod, String pickupStatus,
-                                  boolean washed, boolean expired,
-                                  LocalDateTime createdAt,
-                                  LocalDateTime issueDate, LocalDateTime dueDate,
-                                  String staffId, String staffName) {
+    public AdminRecordResponseDto(String id, String customerName, String contact, String serviceName, 
+                                 int loads, String detergent, String fabric, double totalPrice,
+                                 String paymentMethod, String pickupStatus, String laundryStatus,
+                                 String processedByStaff, boolean paid, boolean expired, 
+                                 LocalDateTime createdAt) {
         this.id = id;
         this.customerName = customerName;
         this.contact = contact;
@@ -47,13 +39,11 @@ public class AdminRecordResponseDto {
         this.totalPrice = totalPrice;
         this.paymentMethod = paymentMethod;
         this.pickupStatus = pickupStatus;
-        this.washed = washed;
+        this.laundryStatus = laundryStatus;
+        this.processedByStaff = processedByStaff;
+        this.paid = paid;
         this.expired = expired;
         this.createdAt = createdAt;
-        this.issueDate = issueDate;
-        this.dueDate = dueDate;
-        this.staffId = staffId;
-        this.staffName = staffName;
     }
 
     // Getters and Setters
@@ -87,24 +77,18 @@ public class AdminRecordResponseDto {
     public String getPickupStatus() { return pickupStatus; }
     public void setPickupStatus(String pickupStatus) { this.pickupStatus = pickupStatus; }
 
-    public boolean isWashed() { return washed; }
-    public void setWashed(boolean washed) { this.washed = washed; }
+    public String getLaundryStatus() { return laundryStatus; }
+    public void setLaundryStatus(String laundryStatus) { this.laundryStatus = laundryStatus; }
+
+    public String getProcessedByStaff() { return processedByStaff; }
+    public void setProcessedByStaff(String processedByStaff) { this.processedByStaff = processedByStaff; }
+
+    public boolean isPaid() { return paid; }
+    public void setPaid(boolean paid) { this.paid = paid; }
 
     public boolean isExpired() { return expired; }
     public void setExpired(boolean expired) { this.expired = expired; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-
-    public LocalDateTime getIssueDate() { return issueDate; }
-    public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
-
-    public LocalDateTime getDueDate() { return dueDate; }
-    public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
-
-    public String getStaffId() { return staffId; }
-    public void setStaffId(String staffId) { this.staffId = staffId; }
-
-    public String getStaffName() { return staffName; }
-    public void setStaffName(String staffName) { this.staffName = staffName; }
 }

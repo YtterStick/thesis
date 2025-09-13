@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/utils/cn";
 
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 7;
 
 const StaffTable = ({ staff, onConfirmDisable }) => {
   const [currentPage, setCurrentPage] = useState(1);

@@ -1,86 +1,180 @@
-import { useState } from "react";
-import TransactionTable from "./TransactionTable";
-import EditTransactionModal from "./components/EditTransactionModal";
-import { initialTransactions } from "@/constants";
+import { useState, useEffect } from "react";
+import AdminRecordTable from "./AdminRecordTable.jsx";
 import {
   PhilippinePeso,
   Package,
   Clock8,
-  PackageX,
+  TimerOff,
+  AlertCircle,
+  CreditCard,
+  Calendar,
 } from "lucide-react";
 
 const MainPage = () => {
-  const [transactions, setTransactions] = useState(initialTransactions);
-  const [editTarget, setEditTarget] = useState(null);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState("today");
 
-  const totalIncome = transactions
-    .filter((t) => t.paymentStatus === "Paid")
-    .reduce((acc, t) => acc + t.price, 0);
+  useEffect(() => {
+    const fetchRecords = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        const res = await fetch("http://localhost:8080/api/admin/records", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-  const unpaid = transactions.filter((t) => t.paymentStatus === "Unpaid").length;
-  const unclaimed = transactions.filter((t) => t.pickupStatus === "Unclaimed").length;
-  const expired = transactions.filter((t) => t.pickupStatus === "Expired").length;
-  const totalLoads = transactions.reduce((acc, t) => acc + t.loads, 0);
+        if (!res.ok) throw new Error("Failed to fetch records");
 
-  const handleSave = (updated) => {
-    setTransactions((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-    setEditTarget(null);
+        const data = await res.json();
+
+        const mapped = data.map((r) => ({
+          id: r.id,
+          name: r.customerName,
+          service: r.serviceName,
+          loads: r.loads,
+          detergent: r.detergent,
+          fabric: r.fabric || "—",
+          price: r.totalPrice,
+          paymentMethod: r.paymentMethod || "—",
+          pickupStatus: r.pickupStatus,
+          laundryStatus: r.laundryStatus,
+          processedBy: r.processedByStaff || "—",
+          createdAt: r.createdAt,
+          paid: r.paid || false,
+          expired: r.expired,
+        }));
+
+        setRecords(mapped);
+      } catch (error) {
+        console.error("❌ Record fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecords();
+  }, []);
+
+  // Filter records based on time filter
+  const filterRecordsByTime = (records) => {
+    const now = new Date();
+    let filtered = [...records];
+    
+    switch(timeFilter) {
+      case "today":
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        filtered = records.filter(r => new Date(r.createdAt) >= todayStart);
+        break;
+      case "week":
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        filtered = records.filter(r => new Date(r.createdAt) >= weekStart);
+        break;
+      case "month":
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        filtered = records.filter(r => new Date(r.createdAt) >= monthStart);
+        break;
+      case "year":
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        filtered = records.filter(r => new Date(r.createdAt) >= yearStart);
+        break;
+      case "all":
+      default:
+        // No filter needed
+        break;
+    }
+    
+    return filtered;
   };
 
+  const filteredRecords = filterRecordsByTime(records);
+
+  // Update the metrics calculation in MainPage.jsx
+  const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
+  const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
+  const unwashed = filteredRecords.filter((r) => r.laundryStatus === "Not Started").length;
+  const expired = filteredRecords.filter((r) => r.expired).length;
+  const unclaimed = filteredRecords.filter((r) => r.pickupStatus === "UNCLAIMED").length;
+
+  const summaryCards = [
+    {
+      label: "Total Income",
+      value: `₱${totalIncome.toFixed(2)}`,
+      icon: <PhilippinePeso size={26} />,
+      color: "#3DD9B6",
+      tooltip: "Total income from filtered transactions",
+    },
+    {
+      label: "Total Loads",
+      value: totalLoads,
+      icon: <Package size={26} />,
+      color: "#60A5FA",
+      tooltip: "Total number of laundry loads in filtered period",
+    },
+    {
+      label: "Unwashed Loads",
+      value: unwashed,
+      icon: <Clock8 size={26} />,
+      color: "#FB923C",
+      tooltip: "Loads that haven't been washed yet",
+    },
+    {
+      label: "Expired Loads",
+      value: expired,
+      icon: <TimerOff size={26} />,
+      color: "#A78BFA",
+      tooltip: "Loads that exceeded their pickup window",
+    },
+    {
+      label: "Unclaimed Loads",
+      value: unclaimed,
+      icon: <AlertCircle size={26} />,
+      color: "#FACC15",
+      tooltip: "Loads that haven't been picked up yet",
+    },
+  ];
+
+  const timeFilters = [
+    { value: "today", label: "Today" },
+    { value: "week", label: "This Week" },
+    { value: "month", label: "This Month" },
+    { value: "year", label: "This Year" },
+    { value: "all", label: "All Time" },
+  ];
+
   return (
-    <main className="relative p-6 space-y-6">
+    <main className="relative space-y-6 p-6">
       {/* 🧢 Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-          Manage Transactions
+          Admin Laundry Records
         </h1>
+        
+        {/* Time Filter */}
+        <div className="flex items-center gap-2">
+          <Calendar size={18} className="text-slate-600 dark:text-slate-400" />
+          <select 
+            value={timeFilter}
+            onChange={(e) => setTimeFilter(e.target.value)}
+            className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          >
+            {timeFilters.map(filter => (
+              <option key={filter.value} value={filter.value}>
+                {filter.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* 🎨 Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {[
-          {
-            label: "Total Income",
-            value: `₱${totalIncome.toFixed(2)}`,
-            icon: <PhilippinePeso size={26} />,
-            growth: "+12% increase compared to yesterday",
-            color: "#3DD9B6",
-            growthColor: "text-emerald-700 dark:text-[#28b99a]",
-          },
-          {
-            label: "Total Loads",
-            value: totalLoads,
-            icon: <Package size={26} />,
-            growth: "+8% increase compared to yesterday",
-            color: "#60A5FA",
-            growthColor: "text-blue-600 dark:text-blue-400",
-          },
-          {
-            label: "Unpaid",
-            value: unpaid,
-            icon: <Clock8 size={26} />,
-            growth: "+5% increase compared to yesterday",
-            color: "#FB923C",
-            growthColor: "text-orange-600 dark:text-orange-400",
-          },
-          {
-            label: "Unclaimed Loads",
-            value: unclaimed,
-            icon: <PackageX size={26} />,
-            growth: "-3% decrease compared to yesterday",
-            color: "#F87171",
-            growthColor: "text-red-600 dark:text-red-400",
-          },
-          {
-            label: "Expired Loads",
-            value: expired,
-            icon: <Clock8 size={26} />,
-            growth: "+1% increase compared to yesterday",
-            color: "#A78BFA",
-            growthColor: "text-violet-600 dark:text-violet-400",
-          },
-        ].map(({ label, value, icon, growth, color, growthColor }) => (
-          <div key={label} className="card">
+        {summaryCards.map(({ label, value, icon, color, tooltip }) => (
+          <div key={label} className="card" title={tooltip}>
             <div className="card-header flex items-center gap-x-3">
               <div
                 className="w-fit rounded-lg p-2"
@@ -95,33 +189,33 @@ const MainPage = () => {
             </div>
             <div className="card-body rounded-md bg-slate-100 p-4 transition-colors dark:bg-slate-950">
               <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">
-                {value}
+                {loading ? (
+                  <span className="inline-block h-6 w-20 animate-pulse rounded bg-slate-300 dark:bg-slate-700" />
+                ) : (
+                  <>{value}</>
+                )}
               </p>
-              <p className={`text-xs font-medium mt-1 ${growthColor}`}>{growth}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* 📋 Transaction Table */}
+      {/* 📋 Record Table */}
       <div className="card">
         <div className="card-header justify-between">
-          <p className="card-title">Transaction List</p>
+          <p className="card-title">Laundry Records</p>
+          <span className="text-sm text-slate-500">
+            {filteredRecords.length} records found
+          </span>
         </div>
-        <TransactionTable
-          items={transactions}
-          onEdit={setEditTarget}
-        />
+        {loading ? (
+          <div className="p-6 text-center text-slate-500 dark:text-slate-400">
+            Loading records...
+          </div>
+        ) : (
+          <AdminRecordTable items={filteredRecords} allItems={records} />
+        )}
       </div>
-
-      {/* ✏️ Edit Modal */}
-      <EditTransactionModal
-        key={editTarget?.id || "empty"}
-        transaction={editTarget}
-        isOpen={Boolean(editTarget)}
-        onClose={() => setEditTarget(null)}
-        onSave={handleSave}
-      />
     </main>
   );
 };

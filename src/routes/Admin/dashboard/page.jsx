@@ -34,33 +34,25 @@ export default function DashboardPage() {
             title: "Total Income",
             icon: <PhilippinePeso size={26} />,
             value: "₱25,154",
-            growth: "+12% increase compared to yesterday",
             color: "#3DD9B6",
-            growthColor: "text-emerald-700 dark:text-[#28b99a]",
           },
           {
             title: "Total Loads",
             icon: <Package size={26} />,
             value: "1,247",
-            growth: "+8% increase compared to yesterday",
             color: "#60A5FA",
-            growthColor: "text-blue-600 dark:text-blue-400",
           },
           {
             title: "Unwashed",
             icon: <Clock8 size={26} />,
             value: "42",
-            growth: "-4% decrease compared to yesterday",
             color: "#FB923C",
-            growthColor: "text-orange-600 dark:text-orange-400",
           },
           {
             title: "Total Unclaimed",
             icon: <PackageX size={26} />,
             value: "71",
-            growth: "-3% decrease compared to yesterday",
             color: "#F87171",
-            growthColor: "text-red-600 dark:text-red-400",
           },
         ].map(({ title, icon, value, growth, color, growthColor }) => (
           <div key={title} className="card">
@@ -86,7 +78,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* 📈 Chart & Unpaid List */}
+      {/* 📈 Chart & Unclaimed List */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Overview Chart */}
         <div className="card col-span-1 md:col-span-2 lg:col-span-4">
@@ -147,7 +139,7 @@ export default function DashboardPage() {
         {/* Unpaid List */}
         <div className="card col-span-1 md:col-span-2 lg:col-span-3">
           <div className="card-header">
-            <p className="card-title">Unpaid List</p>
+            <p className="card-title">Unclaimed List</p>
           </div>
           <div className="card-body h-[300px] overflow-auto p-0">
             {recentSalesData.map((sale) => (

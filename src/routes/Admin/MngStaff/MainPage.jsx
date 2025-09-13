@@ -124,25 +124,19 @@ const MainPage = () => {
             title: "Total Accounts",
             icon: <Users size={26} />,
             value: accountList.length,
-            growth: "+0% change today",
             color: "#3DD9B6",
-            growthColor: "text-emerald-700 dark:text-[#28b99a]",
           },
           {
             title: "Total Admins",
             icon: <ShieldCheck size={26} />,
             value: totalAdmins,
-            growth: "+0% change today",
             color: "#60A5FA",
-            growthColor: "text-blue-600 dark:text-blue-400",
           },
           {
             title: "Total Staff",
             icon: <User size={26} />,
             value: totalStaff,
-            growth: "+0% change today",
             color: "#FB923C",
-            growthColor: "text-orange-600 dark:text-orange-400",
           },
         ].map(({ title, icon, value, growth, color, growthColor }) => (
           <div key={title} className="card">

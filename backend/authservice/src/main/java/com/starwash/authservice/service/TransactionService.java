@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -17,15 +18,18 @@ public class TransactionService {
     private final StockRepository stockRepository;
     private final TransactionRepository transactionRepository;
     private final FormatSettingsRepository formatSettingsRepository;
+    private final LaundryJobRepository laundryJobRepository;
 
     public TransactionService(ServiceRepository serviceRepository,
-                              StockRepository stockRepository,
-                              TransactionRepository transactionRepository,
-                              FormatSettingsRepository formatSettingsRepository) {
+                             StockRepository stockRepository,
+                             TransactionRepository transactionRepository,
+                             FormatSettingsRepository formatSettingsRepository,
+                             LaundryJobRepository laundryJobRepository) {
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
         this.transactionRepository = transactionRepository;
         this.formatSettingsRepository = formatSettingsRepository;
+        this.laundryJobRepository = laundryJobRepository;
     }
 
     public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request) {
@@ -85,8 +89,7 @@ public class TransactionService {
                 issueDate,
                 dueDate,
                 request.getStaffId(),
-                now
-        );
+                now);
 
         transactionRepository.save(transaction);
 
@@ -125,8 +128,7 @@ public class TransactionService {
                 detergentQty,
                 fabricQty,
                 plasticQty,
-                loads
-        );
+                loads);
     }
 
     public ServiceInvoiceDto getServiceInvoiceByTransactionId(String id) {
@@ -140,8 +142,7 @@ public class TransactionService {
         ServiceEntryDto serviceDto = new ServiceEntryDto(
                 tx.getServiceName(),
                 tx.getServicePrice(),
-                tx.getServiceQuantity()
-        );
+                tx.getServiceQuantity());
 
         List<ServiceEntryDto> consumableDtos = tx.getConsumables().stream()
                 .map(c -> new ServiceEntryDto(c.getName(), c.getPrice(), c.getQuantity()))
@@ -182,42 +183,111 @@ public class TransactionService {
                 detergentQty,
                 fabricQty,
                 plasticQty,
-                tx.getServiceQuantity()
-        );
+                tx.getServiceQuantity());
     }
 
-   public List<RecordResponseDto> getAllRecords() {
-    List<Transaction> allTransactions = transactionRepository.findAll();
+    public List<RecordResponseDto> getAllRecords() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
 
-    return allTransactions.stream().map(tx -> {
-        RecordResponseDto dto = new RecordResponseDto();
-        dto.setId(tx.getId());
-        dto.setCustomerName(tx.getCustomerName());
-        dto.setServiceName(tx.getServiceName());
-        dto.setLoads(tx.getServiceQuantity());
-        
-        // ✅ Add contact
-        dto.setContact(tx.getContact());
+        return allTransactions.stream().map(tx -> {
+            RecordResponseDto dto = new RecordResponseDto();
+            dto.setId(tx.getId());
+            dto.setCustomerName(tx.getCustomerName());
+            dto.setServiceName(tx.getServiceName());
+            dto.setLoads(tx.getServiceQuantity());
 
-        dto.setDetergent(tx.getConsumables().stream()
-                .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                .map(c -> String.valueOf(c.getQuantity()))
-                .findFirst().orElse("—"));
+            // ✅ Add contact
+            dto.setContact(tx.getContact());
 
-        dto.setFabric(tx.getConsumables().stream()
-                .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                .map(c -> String.valueOf(c.getQuantity()))
-                .findFirst().orElse("—"));
+            dto.setDetergent(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
 
-        dto.setTotalPrice(tx.getTotalPrice());
-        dto.setPaymentMethod(tx.getPaymentMethod());
-        dto.setPickupStatus("Unclaimed");
-        dto.setWashed(false);
-        dto.setExpired(tx.getDueDate().isBefore(LocalDateTime.now()));
-        dto.setCreatedAt(tx.getCreatedAt());
+            dto.setFabric(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
 
-        return dto;
-    }).collect(Collectors.toList());
-}
+            dto.setTotalPrice(tx.getTotalPrice());
+            dto.setPaymentMethod(tx.getPaymentMethod());
+            dto.setPickupStatus("Unclaimed");
+            dto.setWashed(false);
+            dto.setExpired(tx.getDueDate().isBefore(LocalDateTime.now()));
+            dto.setCreatedAt(tx.getCreatedAt());
 
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    public List<AdminRecordResponseDto> getAllAdminRecords() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
+
+        // Get all laundry jobs in a single query
+        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+        Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+
+        return allTransactions.stream().map(tx -> {
+            AdminRecordResponseDto dto = new AdminRecordResponseDto();
+            dto.setId(tx.getId());
+            dto.setCustomerName(tx.getCustomerName());
+            dto.setContact(tx.getContact());
+            dto.setServiceName(tx.getServiceName());
+            dto.setLoads(tx.getServiceQuantity());
+
+            dto.setDetergent(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
+
+            dto.setFabric(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
+
+            dto.setTotalPrice(tx.getTotalPrice());
+            dto.setPaymentMethod(tx.getPaymentMethod());
+            dto.setProcessedByStaff(tx.getStaffId());
+            dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
+            dto.setCreatedAt(tx.getCreatedAt());
+
+            // Get laundry job data
+            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+            if (job != null) {
+                // Set pickup status
+                dto.setPickupStatus(job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
+                
+                // Set laundry status based on load assignments
+                if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
+                    boolean allCompleted = job.getLoadAssignments().stream()
+                            .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()));
+                    
+                    boolean anyInProgress = job.getLoadAssignments().stream()
+                            .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) && 
+                                              !"COMPLETED".equalsIgnoreCase(load.getStatus()));
+                    
+                    if (allCompleted) {
+                        dto.setLaundryStatus("Completed");
+                    } else if (anyInProgress) {
+                        dto.setLaundryStatus("In Progress");
+                    } else {
+                        dto.setLaundryStatus("Not Started");
+                    }
+                } else {
+                    dto.setLaundryStatus("Not Started");
+                }
+                
+                // Set expired status
+                dto.setExpired(job.isExpired());
+            } else {
+                // Default values if no laundry job exists
+                dto.setPickupStatus("UNCLAIMED");
+                dto.setLaundryStatus("Not Started");
+                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(LocalDateTime.now()));
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
+    }
 }
