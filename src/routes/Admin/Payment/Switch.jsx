@@ -1,16 +1,35 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
-const Switch = () => {
+const Switch = ({ id, checked, onChange, name = "switch" }) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <StyledWrapper>
       <div className="checkbox-wrapper-35">
-        <input defaultValue="private" name="switch" id="switch" type="checkbox" className="switch" />
-        <label htmlFor="switch">
-          <span className="switch-x-text">This is </span>
+        <input 
+          id={id}
+          name={name}
+          type="checkbox" 
+          className="switch"
+          checked={isMounted ? checked : false}
+          onChange={onChange}
+          data-checked={checked}
+        />
+        <label htmlFor={id}>
           <span className="switch-x-toggletext">
-            <span className="switch-x-unchecked"><span className="switch-x-hiddenlabel">Unchecked: </span>Off</span>
-            <span className="switch-x-checked"><span className="switch-x-hiddenlabel">Checked: </span>On</span>
+            <span className="switch-x-unchecked">
+              <span className="switch-x-hiddenlabel">Unchecked: </span>
+              Off
+            </span>
+            <span className="switch-x-checked">
+              <span className="switch-x-hiddenlabel">Checked: </span>
+              On
+            </span>
           </span>
         </label>
       </div>
@@ -115,6 +134,28 @@ const StyledWrapper = styled.div`
   .checkbox-wrapper-35 .switch + label .switch-x-hiddenlabel {
     position: absolute;
     visibility: hidden;
+  }
+
+  /* Use data attribute for initial state to prevent flash */
+  .checkbox-wrapper-35 .switch[data-checked="true"] + label::before {
+    background-color: #ffb500;
+  }
+
+  .checkbox-wrapper-35 .switch[data-checked="true"] + label::after {
+    -webkit-transform: translate3d(10px, 0, 0);
+    transform: translate3d(10px, 0, 0);
+  }
+
+  .checkbox-wrapper-35 .switch[data-checked="true"] + label .switch-x-unchecked {
+    opacity: 0;
+    -webkit-transform: translate3d(0, -100%, 0);
+    transform: translate3d(0, -100%, 0);
+  }
+
+  .checkbox-wrapper-35 .switch[data-checked="true"] + label .switch-x-checked {
+    opacity: 1;
+    -webkit-transform: none;
+    transform: none;
   }
 
   .checkbox-wrapper-35 .switch:checked + label::before {

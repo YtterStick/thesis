@@ -1,4 +1,4 @@
-import { useState, useEffect, useImperativeHandle, forwardRef, useLayoutEffect } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import PropTypes from "prop-types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const [plasticOverrides, setPlasticOverrides] = useState({});
     const [services, setServices] = useState([]);
     const [stockItems, setStockItems] = useState([]);
+    const [paymentMethods, setPaymentMethods] = useState(["Cash"]); // Default to Cash only
     const { toast } = useToast();
 
     useImperativeHandle(ref, () => ({
@@ -109,8 +110,38 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             }
         };
 
+        const fetchPaymentSettings = async () => {
+            try {
+                const res = await fetch("http://localhost:8080/api/payment-settings", {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    // Build payment methods array based on settings
+                    const methods = ["Cash"];
+                    if (data.gcashEnabled) {
+                        methods.push("GCash");
+                    }
+                    setPaymentMethods(methods);
+                    
+                    // If current payment method is GCash but it's disabled, switch to Cash
+                    if (form.paymentMethod === "GCash" && !data.gcashEnabled) {
+                        setForm(prev => ({ ...prev, paymentMethod: "Cash" }));
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch payment settings:", error);
+                // Keep default payment methods (Cash only) if fetch fails
+            }
+        };
+
         fetchServices();
         fetchStockItems();
+        fetchPaymentSettings();
     }, []);
 
     useEffect(() => {
@@ -171,7 +202,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         onPreviewChange?.({
             totalAmount,
             amountGiven: parsedAmount,
-            change, // ✅ pass raw value, even if negative
+            change,
         });
     }, [form.amountGiven, totalAmount]);
 
@@ -346,6 +377,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         onMethodChange={(value) => handleChange("paymentMethod", value)}
                         onAmountChange={(value) => handleChange("amountGiven", value)}
                         isLocked={isLocked}
+                        paymentMethods={paymentMethods} // ✅ Pass enabled payment methods
                     />
 
                     <Button
@@ -365,7 +397,7 @@ TransactionForm.propTypes = {
     onSubmit: PropTypes.func.isRequired,
     onPreviewChange: PropTypes.func,
     isSubmitting: PropTypes.bool,
-    isLocked: PropTypes.bool, // ✅ Add this line
+    isLocked: PropTypes.bool,
 };
 
 export default TransactionForm;

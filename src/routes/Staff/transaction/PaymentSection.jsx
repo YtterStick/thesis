@@ -10,15 +10,14 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 
-const paymentMethods = ["Cash", "GCash"];
-
 const PaymentSection = ({
   paymentMethod = "Cash",
   amountGiven,
   totalAmount,
   onMethodChange,
   onAmountChange,
-  isLocked, // ✅ added
+  isLocked,
+  paymentMethods = ["Cash"] // ✅ Now receives payment methods as prop
 }) => {
   const parsedAmount = parseFloat(amountGiven);
   const isUnderpaid =
@@ -46,7 +45,7 @@ const PaymentSection = ({
         <Select
           value={paymentMethod}
           onValueChange={onMethodChange}
-          disabled={isLocked} // ✅ lock selector
+          disabled={isLocked}
         >
           <SelectTrigger className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
             <SelectValue placeholder="Cash" />
@@ -78,7 +77,7 @@ const PaymentSection = ({
             onChange={handleInputChange}
             onBlur={handleInputBlur}
             placeholder="Enter amount"
-            disabled={isLocked} // ✅ lock input
+            disabled={isLocked}
             className="flex-1 border-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none"
           />
         </div>
@@ -95,13 +94,13 @@ const PaymentSection = ({
 };
 
 PaymentSection.propTypes = {
-  paymentMethod: PropTypes.oneOf(paymentMethods),
-  amountGiven: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-    .isRequired,
-  totalAmount: PropTypes.number.isRequired,
-  onMethodChange: PropTypes.func.isRequired,
-  onAmountChange: PropTypes.func.isRequired,
-  isLocked: PropTypes.bool, // ✅ added
+  paymentMethod: PropTypes.string,
+  amountGiven: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  totalAmount: PropTypes.number,
+  onMethodChange: PropTypes.func,
+  onAmountChange: PropTypes.func,
+  isLocked: PropTypes.bool,
+  paymentMethods: PropTypes.arrayOf(PropTypes.string)
 };
 
 export default PaymentSection;
