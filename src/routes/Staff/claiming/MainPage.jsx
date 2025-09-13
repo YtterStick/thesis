@@ -153,7 +153,7 @@ const MainPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Laundry Claiming</h1>
-          <p className="mt-1 text-slate-600 dark:text-slate-400">Manage completed laundry ready for pickup</p>
+          <p className="mt-1 text-slate-600 dark:text-slate-400">Manage completed and expired laundry</p>
         </div>
       </div>
 
@@ -161,7 +161,7 @@ const MainPage = () => {
         <CardHeader className="bg-slate-100 dark:bg-slate-800 rounded-t-lg">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="text-slate-900 dark:text-slate-50">Completed & Unclaimed Laundry</CardTitle>
+              <CardTitle className="text-slate-900 dark:text-slate-50">Expired & Unclaimed Laundry</CardTitle>
               <CardDescription className="text-slate-600 dark:text-slate-400">
                 {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""} ready for pickup
               </CardDescription>

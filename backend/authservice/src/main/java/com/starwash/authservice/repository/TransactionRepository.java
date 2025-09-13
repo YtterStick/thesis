@@ -24,4 +24,5 @@ public interface TransactionRepository extends MongoRepository<Transaction, Stri
     // Add this method to fetch multiple transactions at once
     @Query("{ 'invoiceNumber': { $in: ?0 } }")
     List<Transaction> findByInvoiceNumberIn(List<String> invoiceNumbers);
+    List<Transaction> findByPaymentMethodAndGcashVerified(String paymentMethod, Boolean gcashVerified);
 }

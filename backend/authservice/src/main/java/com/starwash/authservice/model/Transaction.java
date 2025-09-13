@@ -33,6 +33,7 @@ public class Transaction {
     private LocalDateTime dueDate;   // due date
     private String staffId;
 
+    private Boolean gcashVerified;
     
     @CreatedDate
     private LocalDateTime createdAt;
@@ -63,6 +64,7 @@ public class Transaction {
         this.dueDate = dueDate;
         this.staffId = staffId;
         this.createdAt = createdAt;
+        this.gcashVerified = "GCash".equals(paymentMethod) ? false : null;
     }
 
     // Getters
@@ -82,6 +84,7 @@ public class Transaction {
     public LocalDateTime getDueDate() { return dueDate; }
     public String getStaffId() { return staffId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public Boolean getGcashVerified() { return gcashVerified; }
 
     // Setters
     public void setId(String id) { this.id = id; }
@@ -93,11 +96,20 @@ public class Transaction {
     public void setServiceQuantity(Integer serviceQuantity) { this.serviceQuantity = serviceQuantity; }
     public void setConsumables(List<ServiceEntry> consumables) { this.consumables = consumables; }
     public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
-    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { 
+        this.paymentMethod = paymentMethod; 
+        // Automatically set gcashVerified based on payment method
+        if ("GCash".equals(paymentMethod) && this.gcashVerified == null) {
+            this.gcashVerified = false;
+        } else if (!"GCash".equals(paymentMethod)) {
+            this.gcashVerified = null;
+        }
+    }
     public void setAmountGiven(Double amountGiven) { this.amountGiven = amountGiven; }
     public void setChange(Double change) { this.change = change; }
     public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
     public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
     public void setStaffId(String staffId) { this.staffId = staffId; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setGcashVerified(Boolean gcashVerified) { this.gcashVerified = gcashVerified; }
 }

@@ -1,9 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { WashingMachine, Check, ArrowDown, ArrowUp, RotateCcw, RefreshCw, AlertCircle } from "lucide-react";
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+    WashingMachine,
+    Check,
+    ArrowDown,
+    ArrowUp,
+    RotateCcw,
+    RefreshCw,
+    AlertCircle,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    CheckCircle,
+} from "lucide-react";
 import DryAgainButton from "./DryAgainButton";
 import NextButton from "./NextButton";
 import StartButton from "./StartButton";
@@ -15,8 +30,7 @@ import unwashedAnimation from "@/assets/lottie/unwashed.json";
 import dryingAnimation from "@/assets/lottie/dryer-machine.json";
 import foldingAnimation from "@/assets/lottie/clothes.json";
 import loaderAnimation from "@/assets/lottie/loader.json";
-import Loader from "@/components/loader"; // Import the loader component
-
+import Loader from "@/components/loader";
 // Constants
 const DEFAULT_DURATION = { washing: 35, drying: 40 };
 const ALLOWED_SKEW_MS = 5000;
@@ -128,6 +142,10 @@ export default function ServiceTrackingPage() {
     const completedTimersRef = useRef(new Set());
     const activeTimersRef = useRef(new Map());
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
+
     // Check if there are any active jobs (washing or drying)
     const hasActiveJobs = useMemo(() => {
         return jobs.some((job) => job.loads.some((load) => load.status === "WASHING" || load.status === "DRYING"));
@@ -137,6 +155,27 @@ export default function ServiceTrackingPage() {
     const getPollingInterval = () => {
         if (!autoRefresh) return null;
         return hasActiveJobs ? ACTIVE_POLLING_INTERVAL : POLLING_INTERVAL;
+    };
+
+    // Reset to first page when jobs change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [jobs]);
+
+    // Calculate pagination values
+    const totalItems = jobs.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    const currentItems = jobs.slice(startIndex, endIndex);
+
+    const handlePageChange = (newPage) => {
+        setCurrentPage(Math.max(1, Math.min(newPage, totalPages)));
+    };
+
+    const handleItemsPerPageChange = (value) => {
+        setItemsPerPage(Number(value));
+        setCurrentPage(1);
     };
 
     // Fetch jobs with better error handling
@@ -628,76 +667,93 @@ export default function ServiceTrackingPage() {
                             checked={autoRefresh}
                             onCheckedChange={toggleAutoRefresh}
                         />
+                        <label
+                            htmlFor="auto-refresh"
+                            className="text-sm text-slate-600 dark:text-slate-400"
+                        >
+                            Auto Refresh
+                        </label>
                     </div>
                 </div>
             </div>
 
-            <TooltipProvider>
-                <div className="overflow-x-auto rounded-md border border-slate-300 dark:border-slate-700">
-                    <table className="min-w-full text-sm">
-                        <thead>
-                            <tr className="bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-400">
-                                <th className="p-3 text-left">Name</th>
-                                <th className="p-3 text-left">Contact</th>
-                                <th className="p-3 text-left">Service</th>
-                                <th className="p-3 text-left">Fabric</th>
-                                <th className="p-3 text-left">Detergent</th>
-                                <th className="p-3 text-left">Load</th>
-                                <th className="p-3 text-left">Status</th>
-                                <th className="p-3 text-left">Machine</th>
-                                <th className="p-3 text-center">Duration</th>
-                                <th className="p-3 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {jobs.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={10}
-                                        className="p-8 text-center text-slate-500 dark:text-slate-400"
-                                    >
-                                        No laundry jobs found.
-                                    </td>
-                                </tr>
-                            ) : (
-                                jobs.map((job) => {
-                                    const jobKey = getJobKey(job);
-                                    const expanded = expandedJobs[jobKey] || false;
-                                    const visibleLoads = expanded ? job.loads : job.loads.slice(0, 1);
+            <div className="rounded-md border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="border-b border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                            <TableHead>Name</TableHead>
+                            <TableHead>Contact</TableHead>
+                            <TableHead>Service</TableHead>
+                            <TableHead>Fabric</TableHead>
+                            <TableHead>Detergent</TableHead>
+                            <TableHead>Load</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Machine</TableHead>
+                            <TableHead className="text-center">Duration</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {jobs.length === 0 ? (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={10}
+                                    className="py-16"
+                                >
+                                    <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
+                                        <CheckCircle className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-500" />
+                                        <p className="text-lg font-medium">No laundry jobs found</p>
+                                        <p className="text-sm">All jobs have been completed or no jobs are scheduled.</p>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            currentItems.map((job) => {
+                                const jobKey = getJobKey(job);
+                                const expanded = expandedJobs[jobKey] || false;
+                                const visibleLoads = expanded ? job.loads : job.loads.slice(0, 1);
 
-                                    return (
-                                        <React.Fragment key={jobKey}>
-                                            <tr>
-                                                <td colSpan={10}>
-                                                    <div className="flex h-6 items-center justify-center rounded bg-blue-200 font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                return (
+                                    <React.Fragment key={jobKey}>
+                                        {visibleLoads.map((load, i) => {
+                                            const statusConfig = STATUS_ICONS[load.status] || STATUS_ICONS.UNWASHED;
+                                            const remaining = getRemainingTime(load);
+                                            const machineType = getMachineTypeForStep(load.status, job.serviceType);
+                                            const options =
+                                                machineType === "WASHER"
+                                                    ? machineOptions.WASHER
+                                                    : machineType === "DRYER"
+                                                      ? machineOptions.DRYER
+                                                      : [];
+
+                                            return (
+                                                <TableRow
+                                                    key={`${jobKey}-load${i + 1}`}
+                                                    className="border-t border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                                                >
+                                                    <TableCell className="font-medium text-slate-900 dark:text-slate-100">
                                                         {job.customerName}
-                                                    </div>
-                                                </td>
-                                            </tr>
-
-                                            {visibleLoads.map((load, i) => {
-                                                const statusConfig = STATUS_ICONS[load.status] || STATUS_ICONS.UNWASHED;
-                                                const remaining = getRemainingTime(load);
-                                                const machineType = getMachineTypeForStep(load.status, job.serviceType);
-                                                const options =
-                                                    machineType === "WASHER"
-                                                        ? machineOptions.WASHER
-                                                        : machineType === "DRYER"
-                                                          ? machineOptions.DRYER
-                                                          : [];
-
-                                                return (
-                                                    <tr
-                                                        key={`${jobKey}-load${i + 1}`}
-                                                        className="border-b border-slate-200 dark:border-slate-700"
-                                                    >
-                                                        <td className="p-3 font-semibold">{job.customerName}</td>
-                                                        <td className="p-3">{job.contact ? maskContact(job.contact) : "—"}</td>
-                                                        <td className="p-3">{job.serviceType || "—"}</td>
-                                                        <td className="p-3">{Math.ceil(job.fabricQty ?? 0)}</td>
-                                                        <td className="p-3">{Math.ceil(job.detergentQty ?? 0)}</td>
-                                                        <td className="p-3">Load {load.loadNumber}</td>
-                                                        <td className="p-3">
+                                                    </TableCell>
+                                                    <TableCell className="text-slate-700 dark:text-slate-300">
+                                                        {job.contact ? maskContact(job.contact) : "—"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="border-slate-300 capitalize text-slate-700 dark:border-slate-600 dark:text-slate-300"
+                                                        >
+                                                            {job.serviceType?.toLowerCase() || "—"}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-slate-700 dark:text-slate-300">
+                                                        {Math.ceil(job.fabricQty ?? 0)}
+                                                    </TableCell>
+                                                    <TableCell className="text-slate-700 dark:text-slate-300">
+                                                        {Math.ceil(job.detergentQty ?? 0)}
+                                                    </TableCell>
+                                                    <TableCell className="text-slate-700 dark:text-slate-300">Load {load.loadNumber}</TableCell>
+                                                    <TableCell>
+                                                        <TooltipProvider>
                                                             <Tooltip>
                                                                 <TooltipTrigger>
                                                                     <div className="flex items-center gap-2">
@@ -730,193 +786,252 @@ export default function ServiceTrackingPage() {
                                                                           : "Idle"}
                                                                 </TooltipContent>
                                                             </Tooltip>
-                                                        </td>
-
-                                                        <td className="p-3">
-                                                            {!["FOLDING", "COMPLETED"].includes(load.status) && (
+                                                        </TooltipProvider>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {!["FOLDING", "COMPLETED"].includes(load.status) && (
+                                                            <Select
+                                                                value={load.machineId ?? ""}
+                                                                onValueChange={(val) => assignMachine(jobKey, i, val)}
+                                                                disabled={
+                                                                    isLoadRunning(load) || load.status === "FOLDING" || load.status === "COMPLETED"
+                                                                }
+                                                            >
+                                                                <SelectTrigger className="w-[160px] border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
+                                                                    <SelectValue placeholder="Select machine">
+                                                                        {load.machineId
+                                                                            ? options.find((m) => m.id === load.machineId)?.name || "Select machine"
+                                                                            : "Select machine"}
+                                                                    </SelectValue>
+                                                                </SelectTrigger>
+                                                                <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                                                                    {options.map((m) => {
+                                                                        const assignedElsewhere = jobs.some((j) =>
+                                                                            j.loads.some(
+                                                                                (l) => l.machineId === m.id && l.status !== "COMPLETED" && l !== load,
+                                                                            ),
+                                                                        );
+                                                                        return (
+                                                                            <SelectItem
+                                                                                key={`${jobKey}-${i}-${m.id}`}
+                                                                                value={m.id}
+                                                                                disabled={
+                                                                                    (m.status || "").toLowerCase() !== "available" ||
+                                                                                    assignedElsewhere
+                                                                                }
+                                                                                className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                                            >
+                                                                                {m.name}
+                                                                            </SelectItem>
+                                                                        );
+                                                                    })}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {isLoadRunning(load) ? (
+                                                            <span className="font-semibold text-blue-600">
+                                                                {remaining < 60
+                                                                    ? `${remaining}s`
+                                                                    : `${Math.floor(remaining / 60)}m ${(remaining % 60)
+                                                                          .toString()
+                                                                          .padStart(2, "0")}s`}
+                                                            </span>
+                                                        ) : (
+                                                            !(
+                                                                (job.serviceType === "Wash & Dry" || job.serviceType === "Dry") &&
+                                                                (load.status === "FOLDING" || load.status === "COMPLETED")
+                                                            ) && (
                                                                 <Select
-                                                                    value={load.machineId ?? ""}
-                                                                    onValueChange={(val) => assignMachine(jobKey, i, val)}
-                                                                    disabled={
-                                                                        isLoadRunning(load) ||
-                                                                        load.status === "FOLDING" ||
-                                                                        load.status === "COMPLETED"
-                                                                    }
+                                                                    value={load.duration?.toString() ?? ""}
+                                                                    onValueChange={(val) => updateDuration(jobKey, i, parseInt(val))}
+                                                                    disabled={load.status === "FOLDING" || load.status === "COMPLETED"}
                                                                 >
-                                                                    <SelectTrigger className="w-[160px] border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
-                                                                        <SelectValue placeholder="Select machine">
-                                                                            {load.machineId
-                                                                                ? options.find((m) => m.id === load.machineId)?.name ||
-                                                                                  "Select machine"
-                                                                                : "Select machine"}
-                                                                        </SelectValue>
+                                                                    <SelectTrigger className="mx-auto w-[120px] border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
+                                                                        <SelectValue placeholder="Duration" />
                                                                     </SelectTrigger>
                                                                     <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                                                                        {options.map((m) => {
-                                                                            const assignedElsewhere = jobs.some((j) =>
-                                                                                j.loads.some(
-                                                                                    (l) =>
-                                                                                        l.machineId === m.id &&
-                                                                                        l.status !== "COMPLETED" &&
-                                                                                        l !== load,
-                                                                                ),
-                                                                            );
-                                                                            return (
-                                                                                <SelectItem
-                                                                                    key={`${jobKey}-${i}-${m.id}`}
-                                                                                    value={m.id}
-                                                                                    disabled={
-                                                                                        (m.status || "").toLowerCase() !== "available" ||
-                                                                                        assignedElsewhere
-                                                                                    }
-                                                                                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                                                >
-                                                                                    {m.name}
-                                                                                </SelectItem>
-                                                                            );
-                                                                        })}
+                                                                        {[1, 20, 25, 30, 35, 40, 45, 50, 60].map((d) => (
+                                                                            <SelectItem
+                                                                                key={`${jobKey}-${i}-${d}`}
+                                                                                value={d.toString()}
+                                                                                className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                                            >
+                                                                                {d} mins
+                                                                            </SelectItem>
+                                                                        ))}
                                                                     </SelectContent>
                                                                 </Select>
-                                                            )}
-                                                        </td>
-
-                                                        <td className="p-3 text-center">
-                                                            {isLoadRunning(load) ? (
-                                                                <span className="font-semibold text-blue-600">
-                                                                    {remaining < 60
-                                                                        ? `${remaining}s`
-                                                                        : `${Math.floor(remaining / 60)}m ${(remaining % 60)
-                                                                              .toString()
-                                                                              .padStart(2, "0")}s`}
-                                                                </span>
-                                                            ) : (
-                                                                !(
-                                                                    (job.serviceType === "Wash & Dry" || job.serviceType === "Dry") &&
-                                                                    (load.status === "FOLDING" || load.status === "COMPLETED")
-                                                                ) && (
-                                                                    <Select
-                                                                        value={load.duration?.toString() ?? ""}
-                                                                        onValueChange={(val) => updateDuration(jobKey, i, parseInt(val))}
-                                                                        disabled={load.status === "FOLDING" || load.status === "COMPLETED"}
-                                                                    >
-                                                                        <SelectTrigger className="mx-auto w-[120px] border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
-                                                                            <SelectValue placeholder="Duration" />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                                                                            {[1, 20, 25, 30, 35, 40, 45, 50, 60].map((d) => (
-                                                                                <SelectItem
-                                                                                    key={`${jobKey}-${i}-${d}`}
-                                                                                    value={d.toString()}
-                                                                                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                                                >
-                                                                                    {d} mins
-                                                                                </SelectItem>
-                                                                            ))}
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                )
-                                                            )}
-                                                        </td>
-
-                                                        <td className="p-3 text-center">
-                                                            {isLoadRunning(load) ? (
-                                                                <div className="flex flex-col items-center justify-center">
-                                                                    <div
-                                                                        style={{
-                                                                            width: 40,
-                                                                            height: 40,
-                                                                            display: "flex",
-                                                                            justifyContent: "center",
-                                                                            alignItems: "center",
-                                                                            overflow: "hidden",
-                                                                        }}
-                                                                    >
-                                                                        <div style={{ transform: "scale(0.5)" }}>
-                                                                            <Loader />
-                                                                        </div>
+                                                            )
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {isLoadRunning(load) ? (
+                                                            <div className="flex justify-end">
+                                                                <div
+                                                                    style={{
+                                                                        width: 40,
+                                                                        height: 40,
+                                                                        display: "flex",
+                                                                        justifyContent: "center",
+                                                                        alignItems: "center",
+                                                                        overflow: "hidden",
+                                                                    }}
+                                                                >
+                                                                    <div style={{ transform: "scale(0.5)" }}>
+                                                                        <Loader />
                                                                     </div>
                                                                 </div>
-                                                            ) : (
-                                                                <div className="flex flex-col gap-2">
-                                                                    {load.status === "DRIED" ? (
-                                                                        <div className="flex flex-col gap-2">
-                                                                            <DryAgainButton
-                                                                                onClick={() => startDryingAgain(jobKey, i)}
-                                                                                disabled={load.pending}
-                                                                            />
-                                                                            <ProceedToFoldingButton
-                                                                                onClick={() => advanceStatus(jobKey, i)}
-                                                                                disabled={load.pending}
-                                                                            />
-                                                                        </div>
-                                                                    ) : job.serviceType === "Wash" && load.status === "WASHED" ? (
-                                                                        <Button
-                                                                            onClick={() => advanceStatus(jobKey, i)}
-                                                                            className="bg-green-600 hover:bg-green-700"
-                                                                            size="sm"
-                                                                        >
-                                                                            <Check className="mr-1 h-4 w-4" /> Done
-                                                                        </Button>
-                                                                    ) : ["UNWASHED", "WASHED"].includes(load.status) ? (
-                                                                        <StartButton
-                                                                            onClick={() => startAction(jobKey, i)}
-                                                                            disabled={!load.machineId || load.pending}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col items-end gap-2">
+                                                                {load.status === "DRIED" ? (
+                                                                    <>
+                                                                        <DryAgainButton
+                                                                            onClick={() => startDryingAgain(jobKey, i)}
+                                                                            disabled={load.pending}
                                                                         />
-                                                                    ) : ["DRYING", "FOLDING"].includes(load.status) ? (
-                                                                        <NextButton
+                                                                        <ProceedToFoldingButton
                                                                             onClick={() => advanceStatus(jobKey, i)}
                                                                             disabled={load.pending}
                                                                         />
-                                                                    ) : load.status === "COMPLETED" ? (
-                                                                        <span className="flex items-center gap-1 text-green-600">
-                                                                            <Check className="h-4 w-4" /> Done
-                                                                        </span>
-                                                                    ) : null}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                                                    </>
+                                                                ) : job.serviceType === "Wash" && load.status === "WASHED" ? (
+                                                                    <Button
+                                                                        onClick={() => advanceStatus(jobKey, i)}
+                                                                        className="bg-green-600 hover:bg-green-700"
+                                                                        size="sm"
+                                                                    >
+                                                                        <Check className="mr-1 h-4 w-4" /> Done
+                                                                    </Button>
+                                                                ) : ["UNWASHED", "WASHED"].includes(load.status) ? (
+                                                                    <StartButton
+                                                                        onClick={() => startAction(jobKey, i)}
+                                                                        disabled={!load.machineId || load.pending}
+                                                                    />
+                                                                ) : ["DRYING", "FOLDING"].includes(load.status) ? (
+                                                                    <NextButton
+                                                                        onClick={() => advanceStatus(jobKey, i)}
+                                                                        disabled={load.pending}
+                                                                    />
+                                                                ) : load.status === "COMPLETED" ? (
+                                                                    <span className="flex items-center gap-1 text-green-600">
+                                                                        <Check className="h-4 w-4" /> Done
+                                                                    </span>
+                                                                ) : null}
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
 
-                                            {job.loads.length > 1 && (
-                                                <tr>
-                                                    <td
-                                                        colSpan={10}
-                                                        className="p-2"
-                                                    >
-                                                        <div className="flex justify-center">
-                                                            <button
-                                                                onClick={() =>
-                                                                    setExpandedJobs((prev) => ({
-                                                                        ...prev,
-                                                                        [jobKey]: !expanded,
-                                                                    }))
-                                                                }
-                                                                className="flex items-center gap-1 text-blue-600 hover:underline"
-                                                            >
-                                                                {expanded ? (
-                                                                    <>
-                                                                        See less <ArrowUp className="h-4 w-4" />
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        See more <ArrowDown className="h-4 w-4" />
-                                                                    </>
-                                                                )}
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </React.Fragment>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </TooltipProvider>
+                                        {job.loads.length > 1 && (
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={10}
+                                                    className="p-2"
+                                                >
+                                                    <div className="flex justify-center">
+                                                        <Button
+                                                            variant="ghost"
+                                                            onClick={() =>
+                                                                setExpandedJobs((prev) => ({
+                                                                    ...prev,
+                                                                    [jobKey]: !expanded,
+                                                                }))
+                                                            }
+                                                            className="flex items-center gap-1 text-blue-600 hover:underline"
+                                                        >
+                                                            {expanded ? (
+                                                                <>
+                                                                    See less <ArrowUp className="h-4 w-4" />
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    See more <ArrowDown className="h-4 w-4" />
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
+
+                {/* Pagination Controls */}
+                {jobs.length > 0 && (
+                    <div className="flex flex-col items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700 sm:flex-row">
+                        <div className="mb-4 flex items-center space-x-2 sm:mb-0">
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Rows per page</p>
+                            <select
+                                className="h-8 w-16 rounded-md border border-slate-300 bg-white text-sm dark:border-slate-600 dark:bg-slate-800"
+                                value={itemsPerPage}
+                                onChange={(e) => handleItemsPerPageChange(e.target.value)}
+                            >
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                                {startIndex + 1}-{endIndex} of {totalItems}
+                            </div>
+
+                            <div className="flex space-x-1">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handlePageChange(1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronsLeft className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handlePageChange(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronsRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </main>
     );
 }

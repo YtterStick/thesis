@@ -10,7 +10,20 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Loader, Calendar, Shirt, Printer, Trash2, AlertTriangle } from "lucide-react";
+import { 
+  CheckCircle2, 
+  Clock, 
+  Loader, 
+  Calendar, 
+  Shirt, 
+  Printer, 
+  Trash2, 
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
+} from "lucide-react";
 import ServiceReceiptCard from "@/components/ServiceReceiptCard";
 
 const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose }) => {
@@ -20,10 +33,19 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
   const [disposingTransactionId, setDisposingTransactionId] = useState(null);
   const [formatSettings, setFormatSettings] = useState(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   useEffect(() => {
     fetchFormatSettings();
   }, []);
+
+  // Reset to first page when transactions change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [transactions]);
 
   const fetchFormatSettings = async () => {
     try {
@@ -66,6 +88,13 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
 
   if (!hasFetched) return null;
 
+  // Calculate pagination values
+  const totalItems = transactions.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const currentItems = transactions.slice(startIndex, endIndex);
+
   const handleClaimClick = async (transaction) => {
     setLoadingTransactionId(transaction.id);
     setSelectedTransaction(transaction);
@@ -97,6 +126,15 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
   const handleViewReceipt = (transaction) => {
     setSelectedTransaction(transaction);
     setShowReceipt(true);
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(Math.max(1, Math.min(newPage, totalPages)));
+  };
+
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
   };
 
   return (
@@ -133,7 +171,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                 </TableCell>
               </TableRow>
             ) : (
-              transactions.map((transaction) => {
+              currentItems.map((transaction) => {
                 const completionDate = transaction.loadAssignments?.reduce(
                   (latest, load) => (load.endTime ? new Date(load.endTime) > latest ? new Date(load.endTime) : latest : latest),
                   null
@@ -241,6 +279,73 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
             )}
           </TableBody>
         </Table>
+        
+        {/* Pagination Controls */}
+        {!isLoading && transactions.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-300 dark:border-slate-700">
+            <div className="flex items-center space-x-2 mb-4 sm:mb-0">
+              <p className="text-sm text-slate-600 dark:text-slate-400">Rows per page</p>
+              <select
+                className="h-8 w-16 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(e.target.value)}
+              >
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                {startIndex + 1}-{endIndex} of {totalItems}
+              </div>
+              
+              <div className="flex space-x-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {showReceipt && selectedTransaction && formatSettings && (

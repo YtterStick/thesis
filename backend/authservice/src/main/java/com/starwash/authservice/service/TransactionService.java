@@ -91,6 +91,11 @@ public class TransactionService {
                 request.getStaffId(),
                 now);
 
+        // Set GCash verification status
+        if ("GCash".equals(request.getPaymentMethod())) {
+            transaction.setGcashVerified(false);
+        }
+
         transactionRepository.save(transaction);
 
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
@@ -235,7 +240,7 @@ public class TransactionService {
             dto.setContact(tx.getContact());
             dto.setServiceName(tx.getServiceName());
             dto.setLoads(tx.getServiceQuantity());
-
+            
             dto.setDetergent(tx.getConsumables().stream()
                     .filter(c -> c.getName().toLowerCase().contains("detergent"))
                     .map(c -> String.valueOf(c.getQuantity()))
@@ -251,22 +256,29 @@ public class TransactionService {
             dto.setProcessedByStaff(tx.getStaffId());
             dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
             dto.setCreatedAt(tx.getCreatedAt());
+            
+            // Set GCash verification status
+            dto.setGcashVerified(tx.getGcashVerified());
 
             // Get laundry job data
             LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
             if (job != null) {
                 // Set pickup status
-                dto.setPickupStatus(job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
-                
+                dto.setPickupStatus(
+                        job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
+
                 // Set laundry status based on load assignments
                 if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
                     boolean allCompleted = job.getLoadAssignments().stream()
-                            .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()));
-                    
+                            .allMatch(load -> "COMPLETED"
+                                    .equalsIgnoreCase(load.getStatus()));
+
                     boolean anyInProgress = job.getLoadAssignments().stream()
-                            .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) && 
-                                              !"COMPLETED".equalsIgnoreCase(load.getStatus()));
-                    
+                            .anyMatch(load -> !"NOT_STARTED"
+                                    .equalsIgnoreCase(load.getStatus()) &&
+                                    !"COMPLETED".equalsIgnoreCase(
+                                            load.getStatus()));
+
                     if (allCompleted) {
                         dto.setLaundryStatus("Completed");
                     } else if (anyInProgress) {
@@ -277,17 +289,33 @@ public class TransactionService {
                 } else {
                     dto.setLaundryStatus("Not Started");
                 }
-                
+
                 // Set expired status
                 dto.setExpired(job.isExpired());
             } else {
                 // Default values if no laundry job exists
                 dto.setPickupStatus("UNCLAIMED");
                 dto.setLaundryStatus("Not Started");
-                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(LocalDateTime.now()));
+                dto.setExpired(tx.getDueDate() != null
+                        && tx.getDueDate().isBefore(LocalDateTime.now()));
             }
 
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    // NEW METHODS FOR PENDING GCASH PAYMENTS
+
+    public List<Transaction> findPendingGcashTransactions() {
+        return transactionRepository.findByPaymentMethodAndGcashVerified("GCash", false);
+    }
+
+    public Transaction findTransactionById(String id) {
+        return transactionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+    }
+
+    public void saveTransaction(Transaction transaction) {
+        transactionRepository.save(transaction);
     }
 }

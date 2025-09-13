@@ -1,4 +1,3 @@
-// AdminRecordResponseDto.java
 package com.starwash.authservice.dto;
 
 import java.time.LocalDateTime;
@@ -20,6 +19,7 @@ public class AdminRecordResponseDto {
     private boolean paid;
     private boolean expired;
     private LocalDateTime createdAt;
+    private Boolean gcashVerified; // Added field
 
     // Constructors
     public AdminRecordResponseDto() {}
@@ -28,7 +28,7 @@ public class AdminRecordResponseDto {
                                  int loads, String detergent, String fabric, double totalPrice,
                                  String paymentMethod, String pickupStatus, String laundryStatus,
                                  String processedByStaff, boolean paid, boolean expired, 
-                                 LocalDateTime createdAt) {
+                                 LocalDateTime createdAt, Boolean gcashVerified) {
         this.id = id;
         this.customerName = customerName;
         this.contact = contact;
@@ -44,6 +44,7 @@ public class AdminRecordResponseDto {
         this.paid = paid;
         this.expired = expired;
         this.createdAt = createdAt;
+        this.gcashVerified = gcashVerified;
     }
 
     // Getters and Setters
@@ -91,4 +92,7 @@ public class AdminRecordResponseDto {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public Boolean getGcashVerified() { return gcashVerified; }
+    public void setGcashVerified(Boolean gcashVerified) { this.gcashVerified = gcashVerified; }
 }
