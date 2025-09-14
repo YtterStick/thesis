@@ -18,7 +18,8 @@ import java.util.List;
     @CompoundIndex(name = "due_date_idx", def = "{'dueDate': 1}"),
     @CompoundIndex(name = "expired_idx", def = "{'expired': 1}"),
     @CompoundIndex(name = "customer_name_idx", def = "{'customerName': 1}"),
-    @CompoundIndex(name = "service_type_idx", def = "{'serviceType': 1}")
+    @CompoundIndex(name = "service_type_idx", def = "{'serviceType': 1}"),
+    @CompoundIndex(name = "disposed_idx", def = "{'disposed': 1}") // NEW: Index for disposal status
 })
 public class LaundryJob {
 
@@ -48,6 +49,8 @@ public class LaundryJob {
     private String claimReceiptNumber;
     private String claimedByStaffId;
 
+    private String laundryProcessedBy;
+
     @Indexed
     private String serviceType;
 
@@ -57,6 +60,12 @@ public class LaundryJob {
     @Indexed
     private boolean expired = false;
     private LocalDateTime expirationDate;
+
+    // NEW: Disposal tracking fields
+    @Indexed
+    private boolean disposed = false;
+    private String disposedBy;
+    private LocalDateTime disposedDate;
 
     public LaundryJob() {
     }
@@ -74,6 +83,31 @@ public class LaundryJob {
         this.statusFlow = statusFlow != null ? statusFlow : new ArrayList<>();
         this.currentStep = currentStep != null ? currentStep : 0;
         this.dueDate = LocalDateTime.now().plusDays(7); // Set due date to 7 days from now
+    }
+
+    // ✅ NEW: Disposal getters/setters
+    public boolean isDisposed() {
+        return disposed;
+    }
+
+    public void setDisposed(boolean disposed) {
+        this.disposed = disposed;
+    }
+
+    public String getDisposedBy() {
+        return disposedBy;
+    }
+
+    public void setDisposedBy(String disposedBy) {
+        this.disposedBy = disposedBy;
+    }
+
+    public LocalDateTime getDisposedDate() {
+        return disposedDate;
+    }
+
+    public void setDisposedDate(LocalDateTime disposedDate) {
+        this.disposedDate = disposedDate;
     }
 
     // ✅ Expiration getters/setters
@@ -101,6 +135,10 @@ public class LaundryJob {
         this.expirationDate = expirationDate;
     }
 
+    // ✅ Laundry processed by getters/setters
+    public String getLaundryProcessedBy() { return laundryProcessedBy; }
+    public void setLaundryProcessedBy(String laundryProcessedBy) { this.laundryProcessedBy = laundryProcessedBy; }
+    
     // ✅ Claiming getters/setters
     public LocalDateTime getClaimDate() {
         return claimDate;
@@ -231,6 +269,9 @@ public class LaundryJob {
                 ", dueDate=" + dueDate +
                 ", expired=" + expired +
                 ", expirationDate=" + expirationDate +
+                ", disposed=" + disposed +
+                ", disposedBy='" + disposedBy + '\'' +
+                ", disposedDate=" + disposedDate +
                 '}';
     }
 

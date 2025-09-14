@@ -292,12 +292,19 @@ public class TransactionService {
 
                 // Set expired status
                 dto.setExpired(job.isExpired());
+                
+                // Set the two new processed by fields
+                dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
+                dto.setClaimProcessedBy(job.getClaimedByStaffId());
             } else {
                 // Default values if no laundry job exists
                 dto.setPickupStatus("UNCLAIMED");
                 dto.setLaundryStatus("Not Started");
                 dto.setExpired(tx.getDueDate() != null
                         && tx.getDueDate().isBefore(LocalDateTime.now()));
+                // Set default values for the new fields
+                dto.setLaundryProcessedBy(null);
+                dto.setClaimProcessedBy(null);
             }
 
             return dto;

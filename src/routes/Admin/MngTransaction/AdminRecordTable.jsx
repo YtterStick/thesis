@@ -17,7 +17,8 @@ const tableHeaders = [
     "Payment Method",
     "Pickup Status",
     "Laundry Status",
-    "Processed By",
+    "Laundry Processed By",
+    "Claim Processed By",
     "Actions",
 ];
 
@@ -28,18 +29,23 @@ const renderStatusBadge = (status, type = "pickup") => {
         Washing: <CheckCircle2 className="h-4 w-4 text-blue-500 dark:text-blue-400" />,
         Done: <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />,
         Claimed: <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />,
-        Pending: <Clock8 className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />, // Changed from AlertCircle to Clock8
+        Pending: <Clock8 className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />,
         Paid: <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />,
         Unpaid: <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />,
+        "Not Started": <Clock8 className="h-4 w-4 text-gray-500 dark:text-gray-400" />,
+        UNCLAIMED: <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400" />,
     };
 
     const icon = iconMap[status] || null;
+    
     return icon ? (
         <Tooltip>
             <TooltipTrigger asChild>
                 <span className="inline-flex items-center justify-center">{icon}</span>
             </TooltipTrigger>
-            <TooltipContent side="top">{status}</TooltipContent>
+            <TooltipContent side="top">
+                <div className="font-medium">{status}</div>
+            </TooltipContent>
         </Tooltip>
     ) : null;
 };
@@ -124,7 +130,8 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
             "Payment Status": item.paymentMethod === "GCash" && !item.gcashVerified ? "Pending" : item.paid ? "Paid" : "Unpaid",
             "Pickup Status": item.pickupStatus,
             "Laundry Status": item.laundryStatus,
-            "Processed By": item.processedBy,
+            "Laundry Processed By": item.laundryProcessedBy || "—",
+            "Claim Processed By": item.claimProcessedBy || "—",
             "GCash Verified": item.paymentMethod === "GCash" ? (item.gcashVerified ? "Yes" : "No") : "N/A",
             Expired: item.expired ? "Yes" : "No",
         }));
@@ -158,7 +165,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
     return (
         <TooltipProvider>
             <div className="flex flex-col gap-6">
-                {/* 🔍 Search + Calendar + Export */}
+                {/* Search + Calendar + Export */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="w-full max-w-xs flex-1">
                         <div className="relative w-full max-w-xs">
@@ -182,7 +189,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {/* 📅 Calendar */}
+                        {/* Calendar */}
                         <div
                             className="relative"
                             ref={calendarRef}
@@ -216,7 +223,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                             )}
                         </div>
 
-                        {/* 📤 Export Button */}
+                        {/* Export Button */}
                         <Button
                             onClick={handleExport}
                             className="bg-green-600 text-white hover:bg-green-700"
@@ -227,7 +234,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                     </div>
                 </div>
 
-                {/* 📊 Table */}
+                {/* Table */}
                 <div className="overflow-x-auto rounded-md border border-slate-300 dark:border-slate-700">
                     <table className="min-w-full table-auto text-sm">
                         <thead className="bg-slate-100 dark:bg-slate-800">
@@ -244,7 +251,8 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                                         "Payment Method": "paymentMethod",
                                         "Pickup Status": "pickupStatus",
                                         "Laundry Status": "laundryStatus",
-                                        "Processed By": "processedBy",
+                                        "Laundry Processed By": "laundryProcessedBy",
+                                        "Claim Processed By": "claimProcessedBy",
                                     };
 
                                     const field = fieldMap[header];
@@ -317,7 +325,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                                                         : record.paid
                                                           ? "Paid"
                                                           : "Unpaid",
-                                                    "payment",
+                                                    "payment"
                                                 )}
                                             </div>
                                         </td>
@@ -333,7 +341,12 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                                                 {renderStatusBadge(record.laundryStatus, "laundry")}
                                             </div>
                                         </td>
-                                        <td className="px-3 py-2">{record.processedBy}</td>
+                                        <td className="px-3 py-2">
+                                            {record.laundryProcessedBy || "—"}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            {record.claimProcessedBy || "—"}
+                                        </td>
                                         <td className="px-3 py-2">
                                             <div className="flex items-center gap-2">
                                                 <Tooltip>
@@ -368,7 +381,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                     </table>
                 </div>
 
-                {/* 📄 Pagination */}
+                {/* Pagination */}
                 {totalPages > 1 && (
                     <div className="mt-4 flex items-center justify-center gap-4 text-sm">
                         <button

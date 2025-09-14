@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import AdminRecordTable from "./AdminRecordTable.jsx";
-import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, CreditCard, Calendar } from "lucide-react";
+import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, Calendar } from "lucide-react";
 
 const MainPage = () => {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [timeFilter, setTimeFilter] = useState("today");
+    const [timeFilter, setTimeFilter] = useState("all");
 
     useEffect(() => {
         const fetchRecords = async () => {
@@ -22,7 +22,6 @@ const MainPage = () => {
 
                 const data = await res.json();
 
-                // In the fetchRecords function, update the mapping to include gcashVerified status
                 const mapped = data.map((r) => ({
                     id: r.id,
                     name: r.customerName,
@@ -34,11 +33,11 @@ const MainPage = () => {
                     paymentMethod: r.paymentMethod || "—",
                     pickupStatus: r.pickupStatus,
                     laundryStatus: r.laundryStatus,
-                    processedBy: r.processedByStaff || "—",
+                    laundryProcessedBy: r.laundryProcessedBy || "—", // Updated field
+                    claimProcessedBy: r.claimProcessedBy || "—",     // Updated field
                     createdAt: r.createdAt,
                     paid: r.paid || false,
                     expired: r.expired,
-                    // Add gcashVerified status
                     gcashVerified: r.gcashVerified || false,
                 }));
 
@@ -65,7 +64,10 @@ const MainPage = () => {
                 break;
             case "week":
                 const weekStart = new Date(now);
-                weekStart.setDate(now.getDate() - now.getDay());
+                // Adjust to start from Monday (1) instead of Sunday (0)
+                const dayOfWeek = now.getDay();
+                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                weekStart.setDate(now.getDate() + diffToMonday);
                 weekStart.setHours(0, 0, 0, 0);
                 filtered = records.filter((r) => new Date(r.createdAt) >= weekStart);
                 break;
@@ -143,7 +145,7 @@ const MainPage = () => {
 
     return (
         <main className="relative space-y-6 p-6">
-            {/* 🧢 Header */}
+            {/* Header */}
             <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Admin Laundry Records</h1>
 
@@ -170,7 +172,7 @@ const MainPage = () => {
                 </div>
             </div>
 
-            {/* 🎨 Summary Cards */}
+            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {summaryCards.map(({ label, value, icon, color, tooltip }) => (
                     <div
@@ -203,7 +205,7 @@ const MainPage = () => {
                 ))}
             </div>
 
-            {/* 📋 Record Table */}
+            {/* Record Table */}
             <div className="card">
                 <div className="card-header justify-between">
                     <p className="card-title">Laundry Records</p>
@@ -222,4 +224,4 @@ const MainPage = () => {
     );
 };
 
-export default MainPage;
+export default MainPage;    

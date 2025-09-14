@@ -37,7 +37,17 @@ const MainPage = () => {
       );
       if (!response.ok) throw new Error("Failed to fetch completed transactions");
       const data = await response.json();
-      setTransactions(data);
+      
+      // Additional filtering on the frontend as a safety measure
+      const filteredData = data.filter(transaction => {
+        // This assumes your transaction data includes paymentMethod and gcashVerified
+        if (transaction.paymentMethod === "GCash") {
+          return transaction.gcashVerified === true;
+        }
+        return true;
+      });
+      
+      setTransactions(filteredData);
       setHasFetched(true);
     } catch (error) {
       console.error(error);
@@ -102,6 +112,9 @@ const MainPage = () => {
           if (errorData.message && errorData.message.includes("expired")) {
             throw new Error("Cannot claim expired job");
           }
+          if (errorData.message && errorData.message.includes("GCash")) {
+            throw new Error("GCash payment not verified");
+          }
         }
         throw new Error("Failed to claim transaction");
       }
@@ -118,9 +131,14 @@ const MainPage = () => {
       return claimedTransaction;
     } catch (error) {
       console.error(error);
-      const errorMessage = error.message.includes("expired") 
-        ? "Cannot claim expired laundry. Please dispose instead." 
-        : "Failed to claim laundry";
+      let errorMessage;
+      if (error.message.includes("expired")) {
+        errorMessage = "Cannot claim expired laundry. Please dispose instead.";
+      } else if (error.message.includes("GCash")) {
+        errorMessage = "Cannot claim laundry with unverified GCash payment.";
+      } else {
+        errorMessage = "Failed to claim laundry";
+      }
       toast({ title: "Error", description: errorMessage, variant: "destructive" });
       return null;
     }
@@ -161,7 +179,7 @@ const MainPage = () => {
         <CardHeader className="bg-slate-100 dark:bg-slate-800 rounded-t-lg">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="text-slate-900 dark:text-slate-50">Expired & Unclaimed Laundry</CardTitle>
+              <CardTitle className="text-slate-900 dark:text-slate-50">Completed & Unclaimed Laundry</CardTitle>
               <CardDescription className="text-slate-600 dark:text-slate-400">
                 {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""} ready for pickup
               </CardDescription>

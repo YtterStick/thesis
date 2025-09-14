@@ -90,7 +90,7 @@ public class LaundryJobService {
         job.setStatusFlow(getFlowByServiceType(txn.getServiceName()));
         job.setCurrentStep(0);
         job.setPickupStatus("UNCLAIMED"); // Default pickup status
-        
+
         // Set due date (7 days from now)
         job.setDueDate(LocalDateTime.now().plusDays(7));
         job.setExpired(false);
@@ -100,7 +100,7 @@ public class LaundryJobService {
 
     /** Assign machine */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob assignMachine(String transactionId, int loadNumber, String machineId) {
+    public LaundryJob assignMachine(String transactionId, int loadNumber, String machineId, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
         MachineItem machine = machineRepository.findById(machineId)
@@ -116,12 +116,13 @@ public class LaundryJobService {
                 .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber))
                 .setMachineId(machineId);
 
+        job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
     }
 
     /** Start a load */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes) {
+    public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
         LoadAssignment load = job.getLoadAssignments().stream()
@@ -160,6 +161,7 @@ public class LaundryJobService {
         machine.setStatus(STATUS_IN_USE);
         machineRepository.save(machine);
 
+        job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
         // Schedule auto-advance after duration
@@ -171,7 +173,7 @@ public class LaundryJobService {
 
     /** Dry Again - Reset drying timer */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob dryAgain(String transactionId, int loadNumber) {
+    public LaundryJob dryAgain(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
         LoadAssignment load = job.getLoadAssignments().stream()
@@ -218,6 +220,7 @@ public class LaundryJobService {
             });
         }
 
+        job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
         // Schedule auto-advance after duration
@@ -252,7 +255,7 @@ public class LaundryJobService {
 
     /** Manual advance */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus) {
+    public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus, String processedBy) {
         if ("COMPLETE".equalsIgnoreCase(newStatus)) {
             newStatus = STATUS_COMPLETED;
         }
@@ -270,18 +273,20 @@ public class LaundryJobService {
             releaseMachine(load);
         }
 
+        job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
     }
 
     /** Mark completed */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob completeLoad(String transactionId, int loadNumber) {
-        return advanceLoad(transactionId, loadNumber, STATUS_COMPLETED);
+    public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
+        return advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
     }
 
     /** Update duration */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob updateLoadDuration(String transactionId, int loadNumber, int durationMinutes) {
+    public LaundryJob updateLoadDuration(String transactionId, int loadNumber, int durationMinutes,
+            String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
         LoadAssignment load = job.getLoadAssignments().stream()
@@ -294,28 +299,39 @@ public class LaundryJobService {
             load.setEndTime(load.getStartTime().plusMinutes(durationMinutes));
         }
 
+        job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
     }
 
     /** Update current step */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob updateCurrentStep(String transactionId, int newStep) {
+    public LaundryJob updateCurrentStep(String transactionId, int newStep, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
         job.setCurrentStep(newStep);
+        job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
     }
 
     /** Update whole job */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob updateJob(LaundryJob job) {
+    public LaundryJob updateJob(LaundryJob job, String processedBy) {
+        job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
     }
 
     /** Delete job by ID */
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public boolean deleteJobById(String id) {
+    public boolean deleteJobById(String id, String processedBy) {
         if (!laundryJobRepository.existsById(id))
             return false;
+
+        // Optional: Set processedBy before deletion if needed
+        LaundryJob job = laundryJobRepository.findById(id).orElse(null);
+        if (job != null) {
+            job.setLaundryProcessedBy(processedBy);
+            laundryJobRepository.save(job);
+        }
+
         laundryJobRepository.deleteById(id);
         return true;
     }
@@ -326,7 +342,7 @@ public class LaundryJobService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("dueDate").ascending());
         Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
         List<LaundryJob> jobs = jobPage.getContent();
-        
+
         return processJobsToDtos(jobs);
     }
 
@@ -347,7 +363,7 @@ public class LaundryJobService {
         Set<String> transactionIds = jobs.stream()
                 .map(LaundryJob::getTransactionId)
                 .collect(Collectors.toSet());
-        
+
         List<Transaction> transactions = transactionRepository.findByInvoiceNumberIn(new ArrayList<>(transactionIds));
         Map<String, Transaction> transactionMap = transactions.stream()
                 .collect(Collectors.toMap(Transaction::getInvoiceNumber, Function.identity()));
@@ -471,21 +487,45 @@ public class LaundryJobService {
                 .filter(job -> !job.isExpired()) // Exclude expired jobs
                 .collect(Collectors.toList());
     }
-    
+
     /** Get expired jobs */
+    // In LaundryJobService.java
     public List<LaundryJob> getExpiredJobs() {
+        return laundryJobRepository.findByExpiredTrueAndDisposedFalse();
+    }
+
+    /** NEW: Mark a job as disposed (instead of deleting it) */
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob disposeJob(String transactionId, String processedBy) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        // Instead of deleting, mark as disposed
+        job.setDisposed(true);
+        job.setDisposedBy(processedBy);
+        job.setDisposedDate(LocalDateTime.now());
+
+        return laundryJobRepository.save(job);
+    }
+
+    /** NEW: Get all disposed jobs */
+    public List<LaundryJob> getDisposedJobs() {
         return laundryJobRepository.findAll().stream()
-                .filter(job -> job.isExpired())
+                .filter(job -> job.isDisposed())
                 .collect(Collectors.toList());
     }
-    
+
     /** Scheduled task to check for expired jobs (runs every hour) */
     @Scheduled(fixedRate = 3600000) // 1 hour in milliseconds
     public void checkForExpiredJobs() {
         LocalDateTime now = LocalDateTime.now();
         List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
-        
+
         for (LaundryJob job : unclaimedJobs) {
+            // Skip disposed jobs
+            if (job.isDisposed()) {
+                continue;
+            }
+
             if (job.getDueDate() != null && now.isAfter(job.getDueDate()) && !job.isExpired()) {
                 job.setExpired(true);
                 job.setExpirationDate(now);
