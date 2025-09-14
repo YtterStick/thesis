@@ -54,7 +54,7 @@ export default function DashboardPage() {
             value: "71",
             color: "#F87171",
           },
-        ].map(({ title, icon, value, color }) => (
+        ].map(({ title, icon, value, growth, color, growthColor }) => (
           <div key={title} className="card">
             <div className="card-header flex items-center gap-x-3">
               <div
