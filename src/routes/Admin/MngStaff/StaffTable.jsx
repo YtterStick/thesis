@@ -1,32 +1,19 @@
 import PropTypes from "prop-types";
-import {
-  Ban,
-  CheckCircle,
-  MoreVertical,
-  Search,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+import { Pencil, Trash2, Search } from "lucide-react";
 import { useState } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/utils/cn";
+import EditStaffForm from "./EditStaffForm"; // Add this import
 
 const ITEMS_PER_PAGE = 7;
 
-const StaffTable = ({ staff, onConfirmDisable }) => {
+const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => { // Add onStaffUpdate prop
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loadingId, setLoadingId] = useState(null);
+  const [editingStaff, setEditingStaff] = useState(null); // Add state for editing
+  const { toast } = useToast();
 
   if (!staff || staff.length === 0) {
     return (
@@ -59,176 +46,185 @@ const StaffTable = ({ staff, onConfirmDisable }) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
-  const renderStatus = (status) => {
-    const isActive = status === "Active";
-    const icon = isActive ? (
-      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-    ) : (
-      <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
-    );
-
-    const tooltipClass = isActive
-      ? "border-green-600 text-green-600 dark:border-green-400 dark:text-green-400"
-      : "border-red-500 text-red-600 dark:border-red-400 dark:text-red-400";
-
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex cursor-help items-center gap-1">
-            {icon}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className={tooltipClass}>
-          {isActive ? "Active Staff" : "Inactive Staff"}
-        </TooltipContent>
-      </Tooltip>
-    );
+  const handleDelete = async (id) => {
+    setLoadingId(id);
+    try {
+      await onStatusChange(id, "Inactive");
+      toast({
+        title: "Success",
+        description: "Account disabled successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingId(null);
+    }
   };
 
   return (
-    <TooltipProvider>
-      <div className="card">
-        {/* Header with Search */}
-        <div className="card-header flex flex-col items-start gap-2">
-          <p className="card-title">Account List</p>
-          <SearchBar
-            searchTerm={searchTerm}
-            setSearchTerm={(term) => {
-              setSearchTerm(term);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
+    <div className="card">
+      {/* Header with Search */}
+      <div className="card-header flex flex-col items-start gap-2">
+        <p className="card-title">Account List</p>
+        <SearchBar
+          searchTerm={searchTerm}
+          setSearchTerm={(term) => {
+            setSearchTerm(term);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
 
-        {/* Table */}
-        <div className="mt-4 w-full overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              <tr>
-                <th className="p-2">Username</th>
-                <th className="p-2">Role</th>
-                <th className="p-2">Contact</th>
-                <th className="p-2">Status</th>
-                <th className="p-2 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedStaff.length > 0 ? (
-                paginatedStaff.map((account) => (
-                  <tr
-                    key={account.id || `${account.contact}-${Math.random()}`}
-                    className="border-b border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/40"
+      {/* Table */}
+      <div className="mt-4 w-full overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
+        <table className="min-w-full text-left text-sm">
+          <thead className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <tr>
+              <th className="p-2">Username</th>
+              <th className="p-2">Role</th>
+              <th className="p-2">Contact</th>
+              <th className="p-2">Status</th>
+              <th className="p-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedStaff.length > 0 ? (
+              paginatedStaff.map((account) => (
+                <tr
+                  key={account.id || `${account.contact}-${Math.random()}`}
+                  className="border-b border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/40"
+                >
+                  <td className="p-2 text-slate-800 dark:text-slate-100">
+                    {account.username}
+                  </td>
+                  <td
+                    className={cn(
+                      "p-2 font-medium uppercase",
+                      account.role === "ADMIN"
+                        ? "text-blue-400 dark:text-blue-400"
+                        : account.role === "STAFF"
+                        ? "text-orange-400 dark:text-orange-400"
+                        : "text-slate-600 dark:text-slate-300"
+                    )}
                   >
-                    <td className="p-2 text-slate-800 dark:text-slate-100">
-                      {account.username}
-                    </td>
-                    <td
+                    {account.role}
+                  </td>
+                  <td className="p-2 text-slate-600 dark:text-slate-300">
+                    {account.contact?.replace(/^\+63/, "0")}
+                  </td>
+                  <td className="p-2">
+                    <span
                       className={cn(
-                        "p-2 font-medium uppercase",
-                        account.role === "ADMIN"
-                          ? "text-blue-400 dark:text-blue-400"
-                          : account.role === "STAFF"
-                          ? "text-orange-400 dark:text-orange-400"
-                          : "text-slate-600 dark:text-slate-300"
+                        "px-2 py-1 text-xs font-medium rounded-full",
+                        account.status === "Active"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                       )}
                     >
-                      {account.role}
-                    </td>
-                    <td className="p-2 text-slate-600 dark:text-slate-300">
-                      {account.contact?.replace(/^\+63/, "0")}
-                    </td>
-                    <td className="p-2">{renderStatus(account.status)}</td>
-                    <td className="p-2 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="rounded-md p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
-                            <MoreVertical className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-36 border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                        >
-                          <DropdownMenuItem
-                            onClick={() => onConfirmDisable(account)}
-                            className={`flex cursor-pointer items-center gap-2 text-xs ${
-                              account.status === "Active"
-                                ? "text-red-600 dark:text-red-400"
-                                : "text-green-600 dark:text-green-400"
-                            }`}
-                          >
-                            {account.status === "Active" ? (
-                              <>
-                                <Ban className="h-4 w-4" />
-                                Disable
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="h-4 w-4" />
-                                Enable
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="p-4 text-center text-slate-500 dark:text-slate-400"
-                  >
-                    No matching accounts found.
+                      {account.status}
+                    </span>
+                  </td>
+                  <td className="p-2 text-right">
+                    <div className="flex justify-end space-x-2">
+                      {/* Edit Button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingStaff(account)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Delete Button (sets status to Inactive) */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(account.id)}
+                        disabled={loadingId === account.id}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Compact Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-4 flex justify-center items-center gap-4 text-sm">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`rounded px-3 py-1 transition-colors ${
-                currentPage === 1
-                  ? "opacity-50 cursor-not-allowed"
-                  : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
-              }`}
-            >
-              Prev
-            </button>
-
-            <span className="text-slate-600 dark:text-slate-300 font-medium">
-              Page{" "}
-              <span className="text-cyan-600 dark:text-cyan-400">
-                {currentPage}
-              </span>{" "}
-              of{" "}
-              <span className="text-cyan-600 dark:text-cyan-400">
-                {totalPages}
-              </span>
-            </span>
-
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`rounded px-3 py-1 transition-colors ${
-                currentPage === totalPages
-                  ? "opacity-50 cursor-not-allowed"
-                  : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
-              }`}
-            >
-              Next
-            </button>
-          </div>
-        )}
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="p-4 text-center text-slate-500 dark:text-slate-400"
+                >
+                  No matching accounts found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-    </TooltipProvider>
+
+      {/* Compact Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex justify-center items-center gap-4 text-sm">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`rounded px-3 py-1 transition-colors ${
+              currentPage === 1
+                ? "opacity-50 cursor-not-allowed"
+                : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
+            }`}
+          >
+            Prev
+          </button>
+
+          <span className="text-slate-600 dark:text-slate-300 font-medium">
+            Page{" "}
+            <span className="text-cyan-600 dark:text-cyan-400">
+              {currentPage}
+            </span>{" "}
+            of{" "}
+            <span className="text-cyan-600 dark:text-cyan-400">
+              {totalPages}
+            </span>
+          </span>
+
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`rounded px-3 py-1 transition-colors ${
+              currentPage === totalPages
+                ? "opacity-50 cursor-not-allowed"
+                : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Edit Staff Form Modal */}
+      {editingStaff && (
+        <EditStaffForm
+          staff={editingStaff}
+          onUpdate={(updatedStaff) => {
+            // Update the local state
+            const updated = staff.map(acc => 
+              acc.id === updatedStaff.id ? updatedStaff : acc
+            );
+            // Call the parent callback to update the main state
+            onStaffUpdate(updatedStaff);
+            setEditingStaff(null);
+          }}
+          onClose={() => setEditingStaff(null)}
+        />
+      )}
+    </div>
   );
 };
 
@@ -249,7 +245,8 @@ const SearchBar = ({ searchTerm, setSearchTerm }) => (
 
 StaffTable.propTypes = {
   staff: PropTypes.array.isRequired,
-  onConfirmDisable: PropTypes.func.isRequired,
+  onStatusChange: PropTypes.func.isRequired,
+  onStaffUpdate: PropTypes.func.isRequired, // Add this prop type
 };
 
 export default StaffTable;

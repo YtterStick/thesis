@@ -1,10 +1,13 @@
 package com.starwash.authservice.security;
 
+import com.starwash.authservice.model.User; // Add this import
+import com.starwash.authservice.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.http.HttpStatus; // Add this import
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,14 +18,17 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
-    public JwtFilter(JwtUtil jwtUtil) {
+    public JwtFilter(JwtUtil jwtUtil, UserRepository userRepository) {
         this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -48,7 +54,9 @@ public class JwtFilter extends OncePerRequestFilter {
                 String username = jwtUtil.getUsername(token);
                 String role = jwtUtil.getRole(token);
 
-                if (username != null && role != null) {
+                // Check if user exists and is active
+                Optional<User> userOpt = userRepository.findByUsername(username);
+                if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
                     List<SimpleGrantedAuthority> authorities =
                             List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
 
@@ -59,6 +67,11 @@ public class JwtFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
                     System.out.println("✅ Authenticated: " + username + " [" + role + "]");
+                } else {
+                    // User not found or inactive
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                    response.getWriter().write("Account is deactivated");
+                    return;
                 }
             }
         }

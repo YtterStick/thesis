@@ -147,7 +147,12 @@ const LoginPage = () => {
         body: JSON.stringify(form),
       });
 
-      if (!loginRes.ok) throw new Error("Login failed");
+      // Handle different HTTP status codes
+      if (loginRes.status === 403) {
+        throw new Error("Account is deactivated. Please contact administrator.");
+      } else if (!loginRes.ok) {
+        throw new Error("Invalid username or password");
+      }
 
       const { token } = await loginRes.json();
       if (!token) throw new Error("No token received");
@@ -164,7 +169,7 @@ const LoginPage = () => {
       await login(token);
     } catch (err) {
       console.error("❌ Login error:", err);
-      setError("Invalid username or password");
+      setError(err.message);
       setIsAuthenticating(false);
     }
   };

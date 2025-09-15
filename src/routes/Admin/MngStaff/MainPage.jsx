@@ -1,66 +1,23 @@
 import { useState, useEffect, useCallback } from "react";
 import StaffTable from "./StaffTable";
 import StaffForm from "./StaffForm";
-import AuditTrail from "./AuditTrail";
 import { ShieldCheck, Users, User, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { secureFetch } from "@/lib/secureFetch";
 
-const ALLOWED_SKEW_MS = 5000;
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-
-    console.log("🔍 Token expiration check:");
-    console.log("⏳ Exp:", new Date(exp).toLocaleString());
-    console.log("🕒 Now:", new Date(now).toLocaleString());
-
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-  if (!response.ok) {
-    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
-    throw new Error(`Request failed: ${response.status}`);
-  }
-
-  return response.json();
-};
 
 const MainPage = () => {
   const [accountList, setAccountList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [showAudit, setShowAudit] = useState(false);
-  const [confirmTarget, setConfirmTarget] = useState(null);
   const [error, setError] = useState(null);
+  const { toast } = useToast();
 
-  const totalAdmins = accountList.filter((acc) => acc.role === "ADMIN").length;
-  const totalStaff = accountList.filter((acc) => acc.role === "STAFF").length;
+  // Filter to only show active accounts
+  const activeAccounts = accountList.filter(acc => acc.status === "Active");
+  
+  const totalAdmins = activeAccounts.filter((acc) => acc.role === "ADMIN").length;
+  const totalStaff = activeAccounts.filter((acc) => acc.role === "STAFF").length;
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -68,33 +25,78 @@ const MainPage = () => {
         const data = await secureFetch("/accounts");
         const enriched = data.map((acc) => ({
           ...acc,
-          status: "Active",
+          status: acc.status || "Active",
         }));
         setAccountList(enriched);
       } catch (error) {
         console.error("❌ Error fetching accounts:", error.message);
         setError("Failed to load accounts. Make sure you're logged in as ADMIN.");
+        toast({
+          title: "Error",
+          description: "Failed to load accounts",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchAccounts();
-  }, []);
+  }, [toast]);
 
-  const toggleStatus = (id) => {
-    setAccountList((prev) =>
-      prev.map((acc) =>
-        acc.id === id
-          ? { ...acc, status: acc.status === "Active" ? "Inactive" : "Active" }
-          : acc
+  const handleStatusChange = useCallback(async (id, newStatus) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(`http://localhost:8080/api/accounts/${id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update status");
+      }
+
+      setAccountList(prev => 
+        prev.map(acc => 
+          acc.id === id ? { ...acc, status: newStatus } : acc
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: `Account ${newStatus.toLowerCase()} successfully`,
+      });
+    } catch (error) {
+      console.error("❌ Error updating status:", error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  // Add this function to handle staff updates
+  const handleStaffUpdate = useCallback((updatedStaff) => {
+    setAccountList(prev => 
+      prev.map(acc => 
+        acc.id === updatedStaff.id ? updatedStaff : acc
       )
     );
-  };
+  }, []);
 
   const handleAddAccount = useCallback((savedUser) => {
     setAccountList((prev) => [...prev, { ...savedUser, status: "Active" }]);
-  }, []);
+    toast({
+      title: "Success",
+      description: "Account created successfully",
+    });
+  }, [toast]);
 
   return (
     <main className="relative p-6">
@@ -106,10 +108,10 @@ const MainPage = () => {
             Manage Accounts
           </h1>
         </div>
-        {accountList.length > 0 && (
+        {activeAccounts.length > 0 && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 text-slate-900 dark:text-white hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Add Account</span>
@@ -121,19 +123,19 @@ const MainPage = () => {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 mb-6">
         {[
           {
-            title: "Total Accounts",
+            title: "Active Accounts",
             icon: <Users size={26} />,
-            value: accountList.length,
+            value: activeAccounts.length,
             color: "#3DD9B6",
           },
           {
-            title: "Total Admins",
+            title: "Active Admins",
             icon: <ShieldCheck size={26} />,
             value: totalAdmins,
             color: "#60A5FA",
           },
           {
-            title: "Total Staff",
+            title: "Active Staff",
             icon: <User size={26} />,
             value: totalStaff,
             color: "#FB923C",
@@ -163,7 +165,7 @@ const MainPage = () => {
       </div>
 
       {/* Error Message */}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+      {error && <div className="text-red-500 mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">{error}</div>}
 
       {/* Staff Table or Skeleton Loader */}
       {loading ? (
@@ -176,7 +178,11 @@ const MainPage = () => {
           ))}
         </div>
       ) : (
-        <StaffTable staff={accountList} onConfirmDisable={setConfirmTarget} />
+        <StaffTable 
+          staff={activeAccounts} 
+          onStatusChange={handleStatusChange}
+          onStaffUpdate={handleStaffUpdate} // Add this prop
+        />
       )}
 
       {/* Add Form */}
@@ -185,48 +191,6 @@ const MainPage = () => {
           onAdd={handleAddAccount}
           onClose={() => setShowForm(false)}
         />
-      )}
-
-      {/* Audit Trail */}
-      {showAudit && <AuditTrail onClose={() => setShowAudit(false)} />}
-
-      {/* Confirm Modal */}
-      {confirmTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50">
-          <div className="card w-full max-w-sm mx-4 sm:mx-0">
-            <p className="mb-2 font-medium text-slate-800 dark:text-white">
-              {confirmTarget.status === "Active"
-                ? `Disable account for ${confirmTarget.username}?`
-                : `Enable account for ${confirmTarget.username}?`}
-            </p>
-            <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
-              {confirmTarget.status === "Active"
-                ? "This will prevent them from logging in."
-                : "They will regain access to the system."}
-            </p>
-            <div className="flex flex-col sm:flex-row justify-end gap-2">
-              <button
-                onClick={() => setConfirmTarget(null)}
-                className="btn-ghost text-sm text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  toggleStatus(confirmTarget.id);
-                  setConfirmTarget(null);
-                }}
-                className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white                dark:focus-visible:ring-offset-slate-950 ${
-                  confirmTarget.status === "Active"
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-green-600 hover:bg-green-700"
-                }`}
-              >
-                {confirmTarget.status === "Active" ? "Disable" : "Enable"}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </main>
   );

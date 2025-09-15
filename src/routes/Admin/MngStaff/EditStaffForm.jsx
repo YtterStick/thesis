@@ -19,58 +19,15 @@ import {
 } from "@/components/ui/select";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { secureFetch } from "@/lib/secureFetch";
 
-const ALLOWED_SKEW_MS = 5000;
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "POST", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const response = await fetch(`http://localhost:8080${endpoint}`, options);
-
-  if (!response.ok) {
-    const error = await response.json();
-    console.error(`❌ ${method} ${endpoint} failed:`, error);
-    throw new Error(error.message || "Request failed");
-  }
-
-  return response.json();
-};
-
-const StaffForm = ({ onAdd, onClose }) => {
+const EditStaffForm = ({ staff, onUpdate, onClose }) => {
   const [form, setForm] = useState({
-    username: "",
+    username: staff.username || "",
     password: "",
     confirmPassword: "",
-    contact: "",
-    role: "STAFF",
+    contact: staff.contact?.replace("+63", "") || "",
+    role: staff.role || "STAFF",
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -81,17 +38,10 @@ const StaffForm = ({ onAdd, onClose }) => {
   const roles = ["STAFF", "ADMIN"];
   const { toast } = useToast();
 
-  // Password validation regex
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-  useEffect(() => {
-    if (typeof onAdd !== "function") {
-      console.warn("⚠️ StaffForm mounted without valid onAdd function");
-    }
-  }, [onAdd]);
-
   const validatePassword = (password) => {
-    if (!passwordRegex.test(password)) {
+    if (password && !passwordRegex.test(password)) {
       return "Password must be at least 8 characters, contain uppercase, lowercase, number and special character (@$!%*?&)";
     }
     return "";
@@ -100,7 +50,6 @@ const StaffForm = ({ onAdd, onClose }) => {
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     
-    // Validate password when it changes
     if (field === "password") {
       setPasswordError(validatePassword(value));
     }
@@ -110,8 +59,8 @@ const StaffForm = ({ onAdd, onClose }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validate passwords match
-    if (form.password !== form.confirmPassword) {
+    // Validate passwords match if password is provided
+    if (form.password && form.password !== form.confirmPassword) {
       toast({
         title: "Error",
         description: "Passwords do not match.",
@@ -121,50 +70,45 @@ const StaffForm = ({ onAdd, onClose }) => {
       return;
     }
 
-    // Validate password strength
-    const error = validatePassword(form.password);
-    if (error) {
-      setPasswordError(error);
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
+    // Validate password strength if password is provided
+    if (form.password) {
+      const error = validatePassword(form.password);
+      if (error) {
+        setPasswordError(error);
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     const payload = {
-      username: form.username.trim(),
-      password: form.password.trim(),
       contact: "+63" + form.contact.trim(),
       role: form.role,
     };
 
-    try {
-      const result = await secureFetch("/register", "POST", payload);
+    // Only include password if it was provided
+    if (form.password) {
+      payload.password = form.password.trim();
+    }
 
-      if (typeof onAdd === "function") {
-        onAdd({
-          id: result.id,
-          username: result.username,
-          contact: result.contact || payload.contact,
-          role: result.role || payload.role,
-          status: "Active",
+    try {
+      await secureFetch(`/accounts/${staff.id}`, "PATCH", payload);
+
+      if (typeof onUpdate === "function") {
+        onUpdate({
+          ...staff,
+          contact: payload.contact,
+          role: payload.role,
         });
       }
 
       toast({
         title: "Success",
-        description: "Account created successfully",
-      });
-
-      setForm({
-        username: "",
-        password: "",
-        confirmPassword: "",
-        contact: "",
-        role: "STAFF",
+        description: "Account updated successfully",
       });
 
       if (typeof onClose === "function") {
@@ -172,8 +116,8 @@ const StaffForm = ({ onAdd, onClose }) => {
       }
     } catch (err) {
       toast({
-        title: "Registration Failed",
-        description: err.message || "Failed to create account",
+        title: "Update Failed",
+        description: err.message || "Failed to update account",
         variant: "destructive",
       });
     } finally {
@@ -185,9 +129,9 @@ const StaffForm = ({ onAdd, onClose }) => {
     <Dialog open={true} onOpenChange={isSubmitting ? undefined : onClose}>
       <DialogContent className="rounded-lg border border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-950 text-slate-900 dark:text-white">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">Add New Staff</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">Edit Staff Account</DialogTitle>
           <DialogDescription className="sr-only">
-            Provide username, password, contact number, and role to register a new staff account.
+            Update contact number, role, or password for this staff account.
           </DialogDescription>
           <DialogClose />
         </DialogHeader>
@@ -196,9 +140,8 @@ const StaffForm = ({ onAdd, onClose }) => {
           <Input
             placeholder="Username"
             value={form.username}
-            onChange={(e) => handleChange("username", e.target.value)}
-            required
-            className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
+            disabled
+            className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700"
           />
 
           {/* Password with toggle and info */}
@@ -206,10 +149,9 @@ const StaffForm = ({ onAdd, onClose }) => {
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder="New Password (leave blank to keep current)"
                 value={form.password}
                 onChange={(e) => handleChange("password", e.target.value)}
-                required
                 className="pr-10 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
               />
               <div className="absolute right-3 top-2 flex space-x-1">
@@ -252,10 +194,9 @@ const StaffForm = ({ onAdd, onClose }) => {
           <div className="relative">
             <Input
               type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm Password"
+              placeholder="Confirm New Password"
               value={form.confirmPassword}
               onChange={(e) => handleChange("confirmPassword", e.target.value)}
-              required
               className="pr-10 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
             />
             <button
@@ -310,7 +251,7 @@ const StaffForm = ({ onAdd, onClose }) => {
             disabled={isSubmitting}
             className="w-full bg-[#60A5FA] hover:bg-[#3B82F6] text-white rounded-md px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Creating..." : "Save Staff"}
+            {isSubmitting ? "Updating..." : "Update Account"}
           </Button>
         </form>
       </DialogContent>
@@ -318,9 +259,10 @@ const StaffForm = ({ onAdd, onClose }) => {
   );
 };
 
-StaffForm.propTypes = {
-  onAdd: PropTypes.func.isRequired,
+EditStaffForm.propTypes = {
+  staff: PropTypes.object.isRequired,
+  onUpdate: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
 };
 
-export default StaffForm;
+export default EditStaffForm;

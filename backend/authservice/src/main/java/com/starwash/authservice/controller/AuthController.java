@@ -70,6 +70,13 @@ public class AuthController {
 
         if (foundUser.isPresent()) {
             User user = foundUser.get();
+            
+            // Check if account is inactive
+            if ("Inactive".equals(user.getStatus())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Collections.singletonMap("error", "Account is deactivated"));
+            }
+            
             boolean matches = passwordEncoder.matches(loginRequest.getPassword(), user.getPassword());
 
             if (matches) {
