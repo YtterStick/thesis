@@ -32,11 +32,21 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody User registerRequest) {
         System.out.println("📝 Registering new user: " + registerRequest.getUsername());
 
+        // Check if username already exists
         if (userRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Collections.singletonMap("error", "Username already exists"));
         }
 
+        // Password validation
+        String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
+        if (!registerRequest.getPassword().matches(passwordRegex)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error",
+                            "Password must be at least 8 characters, contain uppercase, lowercase, number and special character (@$!%*?&)"));
+        }
+
+        // Encode password and set default values
         registerRequest.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
 
         if (registerRequest.getRole() == null || registerRequest.getRole().isEmpty()) {
@@ -47,6 +57,7 @@ public class AuthController {
             registerRequest.setStatus("Active");
         }
 
+        // Save user
         User savedUser = userRepository.save(registerRequest);
         System.out.println("✅ User registered: " + savedUser.getUsername());
 

@@ -17,7 +17,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Info } from "lucide-react";
 
 const ALLOWED_SKEW_MS = 5000;
 
@@ -77,7 +77,13 @@ const StaffForm = ({ onAdd, onClose }) => {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [showPasswordInfo, setShowPasswordInfo] = useState(false);
   const roles = ["STAFF", "ADMIN"];
+
+  // Password validation regex
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
   useEffect(() => {
     if (typeof onAdd !== "function") {
@@ -85,15 +91,35 @@ const StaffForm = ({ onAdd, onClose }) => {
     }
   }, [onAdd]);
 
+  const validatePassword = (password) => {
+    if (!passwordRegex.test(password)) {
+      return "Password must be at least 8 characters, contain uppercase, lowercase, number and special character (@$!%*?&)";
+    }
+    return "";
+  };
+
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    
+    // Validate password when it changes
+    if (field === "password") {
+      setPasswordError(validatePassword(value));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate passwords match
     if (form.password !== form.confirmPassword) {
       alert("❌ Passwords do not match.");
+      return;
+    }
+
+    // Validate password strength
+    const error = validatePassword(form.password);
+    if (error) {
+      setPasswordError(error);
       return;
     }
 
@@ -130,7 +156,7 @@ const StaffForm = ({ onAdd, onClose }) => {
         onClose();
       }
     } catch (err) {
-      alert("❌ Registration failed.");
+      alert("❌ Registration failed: " + err.message);
       console.error("API error:", err);
     }
   };
@@ -155,34 +181,71 @@ const StaffForm = ({ onAdd, onClose }) => {
             className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
           />
 
-          {/* Password with toggle */}
+          {/* Password with toggle and info */}
+          <div className="space-y-2">
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={form.password}
+                onChange={(e) => handleChange("password", e.target.value)}
+                required
+                className="pr-10 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
+              />
+              <div className="absolute right-3 top-2 flex space-x-1">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordInfo(!showPasswordInfo)}
+                  className="text-slate-500 dark:text-slate-400 hover:text-blue-500"
+                >
+                  <Info size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="text-slate-500 dark:text-slate-400 hover:text-blue-500"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            
+            {passwordError && (
+              <p className="text-red-500 text-xs">{passwordError}</p>
+            )}
+            
+            {showPasswordInfo && (
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-700 dark:text-blue-300">
+                <p>Password must contain:</p>
+                <ul className="list-disc pl-4 mt-1">
+                  <li>At least 8 characters</li>
+                  <li>One uppercase letter (A-Z)</li>
+                  <li>One lowercase letter (a-z)</li>
+                  <li>One number (0-9)</li>
+                  <li>One special character (@$!%*?&)</li>
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Confirm Password with toggle */}
           <div className="relative">
             <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={form.password}
-              onChange={(e) => handleChange("password", e.target.value)}
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirm Password"
+              value={form.confirmPassword}
+              onChange={(e) => handleChange("confirmPassword", e.target.value)}
               required
               className="pr-10 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
             />
             <button
               type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-2 text-slate-500 dark:text-slate-400"
+              onClick={() => setShowConfirmPassword((prev) => !prev)}
+              className="absolute right-3 top-2 text-slate-500 dark:text-slate-400 hover:text-blue-500"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-
-          {/* Confirm Password */}
-          <Input
-            type="password"
-            placeholder="Confirm Password"
-            value={form.confirmPassword}
-            onChange={(e) => handleChange("confirmPassword", e.target.value)}
-            required
-            className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
-          />
 
           {/* Contact Input */}
           <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-950 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-400 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-slate-950">
@@ -222,7 +285,7 @@ const StaffForm = ({ onAdd, onClose }) => {
             </SelectContent>
           </Select>
 
-                    <Button
+          <Button
             type="submit"
             className="w-full bg-[#60A5FA] hover:bg-[#3B82F6] text-white rounded-md px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
           >
