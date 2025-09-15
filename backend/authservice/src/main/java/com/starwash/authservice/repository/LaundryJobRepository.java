@@ -32,7 +32,4 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
     // In LaundryJobRepository.java
     List<LaundryJob> findByExpiredTrueAndDisposedFalse();
 
-
-    
-    List<LaundryJob> findByTransactionIdIn(List<String> transactionIds);
 }

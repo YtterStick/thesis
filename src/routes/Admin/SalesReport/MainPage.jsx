@@ -3,10 +3,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
+
+// Helper function to format date as MM/DD/YYYY (matching backend pattern)
+const formatDateForBackend = (dateString) => {
+  const date = new Date(dateString);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${month}/${day}/${year}`;
+};
 
 // Custom Tooltip Components
 const CustomBarTooltip = ({ active, payload, label }) => {
@@ -62,6 +71,7 @@ const SalesReportPage = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [datesSwapped, setDatesSwapped] = useState(false);
     const { toast } = useToast();
 
     // State for backend data
@@ -90,14 +100,52 @@ const SalesReportPage = () => {
         try {
             setIsLoading(true);
             const token = localStorage.getItem("authToken");
+            
+            // Reset swap indicator
+            setDatesSwapped(false);
+
+            // Validate custom date range
+            let requestStartDate = startDate;
+            let requestEndDate = endDate;
+            
+            if (dateRange === "custom") {
+                if (!startDate || !endDate) {
+                    toast({ 
+                        title: "Error", 
+                        description: "Please select both start and end dates for custom range", 
+                        variant: "destructive" 
+                    });
+                    setIsLoading(false);
+                    return;
+                }
+                
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                
+                // Auto-swap if start date is after end date
+                if (start > end) {
+                    // Swap dates for the request
+                    requestStartDate = endDate;
+                    requestEndDate = startDate;
+                    setDatesSwapped(true);
+                    
+                    toast({ 
+                        title: "Info", 
+                        description: "Start date was after end date. Dates have been auto-swapped.", 
+                        variant: "default" 
+                    });
+                }
+            }
 
             // Build query parameters
             const params = new URLSearchParams();
             if (dateRange !== "custom") {
                 params.append("dateRange", dateRange);
             } else {
-                if (startDate) params.append("startDate", startDate);
-                if (endDate) params.append("endDate", endDate);
+                // For custom range, we need to explicitly set dateRange to "custom"
+                params.append("dateRange", "custom");
+                if (requestStartDate) params.append("startDate", formatDateForBackend(requestStartDate));
+                if (requestEndDate) params.append("endDate", formatDateForBackend(requestEndDate));
             }
             if (serviceTypeFilter !== "all") {
                 params.append("serviceType", serviceTypeFilter);
@@ -111,7 +159,15 @@ const SalesReportPage = () => {
             });
 
             if (!response.ok) {
-                throw new Error("Failed to fetch sales report");
+                // Handle different error statuses
+                if (response.status === 400) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || "Invalid request parameters");
+                } else if (response.status === 401) {
+                    throw new Error("Authentication failed");
+                } else {
+                    throw new Error("Failed to fetch sales report");
+                }
             }
 
             const data = await response.json();
@@ -138,13 +194,20 @@ const SalesReportPage = () => {
             setIsLoading(false);
         } catch (error) {
             console.error(error);
-            toast({ title: "Error", description: "Failed to load sales report", variant: "destructive" });
+            toast({ 
+                title: "Error", 
+                description: error.message || "Failed to load sales report", 
+                variant: "destructive" 
+            });
             setIsLoading(false);
         }
     };
 
     const handleDateRangeChange = (value) => {
         setDateRange(value);
+        // Reset swap indicator when changing date range
+        setDatesSwapped(false);
+        
         // Set dates based on selection
         const today = new Date();
         switch (value) {
@@ -172,6 +235,30 @@ const SalesReportPage = () => {
                 break;
             default:
                 break;
+        }
+    };
+
+    const handleStartDateChange = (newStartDate) => {
+        setStartDate(newStartDate);
+        if (endDate && new Date(newStartDate) > new Date(endDate)) {
+            setEndDate(newStartDate); // Automatically set end date to match start date
+            toast({
+                title: "Info",
+                description: "End date automatically adjusted to match start date",
+                variant: "default"
+            });
+        }
+    };
+
+    const handleEndDateChange = (newEndDate) => {
+        setEndDate(newEndDate);
+        if (startDate && new Date(newEndDate) < new Date(startDate)) {
+            setStartDate(newEndDate); // Automatically set start date to match end date
+            toast({
+                title: "Info",
+                description: "Start date automatically adjusted to match end date",
+                variant: "default"
+            });
         }
     };
 
@@ -219,6 +306,13 @@ const SalesReportPage = () => {
                     <CardTitle className="text-slate-900 dark:text-slate-50">Report Filters</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
+                    {datesSwapped && (
+                        <div className="mb-4 flex items-center rounded-md bg-blue-50 p-3 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                            <Info className="mr-2 h-4 w-4" />
+                            <span>Start date was after end date. Dates have been auto-swapped.</span>
+                        </div>
+                    )}
+                    
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">Date Range</label>
@@ -246,7 +340,8 @@ const SalesReportPage = () => {
                                     <Input
                                         type="date"
                                         value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
+                                        max={endDate || undefined} // Disable dates after endDate
+                                        onChange={(e) => handleStartDateChange(e.target.value)}
                                         className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
                                     />
                                 </div>
@@ -255,7 +350,8 @@ const SalesReportPage = () => {
                                     <Input
                                         type="date"
                                         value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
+                                        min={startDate || undefined} // Disable dates before startDate
+                                        onChange={(e) => handleEndDateChange(e.target.value)}
                                         className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
                                     />
                                 </div>
@@ -462,7 +558,6 @@ const SalesReportPage = () => {
                                     <th className="p-4 text-left text-slate-900 dark:text-slate-100">Service</th>
                                     <th className="p-4 text-left text-slate-900 dark:text-slate-100">Amount</th>
                                     <th className="p-4 text-left text-slate-900 dark:text-slate-100">Date</th>
-                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -475,18 +570,11 @@ const SalesReportPage = () => {
                                         <td className="p-4 text-slate-600 dark:text-slate-300">{transaction.serviceType}</td>
                                         <td className="p-4 font-medium text-slate-900 dark:text-slate-100">₱{transaction.totalPrice}</td>
                                         <td className="p-4 text-slate-600 dark:text-slate-300">
-                                            {new Date(transaction.createdAt).toLocaleDateString()}
-                                        </td>
-                                        <td className="p-4">
-                                            <Badge
-                                                className={
-                                                    transaction.status === "CLAIMED"
-                                                        ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                                }
-                                            >
-                                                {transaction.status === "CLAIMED" ? "Claimed" : "Unclaimed"}
-                                            </Badge>
+                                            {new Date(transaction.createdAt).toLocaleDateString('en-US', {
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                year: 'numeric'
+                                            })}
                                         </td>
                                     </tr>
                                 ))}

@@ -1,13 +1,10 @@
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.Transaction;
-import com.starwash.authservice.model.LaundryJob;
 import com.starwash.authservice.repository.TransactionRepository;
-import com.starwash.authservice.repository.LaundryJobRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Function;
@@ -17,29 +14,23 @@ import java.util.stream.Collectors;
 public class ReportService {
 
     private final TransactionRepository transactionRepository;
-    private final LaundryJobRepository laundryJobRepository;
 
-    public ReportService(TransactionRepository transactionRepository, 
-                         LaundryJobRepository laundryJobRepository) {
+    public ReportService(TransactionRepository transactionRepository) {
         this.transactionRepository = transactionRepository;
-        this.laundryJobRepository = laundryJobRepository;
     }
 
     public Map<String, Object> generateSalesReport(String dateRange, LocalDate startDate, LocalDate endDate,
             String serviceType) {
         Map<String, Object> reportData = new HashMap<>();
 
-        // Determine date range
         LocalDate[] dates = calculateDateRange(dateRange, startDate, endDate);
         LocalDate reportStartDate = dates[0];
         LocalDate reportEndDate = dates[1];
 
-        // Fetch transactions
         List<Transaction> transactions = transactionRepository.findByCreatedAtBetween(
                 reportStartDate.atStartOfDay(),
                 reportEndDate.plusDays(1).atStartOfDay());
 
-        // Filter by service type if specified
         if (serviceType != null && !"all".equals(serviceType)) {
             transactions = transactions.stream()
                     .filter(t -> serviceType.equals(t.getServiceName()))
@@ -49,13 +40,10 @@ public class ReportService {
         // Generate sales trend data
         List<Map<String, Object>> salesTrend = generateSalesTrend(transactions, reportStartDate, reportEndDate);
 
-        // Generate service distribution data
         List<Map<String, Object>> serviceDistribution = generateServiceDistribution(transactions);
 
-        // Generate summary data
         Map<String, Object> summary = generateSummary(transactions, reportStartDate, reportEndDate);
 
-        // Get unique customer transactions (latest per customer)
         List<Map<String, Object>> uniqueCustomerTransactions = getUniqueCustomerTransactions(transactions);
 
         reportData.put("salesTrend", salesTrend);
@@ -69,10 +57,21 @@ public class ReportService {
     private LocalDate[] calculateDateRange(String dateRange, LocalDate startDate, LocalDate endDate) {
         LocalDate today = LocalDate.now();
 
-        if ("custom".equals(dateRange) && startDate != null && endDate != null) {
+        // Handle custom date range with validation
+        if ("custom".equals(dateRange)) {
+            if (startDate == null || endDate == null) {
+                throw new IllegalArgumentException("Both start date and end date are required for custom range");
+            }
+
+            // Ensure start date is before or equal to end date
+            if (startDate.isAfter(endDate)) {
+                // Swap dates if start is after end
+                return new LocalDate[] { endDate, startDate };
+            }
             return new LocalDate[] { startDate, endDate };
         }
 
+        // Handle predefined date ranges
         switch (dateRange) {
             case "today":
                 return new LocalDate[] { today, today };
@@ -135,94 +134,81 @@ public class ReportService {
                 .collect(Collectors.toList());
     }
 
-   private Map<String, Object> generateSummary(List<Transaction> transactions, LocalDate startDate,
-        LocalDate endDate) {
-    Map<String, Object> summary = new HashMap<>();
+    private Map<String, Object> generateSummary(List<Transaction> transactions, LocalDate startDate,
+            LocalDate endDate) {
+        Map<String, Object> summary = new HashMap<>();
 
-    // Calculate totals
-    double totalSales = transactions.stream()
-            .mapToDouble(Transaction::getTotalPrice)
-            .sum();
+        // Calculate totals
+        double totalSales = transactions.stream()
+                .mapToDouble(Transaction::getTotalPrice)
+                .sum();
 
-    long totalTransactions = transactions.size();
-    
-    // Calculate total loads (sum of serviceQuantity from all transactions)
-    long totalLoads = transactions.stream()
-            .mapToLong(Transaction::getServiceQuantity)
-            .sum();
+        long totalTransactions = transactions.size();
 
-    long totalCustomers = transactions.stream()
-            .map(Transaction::getCustomerName)
-            .distinct()
-            .count();
+        // Calculate total loads (sum of serviceQuantity from all transactions)
+        long totalLoads = transactions.stream()
+                .mapToLong(Transaction::getServiceQuantity)
+                .sum();
 
-    // Fix average order value calculation - total sales divided by number of transactions
-    double averageOrderValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+        long totalCustomers = transactions.stream()
+                .map(Transaction::getCustomerName)
+                .distinct()
+                .count();
 
-    // Get previous period for comparison
-    long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
-    LocalDate previousStartDate = startDate.minusDays(daysBetween);
-    LocalDate previousEndDate = endDate.minusDays(daysBetween);
+        // Fix average order value calculation - total sales divided by number of
+        // transactions
+        double averageOrderValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
 
-    List<Transaction> previousTransactions = transactionRepository.findByCreatedAtBetween(
-            previousStartDate.atStartOfDay(),
-            previousEndDate.plusDays(1).atStartOfDay());
+        // Get previous period for comparison
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        LocalDate previousStartDate = startDate.minusDays(daysBetween);
+        LocalDate previousEndDate = endDate.minusDays(daysBetween);
 
-    double previousSales = previousTransactions.stream()
-            .mapToDouble(Transaction::getTotalPrice)
-            .sum();
+        List<Transaction> previousTransactions = transactionRepository.findByCreatedAtBetween(
+                previousStartDate.atStartOfDay(),
+                previousEndDate.plusDays(1).atStartOfDay());
 
-    double growthPercentage = previousSales > 0 ? ((totalSales - previousSales) / previousSales) * 100 : 0;
+        double previousSales = previousTransactions.stream()
+                .mapToDouble(Transaction::getTotalPrice)
+                .sum();
 
-    summary.put("totalSales", totalSales);
-    summary.put("totalTransactions", totalTransactions);
-    summary.put("totalLoads", totalLoads); // Add total loads to summary
-    summary.put("totalCustomers", totalCustomers);
-    summary.put("averageOrderValue", averageOrderValue);
-    summary.put("todaySales", totalSales);
-    summary.put("yesterdaySales", previousSales);
-    summary.put("growthPercentage", growthPercentage);
+        double growthPercentage = previousSales > 0 ? ((totalSales - previousSales) / previousSales) * 100 : 0;
 
-    return summary;
-}
+        summary.put("totalSales", totalSales);
+        summary.put("totalTransactions", totalTransactions);
+        summary.put("totalLoads", totalLoads); // Add total loads to summary
+        summary.put("totalCustomers", totalCustomers);
+        summary.put("averageOrderValue", averageOrderValue);
+        summary.put("todaySales", totalSales);
+        summary.put("yesterdaySales", previousSales);
+        summary.put("growthPercentage", growthPercentage);
+
+        return summary;
+    }
 
     private List<Map<String, Object>> getUniqueCustomerTransactions(List<Transaction> transactions) {
         // Group transactions by customer name and get the latest transaction for each
         Map<String, Transaction> latestTransactionsByCustomer = transactions.stream()
-            .collect(Collectors.toMap(
-                Transaction::getCustomerName,
-                Function.identity(),
-                (existing, replacement) -> 
-                    replacement.getCreatedAt().isAfter(existing.getCreatedAt()) ? replacement : existing
-            ));
-
-        // Fetch laundry jobs for all transactions
-        List<String> transactionIds = latestTransactionsByCustomer.values().stream()
-            .map(Transaction::getId)
-            .collect(Collectors.toList());
-
-        List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
-        Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
-            .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+                .collect(Collectors.toMap(
+                        Transaction::getCustomerName,
+                        Function.identity(),
+                        (existing, replacement) -> replacement.getCreatedAt().isAfter(existing.getCreatedAt())
+                                ? replacement
+                                : existing));
 
         // Convert to list and sort by date descending
         return latestTransactionsByCustomer.values().stream()
-            .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-            .map(transaction -> {
-                Map<String, Object> transactionData = new HashMap<>();
-                transactionData.put("id", transaction.getId());
-                transactionData.put("customerName", transaction.getCustomerName());
-                transactionData.put("serviceType", transaction.getServiceName());
-                transactionData.put("totalPrice", transaction.getTotalPrice());
-                transactionData.put("createdAt", transaction.getCreatedAt());
-                
-                // Get status from LaundryJob instead of Transaction
-                LaundryJob job = laundryJobMap.get(transaction.getId());
-                String status = (job != null) ? job.getPickupStatus() : "UNKNOWN";
-                transactionData.put("status", status);
-                
-                return transactionData;
-            })
-            .collect(Collectors.toList());
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(transaction -> {
+                    Map<String, Object> transactionData = new HashMap<>();
+                    transactionData.put("id", transaction.getId());
+                    transactionData.put("customerName", transaction.getCustomerName());
+                    transactionData.put("serviceType", transaction.getServiceName());
+                    transactionData.put("totalPrice", transaction.getTotalPrice());
+                    transactionData.put("createdAt", transaction.getCreatedAt());
+                    // Remove status computation
+                    return transactionData;
+                })
+                .collect(Collectors.toList());
     }
 }

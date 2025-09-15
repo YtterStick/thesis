@@ -23,20 +23,25 @@ public class ReportController {
     public ResponseEntity<Map<String, Object>> getSalesReport(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) String dateRange,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "MM/dd/yyyy") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "MM/dd/yyyy") LocalDate endDate,
             @RequestParam(required = false) String serviceType) {
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
 
         try {
-            Map<String, Object> reportData = reportService.generateSalesReport(dateRange, startDate, endDate, serviceType);
+            Map<String, Object> reportData = reportService.generateSalesReport(dateRange, startDate, endDate,
+                    serviceType);
             return ResponseEntity.ok(reportData);
+        } catch (IllegalArgumentException e) {
+            // Return 400 for validation errors
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
+            // Log the exception for debugging
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
     }
-
 }

@@ -444,7 +444,6 @@ public class LaundryJobService {
         }
     }
 
-    /** Auto advance after step ends (only WASHING/DRYING) */
     @CacheEvict(value = "laundryJobs", allEntries = true)
     private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
@@ -514,7 +513,6 @@ public class LaundryJobService {
                 .collect(Collectors.toList());
     }
 
-    /** Scheduled task to check for expired jobs (runs every hour) */
     @Scheduled(fixedRate = 3600000) // 1 hour in milliseconds
     public void checkForExpiredJobs() {
         LocalDateTime now = LocalDateTime.now();
