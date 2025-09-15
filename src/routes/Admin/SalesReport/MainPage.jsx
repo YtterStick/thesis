@@ -1,474 +1,547 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Calendar, 
-  TrendingUp, 
-  DollarSign, 
-  Users, 
-  Package,
-  BarChart3,
-  PieChart,
-  FileText
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line
-} from 'recharts';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
+
+// Custom Tooltip Components
+const CustomBarTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        const isDarkMode = document.documentElement.classList.contains("dark");
+
+        return (
+            <div
+                className={`rounded-lg border p-3 shadow-lg ${
+                    isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-slate-200 bg-white text-slate-900"
+                }`}
+            >
+                <p className="font-medium">{label}</p>
+                <p className="text-sm">
+                    Sales: <span className="font-medium">₱{payload[0].value.toLocaleString()}</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
+
+const CustomPieTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const data = payload[0].payload;
+
+        return (
+            <div
+                className={`rounded-lg border p-3 shadow-lg ${
+                    isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-slate-200 bg-white text-slate-900"
+                }`}
+            >
+                <p className="font-medium">{data.name}</p>
+                <p className="text-sm">
+                    Count: <span className="font-medium">{data.value} transactions</span>
+                </p>
+                <p className="text-sm">
+                    Percentage: <span className="font-medium">{(data.percent * 100).toFixed(1)}%</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
 
 const SalesReportPage = () => {
-  const [reports, setReports] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [dateRange, setDateRange] = useState("today");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
-  const [serviceTypeFilter, setServiceTypeFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState(false);
+    const [dateRange, setDateRange] = useState("today");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [serviceTypeFilter, setServiceTypeFilter] = useState("all");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const { toast } = useToast();
 
-  // Sample data for charts and reports
-  const salesData = [
-    { day: 'Mon', sales: 12500, transactions: 45, customers: 38 },
-    { day: 'Tue', sales: 15800, transactions: 52, customers: 45 },
-    { day: 'Wed', sales: 14200, transactions: 48, customers: 42 },
-    { day: 'Thu', sales: 18900, transactions: 61, customers: 53 },
-    { day: 'Fri', sales: 21500, transactions: 72, customers: 65 },
-    { day: 'Sat', sales: 27800, transactions: 89, customers: 78 },
-    { day: 'Sun', sales: 19500, transactions: 63, customers: 56 },
-  ];
-
-  const paymentMethodsData = [
-    { name: 'Cash', value: 65, color: '#10b981' },
-    { name: 'GCash', value: 25, color: '#3b82f6' },
-    { name: 'Bank Transfer', value: 10, color: '#8b5cf6' },
-  ];
-
-  const serviceTypeData = [
-    { name: 'Wash & Fold', value: 45, color: '#f59e0b' },
-    { name: 'Dry Clean', value: 30, color: '#ef4444' },
-    { name: 'Ironing', value: 15, color: '#06b6d4' },
-    { name: 'Special', value: 10, color: '#8b5cf6' },
-  ];
-
-  const recentTransactions = [
-    { id: 1, customer: 'John Doe', amount: 1250, paymentMethod: 'Cash', service: 'Wash & Fold', date: '2024-01-15 14:30', status: 'completed' },
-    { id: 2, customer: 'Jane Smith', amount: 850, paymentMethod: 'GCash', service: 'Dry Clean', date: '2024-01-15 13:15', status: 'completed' },
-    { id: 3, customer: 'Mike Johnson', amount: 2100, paymentMethod: 'Cash', service: 'Wash & Fold', date: '2024-01-15 12:45', status: 'completed' },
-    { id: 4, customer: 'Sarah Wilson', amount: 950, paymentMethod: 'Bank Transfer', service: 'Ironing', date: '2024-01-15 11:20', status: 'completed' },
-    { id: 5, customer: 'Tom Brown', amount: 1750, paymentMethod: 'GCash', service: 'Special', date: '2024-01-15 10:05', status: 'completed' },
-  ];
-
-  const summaryData = {
-    totalSales: 125800,
-    totalTransactions: 370,
-    totalCustomers: 320,
-    averageOrderValue: 340,
-    todaySales: 19500,
-    yesterdaySales: 27800,
-    growthPercentage: -29.8
-  };
-
-  useEffect(() => {
-    fetchSalesReport();
-  }, [dateRange, startDate, endDate, paymentMethodFilter, serviceTypeFilter]);
-
-  const fetchSalesReport = async () => {
-    try {
-      setIsLoading(true);
-      // Simulate API call - replace with actual API endpoint
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Error", description: "Failed to load sales report", variant: "destructive" });
-      setIsLoading(false);
-    }
-  };
-
-  const handleExportReport = (format) => {
-    toast({
-      title: "Export Started",
-      description: `Exporting report as ${format.toUpperCase()}...`,
+    // State for backend data
+    const [salesData, setSalesData] = useState([]);
+    const [serviceDistributionData, setServiceDistributionData] = useState([]);
+    const [recentTransactions, setRecentTransactions] = useState([]);
+    const [summaryData, setSummaryData] = useState({
+        totalSales: 0,
+        totalTransactions: 0,
+        totalCustomers: 0,
+        averageOrderValue: 0,
+        todaySales: 0,
+        yesterdaySales: 0,
+        growthPercentage: 0,
     });
-    // Simulate export functionality
-    setTimeout(() => {
-      toast({
-        title: "Export Complete",
-        description: `Report exported as ${format.toUpperCase()} successfully`,
-      });
-    }, 2000);
-  };
 
-  const handleDateRangeChange = (value) => {
-    setDateRange(value);
-    // Set dates based on selection
-    const today = new Date();
-    switch (value) {
-      case 'today':
-        setStartDate(today.toISOString().split('T')[0]);
-        setEndDate(today.toISOString().split('T')[0]);
-        break;
-      case 'yesterday':
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        setStartDate(yesterday.toISOString().split('T')[0]);
-        setEndDate(yesterday.toISOString().split('T')[0]);
-        break;
-      case 'week':
-        const weekStart = new Date(today);
-        weekStart.setDate(weekStart.getDate() - 7);
-        setStartDate(weekStart.toISOString().split('T')[0]);
-        setEndDate(today.toISOString().split('T')[0]);
-        break;
-      case 'month':
-        const monthStart = new Date(today);
-        monthStart.setDate(1);
-        setStartDate(monthStart.toISOString().split('T')[0]);
-        setEndDate(today.toISOString().split('T')[0]);
-        break;
-      default:
-        break;
-    }
-  };
+    useEffect(() => {
+        handleDateRangeChange("today"); // Set initial date range
+    }, []);
 
-  const filteredTransactions = recentTransactions.filter(transaction =>
-    transaction.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    transaction.paymentMethod.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    transaction.service.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    useEffect(() => {
+        fetchSalesReport();
+    }, [dateRange, startDate, endDate, serviceTypeFilter]);
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Sales Reports</h1>
-          <p className="mt-1 text-slate-600 dark:text-slate-400">Analyze and track your business performance</p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300"
-            onClick={() => handleExportReport('pdf')}
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
-          <Button 
-            variant="outline" 
-            className="border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300"
-            onClick={() => handleExportReport('excel')}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Excel
-          </Button>
-        </div>
-      </div>
+    const fetchSalesReport = async () => {
+        try {
+            setIsLoading(true);
+            const token = localStorage.getItem("authToken");
 
-      {/* Filters */}
-      <Card className="shadow-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-        <CardHeader className="bg-slate-100 dark:bg-slate-800 rounded-t-lg">
-          <CardTitle className="text-slate-900 dark:text-slate-50">Report Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground mb-2 block">Date Range</label>
-              <Select value={dateRange} onValueChange={handleDateRangeChange}>
-                <SelectTrigger className="bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700">
-                  <SelectValue placeholder="Select date range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="yesterday">Yesterday</SelectItem>
-                  <SelectItem value="week">Last 7 Days</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                  <SelectItem value="custom">Custom Range</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (dateRange !== "custom") {
+                params.append("dateRange", dateRange);
+            } else {
+                if (startDate) params.append("startDate", startDate);
+                if (endDate) params.append("endDate", endDate);
+            }
+            if (serviceTypeFilter !== "all") {
+                params.append("serviceType", serviceTypeFilter);
+            }
 
-            {dateRange === 'custom' && (
-              <>
+            const response = await fetch(`http://localhost:8080/api/reports/sales?${params}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch sales report");
+            }
+
+            const data = await response.json();
+
+            // Update state with backend data
+            setSalesData(data.salesTrend || []);
+            setServiceDistributionData(data.serviceDistribution || []);
+            setRecentTransactions(data.recentTransactions || []);
+            setSummaryData(
+                data.summary || {
+                    totalSales: 0,
+                    totalTransactions: 0,
+                    totalCustomers: 0,
+                    averageOrderValue: 0,
+                    todaySales: 0,
+                    yesterdaySales: 0,
+                    growthPercentage: 0,
+                },
+            );
+
+            // Reset to first page when data changes
+            setCurrentPage(1);
+
+            setIsLoading(false);
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Failed to load sales report", variant: "destructive" });
+            setIsLoading(false);
+        }
+    };
+
+    const handleDateRangeChange = (value) => {
+        setDateRange(value);
+        // Set dates based on selection
+        const today = new Date();
+        switch (value) {
+            case "today":
+                setStartDate(today.toISOString().split("T")[0]);
+                setEndDate(today.toISOString().split("T")[0]);
+                break;
+            case "yesterday":
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                setStartDate(yesterday.toISOString().split("T")[0]);
+                setEndDate(yesterday.toISOString().split("T")[0]);
+                break;
+            case "week":
+                const weekStart = new Date(today);
+                weekStart.setDate(weekStart.getDate() - 7);
+                setStartDate(weekStart.toISOString().split("T")[0]);
+                setEndDate(today.toISOString().split("T")[0]);
+                break;
+            case "month":
+                const monthStart = new Date(today);
+                monthStart.setDate(1);
+                setStartDate(monthStart.toISOString().split("T")[0]);
+                setEndDate(today.toISOString().split("T")[0]);
+                break;
+            default:
+                break;
+        }
+    };
+
+    // Filter transactions based on search term
+    const filteredTransactions = recentTransactions.filter(
+        (transaction) =>
+            transaction.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            transaction.serviceType.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+
+    // Calculate pagination values
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+
+    // Colors for service distribution chart
+    const SERVICE_COLORS = ["#f59e0b", "#ef4444", "#8b5cf6", "#10b981", "#3b82f6"];
+
+    // Colors for charts based on theme
+    const getChartColors = () => {
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        return {
+            text: isDarkMode ? "#d1d5db" : "#374151",
+            grid: isDarkMode ? "#4b5563" : "#e5e7eb",
+            tooltipBg: isDarkMode ? "#1f2937" : "#fff",
+            tooltipText: isDarkMode ? "#f3f4f6" : "#111827",
+        };
+    };
+
+    const chartColors = getChartColors();
+
+    return (
+        <div className="space-y-6 p-6">
+            <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground mb-2 block">Start Date</label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700"
-                  />
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Sales Reports</h1>
+                    <p className="mt-1 text-slate-600 dark:text-slate-400">Analyze and track your business performance</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground mb-2 block">End Date</label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700"
-                  />
-                </div>
-              </>
-            )}
-
-            <div>
-              <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground mb-2 block">Payment Method</label>
-              <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-                <SelectTrigger className="bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700">
-                  <SelectValue placeholder="All Methods" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Methods</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="gcash">GCash</SelectItem>
-                  <SelectItem value="bank">Bank Transfer</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground mb-2 block">Service Type</label>
-              <Select value={serviceTypeFilter} onValueChange={setServiceTypeFilter}>
-                <SelectTrigger className="bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700">
-                  <SelectValue placeholder="All Services" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Services</SelectItem>
-                  <SelectItem value="wash">Wash & Fold</SelectItem>
-                  <SelectItem value="dry">Dry Clean</SelectItem>
-                  <SelectItem value="iron">Ironing</SelectItem>
-                  <SelectItem value="special">Special</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            {/* Filters */}
+            <Card className="border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
+                <CardHeader className="rounded-t-lg bg-slate-100 dark:bg-slate-800">
+                    <CardTitle className="text-slate-900 dark:text-slate-50">Report Filters</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">Date Range</label>
+                            <Select
+                                value={dateRange}
+                                onValueChange={handleDateRangeChange}
+                            >
+                                <SelectTrigger className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
+                                    <SelectValue placeholder="Select date range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="today">Today</SelectItem>
+                                    <SelectItem value="yesterday">Yesterday</SelectItem>
+                                    <SelectItem value="week">Last 7 Days</SelectItem>
+                                    <SelectItem value="month">This Month</SelectItem>
+                                    <SelectItem value="custom">Custom Range</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Sales</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-                  ₱{summaryData.totalSales.toLocaleString()}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">
-                  <span className={summaryData.growthPercentage >= 0 ? 'text-green-600' : 'text-red-600'}>
-                    {summaryData.growthPercentage >= 0 ? '+' : ''}{summaryData.growthPercentage}%
-                  </span> from yesterday
-                </p>
-              </div>
-              <div className="p-3 bg-cyan-100 dark:bg-cyan-900/20 rounded-lg">
-                <DollarSign className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                        {dateRange === "custom" && (
+                            <>
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">Start Date</label>
+                                    <Input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">End Date</label>
+                                    <Input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
+                                    />
+                                </div>
+                            </>
+                        )}
 
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Transactions</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-                  {summaryData.totalTransactions}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">
-                  {summaryData.totalCustomers} unique customers
-                </p>
-              </div>
-              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">Service Type</label>
+                            <Select
+                                value={serviceTypeFilter}
+                                onValueChange={setServiceTypeFilter}
+                            >
+                                <SelectTrigger className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
+                                    <SelectValue placeholder="All Services" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Services</SelectItem>
+                                    <SelectItem value="Wash & Dry">Wash & Dry</SelectItem>
+                                    <SelectItem value="Wash">Wash Only</SelectItem>
+                                    <SelectItem value="Dry">Dry Only</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Avg. Order Value</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-                  ₱{summaryData.averageOrderValue}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">
-                  Per transaction
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {/* Total Income Card */}
+                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Income</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">₱{summaryData.totalSales.toLocaleString()}</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">
+                                    <span className={summaryData.growthPercentage >= 0 ? "text-green-600" : "text-red-600"}>
+                                        {summaryData.growthPercentage >= 0 ? "+" : ""}
+                                        {summaryData.growthPercentage}%
+                                    </span>{" "}
+                                    from previous period
+                                </p>
+                            </div>
+                            <div className="rounded-lg bg-cyan-100 p-3 dark:bg-cyan-900/20">
+                                <DollarSign className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Today's Sales</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-                  ₱{summaryData.todaySales.toLocaleString()}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">
-                  {recentTransactions.length} transactions today
-                </p>
-              </div>
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                {/* Transactions Card */}
+                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Transactions</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">{summaryData.totalTransactions}</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">{summaryData.totalCustomers} unique customers</p>
+                            </div>
+                            <div className="rounded-lg bg-green-100 p-3 dark:bg-green-900/20">
+                                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales Trend Chart */}
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-slate-50">Sales Trend (Last 7 Days)</CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-400">
-              Daily sales performance overview
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value) => [`₱${value.toLocaleString()}`, 'Sales']}
-                  contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0' }}
-                />
-                <Legend />
-                <Bar dataKey="sales" name="Sales" fill="#0891b2" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+                {/* Average Order Value Card */}
+                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Avg. Order Value</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">₱{summaryData.averageOrderValue.toFixed(2)}</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">Per transaction</p>
+                            </div>
+                            <div className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900/20">
+                                <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-        {/* Payment Methods Chart */}
-        <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-slate-50">Payment Methods</CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-400">
-              Distribution of payment methods used
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <RechartsPieChart>
-                <Pie
-                  data={paymentMethodsData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {paymentMethodsData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, 'Usage']} />
-              </RechartsPieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+                {/* Total Loads Card */}
+                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Loads</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">{summaryData.totalLoads}</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">Total wash loads processed</p>
+                            </div>
+                            <div className="rounded-lg bg-purple-100 p-3 dark:bg-purple-900/20">
+                                <Package className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
-      {/* Recent Transactions */}
-      <Card className="shadow-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-        <CardHeader className="bg-slate-100 dark:bg-slate-800 rounded-t-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle className="text-slate-900 dark:text-slate-50">Recent Transactions</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
-                Latest customer transactions
-              </CardDescription>
+            {/* Charts */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Sales Trend Chart */}
+                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                    <CardHeader>
+                        <CardTitle className="text-slate-900 dark:text-slate-50">Sales Trend</CardTitle>
+                        <CardDescription className="text-slate-600 dark:text-slate-400">Sales performance overview</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer
+                            width="100%"
+                            height={300}
+                        >
+                            <BarChart data={salesData}>
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke={chartColors.grid}
+                                />
+                                <XAxis
+                                    dataKey="period"
+                                    stroke={chartColors.text}
+                                    tick={{ fill: chartColors.text }}
+                                />
+                                <YAxis
+                                    stroke={chartColors.text}
+                                    tick={{ fill: chartColors.text }}
+                                />
+                                <Tooltip content={<CustomBarTooltip />} />
+                                <Legend />
+                                <Bar
+                                    dataKey="sales"
+                                    name="Sales"
+                                    fill="#0891b2"
+                                    radius={[4, 4, 0, 0]}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                {/* Service Distribution Chart */}
+                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                    <CardHeader>
+                        <CardTitle className="text-slate-900 dark:text-slate-50">Service Distribution</CardTitle>
+                        <CardDescription className="text-slate-600 dark:text-slate-400">Distribution of services used</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer
+                            width="100%"
+                            height={300}
+                        >
+                            <RechartsPieChart>
+                                <Pie
+                                    data={serviceDistributionData}
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={100}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    labelStyle={{ fill: chartColors.text }}
+                                >
+                                    {serviceDistributionData.map((entry, index) => (
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={SERVICE_COLORS[index % SERVICE_COLORS.length]}
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip content={<CustomPieTooltip />} />
+                            </RechartsPieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
             </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
-              <Input
-                placeholder="Search transactions..."
-                className="pl-8 w-full border-slate-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 shadow-sm">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-300 dark:border-slate-700">
-                  <th className="text-left p-4 text-slate-900 dark:text-slate-100">Customer</th>
-                  <th className="text-left p-4 text-slate-900 dark:text-slate-100">Service</th>
-                  <th className="text-left p-4 text-slate-900 dark:text-slate-100">Amount</th>
-                  <th className="text-left p-4 text-slate-900 dark:text-slate-100">Payment</th>
-                  <th className="text-left p-4 text-slate-900 dark:text-slate-100">Date</th>
-                  <th className="text-left p-4 text-slate-900 dark:text-slate-100">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-t border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                    <td className="p-4 font-medium text-slate-900 dark:text-slate-100">{transaction.customer}</td>
-                    <td className="p-4 text-slate-600 dark:text-slate-300">{transaction.service}</td>
-                    <td className="p-4 font-medium text-slate-900 dark:text-slate-100">₱{transaction.amount}</td>
-                    <td className="p-4">
-                      <Badge variant="outline" className="border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300">
-                        {transaction.paymentMethod}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-slate-600 dark:text-slate-300">{transaction.date}</td>
-                    <td className="p-4">
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                        {transaction.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+
+            {/* Recent Transactions */}
+            <Card className="border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
+                <CardHeader className="rounded-t-lg bg-slate-100 dark:bg-slate-800">
+                    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                        <div>
+                            <CardTitle className="text-slate-900 dark:text-slate-50">Customer Transactions</CardTitle>
+                            <CardDescription className="text-slate-600 dark:text-slate-400">
+                                Latest transaction per customer ({filteredTransactions.length} unique customers)
+                            </CardDescription>
+                        </div>
+                        <div className="relative w-full sm:w-64">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
+                            <Input
+                                placeholder="Search customers..."
+                                className="w-full border-slate-300 pl-8 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="rounded-md border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Customer</th>
+                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Service</th>
+                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Amount</th>
+                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Date</th>
+                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {currentItems.map((transaction) => (
+                                    <tr
+                                        key={transaction.id}
+                                        className="border-t border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                                    >
+                                        <td className="p-4 font-medium text-slate-900 dark:text-slate-100">{transaction.customerName}</td>
+                                        <td className="p-4 text-slate-600 dark:text-slate-300">{transaction.serviceType}</td>
+                                        <td className="p-4 font-medium text-slate-900 dark:text-slate-100">₱{transaction.totalPrice}</td>
+                                        <td className="p-4 text-slate-600 dark:text-slate-300">
+                                            {new Date(transaction.createdAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="p-4">
+                                            <Badge
+                                                className={
+                                                    transaction.status === "CLAIMED"
+                                                        ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                                                }
+                                            >
+                                                {transaction.status === "CLAIMED" ? "Claimed" : "Unclaimed"}
+                                            </Badge>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        {/* Pagination Controls */}
+                        <div className="flex items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700">
+                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredTransactions.length)} of{" "}
+                                {filteredTransactions.length} customers
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Select
+                                    value={itemsPerPage.toString()}
+                                    onValueChange={(value) => {
+                                        setItemsPerPage(parseInt(value));
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger className="w-20">
+                                        <SelectValue placeholder="10" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10</SelectItem>
+                                        <SelectItem value="25">25</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm text-slate-600 dark:text-slate-400">
+                                    Page {currentPage} of {totalPages}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
 };
 
 export default SalesReportPage;

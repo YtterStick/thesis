@@ -1,18 +1,16 @@
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.LaundryJob;
+import com.starwash.authservice.model.MachineItem;
 import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.repository.LaundryJobRepository;
 import com.starwash.authservice.repository.MachineRepository;
 import com.starwash.authservice.repository.TransactionRepository;
-import com.starwash.authservice.model.MachineItem;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,8 +21,8 @@ public class DashboardService {
     private final MachineRepository machineRepository;
 
     public DashboardService(TransactionRepository transactionRepository,
-                           LaundryJobRepository laundryJobRepository,
-                           MachineRepository machineRepository) {
+            LaundryJobRepository laundryJobRepository,
+            MachineRepository machineRepository) {
         this.transactionRepository = transactionRepository;
         this.laundryJobRepository = laundryJobRepository;
         this.machineRepository = machineRepository;
@@ -32,173 +30,170 @@ public class DashboardService {
 
     public Map<String, Object> getStaffDashboardData() {
         Map<String, Object> data = new HashMap<>();
-        
-        // Today's date
+
+        // Today's date for filtering
         LocalDate today = LocalDate.now();
-        
-        // Today's income
-        List<Transaction> todayTransactions = transactionRepository.findByCreatedAtBetween(
-            today.atStartOfDay(),
-            today.atTime(23, 59, 59)
-        );
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+
+        // Get today's transactions
+        List<Transaction> todayTransactions = transactionRepository.findByCreatedAtBetween(startOfDay, endOfDay);
+
+        // Calculate today's income
         double todayIncome = todayTransactions.stream()
-            .mapToDouble(Transaction::getTotalPrice)
-            .sum();
-        
-        // Today's loads
-        long todayLoads = todayTransactions.stream()
-            .mapToInt(Transaction::getServiceQuantity)
-            .sum();
-        
-        // Unwashed count (jobs that are not completed)
-        long unwashedCount = laundryJobRepository.findAll().stream()
-            .filter(job -> job.getLoadAssignments() != null)
-            .filter(job -> job.getLoadAssignments().stream()
-                .anyMatch(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus())))
-            .count();
-        
-        // Get COMPLETED unclaimed transactions (same as claiming page)
-        List<Map<String, Object>> completedUnclaimedTransactions = laundryJobRepository.findByPickupStatus("UNCLAIMED").stream()
-            .filter(job -> {
-                // Filter for jobs where ALL loads are completed
-                if (job.getLoadAssignments() == null) return false;
-                return job.getLoadAssignments().stream()
-                    .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()));
-            })
-            .map(job -> {
-                Map<String, Object> txData = new HashMap<>();
-                txData.put("id", job.getId());
-                txData.put("customerName", job.getCustomerName());
-                txData.put("serviceType", job.getServiceType());
-                txData.put("loadAssignments", job.getLoadAssignments());
-                // Add contact if available
-                if (job.getContact() != null) {
-                    txData.put("contact", job.getContact());
-                }
-                return txData;
-            })
-            .collect(Collectors.toList());
-        
-        // Get ALL machines with their details
-        List<Map<String, Object>> allMachines = machineRepository.findAll().stream()
-            .map(machine -> {
-                Map<String, Object> machineData = new HashMap<>();
-                machineData.put("id", machine.getId());
-                machineData.put("name", machine.getName());
-                machineData.put("type", machine.getType());
-                machineData.put("status", machine.getStatus());
-                
-                // Find if this machine is currently in use by any load
-                LocalDateTime endTime = findMachineEndTime(machine.getId());
-                if (endTime != null) {
-                    machineData.put("endTime", endTime.toString());
-                }
-                
-                return machineData;
-            })
-            .collect(Collectors.toList());
-        
+                .mapToDouble(Transaction::getTotalPrice)
+                .sum();
+
+        // Calculate today's loads
+        int todayLoads = todayTransactions.stream()
+                .mapToInt(Transaction::getServiceQuantity)
+                .sum();
+
+        // Get unwashed count (jobs that are not completed)
+        int unwashedCount = (int) laundryJobRepository.findAll().stream()
+                .filter(job -> job.getLoadAssignments() != null)
+                .flatMap(job -> job.getLoadAssignments().stream())
+                .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                .count();
+
+        // Get completed but unclaimed transactions
+        List<LaundryJob> completedUnclaimedJobs = laundryJobRepository.findAll().stream()
+                .filter(job -> job.getLoadAssignments() != null &&
+                        job.getLoadAssignments().stream()
+                                .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                .filter(job -> !job.isExpired()) // Exclude expired jobs
+                .collect(Collectors.toList());
+
+        int unclaimedCount = completedUnclaimedJobs.size();
+
+        // Get all machines
+        List<MachineItem> allMachines = machineRepository.findAll();
+
         data.put("todayIncome", todayIncome);
         data.put("todayLoads", todayLoads);
         data.put("unwashedCount", unwashedCount);
-        data.put("unclaimedCount", completedUnclaimedTransactions.size()); // Count of completed unclaimed
+        data.put("unclaimedCount", unclaimedCount);
         data.put("allMachines", allMachines);
-        data.put("completedUnclaimedTransactions", completedUnclaimedTransactions); // Changed from unclaimedTransactions
-        
+        data.put("completedUnclaimedTransactions", completedUnclaimedJobs);
+
         return data;
     }
 
-    private LocalDateTime findMachineEndTime(String machineId) {
-        // Find all laundry jobs that might be using this machine
-        List<LaundryJob> jobs = laundryJobRepository.findAll();
-        
-        for (LaundryJob job : jobs) {
-            if (job.getLoadAssignments() != null) {
-                for (LaundryJob.LoadAssignment load : job.getLoadAssignments()) {
-                    if (machineId.equals(load.getMachineId()) && 
-                        load.getEndTime() != null && 
-                        load.getEndTime().isAfter(LocalDateTime.now())) {
-                        return load.getEndTime();
-                    }
-                }
-            }
+    public Map<String, Object> getAdminDashboardData() {
+        Map<String, Object> data = new HashMap<>();
+
+        // Get all transactions for total calculations
+        List<Transaction> allTransactions = transactionRepository.findAll();
+
+        // Calculate total income (all time)
+        double totalIncome = allTransactions.stream()
+                .mapToDouble(Transaction::getTotalPrice)
+                .sum();
+
+        // Calculate total loads (all time)
+        int totalLoads = allTransactions.stream()
+                .mapToInt(Transaction::getServiceQuantity)
+                .sum();
+
+        // Get unwashed count (same as staff dashboard)
+        int unwashedCount = (int) laundryJobRepository.findAll().stream()
+                .filter(job -> job.getLoadAssignments() != null)
+                .flatMap(job -> job.getLoadAssignments().stream())
+                .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                .count();
+
+        // Get ALL unclaimed transactions (including expired)
+        List<LaundryJob> allUnclaimedJobs = laundryJobRepository.findAll().stream()
+                .filter(job -> job.getLoadAssignments() != null &&
+                        job.getLoadAssignments().stream()
+                                .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                .collect(Collectors.toList());
+
+        int totalUnclaimed = allUnclaimedJobs.size();
+
+        // Generate overview data for the chart (current year)
+        int currentYear = LocalDate.now().getYear();
+        LocalDate startOfYear = LocalDate.of(currentYear, 1, 1);
+        LocalDate endOfYear = LocalDate.of(currentYear, 12, 31);
+
+        Map<String, Double> monthlyIncome = new LinkedHashMap<>();
+
+        // Initialize with zeros for all months
+        String[] monthNames = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        for (String month : monthNames) {
+            monthlyIncome.put(month, 0.0);
         }
-        return null;
-    }
 
-    // Helper method to get active machines count by type
-    public Map<String, Long> getActiveMachinesCount() {
-        List<MachineItem> allMachines = machineRepository.findAll();
-        
-        long activeWashers = allMachines.stream()
-            .filter(machine -> "WASHER".equalsIgnoreCase(machine.getType()))
-            .filter(machine -> "In Use".equalsIgnoreCase(machine.getStatus()))
-            .count();
-            
-        long activeDryers = allMachines.stream()
-            .filter(machine -> "DRYER".equalsIgnoreCase(machine.getType()))
-            .filter(machine -> "In Use".equalsIgnoreCase(machine.getStatus()))
-            .count();
-            
-        Map<String, Long> counts = new HashMap<>();
-        counts.put("activeWashers", activeWashers);
-        counts.put("activeDryers", activeDryers);
-        
-        return counts;
-    }
+        // Fill with actual data
+        allTransactions.stream()
+                .filter(tx -> {
+                    LocalDate txDate = tx.getCreatedAt().toLocalDate();
+                    return !txDate.isBefore(startOfYear) && !txDate.isAfter(endOfYear);
+                })
+                .forEach(tx -> {
+                    int month = tx.getCreatedAt().getMonthValue();
+                    String monthName = monthNames[month - 1];
+                    monthlyIncome.put(monthName, monthlyIncome.get(monthName) + tx.getTotalPrice());
+                });
 
-    // Helper method to get machines that will finish soon (within 5 minutes)
-    public List<Map<String, Object>> getMachinesFinishingSoon() {
-        return machineRepository.findAll().stream()
-            .map(machine -> {
-                Map<String, Object> machineInfo = findMachineUsageInfo(machine.getId());
-                if (machineInfo != null && machineInfo.containsKey("endTime")) {
-                    LocalDateTime endTime = LocalDateTime.parse((String) machineInfo.get("endTime"));
-                    LocalDateTime now = LocalDateTime.now();
-                    
-                    if (endTime.isAfter(now) && endTime.isBefore(now.plusMinutes(5))) {
-                        Map<String, Object> finishingMachine = new HashMap<>();
-                        finishingMachine.put("id", machine.getId());
-                        finishingMachine.put("name", machine.getName());
-                        finishingMachine.put("type", machine.getType());
-                        finishingMachine.put("endTime", machineInfo.get("endTime"));
-                        finishingMachine.put("customer", machineInfo.get("customer"));
-                        finishingMachine.put("loadNumber", machineInfo.get("loadNumber"));
-                        return finishingMachine;
-                    }
-                }
-                return null;
-            })
-            .filter(machine -> machine != null)
-            .collect(Collectors.toList());
-    }
+        // Format for frontend
+        List<Map<String, Object>> overviewData = monthlyIncome.entrySet().stream()
+                .map(entry -> {
+                    Map<String, Object> monthData = new HashMap<>();
+                    monthData.put("name", entry.getKey());
+                    monthData.put("total", entry.getValue());
+                    return monthData;
+                })
+                .collect(Collectors.toList());
 
-    private Map<String, Object> findMachineUsageInfo(String machineId) {
-        // Find all laundry jobs that might be using this machine
-        List<LaundryJob> jobs = laundryJobRepository.findAll();
-        
-        for (LaundryJob job : jobs) {
-            if (job.getLoadAssignments() != null) {
-                for (LaundryJob.LoadAssignment load : job.getLoadAssignments()) {
-                    if (machineId.equals(load.getMachineId()) && 
-                        load.getEndTime() != null) {
-                        
-                        Map<String, Object> usageInfo = new HashMap<>();
-                        usageInfo.put("endTime", load.getEndTime().toString());
-                        
-                        // Add customer info for context
-                        if (job.getCustomerName() != null) {
-                            usageInfo.put("customer", job.getCustomerName());
+        // Format unclaimed list for frontend - similar to staff dashboard
+        List<Map<String, Object>> unclaimedList = allUnclaimedJobs.stream()
+                .map(job -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("id", job.getId());
+                    item.put("customerName", job.getCustomerName());
+                    item.put("serviceType", job.getServiceType());
+
+                    // Get the number of loads from load assignments
+                    int loadCount = job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0;
+                    item.put("loadCount", loadCount);
+
+                    // Get the due date or created date
+                    if (job.getDueDate() != null) {
+                        item.put("date",
+                                job.getDueDate().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy")));
+                    } else {
+                        // Fallback to transaction date if due date is not available
+                        Optional<Transaction> transaction = transactionRepository
+                                .findByInvoiceNumber(job.getTransactionId());
+                        if (transaction.isPresent() && transaction.get().getCreatedAt() != null) {
+                            item.put("date", transaction.get().getCreatedAt()
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy")));
+                        } else {
+                            item.put("date", "N/A");
                         }
-                        
-                        // Add load number for context
-                        usageInfo.put("loadNumber", load.getLoadNumber());
-                        
-                        return usageInfo;
                     }
-                }
-            }
-        }
-        return null;
+
+                    return item;
+                })
+                .collect(Collectors.toList());
+
+        data.put("totalIncome", totalIncome);
+        data.put("totalLoads", totalLoads);
+        data.put("unwashedCount", unwashedCount);
+        data.put("totalUnclaimed", totalUnclaimed);
+        data.put("overviewData", overviewData);
+        data.put("unclaimedList", unclaimedList);
+
+        return data;
+    }
+
+    private double getTransactionAmount(String transactionId) {
+        return transactionRepository.findByInvoiceNumber(transactionId)
+                .map(Transaction::getTotalPrice)
+                .orElse(0.0);
     }
 }

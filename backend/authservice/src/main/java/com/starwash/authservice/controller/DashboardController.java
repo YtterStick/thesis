@@ -32,4 +32,21 @@ public class DashboardController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    // NEW: Admin dashboard endpoint
+    @GetMapping("/admin")
+    public ResponseEntity<Map<String, Object>> getAdminDashboard(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            Map<String, Object> dashboardData = dashboardService.getAdminDashboardData();
+            return ResponseEntity.ok(dashboardData);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }
