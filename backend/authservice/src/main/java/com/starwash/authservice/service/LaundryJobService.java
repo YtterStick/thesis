@@ -82,14 +82,14 @@ public class LaundryJobService {
         LaundryJob job = new LaundryJob();
         job.setTransactionId(dto.getTransactionId());
         job.setCustomerName(txn.getCustomerName());
-        job.setContact(txn.getContact()); // ✅ Save customer contact
+        job.setContact(txn.getContact());
         job.setLoadAssignments(assignments);
         job.setDetergentQty(dto.getDetergentQty());
         job.setFabricQty(dto.getFabricQty());
         job.setServiceType(txn.getServiceName());
         job.setStatusFlow(getFlowByServiceType(txn.getServiceName()));
         job.setCurrentStep(0);
-        job.setPickupStatus("UNCLAIMED"); // Default pickup status
+        job.setPickupStatus("UNCLAIMED");
 
         // Set due date (7 days from now)
         job.setDueDate(LocalDateTime.now().plusDays(7));

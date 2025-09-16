@@ -36,23 +36,23 @@ public class MissingItemController {
     }
 
     @PostMapping
-    public ResponseEntity<MissingItem> createMissingItem(@RequestBody MissingItem missingItem, 
-                                                        @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<MissingItem> createMissingItem(@RequestBody MissingItem missingItem,
+            @RequestHeader("Authorization") String authHeader) {
         String staffId = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         MissingItem createdItem = missingItemService.createMissingItem(missingItem, staffId);
         return ResponseEntity.ok(createdItem);
     }
 
-   @PatchMapping("/{id}/claim")
-public ResponseEntity<MissingItem> claimItem(@PathVariable String id, 
-                                            @RequestBody ClaimRequest claimRequest,
-                                            @RequestHeader("Authorization") String authHeader) {
-    Optional<MissingItem> claimedItem = missingItemService.claimItem(id, claimRequest.getClaimedByName());
-    if (claimedItem.isPresent()) {
-        return ResponseEntity.ok(claimedItem.get());
+    @PatchMapping("/{id}/claim")
+    public ResponseEntity<MissingItem> claimItem(@PathVariable String id,
+            @RequestBody ClaimRequest claimRequest,
+            @RequestHeader("Authorization") String authHeader) {
+        Optional<MissingItem> claimedItem = missingItemService.claimItem(id, claimRequest.getClaimedByName());
+        if (claimedItem.isPresent()) {
+            return ResponseEntity.ok(claimedItem.get());
+        }
+        return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.notFound().build();
-}
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteItem(@PathVariable String id) {

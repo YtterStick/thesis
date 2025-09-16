@@ -6,12 +6,14 @@ public class RecordResponseDto {
 
     private String id;
     private String customerName;
-    private String contact;        // ✅ Add contact
+    private String contact;
     private String serviceName;
     private int loads;
     private String detergent;
     private String fabric; 
     private double totalPrice;
+
+    private boolean disposed;
 
     private String paymentMethod;  
     private String pickupStatus;    
@@ -28,7 +30,7 @@ public class RecordResponseDto {
                              boolean expired, LocalDateTime createdAt) {
         this.id = id;
         this.customerName = customerName;
-        this.contact = contact; // ✅ assign contact
+        this.contact = contact;
         this.serviceName = serviceName;
         this.loads = loads;
         this.detergent = detergent;
@@ -71,6 +73,9 @@ public class RecordResponseDto {
 
     public String getPickupStatus() { return pickupStatus; }
     public void setPickupStatus(String pickupStatus) { this.pickupStatus = pickupStatus; }
+
+    public boolean isDisposed() { return disposed; }
+    public void setDisposed(boolean disposed) { this.disposed = disposed; }
 
     public boolean isWashed() { return washed; }
     public void setWashed(boolean washed) { this.washed = washed; }

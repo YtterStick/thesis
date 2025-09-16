@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +41,14 @@ const MissingForm = ({
     // Then sort by name
     return a.name.localeCompare(b.name);
   });
+
+  // Handle notes input change with character limit
+  const handleNotesChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= 30) {
+      setNewItem({...newItem, notes: value});
+    }
+  };
 
   return (
     <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
@@ -93,12 +101,18 @@ const MissingForm = ({
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground">Notes (Optional)</label>
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground">Notes (Optional)</label>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {newItem.notes?.length || 0}/30 characters
+              </span>
+            </div>
             <Textarea
               className={inputClass}
-              placeholder="Additional details about the item..."
+              placeholder="Additional details about the item (max 30 characters)..."
               value={newItem.notes}
-              onChange={e => setNewItem({...newItem, notes: e.target.value})}
+              onChange={handleNotesChange}
+              maxLength={30}
             />
           </div>
           <Button onClick={handleReportItem} className={`w-full ${buttonClass}`}>

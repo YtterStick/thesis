@@ -32,16 +32,16 @@ public class MissingItemService {
     }
 
     public Optional<MissingItem> claimItem(String id, String claimedByName) {
-    Optional<MissingItem> optionalItem = missingItemRepository.findById(id);
-    if (optionalItem.isPresent()) {
-        MissingItem item = optionalItem.get();
-        item.setClaimed(true);
-        item.setClaimedByName(claimedByName);
-        item.setClaimDate(LocalDateTime.now());
-        return Optional.of(missingItemRepository.save(item));
+        Optional<MissingItem> optionalItem = missingItemRepository.findById(id);
+        if (optionalItem.isPresent()) {
+            MissingItem item = optionalItem.get();
+            item.setClaimed(true);
+            item.setClaimedByName(claimedByName);
+            item.setClaimDate(LocalDateTime.now());
+            return Optional.of(missingItemRepository.save(item));
+        }
+        return Optional.empty();
     }
-    return Optional.empty();
-}
 
     public Optional<MissingItem> getItemById(String id) {
         return missingItemRepository.findById(id);

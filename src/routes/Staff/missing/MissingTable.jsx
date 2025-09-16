@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Clock, CheckCircle, AlertCircle, Filter } from "lucide-react";
+import { Search, Clock, CheckCircle, AlertCircle, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,9 @@ const MissingTable = ({
   handleClaimItem,
   machines
 }) => {
+  // State to track which notes are expanded
+  const [expandedNotes, setExpandedNotes] = useState({});
+
   // Function to get machine name by ID
   const getMachineName = (machineId) => {
     const machine = machines.find(m => m.id === machineId);
@@ -56,6 +59,26 @@ const MissingTable = ({
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString();
+  };
+
+  // Toggle note expansion
+  const toggleNoteExpansion = (itemId) => {
+    setExpandedNotes(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  };
+
+  // Check if note is long (more than 20 characters)
+  const isLongNote = (note) => {
+    if (!note) return false;
+    return note.length > 10;
+  };
+
+  // Truncate note to 20 characters
+  const truncateNote = (note) => {
+    if (!note) return "-";
+    return note.length > 10 ? `${note.substring(0, 10)}...` : note;
   };
 
   // Filter items based on search term and status filter
@@ -123,6 +146,7 @@ const MissingTable = ({
                 <TableHead className="text-slate-900 dark:text-slate-100">Found Date</TableHead>
                 <TableHead className="text-slate-900 dark:text-slate-100">Claimed By</TableHead>
                 <TableHead className="text-slate-900 dark:text-slate-100">Claimed Date</TableHead>
+                <TableHead className="text-slate-900 dark:text-slate-100">Notes</TableHead>
                 <TableHead className="text-slate-900 dark:text-slate-100">Status</TableHead>
                 <TableHead className="text-right text-slate-900 dark:text-slate-100">Actions</TableHead>
               </TableRow>
@@ -130,7 +154,7 @@ const MissingTable = ({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16">
+                  <TableCell colSpan={9} className="text-center py-16">
                     <div className="flex items-center justify-center text-slate-600 dark:text-slate-400">
                       <Clock className="h-8 w-8 animate-spin mr-2" />
                       Loading items...
@@ -139,7 +163,7 @@ const MissingTable = ({
                 </TableRow>
               ) : filteredItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-16 text-center">
+                  <TableCell colSpan={9} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                       <AlertCircle className="h-12 w-12 mb-4 text-slate-400 dark:text-slate-500" />
                       <p className="text-lg font-medium">No missing items found</p>
@@ -150,6 +174,9 @@ const MissingTable = ({
               ) : (
                 filteredItems.map((item) => {
                   const machineName = getMachineName(item.machineId);
+                  const isExpanded = expandedNotes[item.id];
+                  const shouldTruncate = isLongNote(item.notes) && !isExpanded;
+                  
                   return (
                     <TableRow key={item.id} className="border-t border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/50">
                       <TableCell className="font-medium text-slate-900 dark:text-slate-100">
@@ -171,6 +198,33 @@ const MissingTable = ({
                       </TableCell>
                       <TableCell className="text-slate-600 dark:text-slate-300">
                         {formatDate(item.claimDate)}
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-300 max-w-xs">
+                        <div className="flex items-start gap-1">
+                          <div className="flex-1">
+                            {shouldTruncate ? truncateNote(item.notes) : item.notes || "-"}
+                          </div>
+                          {isLongNote(item.notes) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => toggleNoteExpansion(item.id)}
+                              title={isExpanded ? "Show less" : "Show more"}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="h-3 w-3" />
+                              ) : (
+                                <ChevronDown className="h-3 w-3" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                        {isLongNote(item.notes) && !isExpanded && (
+                          <div className="text-xs text-blue-500 cursor-pointer mt-1" onClick={() => toggleNoteExpansion(item.id)}>
+                            View more
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         {item.claimed ? (
