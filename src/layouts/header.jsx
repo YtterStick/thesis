@@ -1,20 +1,12 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useClickOutside } from "@/hooks/use-click-outside";
 import { useTheme } from "@/hooks/use-theme";
 import { ChevronsLeft, Moon, Search, Sun, Bell, X } from "lucide-react";
-import profileImg from "@/assets/profile.jpg";
 import PropTypes from "prop-types";
-import { useLogout } from "@/hooks/useLogout";
 
-export const Header = ({ collapsed, setCollapsed, role }) => {
+export const Header = ({ collapsed, setCollapsed }) => {
     const { theme, setTheme } = useTheme();
-    const [showMenu, setShowMenu] = useState(false);
     const [searchActive, setSearchActive] = useState(false);
-    const profileRef = useRef(null);
-    const logout = useLogout();
-
-    useClickOutside([profileRef], () => setShowMenu(false));
 
     return (
         <header
@@ -121,48 +113,6 @@ export const Header = ({ collapsed, setCollapsed, role }) => {
                             }`}
                         />
                     </button>
-
-                    {/* 👤 Profile dropdown */}
-                    <div
-                        className="relative"
-                        ref={profileRef}
-                    >
-                        <button
-                            className="group size-10 overflow-hidden rounded-full border border-slate-300 transition-all hover:ring-2 hover:ring-cyan-500 dark:border-slate-600"
-                            onClick={() => setShowMenu((prev) => !prev)}
-                            title="Profile options"
-                        >
-                            <img
-                                src={profileImg}
-                                alt="Profile"
-                                className="size-full object-cover transition group-hover:brightness-90"
-                            />
-                        </button>
-
-                        <AnimatePresence>
-                            {showMenu && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.15 }}
-                                    className={`absolute right-0 mt-2 w-40 rounded-md border shadow-lg transition-colors ${
-                                        theme === "dark" ? "border-slate-600 bg-slate-800 text-white" : "border-slate-200 bg-white text-slate-700"
-                                    }`}
-                                >
-                                    <button className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-cyan-100 dark:hover:bg-cyan-900">
-                                        {role === "STAFF" ? "My Profile" : "View Profile"}
-                                    </button>
-                                    <button
-                                        className="w-full px-4 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900"
-                                        onClick={logout}
-                                    >
-                                        Logout
-                                    </button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
                 </div>
             )}
 
@@ -219,7 +169,6 @@ export const Header = ({ collapsed, setCollapsed, role }) => {
 Header.propTypes = {
     collapsed: PropTypes.bool,
     setCollapsed: PropTypes.func,
-    role: PropTypes.string,
 };
 
 export default Header;

@@ -77,7 +77,7 @@ function App() {
     { path: "/managereceipts", element: <AdminRoute element={<ManageReceiptPage />} /> },
     { path: "/serviceoption", element: <AdminRoute element={<ServiceOptionPage />} /> },
     { path: "/paymentmethod", element: <AdminRoute element={<PaymentMethodsPage/>} /> },
-    { path: "/documentsettings", element: <AdminRoute element={<DocumentSettingsPage />} /> }, // ✅ NEW route
+    { path: "/documentsettings", element: <AdminRoute element={<DocumentSettingsPage />} /> },
     { path: "/machines", element: <AdminRoute element={<MachineMainPage />} /> },
     { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
 

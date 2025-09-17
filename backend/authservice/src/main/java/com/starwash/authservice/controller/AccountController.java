@@ -62,6 +62,12 @@ public class AccountController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createAccount(@RequestBody User newUser) {
         try {
+            // Check if username already exists
+            if (userRepository.findByUsername(newUser.getUsername()).isPresent()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Username already exists"));
+            }
+
             // Password validation
             String passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$";
             if (!newUser.getPassword().matches(passwordRegex)) {
@@ -103,6 +109,22 @@ public class AccountController {
                 .orElseGet(() -> ResponseEntity.status(404).body("🚫 Account not found for ID: " + id));
     }
 
+    // ✅ Get account by username
+    @GetMapping("/accounts/username/{username}")
+    @PreAuthorize("hasRole('ADMIN') or #username == authentication.principal.username")
+    public ResponseEntity<?> getAccountByUsername(@PathVariable String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        return userOpt
+                .<ResponseEntity<?>>map(
+                        user -> ResponseEntity.ok(new UserResponse(
+                                user.getId(),
+                                user.getUsername(),
+                                user.getRole(),
+                                user.getContact(),
+                                user.getStatus())))
+                .orElseGet(() -> ResponseEntity.status(404).body("🚫 Account not found for username: " + username));
+    }
+
     // ✅ Update account
     @PatchMapping("/accounts/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -115,6 +137,20 @@ public class AccountController {
             }
 
             User user = userOpt.get();
+            
+            // Update username if provided
+            if (updateRequest.containsKey("username")) {
+                String newUsername = updateRequest.get("username");
+                
+                // Check if new username already exists (excluding current user)
+                Optional<User> existingUser = userRepository.findByUsername(newUsername);
+                if (existingUser.isPresent() && !existingUser.get().getId().equals(id)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("error", "Username already exists"));
+                }
+                
+                user.setUsername(newUsername);
+            }
             
             // Update password if provided
             if (updateRequest.containsKey("password") && !updateRequest.get("password").isEmpty()) {

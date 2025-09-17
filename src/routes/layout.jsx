@@ -17,7 +17,7 @@ const Layout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(!isDesktopDevice);
   const sidebarRef = useRef(null);
   const location = useLocation();
-  const { loading, isAuthenticated, role } = useAuth();
+  const { loading, isAuthenticated, role, user } = useAuth();
   const { theme } = useTheme();
 
   const isAuthRoute =
@@ -58,7 +58,13 @@ const Layout = ({ children }) => {
       />
 
       {/* Sidebar */}
-      <Sidebar ref={sidebarRef} collapsed={collapsed} links={sidebarLinks} />
+      <Sidebar 
+        ref={sidebarRef} 
+        collapsed={collapsed} 
+        links={sidebarLinks}
+        user={user}
+        role={role}
+      />
 
       {/* Main layout wrapper */}
       <div
