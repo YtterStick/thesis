@@ -1,12 +1,139 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { ChevronsLeft, Moon, Search, Sun, Bell, X } from "lucide-react";
+import { ChevronsLeft, Moon, Search, Sun, Bell, X, CheckCircle, AlertCircle, Info } from "lucide-react";
 import PropTypes from "prop-types";
 
 export const Header = ({ collapsed, setCollapsed }) => {
     const { theme, setTheme } = useTheme();
     const [searchActive, setSearchActive] = useState(false);
+    const [notificationOpen, setNotificationOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const notificationRef = useRef(null);
+
+    // Fetch notifications
+    const fetchNotifications = async () => {
+        try {
+            const token = localStorage.getItem("authToken");
+            const response = await fetch("http://localhost:8080/api/notifications", {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setNotifications(data);
+            }
+        } catch (error) {
+            console.error("Error fetching notifications:", error);
+        }
+    };
+
+    // Fetch unread count
+    const fetchUnreadCount = async () => {
+        try {
+            const token = localStorage.getItem("authToken");
+            const response = await fetch("http://localhost:8080/api/notifications/unread-count", {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const count = await response.json();
+                setUnreadCount(count);
+            }
+        } catch (error) {
+            console.error("Error fetching unread count:", error);
+        }
+    };
+
+    // Mark notification as read
+    const markAsRead = async (id) => {
+        try {
+            const token = localStorage.getItem("authToken");
+            await fetch(`http://localhost:8080/api/notifications/${id}/read`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+            
+            // Refresh notifications and count
+            fetchNotifications();
+            fetchUnreadCount();
+        } catch (error) {
+            console.error("Error marking notification as read:", error);
+        }
+    };
+
+    // Mark all as read
+    const markAllAsRead = async () => {
+        try {
+            const token = localStorage.getItem("authToken");
+            await fetch("http://localhost:8080/api/notifications/read-all", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+            
+            // Refresh notifications and count
+            fetchNotifications();
+            fetchUnreadCount();
+        } catch (error) {
+            console.error("Error marking all notifications as read:", error);
+        }
+    };
+
+    // Format time ago
+    const formatTimeAgo = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) {
+            return `${diffInSeconds} seconds ago`;
+        } else if (diffInSeconds < 3600) {
+            return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+        } else if (diffInSeconds < 86400) {
+            return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        } else {
+            return `${Math.floor(diffInSeconds / 86400)} days ago`;
+        }
+    };
+
+    // Close notification dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setNotificationOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    // Fetch notifications when dropdown opens
+    useEffect(() => {
+        if (notificationOpen) {
+            fetchNotifications();
+            fetchUnreadCount();
+        }
+    }, [notificationOpen]);
+
+    // Periodically check for new notifications
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchUnreadCount();
+        }, 30000); // Check every 30 seconds
+        
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <header
@@ -102,17 +229,105 @@ export const Header = ({ collapsed, setCollapsed }) => {
                     </button>
 
                     {/* 🔔 Notifications */}
-                    <button
-                        className="group size-10 rounded-md transition-colors hover:bg-slate-200 dark:hover:bg-slate-800"
-                        title="Notifications"
-                    >
-                        <Bell
-                            size={20}
-                            className={`transition-colors ${
-                                theme === "dark" ? "text-white group-hover:text-cyan-400" : "text-slate-700 group-hover:text-cyan-600"
-                            }`}
-                        />
-                    </button>
+                    <div className="relative" ref={notificationRef}>
+                        <button
+                            className="group relative size-10 rounded-md transition-colors hover:bg-slate-200 dark:hover:bg-slate-800"
+                            title="Notifications"
+                            onClick={() => setNotificationOpen(!notificationOpen)}
+                            onMouseEnter={() => setNotificationOpen(true)}
+                        >
+                            <Bell
+                                size={20}
+                                className={`transition-colors ${
+                                    theme === "dark" ? "text-white group-hover:text-cyan-400" : "text-slate-700 group-hover:text-cyan-600"
+                                }`}
+                            />
+                            {unreadCount > 0 && (
+                                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Notification dropdown */}
+                        <AnimatePresence>
+                            {notificationOpen && (
+                                <motion.div
+                                    className="absolute right-0 top-12 w-80 rounded-md border shadow-lg"
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                    onMouseLeave={() => setNotificationOpen(false)}
+                                    style={{
+                                        backgroundColor: theme === "dark" ? "#1e293b" : "white",
+                                        borderColor: theme === "dark" ? "#334155" : "#e2e8f0",
+                                    }}
+                                >
+                                    <div className="p-3 border-b" style={{ borderColor: theme === "dark" ? "#334155" : "#e2e8f0" }}>
+                                        <h3 className="font-semibold" style={{ color: theme === "dark" ? "white" : "#1e293b" }}>
+                                            Notifications
+                                        </h3>
+                                    </div>
+                                    <div className="max-h-96 overflow-y-auto">
+                                        {notifications.length > 0 ? (
+                                            notifications.map(notification => (
+                                                <div
+                                                    key={notification.id}
+                                                    className={`p-3 border-b flex items-start gap-3 cursor-pointer transition-colors ${
+                                                        !notification.read ? "bg-blue-50 dark:bg-blue-900/20" : 
+                                                        "hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                    }`}
+                                                    style={{ borderColor: theme === "dark" ? "#334155" : "#e2e8f0" }}
+                                                    onClick={() => markAsRead(notification.id)}
+                                                >
+                                                    <div className="mt-0.5">
+                                                        {notification.type === "stock_alert" && (
+                                                            <AlertCircle size={18} className="text-yellow-500" />
+                                                        )}
+                                                        {notification.type === "inventory_update" && (
+                                                            <CheckCircle size={18} className="text-green-500" />
+                                                        )}
+                                                        {(notification.type !== "stock_alert" && notification.type !== "inventory_update") && (
+                                                            <Info size={18} className="text-blue-500" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className={`text-sm font-medium ${!notification.read ? "text-blue-600 dark:text-blue-400" : 
+                                                            theme === "dark" ? "text-white" : "text-slate-900"}`}>
+                                                            {notification.title}
+                                                        </h4>
+                                                        <p className="text-sm mt-1" style={{ color: theme === "dark" ? "#cbd5e1" : "#64748b" }}>
+                                                            {notification.message}
+                                                        </p>
+                                                        <p className="text-xs mt-1" style={{ color: theme === "dark" ? "#94a3b8" : "#94a3b8" }}>
+                                                            {formatTimeAgo(notification.createdAt)}
+                                                        </p>
+                                                    </div>
+                                                    {!notification.read && (
+                                                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+                                                    )}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-4 text-center" style={{ color: theme === "dark" ? "#cbd5e1" : "#64748b" }}>
+                                                No notifications
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-2 border-t" style={{ borderColor: theme === "dark" ? "#334155" : "#e2e8f0" }}>
+                                        <button
+                                            className="w-full py-2 text-sm rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            style={{ color: theme === "dark" ? "#e2e8f0" : "#475569" }}
+                                            onClick={markAllAsRead}
+                                        >
+                                            Mark all as read
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             )}
 

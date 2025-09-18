@@ -457,8 +457,8 @@ const SalesReportPage = () => {
                 {/* Sales Trend Chart */}
                 <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
                     <CardHeader>
-                        <CardTitle className="text-slate-900 dark:text-slate-50">Sales Trend</CardTitle>
-                        <CardDescription className="text-slate-600 dark:text-slate-400">Sales performance overview</CardDescription>
+                        <CardTitle className="text-slate-900 dark:text-slate-50">Income Trend</CardTitle>
+                        <CardDescription className="text-slate-600 dark:text-slate-400">Income performance overview</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer
@@ -483,7 +483,7 @@ const SalesReportPage = () => {
                                 <Legend />
                                 <Bar
                                     dataKey="sales"
-                                    name="Sales"
+                                    name="Income"
                                     fill="#0891b2"
                                     radius={[4, 4, 0, 0]}
                                 />

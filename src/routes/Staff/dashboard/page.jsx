@@ -299,7 +299,7 @@ const StaffDashboardPage = () => {
                     <div className="card-header">
                         <p className="card-title">Unclaimed</p>
                         <span className="text-sm text-slate-500 dark:text-slate-400">
-                            {dashboardData.completedUnclaimedTransactions.length} completed loads
+                            {dashboardData.completedUnclaimedTransactions.length} unclaimed laundry
                         </span>
                     </div>
                     <div className="card-body flex h-[360px] flex-col overflow-auto px-4 py-2">

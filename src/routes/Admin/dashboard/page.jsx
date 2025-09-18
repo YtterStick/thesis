@@ -249,7 +249,7 @@ export default function AdminDashboardPage() {
           <div className="card-header">
             <p className="card-title">Unclaimed</p>
             <span className="text-sm text-slate-500 dark:text-slate-400">
-              {dashboardData.unclaimedList.length} completed loads
+              {dashboardData.unclaimedList.length}  unclaimed laundry
             </span>
           </div>
           <div className="card-body h-[310px] overflow-auto px-4 py-2 flex flex-col">
