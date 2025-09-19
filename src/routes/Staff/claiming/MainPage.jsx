@@ -176,27 +176,34 @@ const MainPage = () => {
   };
 
   const handleDispose = async (transactionId) => {
-    try {
-      const token = localStorage.getItem("authToken");
-      const response = await fetch(
-        `http://localhost:8080/api/expired/${transactionId}/dispose`,
-        { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
-      );
+  try {
+    const token = localStorage.getItem("authToken");
+    const response = await fetch(
+      `http://localhost:8080/api/expired/${transactionId}/dispose`,
+      { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
+    );
 
-      if (!response.ok) throw new Error("Failed to dispose transaction");
-
-      toast({
-        title: "Success",
-        description: "Expired laundry has been disposed.",
-      });
-
-      // Remove from expired list
-      setExpiredTransactions(prev => prev.filter(t => t.id !== transactionId));
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Error", description: "Failed to dispose expired laundry", variant: "destructive" });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to dispose transaction");
     }
-  };
+
+    toast({
+      title: "Success",
+      description: "Expired laundry has been disposed.",
+    });
+
+    // Remove from expired list
+    setExpiredTransactions(prev => prev.filter(t => t.id !== transactionId));
+  } catch (error) {
+    console.error(error);
+    toast({ 
+      title: "Error", 
+      description: error.message || "Failed to dispose expired laundry", 
+      variant: "destructive" 
+    });
+  }
+};
 
   const refreshData = () => {
     setHasFetched(false);

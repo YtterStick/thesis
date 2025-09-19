@@ -59,7 +59,6 @@ public class LaundryJob {
     private LocalDateTime dueDate;
     @Indexed
     private boolean expired = false;
-    private LocalDateTime expirationDate;
 
     // Disposal tracking fields
     @Indexed
@@ -125,14 +124,6 @@ public class LaundryJob {
 
     public void setExpired(boolean expired) {
         this.expired = expired;
-    }
-
-    public LocalDateTime getExpirationDate() {
-        return expirationDate;
-    }
-
-    public void setExpirationDate(LocalDateTime expirationDate) {
-        this.expirationDate = expirationDate;
     }
 
     // Laundry processed by getters and setters
@@ -278,7 +269,6 @@ public class LaundryJob {
                 ", serviceType='" + serviceType + '\'' +
                 ", dueDate=" + dueDate +
                 ", expired=" + expired +
-                ", expirationDate=" + expirationDate +
                 ", disposed=" + disposed +
                 ", disposedBy='" + disposedBy + '\'' +
                 ", disposedDate=" + disposedDate +

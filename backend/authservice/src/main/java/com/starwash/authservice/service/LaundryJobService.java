@@ -90,16 +90,15 @@ public class LaundryJobService {
         job.setCurrentStep(0);
         job.setPickupStatus("UNCLAIMED");
 
-        // Ensure dueDate is set properly with fallback
         if (txn.getDueDate() != null) {
             job.setDueDate(txn.getDueDate());
         } else {
-            job.setDueDate(LocalDateTime.now().plusDays(3)); // Fallback to 3 days from now
+            job.setDueDate(LocalDateTime.now().plusDays(3));
         }
         job.setExpired(false);
 
-        System.out.println("Creating laundry job with dueDate: " + job.getDueDate() + 
-                       " for transaction: " + dto.getTransactionId());
+        System.out.println("Creating laundry job with dueDate: " + job.getDueDate() +
+                " for transaction: " + dto.getTransactionId());
 
         return laundryJobRepository.save(job);
     }
@@ -377,31 +376,6 @@ public class LaundryJobService {
                             .sum();
                 }
             }
-
-            List<LoadAssignment> unfinishedLoads = new ArrayList<>();
-            if (job.getLoadAssignments() != null) {
-                for (LoadAssignment load : job.getLoadAssignments()) {
-                    if (!STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())) {
-                        unfinishedLoads.add(load);
-                    }
-                }
-            }
-
-            if (!unfinishedLoads.isEmpty()) {
-                LaundryJobDto dto = new LaundryJobDto();
-                dto.setTransactionId(job.getTransactionId());
-                dto.setCustomerName(job.getCustomerName());
-                dto.setContact(contact);
-                dto.setLoadAssignments(unfinishedLoads);
-                dto.setCurrentStep(job.getCurrentStep());
-                dto.setStatusFlow(job.getStatusFlow());
-                dto.setDetergentQty(detergentQty);
-                dto.setFabricQty(fabricQty);
-                dto.setIssueDate(issueDate);
-                dto.setServiceType(serviceType);
-
-                result.add(dto);
-            }
         }
 
         return result;
@@ -461,7 +435,7 @@ public class LaundryJobService {
                         job.getLoadAssignments().stream()
                                 .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())))
                 .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
-                .filter(job -> !job.isExpired()) // Exclude expired jobs
+                .filter(job -> !job.isExpired())
                 .collect(Collectors.toList());
     }
 
@@ -470,8 +444,18 @@ public class LaundryJobService {
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob disposeJob(String transactionId, String processedBy) {
-        LaundryJob job = findSingleJobByTransaction(transactionId);
+    public LaundryJob disposeJob(String id, String processedBy) {
+        LaundryJob job = laundryJobRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Laundry job not found: " + id));
+
+        if (!job.isExpired()) {
+            throw new RuntimeException("Cannot dispose non-expired job");
+        }
+
+        if (job.isDisposed()) {
+            throw new RuntimeException("Job already disposed");
+        }
+
         job.setDisposed(true);
         job.setDisposedBy(processedBy);
         job.setDisposedDate(LocalDateTime.now());
@@ -486,7 +470,7 @@ public class LaundryJobService {
     public void checkForExpiredJobs() {
         LocalDateTime now = LocalDateTime.now();
         List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
-        
+
         for (LaundryJob job : unclaimedJobs) {
             if (job.isDisposed()) {
                 continue;
@@ -494,7 +478,6 @@ public class LaundryJobService {
 
             if (job.getDueDate() != null && now.isAfter(job.getDueDate()) && !job.isExpired()) {
                 job.setExpired(true);
-                job.setExpirationDate(now);
                 laundryJobRepository.save(job);
                 System.out.println("Job expired: " + job.getTransactionId() + " - " + job.getCustomerName());
             }
