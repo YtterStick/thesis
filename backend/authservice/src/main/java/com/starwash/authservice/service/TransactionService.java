@@ -71,11 +71,9 @@ public class TransactionService {
                 LocalDateTime now = LocalDateTime.now();
                 LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
 
-                // Ensure dueDate is always set (7 days from issue date)
                 LocalDateTime dueDate = Optional.ofNullable(request.getDueDate())
                                 .orElse(issueDate.plusDays(7));
 
-                // Log the dueDate for tracking
                 System.out.println("Creating transaction with dueDate: " + dueDate);
 
                 String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
@@ -94,11 +92,10 @@ public class TransactionService {
                                 amountGiven,
                                 change,
                                 issueDate,
-                                dueDate, // Use the calculated dueDate
+                                dueDate,
                                 request.getStaffId(),
                                 now);
 
-                // Set GCash verification status
                 if ("GCash".equals(request.getPaymentMethod())) {
                         transaction.setGcashVerified(false);
                 }
@@ -135,7 +132,7 @@ public class TransactionService {
                                 total,
                                 request.getPaymentMethod(),
                                 issueDate,
-                                dueDate, // Include dueDate in the response
+                                dueDate,
                                 new FormatSettingsDto(settings),
                                 detergentQty,
                                 fabricQty,
@@ -212,7 +209,6 @@ public class TransactionService {
                         dto.setServiceName(tx.getServiceName());
                         dto.setLoads(tx.getServiceQuantity());
 
-                        // ✅ Add contact
                         dto.setContact(tx.getContact());
 
                         dto.setDetergent(tx.getConsumables().stream()
@@ -252,11 +248,9 @@ public class TransactionService {
 
                 return allRecords.stream()
                                 .filter(record -> {
-                                        // Exclude disposed records
                                         if (record.isDisposed()) {
                                                 return false;
                                         }
-                                        // Include only unclaimed or expired records
                                         return "UNCLAIMED".equals(record.getPickupStatus()) || record.isExpired();
                                 })
                                 .collect(Collectors.toList());
@@ -265,15 +259,12 @@ public class TransactionService {
         public Map<String, Object> getStaffRecordsSummary() {
                 Map<String, Object> summary = new HashMap<>();
 
-                // Get today's date for filtering
                 LocalDate today = LocalDate.now();
                 LocalDateTime startOfDay = today.atStartOfDay();
                 LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
 
-                // Get all transactions (not filtered)
                 List<RecordResponseDto> allRecords = this.getAllRecords();
 
-                // Filter today's records for income and loads
                 List<RecordResponseDto> todaysRecords = allRecords.stream()
                                 .filter(record -> {
                                         LocalDateTime createdAt = record.getCreatedAt();
@@ -281,7 +272,6 @@ public class TransactionService {
                                 })
                                 .collect(Collectors.toList());
 
-                // Calculate today's income and loads
                 double todayIncome = todaysRecords.stream()
                                 .mapToDouble(RecordResponseDto::getTotalPrice)
                                 .sum();
@@ -290,30 +280,27 @@ public class TransactionService {
                                 .mapToInt(RecordResponseDto::getLoads)
                                 .sum();
 
-                // Get all laundry jobs for accurate unwashed and unclaimed counts
                 List<LaundryJob> allJobs = laundryJobRepository.findAll();
 
-                // Calculate unwashed count (jobs that are not completed)
                 int unwashedCount = (int) allJobs.stream()
                                 .filter(job -> job.getLoadAssignments() != null)
                                 .flatMap(job -> job.getLoadAssignments().stream())
                                 .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
                                 .count();
 
-                // Calculate unclaimed count (completed but unclaimed jobs)
                 int unclaimedCount = (int) allJobs.stream()
                                 .filter(job -> job.getLoadAssignments() != null &&
                                                 job.getLoadAssignments().stream()
                                                                 .allMatch(load -> "COMPLETED"
                                                                                 .equalsIgnoreCase(load.getStatus())))
                                 .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
-                                .filter(job -> !job.isExpired()) // Exclude expired jobs
+                                .filter(job -> !job.isExpired()) 
                                 .count();
 
                 // Calculate expired count
                 int expiredCount = (int) allJobs.stream()
                                 .filter(LaundryJob::isExpired)
-                                .filter(job -> !job.isDisposed()) // Exclude disposed jobs
+                                .filter(job -> !job.isDisposed())
                                 .count();
 
                 summary.put("todayIncome", todayIncome);
@@ -328,7 +315,6 @@ public class TransactionService {
         public List<AdminRecordResponseDto> getAllAdminRecords() {
                 List<Transaction> allTransactions = transactionRepository.findAll();
 
-                // Get all laundry jobs in a single query
                 List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
                 Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
                                 .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
@@ -357,17 +343,12 @@ public class TransactionService {
                         dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
                         dto.setCreatedAt(tx.getCreatedAt());
 
-                        // Set GCash verification status
                         dto.setGcashVerified(tx.getGcashVerified());
 
-                        // Get laundry job data
                         LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
                         if (job != null) {
-                                // Set pickup status
                                 dto.setPickupStatus(
                                                 job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
-
-                                // Set laundry status based on load assignments
                                 if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
                                         boolean allCompleted = job.getLoadAssignments().stream()
                                                         .allMatch(load -> "COMPLETED"
@@ -390,28 +371,29 @@ public class TransactionService {
                                         dto.setLaundryStatus("Not Started");
                                 }
 
-                                // Set expired status
                                 dto.setExpired(job.isExpired());
 
-                                // Set the two new processed by fields
                                 dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
                                 dto.setClaimProcessedBy(job.getClaimedByStaffId());
+
+                                dto.setDisposed(job.isDisposed());
+                                dto.setDisposedBy(job.getDisposedBy());
                         } else {
-                                // Default values if no laundry job exists
                                 dto.setPickupStatus("UNCLAIMED");
                                 dto.setLaundryStatus("Not Started");
                                 dto.setExpired(tx.getDueDate() != null
                                                 && tx.getDueDate().isBefore(LocalDateTime.now()));
-                                // Set default values for the new fields
                                 dto.setLaundryProcessedBy(null);
                                 dto.setClaimProcessedBy(null);
+
+                                dto.setDisposed(false);
+                                dto.setDisposedBy(null);
                         }
 
                         return dto;
                 }).collect(Collectors.toList());
         }
 
-        // NEW METHODS FOR PENDING GCASH PAYMENTS
 
         public List<Transaction> findPendingGcashTransactions() {
                 return transactionRepository.findByPaymentMethodAndGcashVerified("GCash", false);

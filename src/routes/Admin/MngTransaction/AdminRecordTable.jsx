@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, AlertCircle, CheckCircle2, Printer, CalendarIcon, Download, Edit, Clock8 } from "lucide-react";
+import { Search, AlertCircle, CheckCircle2, Printer, CalendarIcon, Download, Clock8, ChevronDown, ChevronUp } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -11,20 +11,18 @@ const tableHeaders = [
     "Service",
     "Loads",
     "Detergent",
-    "Fabric",
     "Price",
     "Date",
-    "Payment Method",
-    "Pickup Status",
+    "Payment",
     "Laundry Status",
-    "Laundry Processed By",
-    "Claim Processed By",
+    "Pickup Status",
     "Actions",
 ];
 
 const renderStatusBadge = (status, type = "pickup") => {
     const iconMap = {
         Expired: <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />,
+        Disposed: <AlertCircle className="h-4 w-4 text-gray-500 dark:text-gray-400" />,
         Unclaimed: <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400" />,
         Washing: <CheckCircle2 className="h-4 w-4 text-blue-500 dark:text-blue-400" />,
         Done: <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />,
@@ -37,7 +35,7 @@ const renderStatusBadge = (status, type = "pickup") => {
     };
 
     const icon = iconMap[status] || null;
-    
+
     return icon ? (
         <Tooltip>
             <TooltipTrigger asChild>
@@ -57,6 +55,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortOrder, setSortOrder] = useState("desc");
     const [sortField, setSortField] = useState("createdAt");
+    const [expandedRows, setExpandedRows] = useState(new Set());
 
     const rowsPerPage = 10;
     const calendarRef = useRef(null);
@@ -73,6 +72,16 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
         document.addEventListener("pointerdown", handlePointerDown);
         return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, []);
+
+    const toggleRowExpansion = (id) => {
+        const newExpanded = new Set(expandedRows);
+        if (newExpanded.has(id)) {
+            newExpanded.delete(id);
+        } else {
+            newExpanded.add(id);
+        }
+        setExpandedRows(newExpanded);
+    };
 
     const isInRange = (dateStr) => {
         if (!dateStr) return false;
@@ -112,11 +121,6 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
         // Implement print functionality
     };
 
-    const handleEdit = (record) => {
-        console.log("✏️ Editing record:", record);
-        // Implement edit functionality
-    };
-
     const handleExport = () => {
         const dataToExport = allItems.map((item) => ({
             "Customer Name": item.name,
@@ -132,8 +136,10 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
             "Laundry Status": item.laundryStatus,
             "Laundry Processed By": item.laundryProcessedBy || "—",
             "Claim Processed By": item.claimProcessedBy || "—",
+            "Disposed By": item.disposedBy || "—",
             "GCash Verified": item.paymentMethod === "GCash" ? (item.gcashVerified ? "Yes" : "No") : "N/A",
             Expired: item.expired ? "Yes" : "No",
+            Disposed: item.disposed ? "Yes" : "No",
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -239,20 +245,18 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                     <table className="min-w-full table-auto text-sm">
                         <thead className="bg-slate-100 dark:bg-slate-800">
                             <tr>
+                                <th className="w-10 px-2 py-2"></th>
                                 {tableHeaders.map((header) => {
                                     const fieldMap = {
                                         Name: "name",
                                         Service: "service",
                                         Loads: "loads",
                                         Detergent: "detergent",
-                                        Fabric: "fabric",
                                         Price: "price",
                                         Date: "createdAt",
-                                        "Payment Method": "paymentMethod",
-                                        "Pickup Status": "pickupStatus",
+                                        Payment: "paymentMethod",
                                         "Laundry Status": "laundryStatus",
-                                        "Laundry Processed By": "laundryProcessedBy",
-                                        "Claim Processed By": "claimProcessedBy",
+                                        "Pickup Status": "pickupStatus",
                                     };
 
                                     const field = fieldMap[header];
@@ -279,7 +283,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                             {paginated.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={tableHeaders.length}
+                                        colSpan={tableHeaders.length + 1}
                                         className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
                                     >
                                         <div className="flex flex-col items-center gap-2">
@@ -300,82 +304,101 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                                     </td>
                                 </tr>
                             ) : (
-                                paginated.map((record, idx) => (
-                                    <tr
-                                        key={idx}
-                                        className="border-t border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
-                                    >
-                                        <td className="px-3 py-2">{record.name}</td>
-                                        <td className="px-3 py-2">{record.service}</td>
-                                        <td className="px-3 py-2">{record.loads}</td>
-                                        <td className="px-3 py-2">{record.detergent}</td>
-                                        <td className="px-3 py-2">{record.fabric}</td>
-                                        <td className="px-3 py-2">₱{record.price.toFixed(2)}</td>
-                                        <td className="px-3 py-2">
-                                            {record.createdAt && !isNaN(new Date(record.createdAt))
-                                                ? format(new Date(record.createdAt), "MMM dd, yyyy")
-                                                : "—"}
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            <div className="flex items-center gap-2">
-                                                <span>{record.paymentMethod}</span>
-                                                {renderStatusBadge(
-                                                    record.paymentMethod === "GCash" && !record.gcashVerified
-                                                        ? "Pending"
-                                                        : record.paid
-                                                          ? "Paid"
-                                                          : "Unpaid",
-                                                    "payment"
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            <div className="flex items-center gap-2">
-                                                <span>{record.pickupStatus}</span>
-                                                {renderStatusBadge(record.pickupStatus, "pickup")}
-                                            </div>
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            <div className="flex items-center gap-2">
-                                                <span>{record.laundryStatus}</span>
-                                                {renderStatusBadge(record.laundryStatus, "laundry")}
-                                            </div>
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            {record.laundryProcessedBy || "—"}
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            {record.claimProcessedBy || "—"}
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            <div className="flex items-center gap-2">
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <button
-                                                            onClick={() => handlePrint(record)}
-                                                            className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
-                                                        >
-                                                            <Printer className="h-4 w-4 text-slate-700 dark:text-slate-200" />
-                                                        </button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top">Print Receipt</TooltipContent>
-                                                </Tooltip>
-
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <button
-                                                            onClick={() => handleEdit(record)}
-                                                            className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
-                                                        >
-                                                            <Edit className="h-4 w-4 text-slate-700 dark:text-slate-200" />
-                                                        </button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top">Edit Record</TooltipContent>
-                                                </Tooltip>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                paginated.map((record, idx) => {
+                                    const isExpanded = expandedRows.has(record.id);
+                                    return (
+                                        <>
+                                            <tr
+                                                key={record.id}
+                                                className="border-t border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                                            >
+                                                <td className="px-2 py-2">
+                                                    <button
+                                                        onClick={() => toggleRowExpansion(record.id)}
+                                                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                                                    >
+                                                        {isExpanded ? (
+                                                            <ChevronUp className="h-4 w-4" />
+                                                        ) : (
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        )}
+                                                    </button>
+                                                </td>
+                                                <td className="px-3 py-2 font-medium">{record.name}</td>
+                                                <td className="px-3 py-2">{record.service}</td>
+                                                <td className="px-3 py-2">{record.loads}</td>
+                                                <td className="px-3 py-2">{record.detergent}</td>
+                                                <td className="px-3 py-2">₱{record.price.toFixed(2)}</td>
+                                                <td className="px-3 py-2">
+                                                    {record.createdAt && !isNaN(new Date(record.createdAt))
+                                                        ? format(new Date(record.createdAt), "MMM dd, yyyy")
+                                                        : "—"}
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{record.paymentMethod}</span>
+                                                        {renderStatusBadge(
+                                                            record.paymentMethod === "GCash" && !record.gcashVerified
+                                                                ? "Pending"
+                                                                : record.paid
+                                                                  ? "Paid"
+                                                                  : "Unpaid",
+                                                            "payment",
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{record.laundryStatus}</span>
+                                                        {renderStatusBadge(record.laundryStatus, "laundry")}
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{record.disposed ? "Disposed" : record.expired ? "Expired" : record.pickupStatus}</span>
+                                                        {renderStatusBadge(
+                                                            record.disposed ? "Disposed" : record.expired ? "Expired" : record.pickupStatus,
+                                                            "pickup",
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={() => handlePrint(record)}
+                                                                className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
+                                                            >
+                                                                <Printer className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top">Print Receipt</TooltipContent>
+                                                    </Tooltip>
+                                                </td>
+                                            </tr>
+                                            {isExpanded && (
+                                                <tr className="bg-slate-50 dark:bg-slate-800/30">
+                                                    <td colSpan={tableHeaders.length + 1} className="px-4 py-3">
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                            <div>
+                                                                <span className="font-medium text-slate-500 dark:text-slate-400">Laundry Processed By:</span>
+                                                                <p>{record.laundryProcessedBy || "—"}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-medium text-slate-500 dark:text-slate-400">Claim Processed By:</span>
+                                                                <p>{record.claimProcessedBy || "—"}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-medium text-slate-500 dark:text-slate-400">Disposed By:</span>
+                                                                <p>{record.disposedBy || "—"}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

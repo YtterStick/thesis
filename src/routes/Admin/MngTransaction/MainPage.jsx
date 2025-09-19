@@ -33,14 +33,15 @@ const MainPage = () => {
                     paymentMethod: r.paymentMethod || "—",
                     pickupStatus: r.pickupStatus,
                     laundryStatus: r.laundryStatus,
-                    laundryProcessedBy: r.laundryProcessedBy || "—", // Updated field
-                    claimProcessedBy: r.claimProcessedBy || "—",     // Updated field
+                    laundryProcessedBy: r.laundryProcessedBy || "—",
+                    claimProcessedBy: r.claimProcessedBy || "—",
                     createdAt: r.createdAt,
                     paid: r.paid || false,
                     expired: r.expired,
+                    disposed: r.disposed || false, // Add this line
+                    disposedBy: r.disposedBy || "—",
                     gcashVerified: r.gcashVerified || false,
                 }));
-
                 setRecords(mapped);
             } catch (error) {
                 console.error("❌ Record fetch error:", error);
@@ -224,4 +225,4 @@ const MainPage = () => {
     );
 };
 
-export default MainPage;    
+export default MainPage;

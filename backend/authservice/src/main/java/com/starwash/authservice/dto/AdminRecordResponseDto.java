@@ -21,8 +21,9 @@ public class AdminRecordResponseDto {
     private Boolean gcashVerified;
     private String laundryProcessedBy;
     private String claimProcessedBy;
+    private boolean disposed;
+    private String disposedBy;
 
-    // Constructors
     public AdminRecordResponseDto() {}
     
     public AdminRecordResponseDto(String id, String customerName, String contact, String serviceName, 
@@ -30,7 +31,8 @@ public class AdminRecordResponseDto {
                                  String paymentMethod, String pickupStatus, String laundryStatus,
                                  String processedByStaff, boolean paid, boolean expired, 
                                  LocalDateTime createdAt, Boolean gcashVerified,
-                                 String laundryProcessedBy, String claimProcessedBy) {
+                                 String laundryProcessedBy, String claimProcessedBy,
+                                 boolean disposed, String disposedBy) { 
         this.id = id;
         this.customerName = customerName;
         this.contact = contact;
@@ -49,9 +51,10 @@ public class AdminRecordResponseDto {
         this.gcashVerified = gcashVerified;
         this.laundryProcessedBy = laundryProcessedBy;
         this.claimProcessedBy = claimProcessedBy;
+        this.disposed = disposed;
+        this.disposedBy = disposedBy;
     }
 
-    // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     
@@ -105,4 +108,10 @@ public class AdminRecordResponseDto {
     
     public String getClaimProcessedBy() { return claimProcessedBy; }
     public void setClaimProcessedBy(String claimProcessedBy) { this.claimProcessedBy = claimProcessedBy; }
+    
+    public boolean isDisposed() { return disposed; }
+    public void setDisposed(boolean disposed) { this.disposed = disposed; }
+    
+    public String getDisposedBy() { return disposedBy; }
+    public void setDisposedBy(String disposedBy) { this.disposedBy = disposedBy; }
 }
