@@ -6,6 +6,8 @@ const MainPage = () => {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [timeFilter, setTimeFilter] = useState("all");
+    const [activeFilter, setActiveFilter] = useState(null);
+    const [sortOrder, setSortOrder] = useState(null);
 
     useEffect(() => {
         const fetchRecords = async () => {
@@ -38,7 +40,7 @@ const MainPage = () => {
                     createdAt: r.createdAt,
                     paid: r.paid || false,
                     expired: r.expired,
-                    disposed: r.disposed || false, // Add this line
+                    disposed: r.disposed || false,
                     disposedBy: r.disposedBy || "—",
                     gcashVerified: r.gcashVerified || false,
                 }));
@@ -65,7 +67,6 @@ const MainPage = () => {
                 break;
             case "week":
                 const weekStart = new Date(now);
-                // Adjust to start from Monday (1) instead of Sunday (0)
                 const dayOfWeek = now.getDay();
                 const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
                 weekStart.setDate(now.getDate() + diffToMonday);
@@ -89,9 +90,71 @@ const MainPage = () => {
         return filtered;
     };
 
-    const filteredRecords = filterRecordsByTime(records);
+    // Apply filters and sorting based on active filter
+    const getFilteredRecords = () => {
+        let filtered = filterRecordsByTime(records);
+        
+        // Apply additional filters based on active filter
+        switch (activeFilter) {
+            case "income":
+                filtered = [...filtered].sort((a, b) => {
+                    return sortOrder === "asc" ? a.price - b.price : b.price - a.price;
+                });
+                break;
+            case "loads":
+                filtered = [...filtered].sort((a, b) => {
+                    return sortOrder === "asc" ? a.loads - b.loads : b.loads - a.loads;
+                });
+                break;
+            case "expired":
+                filtered = filtered.filter((r) => r.expired);
+                break;
+            case "unwashed":
+                filtered = filtered.filter((r) => r.laundryStatus === "Not Started");
+                break;
+            case "unclaimed":
+                filtered = filtered.filter((r) => r.pickupStatus === "UNCLAIMED");
+                break;
+            default:
+                // No additional filter
+                break;
+        }
+        
+        return filtered;
+    };
 
-    // Update the metrics calculation in MainPage.jsx
+    const filteredRecords = getFilteredRecords();
+
+    // Handle card click
+    const handleCardClick = (filterType) => {
+        const isSortable = filterType === "income" || filterType === "loads";
+        
+        // If clicking the same card that's already active
+        if (activeFilter === filterType) {
+            if (isSortable) {
+                // For sortable cards, check if we need to toggle or deactivate
+                if (sortOrder === "desc") {
+                    // Switch to ascending order
+                    setSortOrder("asc");
+                } else {
+                    // Already in ascending order, so deactivate
+                    setActiveFilter(null);
+                    setSortOrder(null);
+                }
+            } else {
+                // For non-sortable cards, deactivate on second click
+                setActiveFilter(null);
+                setSortOrder(null);
+            }
+        } else {
+            // Set new active filter
+            setActiveFilter(filterType);
+            // Set default sort order for sortable cards
+            setSortOrder(isSortable ? "desc" : null);
+        }
+    };
+
+    // Update the metrics calculation
     const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
     const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
     const unwashed = filteredRecords.filter((r) => r.laundryStatus === "Not Started").length;
@@ -105,6 +168,9 @@ const MainPage = () => {
             icon: <PhilippinePeso size={26} />,
             color: "#3DD9B6",
             tooltip: "Total income from filtered transactions",
+            filterType: "income",
+            active: activeFilter === "income",
+            sortable: true,
         },
         {
             label: "Total Loads",
@@ -112,6 +178,9 @@ const MainPage = () => {
             icon: <Package size={26} />,
             color: "#60A5FA",
             tooltip: "Total number of laundry loads in filtered period",
+            filterType: "loads",
+            active: activeFilter === "loads",
+            sortable: true,
         },
         {
             label: "Unwashed Loads",
@@ -119,6 +188,9 @@ const MainPage = () => {
             icon: <Clock8 size={26} />,
             color: "#FB923C",
             tooltip: "Loads that haven't been washed yet",
+            filterType: "unwashed",
+            active: activeFilter === "unwashed",
+            sortable: false,
         },
         {
             label: "Expired Loads",
@@ -126,6 +198,9 @@ const MainPage = () => {
             icon: <TimerOff size={26} />,
             color: "#A78BFA",
             tooltip: "Loads that exceeded their pickup window",
+            filterType: "expired",
+            active: activeFilter === "expired",
+            sortable: false,
         },
         {
             label: "Unclaimed Loads",
@@ -133,6 +208,9 @@ const MainPage = () => {
             icon: <AlertCircle size={26} />,
             color: "#FACC15",
             tooltip: "Loads that haven't been picked up yet",
+            filterType: "unclaimed",
+            active: activeFilter === "unclaimed",
+            sortable: false,
         },
     ];
 
@@ -158,7 +236,11 @@ const MainPage = () => {
                     />
                     <select
                         value={timeFilter}
-                        onChange={(e) => setTimeFilter(e.target.value)}
+                        onChange={(e) => {
+                            setTimeFilter(e.target.value);
+                            setActiveFilter(null);
+                            setSortOrder(null);
+                        }}
                         className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     >
                         {timeFilters.map((filter) => (
@@ -175,11 +257,16 @@ const MainPage = () => {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                {summaryCards.map(({ label, value, icon, color, tooltip }) => (
+                {summaryCards.map(({ label, value, icon, color, tooltip, filterType, active, sortable }) => (
                     <div
                         key={label}
-                        className="card"
+                        className={`card cursor-pointer transition-all ${active ? "ring-2 ring-offset-2" : "hover:shadow-md"}`}
                         title={tooltip}
+                        onClick={() => handleCardClick(filterType)}
+                        style={{
+                            borderColor: active ? color : "",
+                            ringColor: active ? color : "",
+                        }}
                     >
                         <div className="card-header flex items-center gap-x-3">
                             <div
@@ -192,6 +279,11 @@ const MainPage = () => {
                                 {icon}
                             </div>
                             <p className="card-title">{label}</p>
+                            {active && sortable && (
+                                <span className="text-xs text-slate-500">
+                                    {sortOrder === "desc" ? "↓ High to Low" : "↑ Low to High"}
+                                </span>
+                            )}
                         </div>
                         <div className="card-body rounded-md bg-slate-100 p-4 transition-colors dark:bg-slate-950">
                             <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">
@@ -210,7 +302,15 @@ const MainPage = () => {
             <div className="card">
                 <div className="card-header justify-between">
                     <p className="card-title">Laundry Records</p>
-                    <span className="text-sm text-slate-500">{filteredRecords.length} records found</span>
+                    <div className="flex items-center gap-2">
+                        {activeFilter && (
+                            <span className="text-sm text-slate-500">
+                                Filtered by: {summaryCards.find(card => card.filterType === activeFilter)?.label}
+                                {(activeFilter === "income" || activeFilter === "loads") && ` (${sortOrder === "desc" ? "High to Low" : "Low to High"})`}
+                            </span>
+                        )}
+                        <span className="text-sm text-slate-500">{filteredRecords.length} records found</span>
+                    </div>
                 </div>
                 {loading ? (
                     <div className="p-6 text-center text-slate-500 dark:text-slate-400">Loading records...</div>
@@ -218,6 +318,8 @@ const MainPage = () => {
                     <AdminRecordTable
                         items={filteredRecords}
                         allItems={records}
+                        activeFilter={activeFilter}
+                        sortOrder={sortOrder}
                     />
                 )}
             </div>

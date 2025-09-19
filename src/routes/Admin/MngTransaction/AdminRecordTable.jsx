@@ -48,13 +48,13 @@ const renderStatusBadge = (status, type = "pickup") => {
     ) : null;
 };
 
-const AdminRecordTable = ({ items = [], allItems = [] }) => {
+const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [showCalendar, setShowCalendar] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const [sortOrder, setSortOrder] = useState("desc");
-    const [sortField, setSortField] = useState("createdAt");
+    const [tableSortOrder, setTableSortOrder] = useState("desc");
+    const [tableSortField, setTableSortField] = useState("createdAt");
     const [expandedRows, setExpandedRows] = useState(new Set());
 
     const rowsPerPage = 10;
@@ -62,7 +62,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, selectedRange]);
+    }, [searchTerm, selectedRange, activeFilter]);
 
     useEffect(() => {
         const handlePointerDown = (e) => {
@@ -94,23 +94,57 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
         return true;
     };
 
+    // Function to determine if a row should be highlighted
+    const shouldHighlight = (item, index) => {
+        switch (activeFilter) {
+            case "income":
+                // Highlight top 10 items when sorted by price
+                const sortedByPrice = [...items].sort((a, b) => 
+                    sortOrder === "asc" ? a.price - b.price : b.price - a.price
+                );
+                return sortedByPrice.indexOf(item) < 10;
+            case "loads":
+                // Highlight top 10 items when sorted by loads
+                const sortedByLoads = [...items].sort((a, b) => 
+                    sortOrder === "asc" ? a.loads - b.loads : b.loads - a.loads
+                );
+                return sortedByLoads.indexOf(item) < 10;
+            case "expired":
+                return item.expired;
+            case "unwashed":
+                return item.laundryStatus === "Not Started";
+            case "unclaimed":
+                return item.pickupStatus === "UNCLAIMED";
+            default:
+                return false;
+        }
+    };
+
     const filtered = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
 
     const sorted = [...filtered].sort((a, b) => {
-        const valueA = a[sortField];
-        const valueB = b[sortField];
+        // If there's an active filter from the summary cards, use that sorting
+        if (activeFilter === "income") {
+            return sortOrder === "asc" ? a.price - b.price : b.price - a.price;
+        } else if (activeFilter === "loads") {
+            return sortOrder === "asc" ? a.loads - b.loads : b.loads - a.loads;
+        }
+        
+        // Otherwise, use the table's own sorting
+        const valueA = a[tableSortField];
+        const valueB = b[tableSortField];
 
-        if (sortField === "createdAt") {
+        if (tableSortField === "createdAt") {
             const dateA = new Date(valueA);
             const dateB = new Date(valueB);
-            return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+            return tableSortOrder === "asc" ? dateA - dateB : dateB - dateA;
         }
 
         if (typeof valueA === "string" && typeof valueB === "string") {
-            return sortOrder === "asc" ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
+            return tableSortOrder === "asc" ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
         }
 
-        return sortOrder === "asc" ? valueA - valueB : valueB - valueA;
+        return tableSortOrder === "asc" ? valueA - valueB : valueB - valueA;
     });
 
     const totalPages = Math.ceil(sorted.length / rowsPerPage);
@@ -156,11 +190,11 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
     };
 
     const handleSort = (field) => {
-        if (sortField === field) {
-            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+        if (tableSortField === field) {
+            setTableSortOrder(tableSortOrder === "asc" ? "desc" : "asc");
         } else {
-            setSortField(field);
-            setSortOrder("desc");
+            setTableSortField(field);
+            setTableSortOrder("desc");
         }
     };
 
@@ -272,7 +306,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                                         >
                                             <div className="flex items-center">
                                                 {header}
-                                                {isSortable && sortField === field && <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>}
+                                                {isSortable && tableSortField === field && <span className="ml-1">{tableSortOrder === "asc" ? "↑" : "↓"}</span>}
                                             </div>
                                         </th>
                                     );
@@ -306,11 +340,15 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                             ) : (
                                 paginated.map((record, idx) => {
                                     const isExpanded = expandedRows.has(record.id);
+                                    const shouldHighlightRow = shouldHighlight(record, idx);
+                                    
                                     return (
                                         <>
                                             <tr
                                                 key={record.id}
-                                                className="border-t border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                                                className={`border-t border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50 ${
+                                                    shouldHighlightRow ? "bg-yellow-100 dark:bg-yellow-900/30" : ""
+                                                }`}
                                             >
                                                 <td className="px-2 py-2">
                                                     <button
@@ -377,7 +415,7 @@ const AdminRecordTable = ({ items = [], allItems = [] }) => {
                                                 </td>
                                             </tr>
                                             {isExpanded && (
-                                                <tr className="bg-slate-50 dark:bg-slate-800/30">
+                                                <tr className={`bg-slate-50 dark:bg-slate-800/30 ${shouldHighlightRow ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}`}>
                                                     <td colSpan={tableHeaders.length + 1} className="px-4 py-3">
                                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                                             <div>
