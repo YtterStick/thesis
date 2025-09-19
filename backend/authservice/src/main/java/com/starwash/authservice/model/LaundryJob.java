@@ -19,7 +19,7 @@ import java.util.List;
     @CompoundIndex(name = "expired_idx", def = "{'expired': 1}"),
     @CompoundIndex(name = "customer_name_idx", def = "{'customerName': 1}"),
     @CompoundIndex(name = "service_type_idx", def = "{'serviceType': 1}"),
-    @CompoundIndex(name = "disposed_idx", def = "{'disposed': 1}") // NEW: Index for disposal status
+    @CompoundIndex(name = "disposed_idx", def = "{'disposed': 1}") // Index for disposal status
 })
 public class LaundryJob {
 
@@ -42,7 +42,7 @@ public class LaundryJob {
     private List<String> statusFlow = new ArrayList<>();
     private Integer currentStep = 0;
 
-    // ✅ Claiming fields
+    // Claiming fields
     @Indexed
     private String pickupStatus = "UNCLAIMED"; // UNCLAIMED | CLAIMED
     private LocalDateTime claimDate;
@@ -54,14 +54,14 @@ public class LaundryJob {
     @Indexed
     private String serviceType;
 
-    // ✅ Expiration fields
+    // Expiration fields
     @Indexed
     private LocalDateTime dueDate;
     @Indexed
     private boolean expired = false;
     private LocalDateTime expirationDate;
 
-    // NEW: Disposal tracking fields
+    // Disposal tracking fields
     @Indexed
     private boolean disposed = false;
     private String disposedBy;
@@ -85,7 +85,7 @@ public class LaundryJob {
         this.dueDate = LocalDateTime.now().plusDays(7); // Set due date to 7 days from now
     }
 
-    // ✅ NEW: Disposal getters/setters
+    // Disposal getters and setters
     public boolean isDisposed() {
         return disposed;
     }
@@ -110,7 +110,7 @@ public class LaundryJob {
         this.disposedDate = disposedDate;
     }
 
-    // ✅ Expiration getters/setters
+    // Expiration getters and setters
     public LocalDateTime getDueDate() {
         return dueDate;
     }
@@ -135,11 +135,16 @@ public class LaundryJob {
         this.expirationDate = expirationDate;
     }
 
-    // ✅ Laundry processed by getters/setters
-    public String getLaundryProcessedBy() { return laundryProcessedBy; }
-    public void setLaundryProcessedBy(String laundryProcessedBy) { this.laundryProcessedBy = laundryProcessedBy; }
+    // Laundry processed by getters and setters
+    public String getLaundryProcessedBy() { 
+        return laundryProcessedBy; 
+    }
     
-    // ✅ Claiming getters/setters
+    public void setLaundryProcessedBy(String laundryProcessedBy) { 
+        this.laundryProcessedBy = laundryProcessedBy; 
+    }
+    
+    // Claiming getters and setters
     public LocalDateTime getClaimDate() {
         return claimDate;
     }
@@ -164,7 +169,7 @@ public class LaundryJob {
         this.claimedByStaffId = claimedByStaffId;
     }
 
-    // ✅ Core getters/setters
+    // Core getters and setters
     public String getId() {
         return id;
     }
@@ -260,11 +265,16 @@ public class LaundryJob {
                 ", transactionId='" + transactionId + '\'' +
                 ", customerName='" + customerName + '\'' +
                 ", contact='" + contact + '\'' +
-                ", loads=" + (loadAssignments != null ? loadAssignments.size() : 0) +
+                ", loadAssignments=" + loadAssignments +
                 ", detergentQty=" + detergentQty +
                 ", fabricQty=" + fabricQty +
+                ", statusFlow=" + statusFlow +
                 ", currentStep=" + currentStep +
-                ", pickupStatus=" + pickupStatus +
+                ", pickupStatus='" + pickupStatus + '\'' +
+                ", claimDate=" + claimDate +
+                ", claimReceiptNumber='" + claimReceiptNumber + '\'' +
+                ", claimedByStaffId='" + claimedByStaffId + '\'' +
+                ", laundryProcessedBy='" + laundryProcessedBy + '\'' +
                 ", serviceType='" + serviceType + '\'' +
                 ", dueDate=" + dueDate +
                 ", expired=" + expired +
@@ -275,7 +285,7 @@ public class LaundryJob {
                 '}';
     }
 
-    // ✅ Inner class for per-load tracking
+    // Inner class for per-load tracking
     public static class LoadAssignment {
         private int loadNumber;
         private String machineId;
@@ -343,6 +353,18 @@ public class LaundryJob {
 
         public void setEndTime(LocalDateTime endTime) {
             this.endTime = endTime;
+        }
+
+        @Override
+        public String toString() {
+            return "LoadAssignment{" +
+                    "loadNumber=" + loadNumber +
+                    ", machineId='" + machineId + '\'' +
+                    ", status='" + status + '\'' +
+                    ", durationMinutes=" + durationMinutes +
+                    ", startTime=" + startTime +
+                    ", endTime=" + endTime +
+                    '}';
         }
     }
 }

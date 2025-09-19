@@ -34,4 +34,7 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
 
     // Add this method
     List<LaundryJob> findByDisposedFalse();
+
+    List<LaundryJob> findByDisposedTrue();
+    
 }

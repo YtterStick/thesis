@@ -33,6 +33,11 @@ public class ExpiredController {
         }
 
         try {
+            String token = authHeader.replace("Bearer ", "");
+            if (!jwtUtil.validateToken(token)) {
+                return ResponseEntity.status(401).build();
+            }
+            
             List<LaundryJob> expiredJobs = laundryJobService.getExpiredJobs();
             return ResponseEntity.ok(expiredJobs);
         } catch (Exception e) {
@@ -54,8 +59,11 @@ public class ExpiredController {
 
         try {
             String token = authHeader.replace("Bearer ", "");
-            String username = jwtUtil.getUsername(token);
+            if (!jwtUtil.validateToken(token)) {
+                return ResponseEntity.status(401).build();
+            }
             
+            String username = jwtUtil.getUsername(token);
             LaundryJob job = laundryJobService.disposeJob(transactionId, username);
             return ResponseEntity.ok(job);
         } catch (Exception e) {
@@ -75,6 +83,11 @@ public class ExpiredController {
         }
 
         try {
+            String token = authHeader.replace("Bearer ", "");
+            if (!jwtUtil.validateToken(token)) {
+                return ResponseEntity.status(401).build();
+            }
+            
             List<LaundryJob> disposedJobs = laundryJobService.getDisposedJobs();
             return ResponseEntity.ok(disposedJobs);
         } catch (Exception e) {

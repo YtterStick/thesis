@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import {
   Table,
   TableBody,
-  TableCell,
+ TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -22,11 +22,12 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  RefreshCw
 } from "lucide-react";
 import ServiceReceiptCard from "@/components/ServiceReceiptCard";
 
-const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose }) => {
+const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose, isExpiredTab }) => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [loadingTransactionId, setLoadingTransactionId] = useState(null);
@@ -46,6 +47,26 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
   useEffect(() => {
     setCurrentPage(1);
   }, [transactions]);
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "N/A";
+    
+    const date = new Date(dateString);
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return "N/A";
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
 
   const fetchFormatSettings = async () => {
     try {
@@ -148,6 +169,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
               <TableHead>Service</TableHead>
               <TableHead>Loads</TableHead>
               <TableHead>Date Completed</TableHead>
+              <TableHead>Due Date</TableHead>
+              {isExpiredTab && <TableHead>Expired On</TableHead>}
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -155,18 +178,27 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-16">
+                <TableCell colSpan={8} className="text-center py-16">
                   <Loader className="h-8 w-8 animate-spin mx-auto mb-2" />
-                  <div className="text-slate-600 dark:text-slate-400">Loading transactions...</div>
+                  <div className="text-slate-600 dark:text-slate-400">
+                    {isExpiredTab ? "Loading expired transactions..." : "Loading transactions..."}
+                  </div>
                 </TableCell>
               </TableRow>
             ) : transactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-16">
+                <TableCell colSpan={8} className="py-16">
                   <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                     <CheckCircle2 className="h-12 w-12 mb-4 text-slate-400 dark:text-slate-500" />
-                    <p className="text-lg font-medium">All laundry has been claimed!</p>
-                    <p className="text-sm">No unclaimed completed transactions found.</p>
+                    <p className="text-lg font-medium">
+                      {isExpiredTab ? "No expired laundry!" : "All laundry has been claimed!"}
+                    </p>
+                    <p className="text-sm">
+                      {isExpiredTab 
+                        ? "No expired transactions found." 
+                        : "No unclaimed completed transactions found."
+                      }
+                    </p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -177,7 +209,9 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                   null
                 );
 
-                const isExpired = transaction.expired;
+                const dueDate = transaction.dueDate ? new Date(transaction.dueDate) : null;
+                const expiredDate = transaction.expirationDate ? new Date(transaction.expirationDate) : null;
+                const isExpired = transaction.expired || (dueDate && dueDate < new Date());
 
                 return (
                   <TableRow
@@ -207,8 +241,16 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                     </TableCell>
                     <TableCell className="flex items-center text-slate-600 dark:text-slate-300">
                       <Calendar className="h-4 w-4 mr-1 text-slate-400 dark:text-slate-500" />
-                      {completionDate ? completionDate.toLocaleDateString() : "N/A"}
+                      {completionDate ? formatDateTime(completionDate) : "N/A"}
                     </TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-300">
+                      {dueDate ? formatDateTime(dueDate) : "N/A"}
+                    </TableCell>
+                    {isExpiredTab && (
+                      <TableCell className="text-slate-600 dark:text-slate-300">
+                        {expiredDate ? formatDateTime(expiredDate) : "N/A"}
+                      </TableCell>
+                    )}
                     <TableCell>
                       {isExpired ? (
                         <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 flex items-center gap-1 justify-center w-24">
@@ -374,6 +416,11 @@ ClaimingTable.propTypes = {
   hasFetched: PropTypes.bool.isRequired,
   onClaim: PropTypes.func.isRequired,
   onDispose: PropTypes.func.isRequired,
+  isExpiredTab: PropTypes.bool,
+};
+
+ClaimingTable.defaultProps = {
+  isExpiredTab: false,
 };
 
 export default ClaimingTable;

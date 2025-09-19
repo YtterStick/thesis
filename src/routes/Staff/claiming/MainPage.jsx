@@ -7,20 +7,26 @@ import { useToast } from "@/hooks/use-toast";
 
 const MainPage = () => {
   const [transactions, setTransactions] = useState([]);
+  const [expiredTransactions, setExpiredTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingExpired, setIsLoadingExpired] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("unclaimed"); // 'unclaimed' or 'expired'
   const [hasFetched, setHasFetched] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!hasFetched) fetchCompletedTransactions();
+    if (!hasFetched) {
+      fetchCompletedTransactions();
+      fetchExpiredTransactions();
+    }
   }, [hasFetched]);
 
   useEffect(() => {
     filterTransactions();
-  }, [transactions, searchTerm, dateFilter]);
+  }, [transactions, expiredTransactions, searchTerm, dateFilter, activeTab]);
 
   const fetchCompletedTransactions = async () => {
     try {
@@ -40,7 +46,6 @@ const MainPage = () => {
       
       // Additional filtering on the frontend as a safety measure
       const filteredData = data.filter(transaction => {
-        // This assumes your transaction data includes paymentMethod and gcashVerified
         if (transaction.paymentMethod === "GCash") {
           return transaction.gcashVerified === true;
         }
@@ -57,8 +62,32 @@ const MainPage = () => {
     }
   };
 
+  const fetchExpiredTransactions = async () => {
+    try {
+      setIsLoadingExpired(true);
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(
+        "http://localhost:8080/api/expired",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.ok) throw new Error("Failed to fetch expired transactions");
+      const data = await response.json();
+      setExpiredTransactions(data);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Failed to load expired transactions", variant: "destructive" });
+    } finally {
+      setIsLoadingExpired(false);
+    }
+  };
+
   const filterTransactions = () => {
-    let filtered = transactions;
+    let filtered = activeTab === "unclaimed" ? transactions : expiredTransactions;
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -126,7 +155,9 @@ const MainPage = () => {
         description: "Laundry marked as claimed. You can now view/print the receipt.",
       });
 
+      // Remove from both lists
       setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      setExpiredTransactions(prev => prev.filter(t => t.id !== transactionId));
 
       return claimedTransaction;
     } catch (error) {
@@ -159,18 +190,25 @@ const MainPage = () => {
         description: "Expired laundry has been disposed.",
       });
 
-      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      // Remove from expired list
+      setExpiredTransactions(prev => prev.filter(t => t.id !== transactionId));
     } catch (error) {
       console.error(error);
       toast({ title: "Error", description: "Failed to dispose expired laundry", variant: "destructive" });
     }
   };
 
+  const refreshData = () => {
+    setHasFetched(false);
+    fetchCompletedTransactions();
+    fetchExpiredTransactions();
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Laundry Claiming</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Laundry Claiming & Disposing </h1>
           <p className="mt-1 text-slate-600 dark:text-slate-400">Manage completed and expired laundry</p>
         </div>
       </div>
@@ -179,12 +217,37 @@ const MainPage = () => {
         <CardHeader className="bg-slate-100 dark:bg-slate-800 rounded-t-lg">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="text-slate-900 dark:text-slate-50">Completed & Unclaimed Laundry</CardTitle>
+              <CardTitle className="text-slate-900 dark:text-slate-50">
+                {activeTab === "unclaimed" ? "Completed & Unclaimed Laundry" : "Expired Laundry"}
+              </CardTitle>
               <CardDescription className="text-slate-600 dark:text-slate-400">
-                {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""} ready for pickup
+                {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""}{" "}
+                {activeTab === "unclaimed" ? "ready for pickup" : "expired and need disposal"}
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+              <div className="flex space-x-1">
+                <button
+                  className={`px-4 py-2 rounded-md text-sm font-medium ${
+                    activeTab === "unclaimed"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+                  }`}
+                  onClick={() => setActiveTab("unclaimed")}
+                >
+                  Unclaimed ({transactions.length})
+                </button>
+                <button
+                  className={`px-4 py-2 rounded-md text-sm font-medium ${
+                    activeTab === "expired"
+                      ? "bg-red-600 text-white"
+                      : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+                  }`}
+                  onClick={() => setActiveTab("expired")}
+                >
+                  Expired ({expiredTransactions.length})
+                </button>
+              </div>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
                 <Input
@@ -213,10 +276,11 @@ const MainPage = () => {
         <CardContent className="p-0">
           <ClaimingTable
             transactions={filteredTransactions}
-            isLoading={isLoading}
+            isLoading={activeTab === "unclaimed" ? isLoading : isLoadingExpired}
             hasFetched={hasFetched}
             onClaim={handleClaim}
             onDispose={handleDispose}
+            isExpiredTab={activeTab === "expired"}
           />
         </CardContent>
       </Card>

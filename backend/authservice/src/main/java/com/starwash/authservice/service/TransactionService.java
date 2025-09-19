@@ -70,7 +70,13 @@ public class TransactionService {
 
                 LocalDateTime now = LocalDateTime.now();
                 LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
-                LocalDateTime dueDate = Optional.ofNullable(request.getDueDate()).orElse(issueDate.plusDays(7));
+
+                // Ensure dueDate is always set (7 days from issue date)
+                LocalDateTime dueDate = Optional.ofNullable(request.getDueDate())
+                                .orElse(issueDate.plusDays(7));
+
+                // Log the dueDate for tracking
+                System.out.println("Creating transaction with dueDate: " + dueDate);
 
                 String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
 
@@ -88,7 +94,7 @@ public class TransactionService {
                                 amountGiven,
                                 change,
                                 issueDate,
-                                dueDate,
+                                dueDate, // Use the calculated dueDate
                                 request.getStaffId(),
                                 now);
 
@@ -129,7 +135,7 @@ public class TransactionService {
                                 total,
                                 request.getPaymentMethod(),
                                 issueDate,
-                                dueDate,
+                                dueDate, // Include dueDate in the response
                                 new FormatSettingsDto(settings),
                                 detergentQty,
                                 fabricQty,
