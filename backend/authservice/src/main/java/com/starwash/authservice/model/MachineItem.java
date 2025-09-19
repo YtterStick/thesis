@@ -13,17 +13,22 @@ public class MachineItem {
   private String type;
   private Double capacityKg;
   private String status;
+  private String lastMaintenance; // ISO date string
+  private String nextMaintenance; // ISO date string
 
   public MachineItem() {}
 
-  public MachineItem(String id, String name, String type, Double capacityKg, String status) {
+  public MachineItem(String id, String name, String type, Double capacityKg, String status, String lastMaintenance, String nextMaintenance) {
     this.id = id;
     this.name = name;
     this.type = type;
     this.capacityKg = capacityKg;
     this.status = status;
+    this.lastMaintenance = lastMaintenance;
+    this.nextMaintenance = nextMaintenance;
   }
 
+  // Getters and setters for all fields
   public String getId() { return id; }
   public void setId(String id) { this.id = id; }
 
@@ -38,4 +43,10 @@ public class MachineItem {
 
   public String getStatus() { return status; }
   public void setStatus(String status) { this.status = status; }
+
+  public String getLastMaintenance() { return lastMaintenance; }
+  public void setLastMaintenance(String lastMaintenance) { this.lastMaintenance = lastMaintenance; }
+
+  public String getNextMaintenance() { return nextMaintenance; }
+  public void setNextMaintenance(String nextMaintenance) { this.nextMaintenance = nextMaintenance; }
 }
