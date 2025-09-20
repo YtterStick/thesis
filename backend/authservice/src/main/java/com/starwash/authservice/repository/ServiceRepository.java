@@ -6,5 +6,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ServiceRepository extends MongoRepository<ServiceItem, String> {
-  // Optional: add custom queries like findByNameContaining, etc.
 }

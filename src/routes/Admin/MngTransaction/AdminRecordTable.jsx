@@ -6,18 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 
-const tableHeaders = [
-    "Name",
-    "Service",
-    "Loads",
-    "Detergent",
-    "Price",
-    "Date",
-    "Payment",
-    "Laundry Status",
-    "Pickup Status",
-    "Actions",
-];
+const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Price", "Date", "Payment", "Laundry Status", "Pickup Status", "Actions"];
 
 const renderStatusBadge = (status, type = "pickup") => {
     const iconMap = {
@@ -94,20 +83,13 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
         return true;
     };
 
-    // Function to determine if a row should be highlighted
     const shouldHighlight = (item, index) => {
         switch (activeFilter) {
             case "income":
-                // Highlight top 10 items when sorted by price
-                const sortedByPrice = [...items].sort((a, b) => 
-                    sortOrder === "asc" ? a.price - b.price : b.price - a.price
-                );
+                const sortedByPrice = [...items].sort((a, b) => (sortOrder === "asc" ? a.price - b.price : b.price - a.price));
                 return sortedByPrice.indexOf(item) < 10;
             case "loads":
-                // Highlight top 10 items when sorted by loads
-                const sortedByLoads = [...items].sort((a, b) => 
-                    sortOrder === "asc" ? a.loads - b.loads : b.loads - a.loads
-                );
+                const sortedByLoads = [...items].sort((a, b) => (sortOrder === "asc" ? a.loads - b.loads : b.loads - a.loads));
                 return sortedByLoads.indexOf(item) < 10;
             case "expired":
                 return item.expired;
@@ -123,14 +105,12 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
     const filtered = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
 
     const sorted = [...filtered].sort((a, b) => {
-        // If there's an active filter from the summary cards, use that sorting
         if (activeFilter === "income") {
             return sortOrder === "asc" ? a.price - b.price : b.price - a.price;
         } else if (activeFilter === "loads") {
             return sortOrder === "asc" ? a.loads - b.loads : b.loads - a.loads;
         }
-        
-        // Otherwise, use the table's own sorting
+
         const valueA = a[tableSortField];
         const valueB = b[tableSortField];
 
@@ -152,7 +132,6 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
 
     const handlePrint = (record) => {
         console.log("🖨️ Printing receipt for:", record);
-        // Implement print functionality
     };
 
     const handleExport = () => {
@@ -179,8 +158,6 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Laundry Records");
-
-        // Create a date string for the filename
         const dateStr = format(new Date(), "yyyy-MM-dd");
         XLSX.writeFile(workbook, `laundry-records-${dateStr}.xlsx`);
     };
@@ -306,7 +283,9 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                         >
                                             <div className="flex items-center">
                                                 {header}
-                                                {isSortable && tableSortField === field && <span className="ml-1">{tableSortOrder === "asc" ? "↑" : "↓"}</span>}
+                                                {isSortable && tableSortField === field && (
+                                                    <span className="ml-1">{tableSortOrder === "asc" ? "↑" : "↓"}</span>
+                                                )}
                                             </div>
                                         </th>
                                     );
@@ -341,7 +320,7 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                 paginated.map((record, idx) => {
                                     const isExpanded = expandedRows.has(record.id);
                                     const shouldHighlightRow = shouldHighlight(record, idx);
-                                    
+
                                     return (
                                         <>
                                             <tr
@@ -353,13 +332,9 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                                 <td className="px-2 py-2">
                                                     <button
                                                         onClick={() => toggleRowExpansion(record.id)}
-                                                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                                                        className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
                                                     >
-                                                        {isExpanded ? (
-                                                            <ChevronUp className="h-4 w-4" />
-                                                        ) : (
-                                                            <ChevronDown className="h-4 w-4" />
-                                                        )}
+                                                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                                     </button>
                                                 </td>
                                                 <td className="px-3 py-2 font-medium">{record.name}</td>
@@ -415,15 +390,24 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                                 </td>
                                             </tr>
                                             {isExpanded && (
-                                                <tr className={`bg-slate-50 dark:bg-slate-800/30 ${shouldHighlightRow ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}`}>
-                                                    <td colSpan={tableHeaders.length + 1} className="px-4 py-3">
-                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                <tr
+                                                    className={`bg-slate-50 dark:bg-slate-800/30 ${shouldHighlightRow ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}`}
+                                                >
+                                                    <td
+                                                        colSpan={tableHeaders.length + 1}
+                                                        className="px-4 py-3"
+                                                    >
+                                                        <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                                                             <div>
-                                                                <span className="font-medium text-slate-500 dark:text-slate-400">Laundry Processed By:</span>
+                                                                <span className="font-medium text-slate-500 dark:text-slate-400">
+                                                                    Laundry Processed By:
+                                                                </span>
                                                                 <p>{record.laundryProcessedBy || "—"}</p>
                                                             </div>
                                                             <div>
-                                                                <span className="font-medium text-slate-500 dark:text-slate-400">Claim Processed By:</span>
+                                                                <span className="font-medium text-slate-500 dark:text-slate-400">
+                                                                    Claim Processed By:
+                                                                </span>
                                                                 <p>{record.claimProcessedBy || "—"}</p>
                                                             </div>
                                                             <div>

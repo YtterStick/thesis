@@ -92,7 +92,7 @@ const MainPage = () => {
                 change: 0,
             });
             setShowActions(false);
-            setIsLocked(true); // ✅ lock after save
+            setIsLocked(true);
         } catch (error) {
             console.error("❌ Transaction failed:", error);
             setErrorMessage(error.message || "Transaction failed");
@@ -110,7 +110,7 @@ const MainPage = () => {
         });
         setShowActions(false);
         setErrorMessage(null);
-        setIsLocked(false); // ✅ unlock for new transaction
+        setIsLocked(false); 
         formRef.current?.resetForm();
     };
 

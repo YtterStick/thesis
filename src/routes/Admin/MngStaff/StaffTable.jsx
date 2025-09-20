@@ -4,15 +4,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/utils/cn";
-import EditStaffForm from "./EditStaffForm"; // Add this import
+import EditStaffForm from "./EditStaffForm";
 
 const ITEMS_PER_PAGE = 7;
 
-const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => { // Add onStaffUpdate prop
+const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingId, setLoadingId] = useState(null);
-  const [editingStaff, setEditingStaff] = useState(null); // Add state for editing
+  const [editingStaff, setEditingStaff] = useState(null);
   const { toast } = useToast();
 
   if (!staff || staff.length === 0) {
@@ -140,7 +140,6 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => { // Add onStaf
                         <Pencil className="h-4 w-4" />
                       </Button>
                       
-                      {/* Delete Button (sets status to Inactive) */}
                       <Button
                         variant="ghost"
                         size="sm"

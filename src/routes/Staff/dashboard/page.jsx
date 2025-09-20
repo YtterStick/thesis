@@ -16,10 +16,8 @@ const StaffDashboardPage = () => {
         lastUpdated: null,
     });
 
-    // State for real-time countdown
     const [currentTime, setCurrentTime] = useState(new Date());
 
-    // Update time every second for real-time countdown
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentTime(new Date());
@@ -69,7 +67,6 @@ const StaffDashboardPage = () => {
     useEffect(() => {
         fetchDashboardData();
 
-        // Set up polling every 15 seconds for data refresh
         const interval = setInterval(fetchDashboardData, 15000);
         return () => clearInterval(interval);
     }, [fetchDashboardData]);
@@ -78,7 +75,6 @@ const StaffDashboardPage = () => {
         return `₱${amount.toFixed(2)}`;
     };
 
-    // Real-time remaining time calculation - FIXED (no buffer)
     const getRemainingTime = (endTime) => {
         if (!endTime) return null;
 
@@ -102,7 +98,6 @@ const StaffDashboardPage = () => {
     };
 
     const getMachineStatus = (machine) => {
-        // Always show timer if machine is in use, even if endTime is near
         if (machine.status === "In Use") {
             if (machine.endTime) {
                 const remaining = getRemainingTime(machine.endTime);
@@ -178,7 +173,6 @@ const StaffDashboardPage = () => {
         },
     ];
 
-    // Group machines by type
     const washers = dashboardData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "WASHER");
 
     const dryers = dashboardData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "DRYER");

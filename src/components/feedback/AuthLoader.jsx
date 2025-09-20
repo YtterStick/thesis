@@ -1,6 +1,6 @@
 import React from "react";
 import Lottie from "lottie-react";
-import waterLoadingAnimation from "@/assets/lottie/water-loading.json"; // Replace with your actual path
+import waterLoadingAnimation from "@/assets/lottie/water-loading.json";
 import { animated, useSpring } from "@react-spring/web";
 
 const AuthLoader = () => {
@@ -16,7 +16,6 @@ const AuthLoader = () => {
         style={fadeIn}
         className="relative z-10 flex flex-col items-center justify-center"
       >
-        {/* 🌊 Enlarged Water-themed Lottie animation */}
         <div className="h-64 w-64">
           <Lottie
             animationData={waterLoadingAnimation}

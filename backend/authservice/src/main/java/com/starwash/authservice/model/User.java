@@ -19,7 +19,6 @@ public class User implements UserDetails {
     private String contact;
     private String status;
 
-    // 🛠 Getters
     public String getId() { return id; }
     public String getUsername() { return username; }
     public String getPassword() { return password; }
@@ -27,7 +26,6 @@ public class User implements UserDetails {
     public String getContact() { return contact; }
     public String getStatus() { return status; }
 
-    // 🛠 Setters
     public void setId(String id) { this.id = id; }
     public void setUsername(String username) { this.username = username; }
     public void setPassword(String password) { this.password = password; }
@@ -35,10 +33,9 @@ public class User implements UserDetails {
     public void setContact(String contact) { this.contact = contact; }
     public void setStatus(String status) { this.status = status; }
 
-    // ✅ Spring Security overrides - Updated to check account status
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // Optional: map role to authority
+        return Collections.emptyList();
     }
 
     @Override

@@ -14,7 +14,6 @@ public class ServiceEntry {
         this.quantity = quantity;
     }
 
-    // Getters
     public String getName() {
         return name;
     }
@@ -27,7 +26,6 @@ public class ServiceEntry {
         return quantity;
     }
 
-    // Setters
     public void setName(String name) {
         this.name = name;
     }

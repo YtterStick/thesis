@@ -12,8 +12,6 @@ public class ServiceItem {
   private String description;
   private Double price;
 
-  // Optional: add icon or category later if needed
-
   public ServiceItem() {
   }
 

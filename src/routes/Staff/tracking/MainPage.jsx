@@ -31,14 +31,12 @@ import dryingAnimation from "@/assets/lottie/dryer-machine.json";
 import foldingAnimation from "@/assets/lottie/clothes.json";
 import loaderAnimation from "@/assets/lottie/loader.json";
 import Loader from "@/components/loader";
-// Constants
 const DEFAULT_DURATION = { washing: 35, drying: 40 };
 const ALLOWED_SKEW_MS = 5000;
 const REQUEST_TIMEOUT = 10000;
 const POLLING_INTERVAL = 10000;
 const ACTIVE_POLLING_INTERVAL = 5000;
 
-// Utility functions
 const normalizeStatus = (raw) => {
     if (!raw) return "UNWASHED";
     const s = raw.toUpperCase();
@@ -88,7 +86,6 @@ const maskContact = (contact) => {
     return `${contact.slice(0, 4)}****${contact.slice(-3)}`;
 };
 
-// Helper function for API calls with timeout
 const fetchWithTimeout = (url, options = {}, timeout = REQUEST_TIMEOUT) => {
     const controller = new AbortController();
     const { signal } = controller;
@@ -142,27 +139,22 @@ export default function ServiceTrackingPage() {
     const completedTimersRef = useRef(new Set());
     const activeTimersRef = useRef(new Map());
 
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
-    // Check if there are any active jobs (washing or drying)
     const hasActiveJobs = useMemo(() => {
         return jobs.some((job) => job.loads.some((load) => load.status === "WASHING" || load.status === "DRYING"));
     }, [jobs]);
 
-    // Determine polling interval based on active jobs
     const getPollingInterval = () => {
         if (!autoRefresh) return null;
         return hasActiveJobs ? ACTIVE_POLLING_INTERVAL : POLLING_INTERVAL;
     };
 
-    // Reset to first page when jobs change
     useEffect(() => {
         setCurrentPage(1);
     }, [jobs]);
 
-    // Calculate pagination values
     const totalItems = jobs.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -178,7 +170,6 @@ export default function ServiceTrackingPage() {
         setCurrentPage(1);
     };
 
-    // Fetch jobs with better error handling
     const fetchJobs = useCallback(async () => {
         try {
             const res = await fetchWithTimeout("http://localhost:8080/api/laundry-jobs");
@@ -217,7 +208,6 @@ export default function ServiceTrackingPage() {
                 })),
             }));
 
-            // Merge jobs safely by loadNumber, preserving timer state
             setJobs((prev) =>
                 jobsWithLoads.map((newJob) => {
                     const oldJob = prev.find((j) => j.id === newJob.id);
@@ -229,7 +219,6 @@ export default function ServiceTrackingPage() {
                             const oldLoad = oldJob.loads.find((l) => l.loadNumber === newLoad.loadNumber);
                             if (!oldLoad) return { ...newLoad, status: normalizeStatus(newLoad.status) };
 
-                            // Check if we have a preserved timer for this load
                             const timerKey = `${newJob.id}-${newLoad.loadNumber}`;
                             const preservedStartTime = activeTimersRef.current.get(timerKey);
 
@@ -293,7 +282,6 @@ export default function ServiceTrackingPage() {
         }
     };
 
-    // Setup polling with dynamic interval
     useEffect(() => {
         const interval = getPollingInterval();
 
@@ -322,10 +310,8 @@ export default function ServiceTrackingPage() {
             return;
         }
 
-        // Initial data fetch
         fetchData();
 
-        // Set up clock for UI updates
         clockRef.current = setInterval(() => setNow(Date.now()), 1000);
 
         return () => {
@@ -362,7 +348,6 @@ export default function ServiceTrackingPage() {
                 `http://localhost:8080/api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`,
                 { method: "PATCH" },
             );
-            // Refresh data after action
             fetchData();
         } catch (err) {
             console.error("Failed to assign machine:", err);
@@ -389,7 +374,6 @@ export default function ServiceTrackingPage() {
                 `http://localhost:8080/api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`,
                 { method: "PATCH" },
             );
-            // Refresh data after action
             fetchData();
         } catch (err) {
             console.error("Failed to update duration:", err);
@@ -423,7 +407,6 @@ export default function ServiceTrackingPage() {
 
         const startTime = new Date().toISOString();
 
-        // Store the timer for preservation during refreshes
         const timerKey = `${job.id}-${load.loadNumber}`;
         activeTimersRef.current.set(timerKey, startTime);
 
@@ -445,7 +428,6 @@ export default function ServiceTrackingPage() {
                     method: "PATCH",
                 },
             );
-            // Refresh data after action
             fetchData();
         } catch (err) {
             console.error("Failed to start load:", err);
@@ -461,7 +443,6 @@ export default function ServiceTrackingPage() {
         const currentIndex = flow.indexOf(load.status);
         const nextStatus = currentIndex < flow.length - 1 ? flow[currentIndex + 1] : load.status;
 
-        // Remove timer tracking if this load was running
         if (load.status === "WASHING" || load.status === "DRYING") {
             const timerKey = `${job.id}-${load.loadNumber}`;
             activeTimersRef.current.delete(timerKey);
@@ -510,7 +491,6 @@ export default function ServiceTrackingPage() {
                 }
             }
 
-            // Refresh data after action
             fetchData();
         } catch (err) {
             console.error("Failed to advance load status:", err);
@@ -525,7 +505,6 @@ export default function ServiceTrackingPage() {
 
         const startTime = new Date().toISOString();
 
-        // Store the timer for preservation during refreshes
         const timerKey = `${job.id}-${load.loadNumber}`;
         activeTimersRef.current.set(timerKey, startTime);
 
@@ -542,7 +521,6 @@ export default function ServiceTrackingPage() {
 
         try {
             await fetchWithTimeout(`http://localhost:8080/api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`, { method: "PATCH" });
-            // Refresh data after action
             fetchData();
         } catch (err) {
             console.error("Failed to start drying again:", err);
@@ -564,7 +542,6 @@ export default function ServiceTrackingPage() {
         return remaining !== null && remaining > 0 && (load.status === "WASHING" || load.status === "DRYING");
     };
 
-    // Track completed timers and refresh data when they finish
     useEffect(() => {
         const checkCompletedTimers = () => {
             let shouldRefresh = false;
@@ -577,11 +554,9 @@ export default function ServiceTrackingPage() {
                         const timerKey = `${getJobKey(job)}-load${load.loadNumber}`;
 
                         if (remaining === 0 && !completedTimersRef.current.has(timerKey)) {
-                            // Timer just completed - mark for refresh
                             completedTimersRef.current.add(timerKey);
                             shouldRefresh = true;
                         } else if (remaining > 0 && completedTimersRef.current.has(timerKey)) {
-                            // Timer was reset - remove from completed set
                             completedTimersRef.current.delete(timerKey);
                         }
 
@@ -590,14 +565,12 @@ export default function ServiceTrackingPage() {
                 });
             });
 
-            // Clean up any stale completed timer references
             completedTimersRef.current.forEach((timerKey) => {
                 if (!completedTimers.has(timerKey)) {
                     completedTimersRef.current.delete(timerKey);
                 }
             });
 
-            // Refresh data if any timers completed
             if (shouldRefresh) {
                 fetchData();
             }
@@ -965,7 +938,6 @@ export default function ServiceTrackingPage() {
                     </TableBody>
                 </Table>
 
-                {/* Pagination Controls */}
                 {jobs.length > 0 && (
                     <div className="flex flex-col items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700 sm:flex-row">
                         <div className="mb-4 flex items-center space-x-2 sm:mb-0">

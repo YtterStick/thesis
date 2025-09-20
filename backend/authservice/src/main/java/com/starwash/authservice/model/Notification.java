@@ -10,14 +10,13 @@ public class Notification {
     @Id
     private String id;
     private String userId;
-    private String type; // "inventory_update", "stock_alert", etc.
+    private String type;
     private String title;
     private String message;
     private boolean read;
     private LocalDateTime createdAt;
-    private String relatedEntityId; // e.g., stock item ID
+    private String relatedEntityId;
 
-    // Constructors, getters, and setters
     public Notification() {
         this.createdAt = LocalDateTime.now();
         this.read = false;

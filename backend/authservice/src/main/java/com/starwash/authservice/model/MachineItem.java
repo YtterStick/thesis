@@ -13,8 +13,8 @@ public class MachineItem {
   private String type;
   private Double capacityKg;
   private String status;
-  private String lastMaintenance; // ISO date string
-  private String nextMaintenance; // ISO date string
+  private String lastMaintenance;
+  private String nextMaintenance;
 
   public MachineItem() {}
 
@@ -28,7 +28,6 @@ public class MachineItem {
     this.nextMaintenance = nextMaintenance;
   }
 
-  // Getters and setters for all fields
   public String getId() { return id; }
   public void setId(String id) { this.id = id; }
 

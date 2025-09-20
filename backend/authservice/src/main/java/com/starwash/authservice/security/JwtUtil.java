@@ -47,7 +47,7 @@ public class JwtUtil {
             Date now = new Date();
             Date exp = claims.getExpiration();
 
-            long skewMs = 5000; // match frontend
+            long skewMs = 5000;
             if (exp.getTime() + skewMs < now.getTime()) {
                 System.out.println("⏳ Token expired with skew for user: " + claims.getSubject());
                 return false;
@@ -62,7 +62,6 @@ public class JwtUtil {
         return false;
     }
 
-    // ADD THIS METHOD - It's the same as getUsername but with a different name
     public String extractUsername(String token) {
         return getUsername(token);
     }

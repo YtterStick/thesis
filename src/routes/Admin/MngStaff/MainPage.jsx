@@ -13,7 +13,6 @@ const MainPage = () => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  // Filter to only show active accounts
   const activeAccounts = accountList.filter(acc => acc.status === "Active");
   
   const totalAdmins = activeAccounts.filter((acc) => acc.role === "ADMIN").length;
@@ -81,7 +80,6 @@ const MainPage = () => {
     }
   }, [toast]);
 
-  // Add this function to handle staff updates
   const handleStaffUpdate = useCallback((updatedStaff) => {
     setAccountList(prev => 
       prev.map(acc => 

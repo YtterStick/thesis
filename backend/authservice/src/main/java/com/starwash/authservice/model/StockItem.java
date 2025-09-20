@@ -27,11 +27,9 @@ public class StockItem {
     private LocalDateTime lastRestock;
     private String updatedBy;
 
-    // ✅ Restock tracking fields
     private Integer previousQuantity;
     private Integer lastRestockAmount;
 
-    // ✅ Thresholds
     private Integer lowStockThreshold;
     private Integer adequateStockThreshold;
 
@@ -47,7 +45,6 @@ public class StockItem {
         this.lastRestock = LocalDateTime.now();
     }
 
-    // ✅ Stock status logic
     public String getStockStatus() {
         if (lowStockThreshold == null || adequateStockThreshold == null) return "Unknown";
         if (quantity <= lowStockThreshold) return "Low";
@@ -55,7 +52,6 @@ public class StockItem {
         return "Stocked";
     }
 
-    // Getters
     public String getId() { return id; }
     public String getName() { return name; }
     public int getQuantity() { return quantity; }
@@ -70,7 +66,6 @@ public class StockItem {
     public Integer getLowStockThreshold() { return lowStockThreshold; }
     public Integer getAdequateStockThreshold() { return adequateStockThreshold; }
 
-    // Setters
     public void setName(String name) { this.name = name; }
     public void setQuantity(int quantity) { this.quantity = quantity; }
     public void setUnit(String unit) { this.unit = unit; }

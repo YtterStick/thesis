@@ -81,7 +81,6 @@ const StaffForm = ({ onAdd, onClose }) => {
   const roles = ["STAFF", "ADMIN"];
   const { toast } = useToast();
 
-  // Password validation regex
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
   useEffect(() => {
@@ -100,7 +99,6 @@ const StaffForm = ({ onAdd, onClose }) => {
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     
-    // Validate password when it changes
     if (field === "password") {
       setPasswordError(validatePassword(value));
     }
@@ -110,7 +108,6 @@ const StaffForm = ({ onAdd, onClose }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validate passwords match
     if (form.password !== form.confirmPassword) {
       toast({
         title: "Error",
@@ -121,7 +118,6 @@ const StaffForm = ({ onAdd, onClose }) => {
       return;
     }
 
-    // Validate password strength
     const error = validatePassword(form.password);
     if (error) {
       setPasswordError(error);

@@ -58,7 +58,6 @@ const RecordTable = ({ items = [] }) => {
         return true;
     };
 
-    // In the filtered variable, add a condition to exclude disposed records
     const filtered = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt) && !r.disposed);
 
     const sorted = [...filtered].sort((a, b) => {

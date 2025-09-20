@@ -1,4 +1,3 @@
-// Notification Service
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.Notification;
@@ -18,7 +17,8 @@ public class NotificationService {
         this.userRepository = userRepository;
     }
 
-    public Notification createNotification(String userId, String type, String title, String message, String relatedEntityId) {
+    public Notification createNotification(String userId, String type, String title, String message,
+            String relatedEntityId) {
         Notification notification = new Notification(userId, type, title, message, relatedEntityId);
         return notificationRepository.save(notification);
     }

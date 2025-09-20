@@ -5,7 +5,7 @@ import java.util.List;
 
 public class TransactionResponseDto {
 
-    private String id; // MongoDB document ID
+    private String id;
 
     private String customerName;
     private String contact;
@@ -46,7 +46,6 @@ public class TransactionResponseDto {
         this.dueDate = dueDate;
     }
 
-    // Getters
     public String getId() { return id; }
     public String getCustomerName() { return customerName; }
     public String getContact() { return contact; }
@@ -60,7 +59,6 @@ public class TransactionResponseDto {
     public LocalDateTime getIssueDate() { return issueDate; }
     public LocalDateTime getDueDate() { return dueDate; }
 
-    // Setters
     public void setId(String id) { this.id = id; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
     public void setContact(String contact) { this.contact = contact; }

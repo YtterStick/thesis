@@ -72,7 +72,6 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchDashboardData();
     
-    // Set up polling every 30 seconds for data refresh
     const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
   }, [fetchDashboardData]);
@@ -185,7 +184,6 @@ export default function AdminDashboardPage() {
 
       {/* 📈 Chart & Unclaimed List */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Overview Chart - Updated to match staff dashboard style */}
         <div className="card col-span-1 md:col-span-2 lg:col-span-4">
           <div className="card-header">
             <p className="card-title">Yearly Revenue Overview</p>

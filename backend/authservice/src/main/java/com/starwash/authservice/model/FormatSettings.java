@@ -41,7 +41,6 @@ public class FormatSettings {
         this.trackingUrl = dto.getTrackingUrl();
     }
 
-    // Getters
     public String getId() { return id; }
     public String getStoreName() { return storeName; }
     public String getAddress() { return address; }
@@ -49,7 +48,6 @@ public class FormatSettings {
     public String getFooterNote() { return footerNote; }
     public String getTrackingUrl() { return trackingUrl; }
 
-    // Setters
     public void setId(String id) { this.id = id; }
     public void setStoreName(String storeName) { this.storeName = storeName; }
     public void setAddress(String address) { this.address = address; }

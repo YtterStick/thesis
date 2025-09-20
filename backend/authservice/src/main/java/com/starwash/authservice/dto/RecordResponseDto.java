@@ -21,7 +21,6 @@ public class RecordResponseDto {
     private boolean expired;
     private LocalDateTime createdAt;
 
-    // Constructors
     public RecordResponseDto() {}
 
     public RecordResponseDto(String id, String customerName, String contact, String serviceName, int loads,
@@ -43,15 +42,14 @@ public class RecordResponseDto {
         this.createdAt = createdAt;
     }
 
-    // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
 
-    public String getContact() { return contact; } // ✅ getter
-    public void setContact(String contact) { this.contact = contact; } // ✅ setter
+    public String getContact() { return contact; }
+    public void setContact(String contact) { this.contact = contact; }
 
     public String getServiceName() { return serviceName; }
     public void setServiceName(String serviceName) { this.serviceName = serviceName; }

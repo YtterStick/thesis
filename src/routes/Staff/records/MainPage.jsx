@@ -19,7 +19,6 @@ const MainPage = () => {
             try {
                 const token = localStorage.getItem("authToken");
 
-                // Fetch records for the table
                 const recordsRes = await fetch("http://localhost:8080/api/records/staff", {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -47,7 +46,6 @@ const MainPage = () => {
 
                 setRecords(mapped);
 
-                // Fetch summary data
                 const summaryRes = await fetch("http://localhost:8080/api/records/staff/summary", {
                     headers: {
                         Authorization: `Bearer ${token}`,

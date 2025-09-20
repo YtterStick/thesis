@@ -32,7 +32,6 @@ const decodeToken = (token) => {
   }
 };
 
-// Static background elements component to prevent re-renders
 const BackgroundElements = () => {
   const elements = useMemo(() => {
     return Array.from({ length: 5 }, (_, i) => ({

@@ -10,7 +10,6 @@ public class PendingGcashDto {
     private Double totalPrice;
     private LocalDateTime createdAt;
     
-    // Constructors
     public PendingGcashDto() {}
     
     public PendingGcashDto(String id, String invoiceNumber, String customerName, 
@@ -23,7 +22,6 @@ public class PendingGcashDto {
         this.createdAt = createdAt;
     }
     
-    // Getters and setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     

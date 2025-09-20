@@ -83,14 +83,12 @@ public class StockService {
             
             StockItem savedItem = stockRepository.save(item);
             
-            // Send notification to all staff about the inventory update
             String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s", 
                 item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
             
             notificationService.notifyAllStaff("inventory_update", 
                 "Inventory Updated", message, item.getId());
             
-            // Check stock status and send alerts if needed
             checkStockStatusAndNotify(savedItem);
             
             return savedItem;
@@ -99,11 +97,9 @@ public class StockService {
 
     private void checkStockStatusAndNotify(StockItem item) {
         if (item.getQuantity() == 0) {
-            // Out of stock
             String message = String.format("%s is out of stock. Please restock immediately.", item.getName());
             notificationService.notifyAllAdmins("stock_alert", "Out of Stock Alert", message, item.getId());
         } else if (item.getQuantity() <= item.getLowStockThreshold()) {
-            // Low stock
             String message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
                 item.getName(), item.getQuantity(), item.getUnit(), 
                 item.getLowStockThreshold(), item.getUnit());

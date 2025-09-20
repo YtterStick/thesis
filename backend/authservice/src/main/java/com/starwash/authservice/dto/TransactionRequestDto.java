@@ -6,41 +6,24 @@ import java.util.Map;
 
 public class TransactionRequestDto {
 
-    // 🔒 Defensive: ID should not be passed by client
     private String id;
 
     private String customerName;
     private String contact;
-
-    // ID of the selected service
     private String serviceId;
-
-    // Number of loads (quantity multiplier for the service)
     private Integer loads;
 
-    // Map of consumable item names to quantities (e.g. "Plastic" -> 2)
     private Map<String, Integer> consumableQuantities;
-
-    // ✅ Payment method (e.g. "Cash", "GCash", "Card")
     private String paymentMethod;
-
-    // ✅ Amount given by customer (used to compute change)
     private Double amountGiven;
 
-    // ⏳ Optional override for issue/due dates
     private LocalDateTime issueDate;
     private LocalDateTime dueDate;
 
-    // 🔒 Optional: trigger invoice generation (default true)
     private boolean generateInvoice = true;
-
-    // 👤 Optional: staff ID for traceability
     private String staffId;
-
-    // 📝 Optional: notes or override reason
     private String notes;
 
-    // 🧼 Laundry job fields
     private Integer detergentQty;
     private Integer fabricQty;
     private List<String> statusFlow;

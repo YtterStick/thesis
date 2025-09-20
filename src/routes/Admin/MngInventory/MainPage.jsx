@@ -220,7 +220,6 @@ const MainPage = () => {
         ))}
       </div>
 
-      {/* Inventory Table or Loading/Empty State */}
       {loading ? (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(3)].map((_, i) => (

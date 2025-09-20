@@ -1,5 +1,3 @@
-// staff/inventory/MainPage.jsx
-
 import { useEffect, useState } from "react";
 import { Boxes, PackageX, Package, Clock8, CheckCircle2 } from "lucide-react";
 import {

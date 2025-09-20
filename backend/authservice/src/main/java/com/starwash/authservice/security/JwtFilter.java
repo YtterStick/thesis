@@ -1,13 +1,13 @@
 package com.starwash.authservice.security;
 
-import com.starwash.authservice.model.User; // Add this import
+import com.starwash.authservice.model.User;
 import com.starwash.authservice.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.springframework.http.HttpStatus; // Add this import
+import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -54,7 +54,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 String username = jwtUtil.getUsername(token);
                 String role = jwtUtil.getRole(token);
 
-                // Check if user exists and is active
                 Optional<User> userOpt = userRepository.findByUsername(username);
                 if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
                     List<SimpleGrantedAuthority> authorities =
@@ -68,7 +67,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
                     System.out.println("✅ Authenticated: " + username + " [" + role + "]");
                 } else {
-                    // User not found or inactive
                     response.setStatus(HttpStatus.FORBIDDEN.value());
                     response.getWriter().write("Account is deactivated");
                     return;

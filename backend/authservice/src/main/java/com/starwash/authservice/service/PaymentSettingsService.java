@@ -1,4 +1,3 @@
-// PaymentSettingsService.java
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.PaymentSettings;

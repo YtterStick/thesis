@@ -25,7 +25,6 @@ public class ServiceInvoiceDto {
 
     private FormatSettingsDto formatSettings;
 
-    // 🆕 Added fields for Option 1
     private int detergentQty;
     private int fabricQty;
     private int plasticQty;
@@ -60,7 +59,6 @@ public class ServiceInvoiceDto {
         this.loads = loads;
     }
 
-    // Getters
     public String getInvoiceNumber() { return invoiceNumber; }
     public String getCustomerName() { return customerName; }
     public String getContact() { return contact; }
@@ -79,7 +77,6 @@ public class ServiceInvoiceDto {
     public int getPlasticQty() { return plasticQty; }
     public int getLoads() { return loads; }
 
-    // Setters
     public void setInvoiceNumber(String invoiceNumber) { this.invoiceNumber = invoiceNumber; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
     public void setContact(String contact) { this.contact = contact; }

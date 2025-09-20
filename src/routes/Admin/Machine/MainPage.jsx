@@ -18,7 +18,6 @@ const initialForm = {
 
 const ALLOWED_SKEW_MS = 5000;
 
-// Smart Rotation Plan Configuration
 const MAINTENANCE_INTERVAL_DAYS = 3;
 const REPEAT_AFTER_DAYS = 60;
 
@@ -72,7 +71,6 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
     return null;
 };
 
-// Calculate maintenance schedule based on rotation plan
 const calculateMaintenanceSchedule = (machines) => {
     const now = new Date();
     const washers = machines.filter((m) => m.type === "Washer").sort((a, b) => a.name.localeCompare(b.name));
@@ -80,7 +78,6 @@ const calculateMaintenanceSchedule = (machines) => {
 
     let enhancedMachines = [...machines];
 
-    // Calculate washer maintenance schedule
     washers.forEach((washer, index) => {
         const maintenanceStartDate = new Date(now);
         maintenanceStartDate.setDate(maintenanceStartDate.getDate() + index * MAINTENANCE_INTERVAL_DAYS);
@@ -100,10 +97,9 @@ const calculateMaintenanceSchedule = (machines) => {
         );
     });
 
-    // Calculate dryer maintenance schedule (offset from washers)
     dryers.forEach((dryer, index) => {
         const maintenanceStartDate = new Date(now);
-        maintenanceStartDate.setDate(maintenanceStartDate.getDate() + index * MAINTENANCE_INTERVAL_DAYS + 1); // +1 day offset from washers
+        maintenanceStartDate.setDate(maintenanceStartDate.getDate() + index * MAINTENANCE_INTERVAL_DAYS + 1);
 
         const nextMaintenanceDate = new Date(maintenanceStartDate);
         nextMaintenanceDate.setDate(nextMaintenanceDate.getDate() + REPEAT_AFTER_DAYS);
@@ -123,7 +119,6 @@ const calculateMaintenanceSchedule = (machines) => {
     return enhancedMachines;
 };
 
-// ✅ Inline MachineCard component
 function MachineCard({ machine, animationData, onEdit, onDelete, onMaintenance }) {
     const lottieRef = useRef();
 
@@ -245,7 +240,6 @@ export default function MachineMainPage() {
         return () => window.removeEventListener("wheel", onWheel);
     }, []);
 
-    // Check for maintenance reminders
     useEffect(() => {
         const checkMaintenanceReminders = () => {
             const now = new Date();
@@ -260,9 +254,8 @@ export default function MachineMainPage() {
             }
         };
 
-        // Check every hour for maintenance reminders
         const interval = setInterval(checkMaintenanceReminders, 60 * 60 * 1000);
-        checkMaintenanceReminders(); // Check immediately on load
+        checkMaintenanceReminders();
 
         return () => clearInterval(interval);
     }, [machines, showMaintenanceDialog]);
@@ -272,7 +265,6 @@ export default function MachineMainPage() {
             try {
                 const data = await secureFetch("/machines");
 
-                // Calculate maintenance schedule based on rotation plan
                 const enhancedData = calculateMaintenanceSchedule(data);
 
                 setMachines(enhancedData);
@@ -314,7 +306,6 @@ export default function MachineMainPage() {
                 capacityKg: parseFloat(form.capacityKg),
             });
 
-            // After saving, recalculate maintenance schedule for all machines
             const updatedMachines = await secureFetch("/machines");
             const enhancedData = calculateMaintenanceSchedule(updatedMachines);
 
@@ -337,7 +328,6 @@ export default function MachineMainPage() {
         try {
             await secureFetch(`/machines/${id}`, "DELETE");
 
-            // After deletion, recalculate maintenance schedule
             const updatedMachines = await secureFetch("/machines");
             const enhancedData = calculateMaintenanceSchedule(updatedMachines);
 
@@ -361,7 +351,6 @@ export default function MachineMainPage() {
 
     const handleMaintenance = async (machine) => {
         try {
-            // Update the machine's maintenance status
             const now = new Date();
             const updatedMachine = {
                 ...machine,
@@ -371,13 +360,11 @@ export default function MachineMainPage() {
 
             const saved = await secureFetch(`/machines/${machine.id}`, "PUT", updatedMachine);
 
-            // Calculate next maintenance date (60 days from now)
             const nextDate = new Date();
             nextDate.setDate(nextDate.getDate() + REPEAT_AFTER_DAYS);
             saved.nextMaintenance = nextDate.toISOString();
             saved.needsMaintenance = false;
 
-            // Update the machine in the list
             setMachines((prev) => prev.map((m) => (m.id === saved.id ? saved : m)));
 
             toast({
@@ -394,7 +381,6 @@ export default function MachineMainPage() {
     const postponeMaintenance = () => {
         if (!maintenanceReminder) return;
 
-        // Set reminder for 3 days later
         const nextReminderDate = new Date();
         nextReminderDate.setDate(nextReminderDate.getDate() + MAINTENANCE_INTERVAL_DAYS);
 
@@ -439,7 +425,6 @@ export default function MachineMainPage() {
 
             {error && <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>}
 
-            {/* Maintenance Reminder Dialog */}
             <Dialog
                 open={showMaintenanceDialog}
                 onOpenChange={setShowMaintenanceDialog}
@@ -581,7 +566,7 @@ export default function MachineMainPage() {
                 </TooltipProvider>
             </div>
 
-            {/* ❓ Confirm Delete */}
+            {/* Confirm Delete */}
             {confirmDeleteId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="w-full max-w-sm rounded-md border border-slate-300 bg-white p-6 text-slate-900 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-white">

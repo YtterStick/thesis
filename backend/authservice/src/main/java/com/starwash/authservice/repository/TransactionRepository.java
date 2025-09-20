@@ -22,7 +22,6 @@ public interface TransactionRepository extends MongoRepository<Transaction, Stri
 
     Optional<Transaction> findByInvoiceNumber(String invoiceNumber);
 
-    // Add this method to fetch multiple transactions at once
     @Query("{ 'invoiceNumber': { $in: ?0 } }")
     List<Transaction> findByInvoiceNumberIn(List<String> invoiceNumbers);
 

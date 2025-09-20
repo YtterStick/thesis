@@ -13,7 +13,7 @@ const MainPage = () => {
   const [isLoadingExpired, setIsLoadingExpired] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("unclaimed"); // 'unclaimed' or 'expired'
+  const [activeTab, setActiveTab] = useState("unclaimed");
   const [hasFetched, setHasFetched] = useState(false);
   const { toast } = useToast();
 
@@ -44,7 +44,6 @@ const MainPage = () => {
       if (!response.ok) throw new Error("Failed to fetch completed transactions");
       const data = await response.json();
       
-      // Additional filtering on the frontend as a safety measure
       const filteredData = data.filter(transaction => {
         if (transaction.paymentMethod === "GCash") {
           return transaction.gcashVerified === true;

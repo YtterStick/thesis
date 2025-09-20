@@ -28,7 +28,6 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
     const [formatSettings, setFormatSettings] = useState(null);
     const [loadingSettings, setLoadingSettings] = useState(false);
 
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
@@ -36,7 +35,6 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
         fetchFormatSettings();
     }, []);
 
-    // Reset to first page when transactions change
     useEffect(() => {
         setCurrentPage(1);
     }, [transactions]);

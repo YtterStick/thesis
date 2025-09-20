@@ -19,7 +19,7 @@ import java.util.List;
     @CompoundIndex(name = "expired_idx", def = "{'expired': 1}"),
     @CompoundIndex(name = "customer_name_idx", def = "{'customerName': 1}"),
     @CompoundIndex(name = "service_type_idx", def = "{'serviceType': 1}"),
-    @CompoundIndex(name = "disposed_idx", def = "{'disposed': 1}") // Index for disposal status
+    @CompoundIndex(name = "disposed_idx", def = "{'disposed': 1}")
 })
 public class LaundryJob {
 

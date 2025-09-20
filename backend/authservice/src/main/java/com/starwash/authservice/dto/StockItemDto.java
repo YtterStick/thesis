@@ -15,15 +15,12 @@ public class StockItemDto {
     private LocalDateTime lastRestock;
     private String updatedBy;
 
-    // ✅ Restock tracking fields
     private Integer previousQuantity;
     private Integer lastRestockAmount;
 
-    // ✅ Thresholds
     private Integer lowStockThreshold;
     private Integer adequateStockThreshold;
 
-    // Constructors
     public StockItemDto() {}
 
     public StockItemDto(String id, String name, Integer quantity, String unit, Double price,
@@ -46,7 +43,6 @@ public class StockItemDto {
         this.adequateStockThreshold = adequateStockThreshold;
     }
 
-    // Getters & Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 

@@ -32,13 +32,13 @@ const MissingItemsPage = () => {
             setIsLoading(true);
             const token = localStorage.getItem("authToken");
             const response = await fetch(
-                `http://localhost:8080/api/missing-items?t=${new Date().getTime()}`, // Add timestamp to prevent caching
+                `http://localhost:8080/api/missing-items?t=${new Date().getTime()}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
                         "Content-Type": "application/json",
                     },
-                    cache: "no-cache", // Explicitly disable caching
+                    cache: "no-cache",
                 },
             );
             if (!response.ok) throw new Error("Failed to fetch missing items");
@@ -103,7 +103,6 @@ const MissingItemsPage = () => {
 
             setShowReportDialog(false);
             setNewItem({ itemDescription: "", machineId: "", notes: "" });
-            // Refresh the items list after reporting
             fetchMissingItems();
         } catch (error) {
             console.error(error);
@@ -149,7 +148,6 @@ const MissingItemsPage = () => {
             setClaimName("");
             setSelectedItem(null);
 
-            // Update the UI with the data returned from the backend
             setAllItems((prevItems) =>
                 prevItems.map((item) =>
                     item.id === selectedItem.id ? { ...item, claimed: true, claimedByName: claimName, claimDate: new Date().toISOString() } : item,

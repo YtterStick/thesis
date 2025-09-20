@@ -46,22 +46,18 @@ const MissingTable = ({
   handleClaimItem,
   machines
 }) => {
-  // State to track which notes are expanded
   const [expandedNotes, setExpandedNotes] = useState({});
 
-  // Function to get machine name by ID
   const getMachineName = (machineId) => {
     const machine = machines.find(m => m.id === machineId);
-    return machine ? machine.name : machineId; // Fallback to ID if machine not found
+    return machine ? machine.name : machineId;
   };
 
-  // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Toggle note expansion
   const toggleNoteExpansion = (itemId) => {
     setExpandedNotes(prev => ({
       ...prev,
@@ -69,19 +65,16 @@ const MissingTable = ({
     }));
   };
 
-  // Check if note is long (more than 20 characters)
   const isLongNote = (note) => {
     if (!note) return false;
     return note.length > 10;
   };
 
-  // Truncate note to 20 characters
   const truncateNote = (note) => {
     if (!note) return "-";
     return note.length > 10 ? `${note.substring(0, 10)}...` : note;
   };
 
-  // Filter items based on search term and status filter
   const filteredItems = allItems.filter(item => {
     const machineName = getMachineName(item.machineId);
     const matchesSearch = item.itemDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||

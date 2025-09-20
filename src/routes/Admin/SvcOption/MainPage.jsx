@@ -44,13 +44,12 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
     const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
 
     if (!response.ok) {
-        const errorText = await response.text(); // fallback if no JSON
+        const errorText = await response.text();
         throw new Error(`Request failed: ${response.status} - ${errorText}`);
     }
 
     const contentType = response.headers.get("content-type");
 
-    // ✅ Gracefully handle empty or non-JSON responses
     if (contentType && contentType.includes("application/json")) {
         try {
             return await response.json();
@@ -60,7 +59,7 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
         }
     }
 
-    return null; // for 204 No Content or application/octet-stream
+    return null;
 };
 export default function MainPage() {
     const { toast } = useToast();
@@ -137,7 +136,6 @@ export default function MainPage() {
             onClick={() => setEditTarget(service)}
             className="relative rounded-md border border-cyan-500 bg-white p-4 text-slate-900 transition-transform duration-200 hover:scale-[1.02] hover:cursor-pointer dark:bg-slate-900 dark:text-white"
         >
-            {/* ❌ Delete Button */}
             <button
                 onClick={(e) => {
                     e.stopPropagation();

@@ -29,14 +29,12 @@ public class FormatSettingsDto {
         this.trackingUrl = model.getTrackingUrl();
     }
 
-    // Getters
     public String getStoreName() { return storeName; }
     public String getAddress() { return address; }
     public String getPhone() { return phone; }
     public String getFooterNote() { return footerNote; }
     public String getTrackingUrl() { return trackingUrl; }
 
-    // Setters
     public void setStoreName(String storeName) { this.storeName = storeName; }
     public void setAddress(String address) { this.address = address; }
     public void setPhone(String phone) { this.phone = phone; }

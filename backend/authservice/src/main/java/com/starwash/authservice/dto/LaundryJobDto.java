@@ -9,7 +9,7 @@ public class LaundryJobDto {
 
     private String transactionId;
     private String customerName;
-    private String contact; // ✅ New field for customer contact
+    private String contact;
     private List<LoadAssignment> loadAssignments;
     private Integer detergentQty;
     private Integer fabricQty;
@@ -18,23 +18,22 @@ public class LaundryJobDto {
     private LocalDateTime issueDate;
     private String serviceType;
 
-    // ✅ Total loads for convenience
     private Integer totalLoads;
 
-    public LaundryJobDto() {}
+    public LaundryJobDto() {
+    }
 
     public LaundryJobDto(
             String transactionId,
             String customerName,
-            String contact, // ✅ Add in constructor
+            String contact,
             List<LoadAssignment> loadAssignments,
             Integer detergentQty,
             Integer fabricQty,
             List<String> statusFlow,
             Integer currentStep,
             LocalDateTime issueDate,
-            String serviceType
-    ) {
+            String serviceType) {
         this.transactionId = transactionId;
         this.customerName = customerName;
         this.contact = contact;
@@ -48,40 +47,92 @@ public class LaundryJobDto {
         this.totalLoads = loadAssignments != null ? loadAssignments.size() : 0;
     }
 
-    // 🔹 Getters and setters
-    public String getTransactionId() { return transactionId; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public String getTransactionId() {
+        return transactionId;
+    }
 
-    public String getCustomerName() { return customerName; }
-    public void setCustomerName(String customerName) { this.customerName = customerName; }
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
 
-    public String getContact() { return contact; } // ✅ Getter
-    public void setContact(String contact) { this.contact = contact; } // ✅ Setter
+    public String getCustomerName() {
+        return customerName;
+    }
 
-    public List<LoadAssignment> getLoadAssignments() { return loadAssignments; }
-    public void setLoadAssignments(List<LoadAssignment> loadAssignments) { 
-        this.loadAssignments = loadAssignments; 
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public String getContact() {
+        return contact;
+    }
+
+    public void setContact(String contact) {
+        this.contact = contact;
+    }
+
+    public List<LoadAssignment> getLoadAssignments() {
+        return loadAssignments;
+    }
+
+    public void setLoadAssignments(List<LoadAssignment> loadAssignments) {
+        this.loadAssignments = loadAssignments;
         this.totalLoads = loadAssignments != null ? loadAssignments.size() : 0;
     }
 
-    public Integer getDetergentQty() { return detergentQty; }
-    public void setDetergentQty(Integer detergentQty) { this.detergentQty = detergentQty; }
+    public Integer getDetergentQty() {
+        return detergentQty;
+    }
 
-    public Integer getFabricQty() { return fabricQty; }
-    public void setFabricQty(Integer fabricQty) { this.fabricQty = fabricQty; }
+    public void setDetergentQty(Integer detergentQty) {
+        this.detergentQty = detergentQty;
+    }
 
-    public List<String> getStatusFlow() { return statusFlow; }
-    public void setStatusFlow(List<String> statusFlow) { this.statusFlow = statusFlow; }
+    public Integer getFabricQty() {
+        return fabricQty;
+    }
 
-    public Integer getCurrentStep() { return currentStep; }
-    public void setCurrentStep(Integer currentStep) { this.currentStep = currentStep; }
+    public void setFabricQty(Integer fabricQty) {
+        this.fabricQty = fabricQty;
+    }
 
-    public LocalDateTime getIssueDate() { return issueDate; }
-    public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
+    public List<String> getStatusFlow() {
+        return statusFlow;
+    }
 
-    public String getServiceType() { return serviceType; }
-    public void setServiceType(String serviceType) { this.serviceType = serviceType; }
+    public void setStatusFlow(List<String> statusFlow) {
+        this.statusFlow = statusFlow;
+    }
 
-    public Integer getTotalLoads() { return totalLoads; }
-    public void setTotalLoads(Integer totalLoads) { this.totalLoads = totalLoads; }
+    public Integer getCurrentStep() {
+        return currentStep;
+    }
+
+    public void setCurrentStep(Integer currentStep) {
+        this.currentStep = currentStep;
+    }
+
+    public LocalDateTime getIssueDate() {
+        return issueDate;
+    }
+
+    public void setIssueDate(LocalDateTime issueDate) {
+        this.issueDate = issueDate;
+    }
+
+    public String getServiceType() {
+        return serviceType;
+    }
+
+    public void setServiceType(String serviceType) {
+        this.serviceType = serviceType;
+    }
+
+    public Integer getTotalLoads() {
+        return totalLoads;
+    }
+
+    public void setTotalLoads(Integer totalLoads) {
+        this.totalLoads = totalLoads;
+    }
 }

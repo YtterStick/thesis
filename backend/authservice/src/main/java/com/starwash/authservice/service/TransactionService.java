@@ -294,7 +294,7 @@ public class TransactionService {
                                                                 .allMatch(load -> "COMPLETED"
                                                                                 .equalsIgnoreCase(load.getStatus())))
                                 .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
-                                .filter(job -> !job.isExpired()) 
+                                .filter(job -> !job.isExpired())
                                 .count();
 
                 // Calculate expired count
@@ -393,7 +393,6 @@ public class TransactionService {
                         return dto;
                 }).collect(Collectors.toList());
         }
-
 
         public List<Transaction> findPendingGcashTransactions() {
                 return transactionRepository.findByPaymentMethodAndGcashVerified("GCash", false);

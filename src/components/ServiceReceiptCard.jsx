@@ -31,8 +31,8 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
 
   const handlePrint = () => {
     setIsPrinting(true);
-    window.print();   // trigger print
-    onClose();        // immediately close modal after print
+    window.print();
+    onClose();
   };
 
   return (
@@ -40,6 +40,7 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
       <div className="mx-auto max-w-md bg-white dark:bg-slate-900 p-6 rounded-lg shadow-lg">
         <div ref={receiptRef} className="printable-area">
           <div className="mx-auto max-w-md space-y-2 rounded-md border border-dashed bg-white dark:bg-slate-950 p-4 font-mono text-sm shadow-md dark:border-gray-600">
+            
             {/* Store Info */}
             <div className="text-center text-lg font-bold dark:text-white">
               {settings.storeName}

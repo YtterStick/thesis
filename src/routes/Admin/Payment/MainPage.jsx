@@ -23,7 +23,7 @@ import {
   Download 
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import Switch from "./Switch"; // Using your custom Switch component
+import Switch from "./Switch";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -180,7 +180,6 @@ const PaymentManagementPage = () => {
           title: "Success",
           description: "GCash payment verified successfully",
         });
-        // Remove the verified transaction from the list
         setPendingTransactions(pendingTransactions.filter(t => t.id !== transactionId));
       } else {
         const errorText = await response.text();

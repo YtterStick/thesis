@@ -19,14 +19,11 @@ public class ClaimingService {
     private final FormatSettingsRepository formatSettingsRepository;
 
     public ClaimingService(LaundryJobRepository laundryJobRepository,
-                           FormatSettingsRepository formatSettingsRepository) {
+            FormatSettingsRepository formatSettingsRepository) {
         this.laundryJobRepository = laundryJobRepository;
         this.formatSettingsRepository = formatSettingsRepository;
     }
 
-    /**
-     * Mark job as claimed and generate receipt DTO
-     */
     public ServiceClaimReceiptDto claimLaundry(String transactionId, String staffName) {
         LaundryJob job = laundryJobRepository.findById(transactionId)
                 .orElseThrow(() -> new RuntimeException("Laundry job not found: " + transactionId));
@@ -35,26 +32,21 @@ public class ClaimingService {
             throw new RuntimeException("Job already claimed");
         }
 
-        // Check if job is expired
         if (job.isExpired()) {
             throw new RuntimeException("Cannot claim expired job");
         }
 
-        // Generate claim receipt number
         String claimReceiptNumber = "CLM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        // Update job
         job.setPickupStatus("CLAIMED");
         job.setClaimDate(LocalDateTime.now());
         job.setClaimReceiptNumber(claimReceiptNumber);
         job.setClaimedByStaffId(staffName);
         laundryJobRepository.save(job);
 
-        // Load latest format settings
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
-        // Build receipt DTO
         return new ServiceClaimReceiptDto(
                 claimReceiptNumber,
                 job.getTransactionId(),
@@ -64,13 +56,9 @@ public class ClaimingService {
                 job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0,
                 job.getClaimDate(),
                 staffName,
-                new FormatSettingsDto(settings)
-        );
+                new FormatSettingsDto(settings));
     }
 
-    /**
-     * Get receipt for already claimed job
-     */
     public ServiceClaimReceiptDto getClaimReceipt(String transactionId) {
         LaundryJob job = laundryJobRepository.findById(transactionId)
                 .orElseThrow(() -> new RuntimeException("Laundry job not found: " + transactionId));
@@ -91,13 +79,9 @@ public class ClaimingService {
                 job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0,
                 job.getClaimDate(),
                 job.getClaimedByStaffId() != null ? job.getClaimedByStaffId() : "Staff",
-                new FormatSettingsDto(settings)
-        );
+                new FormatSettingsDto(settings));
     }
 
-    /**
-     * Get all claimed laundry jobs
-     */
     public List<LaundryJob> getClaimedJobs() {
         return laundryJobRepository.findByPickupStatus("CLAIMED");
     }

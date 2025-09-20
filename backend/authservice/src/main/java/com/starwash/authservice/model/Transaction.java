@@ -29,8 +29,8 @@ public class Transaction {
     private Double amountGiven;
     private Double change;
 
-    private LocalDateTime issueDate; //invoice
-    private LocalDateTime dueDate;   // due date
+    private LocalDateTime issueDate;
+    private LocalDateTime dueDate; 
     private String staffId;
 
     private Boolean gcashVerified;
@@ -62,14 +62,11 @@ public class Transaction {
         this.change = change;
         this.issueDate = issueDate;
         
-        // Ensure dueDate is never null and includes time component
         if (dueDate != null) {
             this.dueDate = dueDate;
         } else if (issueDate != null) {
-            // Set to 3 days from issue date at 5:00 PM
             this.dueDate = issueDate.plusDays(3).withHour(17).withMinute(0).withSecond(0);
         } else {
-            // Set to 3 days from now at 5:00 PM
             this.dueDate = LocalDateTime.now().plusDays(3).withHour(17).withMinute(0).withSecond(0);
         }
         
@@ -78,7 +75,6 @@ public class Transaction {
         this.gcashVerified = "GCash".equals(paymentMethod) ? false : null;
     }
 
-    // Getters and Setters (unchanged)
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     

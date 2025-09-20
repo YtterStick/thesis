@@ -10,7 +10,7 @@ import {
   Tags,
   Bell,
   CreditCard,
-} from "lucide-react"; // You can remove unused icons if needed
+} from "lucide-react";
 
 export const overviewData = [
   { name: "Jan", total: 3500 },

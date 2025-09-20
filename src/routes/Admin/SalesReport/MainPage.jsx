@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
 
-// Helper function to format date as MM/DD/YYYY (matching backend pattern)
 const formatDateForBackend = (dateString) => {
   const date = new Date(dateString);
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -17,7 +15,6 @@ const formatDateForBackend = (dateString) => {
   return `${month}/${day}/${year}`;
 };
 
-// Custom Tooltip Components
 const CustomBarTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         const isDarkMode = document.documentElement.classList.contains("dark");
@@ -74,7 +71,6 @@ const SalesReportPage = () => {
     const [datesSwapped, setDatesSwapped] = useState(false);
     const { toast } = useToast();
 
-    // State for backend data
     const [salesData, setSalesData] = useState([]);
     const [serviceDistributionData, setServiceDistributionData] = useState([]);
     const [recentTransactions, setRecentTransactions] = useState([]);
@@ -89,7 +85,7 @@ const SalesReportPage = () => {
     });
 
     useEffect(() => {
-        handleDateRangeChange("today"); // Set initial date range
+        handleDateRangeChange("today");
     }, []);
 
     useEffect(() => {
@@ -101,10 +97,8 @@ const SalesReportPage = () => {
             setIsLoading(true);
             const token = localStorage.getItem("authToken");
             
-            // Reset swap indicator
             setDatesSwapped(false);
 
-            // Validate custom date range
             let requestStartDate = startDate;
             let requestEndDate = endDate;
             
@@ -122,9 +116,7 @@ const SalesReportPage = () => {
                 const start = new Date(startDate);
                 const end = new Date(endDate);
                 
-                // Auto-swap if start date is after end date
                 if (start > end) {
-                    // Swap dates for the request
                     requestStartDate = endDate;
                     requestEndDate = startDate;
                     setDatesSwapped(true);
@@ -137,12 +129,10 @@ const SalesReportPage = () => {
                 }
             }
 
-            // Build query parameters
             const params = new URLSearchParams();
             if (dateRange !== "custom") {
                 params.append("dateRange", dateRange);
             } else {
-                // For custom range, we need to explicitly set dateRange to "custom"
                 params.append("dateRange", "custom");
                 if (requestStartDate) params.append("startDate", formatDateForBackend(requestStartDate));
                 if (requestEndDate) params.append("endDate", formatDateForBackend(requestEndDate));
@@ -159,7 +149,6 @@ const SalesReportPage = () => {
             });
 
             if (!response.ok) {
-                // Handle different error statuses
                 if (response.status === 400) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || "Invalid request parameters");
@@ -172,7 +161,6 @@ const SalesReportPage = () => {
 
             const data = await response.json();
 
-            // Update state with backend data
             setSalesData(data.salesTrend || []);
             setServiceDistributionData(data.serviceDistribution || []);
             setRecentTransactions(data.recentTransactions || []);
@@ -188,7 +176,6 @@ const SalesReportPage = () => {
                 },
             );
 
-            // Reset to first page when data changes
             setCurrentPage(1);
 
             setIsLoading(false);
@@ -205,10 +192,8 @@ const SalesReportPage = () => {
 
     const handleDateRangeChange = (value) => {
         setDateRange(value);
-        // Reset swap indicator when changing date range
         setDatesSwapped(false);
         
-        // Set dates based on selection
         const today = new Date();
         switch (value) {
             case "today":
@@ -241,7 +226,7 @@ const SalesReportPage = () => {
     const handleStartDateChange = (newStartDate) => {
         setStartDate(newStartDate);
         if (endDate && new Date(newStartDate) > new Date(endDate)) {
-            setEndDate(newStartDate); // Automatically set end date to match start date
+            setEndDate(newStartDate);
             toast({
                 title: "Info",
                 description: "End date automatically adjusted to match start date",
@@ -253,7 +238,7 @@ const SalesReportPage = () => {
     const handleEndDateChange = (newEndDate) => {
         setEndDate(newEndDate);
         if (startDate && new Date(newEndDate) < new Date(startDate)) {
-            setStartDate(newEndDate); // Automatically set start date to match end date
+            setStartDate(newEndDate);
             toast({
                 title: "Info",
                 description: "Start date automatically adjusted to match end date",
@@ -262,23 +247,19 @@ const SalesReportPage = () => {
         }
     };
 
-    // Filter transactions based on search term
     const filteredTransactions = recentTransactions.filter(
         (transaction) =>
             transaction.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             transaction.serviceType.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
-    // Calculate pagination values
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
-    // Colors for service distribution chart
     const SERVICE_COLORS = ["#f59e0b", "#ef4444", "#8b5cf6", "#10b981", "#3b82f6"];
 
-    // Colors for charts based on theme
     const getChartColors = () => {
         const isDarkMode = document.documentElement.classList.contains("dark");
         return {
@@ -340,7 +321,7 @@ const SalesReportPage = () => {
                                     <Input
                                         type="date"
                                         value={startDate}
-                                        max={endDate || undefined} // Disable dates after endDate
+                                        max={endDate || undefined}
                                         onChange={(e) => handleStartDateChange(e.target.value)}
                                         className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
                                     />
@@ -350,7 +331,7 @@ const SalesReportPage = () => {
                                     <Input
                                         type="date"
                                         value={endDate}
-                                        min={startDate || undefined} // Disable dates before startDate
+                                        min={startDate || undefined}
                                         onChange={(e) => handleEndDateChange(e.target.value)}
                                         className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
                                     />

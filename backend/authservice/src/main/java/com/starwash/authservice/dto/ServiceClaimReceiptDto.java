@@ -30,7 +30,6 @@ public class ServiceClaimReceiptDto {
         this.formatSettings = formatSettings;
     }
 
-    // Getters and setters
     public String getClaimReceiptNumber() { return claimReceiptNumber; }
     public void setClaimReceiptNumber(String claimReceiptNumber) { this.claimReceiptNumber = claimReceiptNumber; }
     
