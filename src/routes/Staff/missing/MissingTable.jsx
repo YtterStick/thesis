@@ -27,6 +27,66 @@ const MissingTable = ({
     machines,
 }) => {
     const [expandedNotes, setExpandedNotes] = useState({});
+    const [laundryJobSearchResults, setLaundryJobSearchResults] = useState([]);
+    const [isSearchingLaundryJobs, setIsSearchingLaundryJobs] = useState(false);
+    const [searchTimeout, setSearchTimeout] = useState(null);
+
+    // Add this function to search laundry jobs with debouncing
+    const searchLaundryJobs = async (name) => {
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+
+        // Set a new timeout to debounce the search
+        const newTimeout = setTimeout(async () => {
+            if (name.length < 2) {
+                setLaundryJobSearchResults([]);
+                return;
+            }
+
+            setIsSearchingLaundryJobs(true);
+            try {
+                const token = localStorage.getItem("authToken");
+                const response = await fetch(`http://localhost:8080/api/laundry-jobs/search-by-customer?customerName=${encodeURIComponent(name)}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setLaundryJobSearchResults(data);
+                }
+            } catch (error) {
+                console.error("Error searching laundry jobs:", error);
+            } finally {
+                setIsSearchingLaundryJobs(false);
+            }
+        }, 300); // 300ms debounce
+
+        setSearchTimeout(newTimeout);
+    };
+
+    // Helper function to get machine names from a laundry job
+    const getMachineNamesFromJob = (job) => {
+        if (!job.loadAssignments) return [];
+
+        const machineIds = job.loadAssignments.map((load) => load.machineId).filter((id) => id !== null);
+
+        return machineIds.map((id) => {
+            const machine = machines.find((m) => m.id === id);
+            return machine ? machine.name : id;
+        });
+    };
+
+    // Helper function to highlight matching text
+    const highlightMatch = (text, searchTerm) => {
+        if (!searchTerm || !text) return text;
+
+        const regex = new RegExp(`(${searchTerm})`, "gi");
+        return text.replace(regex, "<mark>$1</mark>");
+    };
 
     const getMachineName = (machineId) => {
         const machine = machines.find((m) => m.id === machineId);
@@ -219,7 +279,10 @@ const MissingTable = ({
                                                     <Dialog
                                                         open={showClaimDialog && selectedItem?.id === item.id}
                                                         onOpenChange={(open) => {
-                                                            if (!open) setShowClaimDialog(false);
+                                                            if (!open) {
+                                                                setShowClaimDialog(false);
+                                                                setLaundryJobSearchResults([]);
+                                                            }
                                                         }}
                                                     >
                                                         <DialogTrigger asChild>
@@ -229,6 +292,8 @@ const MissingTable = ({
                                                                 onClick={() => {
                                                                     setSelectedItem(item);
                                                                     setShowClaimDialog(true);
+                                                                    setLaundryJobSearchResults([]);
+                                                                    setClaimName("");
                                                                 }}
                                                                 className="border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-300"
                                                             >
@@ -236,11 +301,12 @@ const MissingTable = ({
                                                                 Claim
                                                             </Button>
                                                         </DialogTrigger>
-                                                        <DialogContent className="border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                                        <DialogContent className="max-w-2xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-950">
                                                             <DialogHeader>
                                                                 <DialogTitle className="text-slate-900 dark:text-slate-50">Claim Item</DialogTitle>
                                                                 <DialogDescription className="text-slate-600 dark:text-slate-400">
-                                                                    Enter the name of the person claiming this item.
+                                                                    Enter the name of the person claiming this item. Matching laundry jobs will appear
+                                                                    below.
                                                                 </DialogDescription>
                                                             </DialogHeader>
                                                             <div className="space-y-4">
@@ -252,12 +318,88 @@ const MissingTable = ({
                                                                         className={inputClass}
                                                                         placeholder="Enter full name"
                                                                         value={claimName}
-                                                                        onChange={(e) => setClaimName(e.target.value)}
+                                                                        onChange={(e) => {
+                                                                            setClaimName(e.target.value);
+                                                                            searchLaundryJobs(e.target.value);
+                                                                        }}
                                                                     />
                                                                 </div>
+
+                                                                {/* Laundry job search results */}
+                                                                {isSearchingLaundryJobs && (
+                                                                    <div className="flex items-center text-sm text-slate-500">
+                                                                        <Clock className="mr-2 h-4 w-4 animate-spin" />
+                                                                        Searching laundry jobs...
+                                                                    </div>
+                                                                )}
+
+                                                                {laundryJobSearchResults.length > 0 && (
+                                                                    <div className="mt-4">
+                                                                        <h4 className="mb-2 text-sm font-medium">
+                                                                            Matching Laundry Jobs ({laundryJobSearchResults.length}):
+                                                                        </h4>
+                                                                        <div className="max-h-60 divide-y overflow-y-auto rounded-md border">
+                                                                            {laundryJobSearchResults.map((job) => {
+                                                                                const machineNames = getMachineNamesFromJob(job);
+                                                                                // Case-sensitive exact match
+                                                                                const isExactMatch = job.customerName === claimName;
+
+                                                                                return (
+                                                                                    <div
+                                                                                        key={job.id}
+                                                                                        className={`p-3 text-sm ${isExactMatch ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                                                                                    >
+                                                                                        <div
+                                                                                            className="font-medium"
+                                                                                            dangerouslySetInnerHTML={{
+                                                                                                __html: highlightMatch(job.customerName, claimName),
+                                                                                            }}
+                                                                                        />
+                                                                                        <div>Transaction ID: {job.transactionId}</div>
+                                                                                        <div>Service Type: {job.serviceType}</div>
+                                                                                        <div>
+                                                                                            Machines:{" "}
+                                                                                            {machineNames.length > 0
+                                                                                                ? machineNames.join(", ")
+                                                                                                : "No machine info"}
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            Pickup Status:
+                                                                                            <span
+                                                                                                className={
+                                                                                                    job.pickupStatus === "CLAIMED"
+                                                                                                        ? "ml-1 text-green-600"
+                                                                                                        : "ml-1 text-orange-600"
+                                                                                                }
+                                                                                            >
+                                                                                                {job.pickupStatus}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            Claim Date:{" "}
+                                                                                            {job.pickupStatus === "CLAIMED"
+                                                                                                ? job.claimDate
+                                                                                                    ? new Date(job.claimDate).toLocaleDateString()
+                                                                                                    : "N/A"
+                                                                                                : "Not claimed"}
+                                                                                        </div>
+                                                                                        {isExactMatch && (
+                                                                                            <div className="mt-1 flex items-center font-semibold text-blue-600">
+                                                                                                <CheckCircle className="mr-1 h-4 w-4" />
+                                                                                                Exact name match
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
                                                                 <Button
                                                                     onClick={handleClaimItem}
                                                                     className={`w-full ${buttonClass}`}
+                                                                    disabled={!claimName.trim()}
                                                                 >
                                                                     Mark as Claimed
                                                                 </Button>

@@ -483,4 +483,11 @@ public class LaundryJobService {
             }
         }
     }
+
+    public List<LaundryJob> searchLaundryJobsByCustomerName(String customerName) {
+        List<LaundryJob> jobs = laundryJobRepository.findByCustomerName(customerName);
+        return jobs.stream()
+                .filter(job -> job.getClaimDate() != null)
+                .collect(Collectors.toList());
+    }
 }

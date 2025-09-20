@@ -13,6 +13,7 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
 
     Optional<LaundryJob> findFirstByTransactionId(String transactionId);
 
+    // Exact case-sensitive search
     List<LaundryJob> findByCustomerName(String customerName);
 
     Optional<LaundryJob> findByLoadAssignmentsMachineId(String machineId);

@@ -45,8 +45,8 @@ public class LaundryJobController {
     // UPDATE job (replace core fields)
     @PutMapping("/{transactionId}")
     public ResponseEntity<LaundryJobDto> updateJob(@PathVariable String transactionId,
-                                                   @RequestBody LaundryJobDto dto,
-                                                   @RequestHeader("Authorization") String authHeader) {
+            @RequestBody LaundryJobDto dto,
+            @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob existing = laundryJobService.findSingleJobByTransaction(transactionId);
 
@@ -64,7 +64,7 @@ public class LaundryJobController {
     // DELETE job
     @DeleteMapping("/{transactionId}")
     public ResponseEntity<Void> deleteJob(@PathVariable String transactionId,
-                                          @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         boolean deleted = laundryJobService.deleteJobById(transactionId, username);
         return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
@@ -73,9 +73,9 @@ public class LaundryJobController {
     // Assign machine
     @PatchMapping("/{transactionId}/assign-machine")
     public ResponseEntity<LaundryJobDto> assignMachine(@PathVariable String transactionId,
-                                                       @RequestParam int loadNumber,
-                                                       @RequestParam String machineId,
-                                                       @RequestHeader("Authorization") String authHeader) {
+            @RequestParam int loadNumber,
+            @RequestParam String machineId,
+            @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.assignMachine(transactionId, loadNumber, machineId, username);
         return ResponseEntity.ok(toDto(job));
@@ -84,9 +84,9 @@ public class LaundryJobController {
     // Start load
     @PatchMapping("/{transactionId}/start-load")
     public ResponseEntity<LaundryJobDto> startLoad(@PathVariable String transactionId,
-                                                   @RequestParam int loadNumber,
-                                                   @RequestParam(required = false) Integer durationMinutes,
-                                                   @RequestHeader("Authorization") String authHeader) {
+            @RequestParam int loadNumber,
+            @RequestParam(required = false) Integer durationMinutes,
+            @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.startLoad(transactionId, loadNumber, durationMinutes, username);
         return ResponseEntity.ok(toDto(job));
@@ -95,8 +95,8 @@ public class LaundryJobController {
     // Dry Again - Reset drying timer
     @PatchMapping("/{transactionId}/dry-again")
     public ResponseEntity<LaundryJobDto> dryAgain(@PathVariable String transactionId,
-                                                  @RequestParam int loadNumber,
-                                                  @RequestHeader("Authorization") String authHeader) {
+            @RequestParam int loadNumber,
+            @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.dryAgain(transactionId, loadNumber, username);
         return ResponseEntity.ok(toDto(job));
@@ -105,9 +105,9 @@ public class LaundryJobController {
     // Advance load
     @PatchMapping("/{transactionId}/advance-load")
     public ResponseEntity<LaundryJobDto> advanceLoad(@PathVariable String transactionId,
-                                                     @RequestParam int loadNumber,
-                                                     @RequestParam String status,
-                                                     @RequestHeader("Authorization") String authHeader) {
+            @RequestParam int loadNumber,
+            @RequestParam String status,
+            @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.advanceLoad(transactionId, loadNumber, status, username);
         return ResponseEntity.ok(toDto(job));
@@ -116,8 +116,8 @@ public class LaundryJobController {
     // Complete load
     @PatchMapping("/{transactionId}/complete-load")
     public ResponseEntity<LaundryJobDto> completeLoad(@PathVariable String transactionId,
-                                                      @RequestParam int loadNumber,
-                                                      @RequestHeader("Authorization") String authHeader) {
+            @RequestParam int loadNumber,
+            @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.completeLoad(transactionId, loadNumber, username);
         return ResponseEntity.ok(toDto(job));
@@ -126,9 +126,9 @@ public class LaundryJobController {
     // Update load duration
     @PatchMapping("/{transactionId}/update-duration")
     public ResponseEntity<LaundryJobDto> updateLoadDuration(@PathVariable String transactionId,
-                                                            @RequestParam int loadNumber,
-                                                            @RequestParam int durationMinutes,
-                                                            @RequestHeader("Authorization") String authHeader) {
+            @RequestParam int loadNumber,
+            @RequestParam int durationMinutes,
+            @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.updateLoadDuration(transactionId, loadNumber, durationMinutes, username);
         return ResponseEntity.ok(toDto(job));
@@ -149,9 +149,16 @@ public class LaundryJobController {
         return dto;
     }
 
-    // ========== Exception Handling (basic) ==========
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleRuntime(RuntimeException ex) {
         return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
+    // missing item
+    @GetMapping("/search-by-customer")
+    public ResponseEntity<List<LaundryJob>> searchLaundryJobsByCustomerName(
+            @RequestParam String customerName) {
+        List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
+        return ResponseEntity.ok(jobs);
     }
 }
