@@ -327,13 +327,28 @@ public class LaundryJobService {
         Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
         List<LaundryJob> jobs = jobPage.getContent();
 
-        return processJobsToDtos(jobs);
+        // Filter out jobs where all loads are completed
+        List<LaundryJob> nonCompletedJobs = jobs.stream()
+                .filter(job -> job.getLoadAssignments() != null)
+                .filter(job -> !job.getLoadAssignments().stream()
+                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                .collect(Collectors.toList());
+
+        return processJobsToDtos(nonCompletedJobs);
     }
 
     @Cacheable(value = "laundryJobs", key = "'allJobs'")
     public List<LaundryJobDto> getAllJobs() {
         List<LaundryJob> jobs = laundryJobRepository.findAll();
-        return processJobsToDtos(jobs);
+
+        // Filter out jobs where all loads are completed
+        List<LaundryJob> nonCompletedJobs = jobs.stream()
+                .filter(job -> job.getLoadAssignments() != null)
+                .filter(job -> !job.getLoadAssignments().stream()
+                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                .collect(Collectors.toList());
+
+        return processJobsToDtos(nonCompletedJobs);
     }
 
     private List<LaundryJobDto> processJobsToDtos(List<LaundryJob> jobs) {
@@ -357,12 +372,12 @@ public class LaundryJobService {
             int detergentQty = 0;
             int fabricQty = 0;
             LocalDateTime issueDate = null;
-            String serviceType = null;
+            String serviceType = job.getServiceType(); // Use job's service type as fallback
             String contact = job.getContact();
 
             if (tx != null) {
                 issueDate = tx.getIssueDate();
-                serviceType = tx.getServiceName();
+                serviceType = tx.getServiceName(); // Use transaction's service name
 
                 if (tx.getConsumables() != null) {
                     detergentQty = tx.getConsumables().stream()
@@ -376,6 +391,22 @@ public class LaundryJobService {
                             .sum();
                 }
             }
+
+            // Create and populate the DTO
+            LaundryJobDto dto = new LaundryJobDto();
+            dto.setTransactionId(job.getTransactionId());
+            dto.setCustomerName(job.getCustomerName());
+            dto.setContact(contact);
+            dto.setLoadAssignments(job.getLoadAssignments());
+            dto.setDetergentQty(detergentQty);
+            dto.setFabricQty(fabricQty);
+            dto.setStatusFlow(job.getStatusFlow());
+            dto.setCurrentStep(job.getCurrentStep());
+            dto.setIssueDate(issueDate);
+            dto.setServiceType(serviceType);
+            dto.setTotalLoads(job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0);
+
+            result.add(dto);
         }
 
         return result;
@@ -484,10 +515,11 @@ public class LaundryJobService {
         }
     }
 
+    // para sa missing item
+
+    // Change the search method to be case sensitive
     public List<LaundryJob> searchLaundryJobsByCustomerName(String customerName) {
-        List<LaundryJob> jobs = laundryJobRepository.findByCustomerName(customerName);
-        return jobs.stream()
-                .filter(job -> job.getClaimDate() != null)
-                .collect(Collectors.toList());
+        // Use exact case-sensitive matching
+        return laundryJobRepository.findByCustomerName(customerName);
     }
 }

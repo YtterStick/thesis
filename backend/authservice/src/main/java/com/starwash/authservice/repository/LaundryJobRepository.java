@@ -2,6 +2,7 @@ package com.starwash.authservice.repository;
 
 import com.starwash.authservice.model.LaundryJob;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -31,4 +32,8 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
     List<LaundryJob> findByExpiredTrueOrDueDateBefore(java.time.LocalDateTime date);
 
     List<LaundryJob> findByPickupStatusAndExpiredAndDisposed(String pickupStatus, Boolean expired, Boolean disposed);
+
+    // In LaundryJobRepository.java
+@Query("{ 'loadAssignments.status': { $ne: 'COMPLETED' } }")
+List<LaundryJob> findIncompleteJobs();
 }

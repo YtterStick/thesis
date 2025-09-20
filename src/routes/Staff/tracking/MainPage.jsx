@@ -31,6 +31,7 @@ import dryingAnimation from "@/assets/lottie/dryer-machine.json";
 import foldingAnimation from "@/assets/lottie/clothes.json";
 import loaderAnimation from "@/assets/lottie/loader.json";
 import Loader from "@/components/loader";
+
 const DEFAULT_DURATION = { washing: 35, drying: 40 };
 const ALLOWED_SKEW_MS = 5000;
 const REQUEST_TIMEOUT = 10000;
@@ -151,10 +152,6 @@ export default function ServiceTrackingPage() {
         return hasActiveJobs ? ACTIVE_POLLING_INTERVAL : POLLING_INTERVAL;
     };
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [jobs]);
-
     const totalItems = jobs.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -169,6 +166,13 @@ export default function ServiceTrackingPage() {
         setItemsPerPage(Number(value));
         setCurrentPage(1);
     };
+
+    // Fix: Only reset page if current page becomes invalid
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages > 0 ? totalPages : 1);
+        }
+    }, [jobs, currentPage, totalPages]);
 
     const fetchJobs = useCallback(async () => {
         try {
@@ -222,14 +226,17 @@ export default function ServiceTrackingPage() {
                             const timerKey = `${newJob.id}-${newLoad.loadNumber}`;
                             const preservedStartTime = activeTimersRef.current.get(timerKey);
 
+                            // Fixed: Add safe handling for undefined serviceType
+                            const flow = SERVICE_FLOWS[newJob.serviceType] || ["UNWASHED", "COMPLETED"];
+                            const oldIdx = flow.indexOf(oldLoad.status);
+                            const newIdx = flow.indexOf(normalizeStatus(newLoad.status));
+
+                            // Fixed: Handle cases where status might not be in the flow
+                            const shouldUseOldStatus = oldIdx > newIdx && oldIdx !== -1 && newIdx !== -1;
+
                             return {
                                 ...newLoad,
-                                status: (() => {
-                                    const flow = SERVICE_FLOWS[newJob.serviceType];
-                                    const oldIdx = flow.indexOf(oldLoad.status);
-                                    const newIdx = flow.indexOf(normalizeStatus(newLoad.status));
-                                    return oldIdx > newIdx ? oldLoad.status : normalizeStatus(newLoad.status);
-                                })(),
+                                status: shouldUseOldStatus ? oldLoad.status : normalizeStatus(newLoad.status),
                                 machineId: oldLoad.machineId ?? newLoad.machineId,
                                 duration: oldLoad.duration ?? newLoad.duration,
                                 startTime: preservedStartTime || oldLoad.startTime || newLoad.startTime,
@@ -439,7 +446,8 @@ export default function ServiceTrackingPage() {
         if (!job?.id) return;
 
         const load = job.loads[loadIndex];
-        const flow = SERVICE_FLOWS[job.serviceType];
+        // Fixed: Add safe handling for undefined serviceType
+        const flow = SERVICE_FLOWS[job.serviceType] || ["UNWASHED", "COMPLETED"];
         const currentIndex = flow.indexOf(load.status);
         const nextStatus = currentIndex < flow.length - 1 ? flow[currentIndex + 1] : load.status;
 
