@@ -27,6 +27,7 @@ public class TransactionRequestDto {
     private Integer detergentQty;
     private Integer fabricQty;
     private List<String> statusFlow;
+    private String gcashReference;
 
     public TransactionRequestDto() {}
 
@@ -36,7 +37,8 @@ public class TransactionRequestDto {
                                  String paymentMethod, Double amountGiven,
                                  LocalDateTime issueDate, LocalDateTime dueDate,
                                  boolean generateInvoice, String staffId, String notes,
-                                 Integer detergentQty, Integer fabricQty, List<String> statusFlow) {
+                                 Integer detergentQty, Integer fabricQty, List<String> statusFlow,
+                                 String gcashReference) {
         this.customerName = customerName;
         this.contact = contact;
         this.serviceId = serviceId;
@@ -52,6 +54,7 @@ public class TransactionRequestDto {
         this.detergentQty = detergentQty;
         this.fabricQty = fabricQty;
         this.statusFlow = statusFlow;
+        this.gcashReference = gcashReference;
     }
 
     // Getters and Setters
@@ -104,4 +107,7 @@ public class TransactionRequestDto {
 
     public List<String> getStatusFlow() { return statusFlow; }
     public void setStatusFlow(List<String> statusFlow) { this.statusFlow = statusFlow; }
+
+    public String getGcashReference() { return gcashReference; }
+    public void setGcashReference(String gcashReference) { this.gcashReference = gcashReference; }
 }

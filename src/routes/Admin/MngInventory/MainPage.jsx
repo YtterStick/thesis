@@ -3,7 +3,6 @@ import { Plus, Boxes, PackageX, Package, Clock8 } from "lucide-react";
 import InventoryForm from "./InventoryForm";
 import InventoryTable from "./InventoryTable";
 import StockModal from "./StockModal";
-import { Button } from "@/components/ui/button";
 
 const ALLOWED_SKEW_MS = 5000;
 

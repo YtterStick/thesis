@@ -8,11 +8,11 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
 
 const formatDateForBackend = (dateString) => {
-  const date = new Date(dateString);
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const year = date.getFullYear();
-  return `${month}/${day}/${year}`;
+    const date = new Date(dateString);
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
 };
 
 const CustomBarTooltip = ({ active, payload, label }) => {
@@ -96,35 +96,35 @@ const SalesReportPage = () => {
         try {
             setIsLoading(true);
             const token = localStorage.getItem("authToken");
-            
+
             setDatesSwapped(false);
 
             let requestStartDate = startDate;
             let requestEndDate = endDate;
-            
+
             if (dateRange === "custom") {
                 if (!startDate || !endDate) {
-                    toast({ 
-                        title: "Error", 
-                        description: "Please select both start and end dates for custom range", 
-                        variant: "destructive" 
+                    toast({
+                        title: "Error",
+                        description: "Please select both start and end dates for custom range",
+                        variant: "destructive",
                     });
                     setIsLoading(false);
                     return;
                 }
-                
+
                 const start = new Date(startDate);
                 const end = new Date(endDate);
-                
+
                 if (start > end) {
                     requestStartDate = endDate;
                     requestEndDate = startDate;
                     setDatesSwapped(true);
-                    
-                    toast({ 
-                        title: "Info", 
-                        description: "Start date was after end date. Dates have been auto-swapped.", 
-                        variant: "default" 
+
+                    toast({
+                        title: "Info",
+                        description: "Start date was after end date. Dates have been auto-swapped.",
+                        variant: "default",
                     });
                 }
             }
@@ -181,10 +181,10 @@ const SalesReportPage = () => {
             setIsLoading(false);
         } catch (error) {
             console.error(error);
-            toast({ 
-                title: "Error", 
-                description: error.message || "Failed to load sales report", 
-                variant: "destructive" 
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load sales report",
+                variant: "destructive",
             });
             setIsLoading(false);
         }
@@ -193,7 +193,7 @@ const SalesReportPage = () => {
     const handleDateRangeChange = (value) => {
         setDateRange(value);
         setDatesSwapped(false);
-        
+
         const today = new Date();
         switch (value) {
             case "today":
@@ -230,7 +230,7 @@ const SalesReportPage = () => {
             toast({
                 title: "Info",
                 description: "End date automatically adjusted to match start date",
-                variant: "default"
+                variant: "default",
             });
         }
     };
@@ -242,7 +242,7 @@ const SalesReportPage = () => {
             toast({
                 title: "Info",
                 description: "Start date automatically adjusted to match end date",
-                variant: "default"
+                variant: "default",
             });
         }
     };
@@ -293,7 +293,7 @@ const SalesReportPage = () => {
                             <span>Start date was after end date. Dates have been auto-swapped.</span>
                         </div>
                     )}
-                    
+
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">Date Range</label>
@@ -551,10 +551,10 @@ const SalesReportPage = () => {
                                         <td className="p-4 text-slate-600 dark:text-slate-300">{transaction.serviceType}</td>
                                         <td className="p-4 font-medium text-slate-900 dark:text-slate-100">₱{transaction.totalPrice}</td>
                                         <td className="p-4 text-slate-600 dark:text-slate-300">
-                                            {new Date(transaction.createdAt).toLocaleDateString('en-US', {
-                                                month: '2-digit',
-                                                day: '2-digit',
-                                                year: 'numeric'
+                                            {new Date(transaction.createdAt).toLocaleDateString("en-US", {
+                                                month: "2-digit",
+                                                day: "2-digit",
+                                                year: "numeric",
                                             })}
                                         </td>
                                     </tr>

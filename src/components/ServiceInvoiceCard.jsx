@@ -17,6 +17,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
     amountGiven = 0,
     change = 0,
     paymentMethod,
+    gcashReference,
     totalPrice,
     loads = 0,
     serviceName = "",
@@ -101,6 +102,15 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
           <div className="text-right">
             Payment: <span className="font-bold">{paymentMethod}</span>
           </div>
+          
+          {/* GCash Reference */}
+          {paymentMethod === "GCash" && gcashReference && (
+            <div className="col-span-2 flex justify-between">
+                <span>GCash Reference:</span>
+                <span>{gcashReference}</span>
+            </div>
+          )}
+
           <div className="col-span-2 flex justify-between">
             <span>Due Date to Claim:</span>
             <span className="font-bold text-red-600 dark:text-red-400">

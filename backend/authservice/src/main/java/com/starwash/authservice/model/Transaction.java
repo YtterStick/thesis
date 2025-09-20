@@ -34,6 +34,7 @@ public class Transaction {
     private String staffId;
 
     private Boolean gcashVerified;
+    private String gcashReference;
     
     @CreatedDate
     private LocalDateTime createdAt;
@@ -73,8 +74,10 @@ public class Transaction {
         this.staffId = staffId;
         this.createdAt = createdAt;
         this.gcashVerified = "GCash".equals(paymentMethod) ? false : null;
+        this.gcashReference = null;
     }
 
+    // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     
@@ -132,4 +135,7 @@ public class Transaction {
     
     public Boolean getGcashVerified() { return gcashVerified; }
     public void setGcashVerified(Boolean gcashVerified) { this.gcashVerified = gcashVerified; }
+    
+    public String getGcashReference() { return gcashReference; }
+    public void setGcashReference(String gcashReference) { this.gcashReference = gcashReference; }
 }

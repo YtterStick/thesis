@@ -17,7 +17,9 @@ const PaymentSection = ({
   onMethodChange,
   onAmountChange,
   isLocked,
-  paymentMethods = ["Cash"] // ✅ Now receives payment methods as prop
+  paymentMethods = ["Cash"],
+  gcashReference,
+  onGcashReferenceChange
 }) => {
   const parsedAmount = parseFloat(amountGiven);
   const isUnderpaid =
@@ -35,6 +37,12 @@ const PaymentSection = ({
     const cleaned = e.target.value.replace(/[^\d.]/g, "");
     const numeric = parseFloat(cleaned);
     onAmountChange(isNaN(numeric) ? "0" : numeric.toString());
+  };
+
+  const handleGcashReferenceChange = (value) => {
+    // Only allow numbers
+    const numericValue = value.replace(/[^0-9]/g, '');
+    onGcashReferenceChange(numericValue);
   };
 
   return (
@@ -63,6 +71,26 @@ const PaymentSection = ({
           </SelectContent>
         </Select>
       </div>
+
+      {/* GCash Reference Input (only show when GCash is selected) */}
+      {paymentMethod === "GCash" && (
+        <div>
+          <Label className="mb-1 block">GCash Reference Number</Label>
+          <Input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={gcashReference || ""}
+            onChange={(e) => handleGcashReferenceChange(e.target.value)}
+            placeholder="Enter GCash reference number"
+            disabled={isLocked}
+            required={paymentMethod === "GCash"}
+            maxLength={20}
+            className="border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
+          />
+          <p className="text-xs text-slate-500 mt-1">Enter numbers only</p>
+        </div>
+      )}
 
       {/* 💰 Amount Given */}
       <div>
@@ -100,7 +128,9 @@ PaymentSection.propTypes = {
   onMethodChange: PropTypes.func,
   onAmountChange: PropTypes.func,
   isLocked: PropTypes.bool,
-  paymentMethods: PropTypes.arrayOf(PropTypes.string)
+  paymentMethods: PropTypes.arrayOf(PropTypes.string),
+  gcashReference: PropTypes.string,
+  onGcashReferenceChange: PropTypes.func
 };
 
 export default PaymentSection;

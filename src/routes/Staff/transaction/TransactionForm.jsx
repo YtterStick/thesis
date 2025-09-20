@@ -18,6 +18,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         serviceId: "",
         amountGiven: 0,
         paymentMethod: "Cash",
+        gcashReference: ""
     });
 
     const [loads, setLoads] = useState(1);
@@ -26,8 +27,16 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const [plasticOverrides, setPlasticOverrides] = useState({});
     const [services, setServices] = useState([]);
     const [stockItems, setStockItems] = useState([]);
-    const [paymentMethods, setPaymentMethods] = useState(["Cash"]); // Default to Cash only
+    const [paymentMethods, setPaymentMethods] = useState(["Cash"]);
     const { toast } = useToast();
+
+    const handleChange = (field, value) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+        
+        if (field === "paymentMethod" && value !== "GCash") {
+            setForm((prev) => ({ ...prev, gcashReference: "" }));
+        }
+    };
 
     useImperativeHandle(ref, () => ({
         resetForm: () => {
@@ -38,6 +47,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 serviceId: defaultService?.id || "",
                 amountGiven: 0,
                 paymentMethod: "Cash",
+                gcashReference: ""
             });
             setLoads(1);
             setSupplySource("in-store");
@@ -121,21 +131,18 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 
                 if (res.ok) {
                     const data = await res.json();
-                    // Build payment methods array based on settings
                     const methods = ["Cash"];
                     if (data.gcashEnabled) {
                         methods.push("GCash");
                     }
                     setPaymentMethods(methods);
                     
-                    // If current payment method is GCash but it's disabled, switch to Cash
                     if (form.paymentMethod === "GCash" && !data.gcashEnabled) {
                         setForm(prev => ({ ...prev, paymentMethod: "Cash" }));
                     }
                 }
             } catch (error) {
                 console.error("Failed to fetch payment settings:", error);
-                // Keep default payment methods (Cash only) if fetch fails
             }
         };
 
@@ -165,10 +172,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             setConsumables(updated);
         }
     }, [loads, stockItems, plasticOverrides, consumables]);
-
-    const handleChange = (field, value) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
-    };
 
     const handleConsumableChange = (name, value) => {
         setConsumables((prev) => ({
@@ -229,6 +232,38 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             return;
         }
 
+        // Add validation for GCash reference
+        if (form.paymentMethod === "GCash") {
+            if (!form.gcashReference) {
+                toast({
+                    title: "Missing GCash Reference",
+                    description: "Please enter GCash reference number.",
+                    variant: "destructive",
+                });
+                return;
+            }
+            
+            // Validate that reference is numeric
+            if (!/^\d+$/.test(form.gcashReference)) {
+                toast({
+                    title: "Invalid GCash Reference",
+                    description: "GCash reference must contain numbers only.",
+                    variant: "destructive",
+                });
+                return;
+            }
+            
+            // Validate exact amount for GCash
+            if (parseFloat(form.amountGiven || 0) !== totalAmount) {
+                toast({
+                    title: "Invalid Amount for GCash",
+                    description: "For GCash payments, amount given must exactly match the total.",
+                    variant: "destructive",
+                });
+                return;
+            }
+        }
+
         if (parseFloat(form.amountGiven || 0) < totalAmount) {
             toast({
                 title: "Insufficient Payment",
@@ -263,6 +298,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             consumablesPrice: consumablesTotal,
             paymentMethod: form.paymentMethod,
             amountGiven: parseFloat(form.amountGiven) || 0,
+            gcashReference: form.paymentMethod === "GCash" ? form.gcashReference : null,
             change: parseFloat(form.amountGiven || 0) - totalAmount,
             totalPrice: totalAmount,
             issueDate: new Date().toISOString(),
@@ -377,7 +413,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         onMethodChange={(value) => handleChange("paymentMethod", value)}
                         onAmountChange={(value) => handleChange("amountGiven", value)}
                         isLocked={isLocked}
-                        paymentMethods={paymentMethods} // ✅ Pass enabled payment methods
+                        paymentMethods={paymentMethods}
+                        gcashReference={form.gcashReference}
+                        onGcashReferenceChange={(value) => handleChange("gcashReference", value)}
                     />
 
                     <Button

@@ -15,395 +15,397 @@ import java.util.stream.Collectors;
 @Service
 public class TransactionService {
 
-        private final ServiceRepository serviceRepository;
-        private final StockRepository stockRepository;
-        private final TransactionRepository transactionRepository;
-        private final FormatSettingsRepository formatSettingsRepository;
-        private final LaundryJobRepository laundryJobRepository;
+    private final ServiceRepository serviceRepository;
+    private final StockRepository stockRepository;
+    private final TransactionRepository transactionRepository;
+    private final FormatSettingsRepository formatSettingsRepository;
+    private final LaundryJobRepository laundryJobRepository;
 
-        public TransactionService(ServiceRepository serviceRepository,
-                        StockRepository stockRepository,
-                        TransactionRepository transactionRepository,
-                        FormatSettingsRepository formatSettingsRepository,
-                        LaundryJobRepository laundryJobRepository) {
-                this.serviceRepository = serviceRepository;
-                this.stockRepository = stockRepository;
-                this.transactionRepository = transactionRepository;
-                this.formatSettingsRepository = formatSettingsRepository;
-                this.laundryJobRepository = laundryJobRepository;
+    public TransactionService(ServiceRepository serviceRepository,
+                    StockRepository stockRepository,
+                    TransactionRepository transactionRepository,
+                    FormatSettingsRepository formatSettingsRepository,
+                    LaundryJobRepository laundryJobRepository) {
+            this.serviceRepository = serviceRepository;
+            this.stockRepository = stockRepository;
+            this.transactionRepository = transactionRepository;
+            this.formatSettingsRepository = formatSettingsRepository;
+            this.laundryJobRepository = laundryJobRepository;
+    }
+
+    public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request) {
+        ServiceItem service = serviceRepository.findById(request.getServiceId())
+                        .orElseThrow(() -> new RuntimeException("Service not found"));
+
+        int loads = Optional.ofNullable(request.getLoads()).orElse(1);
+        ServiceEntryDto serviceDto = new ServiceEntryDto(service.getName(), service.getPrice(), loads);
+        double total = service.getPrice() * loads;
+
+        List<ServiceEntryDto> consumableDtos = new ArrayList<>();
+        List<ServiceEntry> consumables = new ArrayList<>();
+
+        for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
+            String itemName = entry.getKey();
+            int quantity = entry.getValue();
+
+            StockItem item = stockRepository.findByName(itemName)
+                            .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
+
+            if (item.getQuantity() < quantity) {
+                throw new RuntimeException("Insufficient stock for: " + itemName);
+            }
+
+            item.setQuantity(item.getQuantity() - quantity);
+            stockRepository.save(item);
+
+            double itemTotal = item.getPrice() * quantity;
+            total += itemTotal;
+
+            consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
+            consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
         }
 
-        public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request) {
-                ServiceItem service = serviceRepository.findById(request.getServiceId())
-                                .orElseThrow(() -> new RuntimeException("Service not found"));
+        double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
+        double change = amountGiven - total;
 
-                int loads = Optional.ofNullable(request.getLoads()).orElse(1);
-                ServiceEntryDto serviceDto = new ServiceEntryDto(service.getName(), service.getPrice(), loads);
-                double total = service.getPrice() * loads;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
 
-                List<ServiceEntryDto> consumableDtos = new ArrayList<>();
-                List<ServiceEntry> consumables = new ArrayList<>();
+        LocalDateTime dueDate = Optional.ofNullable(request.getDueDate())
+                        .orElse(issueDate.plusDays(7));
 
-                for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
-                        String itemName = entry.getKey();
-                        int quantity = entry.getValue();
+        System.out.println("Creating transaction with dueDate: " + dueDate);
 
-                        StockItem item = stockRepository.findByName(itemName)
-                                        .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
+        String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
 
-                        if (item.getQuantity() < quantity) {
-                                throw new RuntimeException("Insufficient stock for: " + itemName);
-                        }
+        Transaction transaction = new Transaction(
+                        null,
+                        invoiceNumber,
+                        request.getCustomerName(),
+                        request.getContact(),
+                        service.getName(),
+                        service.getPrice(),
+                        loads,
+                        consumables,
+                        total,
+                        request.getPaymentMethod(),
+                        amountGiven,
+                        change,
+                        issueDate,
+                        dueDate,
+                        request.getStaffId(),
+                        now);
 
-                        item.setQuantity(item.getQuantity() - quantity);
-                        stockRepository.save(item);
-
-                        double itemTotal = item.getPrice() * quantity;
-                        total += itemTotal;
-
-                        consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
-                        consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
-                }
-
-                double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
-                double change = amountGiven - total;
-
-                LocalDateTime now = LocalDateTime.now();
-                LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
-
-                LocalDateTime dueDate = Optional.ofNullable(request.getDueDate())
-                                .orElse(issueDate.plusDays(7));
-
-                System.out.println("Creating transaction with dueDate: " + dueDate);
-
-                String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
-
-                Transaction transaction = new Transaction(
-                                null,
-                                invoiceNumber,
-                                request.getCustomerName(),
-                                request.getContact(),
-                                service.getName(),
-                                service.getPrice(),
-                                loads,
-                                consumables,
-                                total,
-                                request.getPaymentMethod(),
-                                amountGiven,
-                                change,
-                                issueDate,
-                                dueDate,
-                                request.getStaffId(),
-                                now);
-
-                if ("GCash".equals(request.getPaymentMethod())) {
-                        transaction.setGcashVerified(false);
-                }
-
-                transactionRepository.save(transaction);
-
-                FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
-                                .orElseThrow(() -> new RuntimeException("Format settings not found"));
-
-                int detergentQty = consumableDtos.stream()
-                                .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                                .mapToInt(ServiceEntryDto::getQuantity)
-                                .sum();
-
-                int fabricQty = consumableDtos.stream()
-                                .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                                .mapToInt(ServiceEntryDto::getQuantity)
-                                .sum();
-
-                int plasticQty = consumableDtos.stream()
-                                .filter(c -> c.getName().toLowerCase().contains("plastic"))
-                                .mapToInt(ServiceEntryDto::getQuantity)
-                                .sum();
-
-                return new ServiceInvoiceDto(
-                                invoiceNumber,
-                                transaction.getCustomerName(),
-                                transaction.getContact(),
-                                serviceDto,
-                                consumableDtos,
-                                total,
-                                0.0,
-                                0.0,
-                                total,
-                                request.getPaymentMethod(),
-                                issueDate,
-                                dueDate,
-                                new FormatSettingsDto(settings),
-                                detergentQty,
-                                fabricQty,
-                                plasticQty,
-                                loads);
+        // Set GCash reference if payment method is GCash
+        if ("GCash".equals(request.getPaymentMethod())) {
+            transaction.setGcashReference(request.getGcashReference());
+            transaction.setGcashVerified(false);
         }
 
-        public ServiceInvoiceDto getServiceInvoiceByTransactionId(String id) {
-                Transaction tx = transactionRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+        transactionRepository.save(transaction);
 
-                return buildInvoice(tx);
-        }
+        FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
+                        .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
-        private ServiceInvoiceDto buildInvoice(Transaction tx) {
-                ServiceEntryDto serviceDto = new ServiceEntryDto(
-                                tx.getServiceName(),
-                                tx.getServicePrice(),
-                                tx.getServiceQuantity());
+        int detergentQty = consumableDtos.stream()
+                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                        .mapToInt(ServiceEntryDto::getQuantity)
+                        .sum();
 
-                List<ServiceEntryDto> consumableDtos = tx.getConsumables().stream()
-                                .map(c -> new ServiceEntryDto(c.getName(), c.getPrice(), c.getQuantity()))
-                                .collect(Collectors.toList());
+        int fabricQty = consumableDtos.stream()
+                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                        .mapToInt(ServiceEntryDto::getQuantity)
+                        .sum();
 
-                FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
-                                .orElseThrow(() -> new RuntimeException("Format settings not found"));
+        int plasticQty = consumableDtos.stream()
+                        .filter(c -> c.getName().toLowerCase().contains("plastic"))
+                        .mapToInt(ServiceEntryDto::getQuantity)
+                        .sum();
 
-                int detergentQty = consumableDtos.stream()
-                                .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                                .mapToInt(ServiceEntryDto::getQuantity)
-                                .sum();
+        return new ServiceInvoiceDto(
+                        invoiceNumber,
+                        transaction.getCustomerName(),
+                        transaction.getContact(),
+                        serviceDto,
+                        consumableDtos,
+                        total,
+                        0.0,
+                        0.0,
+                        total,
+                        request.getPaymentMethod(),
+                        issueDate,
+                        dueDate,
+                        new FormatSettingsDto(settings),
+                        detergentQty,
+                        fabricQty,
+                        plasticQty,
+                        loads);
+    }
 
-                int fabricQty = consumableDtos.stream()
-                                .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                                .mapToInt(ServiceEntryDto::getQuantity)
-                                .sum();
+    public ServiceInvoiceDto getServiceInvoiceByTransactionId(String id) {
+        Transaction tx = transactionRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Transaction not found"));
 
-                int plasticQty = consumableDtos.stream()
-                                .filter(c -> c.getName().toLowerCase().contains("plastic"))
-                                .mapToInt(ServiceEntryDto::getQuantity)
-                                .sum();
+        return buildInvoice(tx);
+    }
 
-                return new ServiceInvoiceDto(
-                                tx.getInvoiceNumber(),
-                                tx.getCustomerName(),
-                                tx.getContact(),
-                                serviceDto,
-                                consumableDtos,
-                                tx.getTotalPrice(),
-                                0.0,
-                                0.0,
-                                tx.getTotalPrice(),
-                                tx.getPaymentMethod(),
-                                tx.getIssueDate(),
-                                tx.getDueDate(),
-                                new FormatSettingsDto(settings),
-                                detergentQty,
-                                fabricQty,
-                                plasticQty,
-                                tx.getServiceQuantity());
-        }
+    private ServiceInvoiceDto buildInvoice(Transaction tx) {
+        ServiceEntryDto serviceDto = new ServiceEntryDto(
+                        tx.getServiceName(),
+                        tx.getServicePrice(),
+                        tx.getServiceQuantity());
 
-        public List<RecordResponseDto> getAllRecords() {
-                List<Transaction> allTransactions = transactionRepository.findAll();
-                List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+        List<ServiceEntryDto> consumableDtos = tx.getConsumables().stream()
+                        .map(c -> new ServiceEntryDto(c.getName(), c.getPrice(), c.getQuantity()))
+                        .collect(Collectors.toList());
 
-                Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
-                                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+        FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
+                        .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
-                return allTransactions.stream().map(tx -> {
-                        RecordResponseDto dto = new RecordResponseDto();
-                        dto.setId(tx.getId());
-                        dto.setCustomerName(tx.getCustomerName());
-                        dto.setServiceName(tx.getServiceName());
-                        dto.setLoads(tx.getServiceQuantity());
+        int detergentQty = consumableDtos.stream()
+                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                        .mapToInt(ServiceEntryDto::getQuantity)
+                        .sum();
 
-                        dto.setContact(tx.getContact());
+        int fabricQty = consumableDtos.stream()
+                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                        .mapToInt(ServiceEntryDto::getQuantity)
+                        .sum();
 
-                        dto.setDetergent(tx.getConsumables().stream()
-                                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                                        .map(c -> String.valueOf(c.getQuantity()))
-                                        .findFirst().orElse("—"));
+        int plasticQty = consumableDtos.stream()
+                        .filter(c -> c.getName().toLowerCase().contains("plastic"))
+                        .mapToInt(ServiceEntryDto::getQuantity)
+                        .sum();
 
-                        dto.setFabric(tx.getConsumables().stream()
-                                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                                        .map(c -> String.valueOf(c.getQuantity()))
-                                        .findFirst().orElse("—"));
+        return new ServiceInvoiceDto(
+                        tx.getInvoiceNumber(),
+                        tx.getCustomerName(),
+                        tx.getContact(),
+                        serviceDto,
+                        consumableDtos,
+                        tx.getTotalPrice(),
+                        0.0,
+                        0.0,
+                        tx.getTotalPrice(),
+                        tx.getPaymentMethod(),
+                        tx.getIssueDate(),
+                        tx.getDueDate(),
+                        new FormatSettingsDto(settings),
+                        detergentQty,
+                        fabricQty,
+                        plasticQty,
+                        tx.getServiceQuantity());
+    }
 
-                        dto.setTotalPrice(tx.getTotalPrice());
-                        dto.setPaymentMethod(tx.getPaymentMethod());
-                        dto.setPickupStatus("Unclaimed");
-                        dto.setWashed(false);
-                        dto.setExpired(tx.getDueDate().isBefore(LocalDateTime.now()));
-                        dto.setCreatedAt(tx.getCreatedAt());
+    public List<RecordResponseDto> getAllRecords() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
+        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
 
-                        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
-                        if (job != null) {
-                                dto.setPickupStatus(job.getPickupStatus());
-                                dto.setExpired(job.isExpired());
-                                dto.setDisposed(job.isDisposed());
-                        } else {
-                                dto.setPickupStatus("UNCLAIMED");
-                                dto.setExpired(tx.getDueDate() != null &&
-                                                tx.getDueDate().isBefore(LocalDateTime.now()));
-                        }
+        Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                        .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-                        return dto;
-                }).collect(Collectors.toList());
-        }
+        return allTransactions.stream().map(tx -> {
+            RecordResponseDto dto = new RecordResponseDto();
+            dto.setId(tx.getId());
+            dto.setCustomerName(tx.getCustomerName());
+            dto.setServiceName(tx.getServiceName());
+            dto.setLoads(tx.getServiceQuantity());
 
-        public List<RecordResponseDto> getStaffRecords() {
-                List<RecordResponseDto> allRecords = this.getAllRecords();
+            dto.setContact(tx.getContact());
 
-                return allRecords.stream()
-                                .filter(record -> {
-                                        if (record.isDisposed()) {
-                                                return false;
-                                        }
-                                        return "UNCLAIMED".equals(record.getPickupStatus()) || record.isExpired();
-                                })
-                                .collect(Collectors.toList());
-        }
+            dto.setDetergent(tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                            .map(c -> String.valueOf(c.getQuantity()))
+                            .findFirst().orElse("—"));
 
-        public Map<String, Object> getStaffRecordsSummary() {
-                Map<String, Object> summary = new HashMap<>();
+            dto.setFabric(tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                            .map(c -> String.valueOf(c.getQuantity()))
+                            .findFirst().orElse("—"));
 
-                LocalDate today = LocalDate.now();
-                LocalDateTime startOfDay = today.atStartOfDay();
-                LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+            dto.setTotalPrice(tx.getTotalPrice());
+            dto.setPaymentMethod(tx.getPaymentMethod());
+            dto.setPickupStatus("Unclaimed");
+            dto.setWashed(false);
+            dto.setExpired(tx.getDueDate().isBefore(LocalDateTime.now()));
+            dto.setCreatedAt(tx.getCreatedAt());
 
-                List<RecordResponseDto> allRecords = this.getAllRecords();
+            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+            if (job != null) {
+                dto.setPickupStatus(job.getPickupStatus());
+                dto.setExpired(job.isExpired());
+                dto.setDisposed(job.isDisposed());
+            } else {
+                dto.setPickupStatus("UNCLAIMED");
+                dto.setExpired(tx.getDueDate() != null &&
+                                tx.getDueDate().isBefore(LocalDateTime.now()));
+            }
 
-                List<RecordResponseDto> todaysRecords = allRecords.stream()
-                                .filter(record -> {
-                                        LocalDateTime createdAt = record.getCreatedAt();
-                                        return createdAt.isAfter(startOfDay) && createdAt.isBefore(endOfDay);
-                                })
-                                .collect(Collectors.toList());
+            return dto;
+        }).collect(Collectors.toList());
+    }
 
-                double todayIncome = todaysRecords.stream()
-                                .mapToDouble(RecordResponseDto::getTotalPrice)
-                                .sum();
+    public List<RecordResponseDto> getStaffRecords() {
+        List<RecordResponseDto> allRecords = this.getAllRecords();
 
-                int todayLoads = todaysRecords.stream()
-                                .mapToInt(RecordResponseDto::getLoads)
-                                .sum();
+        return allRecords.stream()
+                        .filter(record -> {
+                            if (record.isDisposed()) {
+                                return false;
+                            }
+                            return "UNCLAIMED".equals(record.getPickupStatus()) || record.isExpired();
+                        })
+                        .collect(Collectors.toList());
+    }
 
-                List<LaundryJob> allJobs = laundryJobRepository.findAll();
+    public Map<String, Object> getStaffRecordsSummary() {
+        Map<String, Object> summary = new HashMap<>();
 
-                int unwashedCount = (int) allJobs.stream()
-                                .filter(job -> job.getLoadAssignments() != null)
-                                .flatMap(job -> job.getLoadAssignments().stream())
-                                .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
-                                .count();
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
 
-                int unclaimedCount = (int) allJobs.stream()
-                                .filter(job -> job.getLoadAssignments() != null &&
-                                                job.getLoadAssignments().stream()
-                                                                .allMatch(load -> "COMPLETED"
-                                                                                .equalsIgnoreCase(load.getStatus())))
-                                .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
-                                .filter(job -> !job.isExpired())
-                                .count();
+        List<RecordResponseDto> allRecords = this.getAllRecords();
 
-                // Calculate expired count
-                int expiredCount = (int) allJobs.stream()
-                                .filter(LaundryJob::isExpired)
-                                .filter(job -> !job.isDisposed())
-                                .count();
+        List<RecordResponseDto> todaysRecords = allRecords.stream()
+                        .filter(record -> {
+                            LocalDateTime createdAt = record.getCreatedAt();
+                            return createdAt.isAfter(startOfDay) && createdAt.isBefore(endOfDay);
+                        })
+                        .collect(Collectors.toList());
 
-                summary.put("todayIncome", todayIncome);
-                summary.put("todayLoads", todayLoads);
-                summary.put("unwashedCount", unwashedCount);
-                summary.put("unclaimedCount", unclaimedCount);
-                summary.put("expiredCount", expiredCount);
+        double todayIncome = todaysRecords.stream()
+                        .mapToDouble(RecordResponseDto::getTotalPrice)
+                        .sum();
 
-                return summary;
-        }
+        int todayLoads = todaysRecords.stream()
+                        .mapToInt(RecordResponseDto::getLoads)
+                        .sum();
 
-        public List<AdminRecordResponseDto> getAllAdminRecords() {
-                List<Transaction> allTransactions = transactionRepository.findAll();
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
 
-                List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
-                Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
-                                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+        int unwashedCount = (int) allJobs.stream()
+                        .filter(job -> job.getLoadAssignments() != null)
+                        .flatMap(job -> job.getLoadAssignments().stream())
+                        .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                        .count();
 
-                return allTransactions.stream().map(tx -> {
-                        AdminRecordResponseDto dto = new AdminRecordResponseDto();
-                        dto.setId(tx.getId());
-                        dto.setCustomerName(tx.getCustomerName());
-                        dto.setContact(tx.getContact());
-                        dto.setServiceName(tx.getServiceName());
-                        dto.setLoads(tx.getServiceQuantity());
-
-                        dto.setDetergent(tx.getConsumables().stream()
-                                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                                        .map(c -> String.valueOf(c.getQuantity()))
-                                        .findFirst().orElse("—"));
-
-                        dto.setFabric(tx.getConsumables().stream()
-                                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                                        .map(c -> String.valueOf(c.getQuantity()))
-                                        .findFirst().orElse("—"));
-
-                        dto.setTotalPrice(tx.getTotalPrice());
-                        dto.setPaymentMethod(tx.getPaymentMethod());
-                        dto.setProcessedByStaff(tx.getStaffId());
-                        dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
-                        dto.setCreatedAt(tx.getCreatedAt());
-
-                        dto.setGcashVerified(tx.getGcashVerified());
-
-                        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
-                        if (job != null) {
-                                dto.setPickupStatus(
-                                                job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
-                                if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
-                                        boolean allCompleted = job.getLoadAssignments().stream()
+        int unclaimedCount = (int) allJobs.stream()
+                        .filter(job -> job.getLoadAssignments() != null &&
+                                        job.getLoadAssignments().stream()
                                                         .allMatch(load -> "COMPLETED"
-                                                                        .equalsIgnoreCase(load.getStatus()));
+                                                                        .equalsIgnoreCase(load.getStatus())))
+                        .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                        .filter(job -> !job.isExpired())
+                        .count();
 
-                                        boolean anyInProgress = job.getLoadAssignments().stream()
-                                                        .anyMatch(load -> !"NOT_STARTED"
-                                                                        .equalsIgnoreCase(load.getStatus()) &&
-                                                                        !"COMPLETED".equalsIgnoreCase(
-                                                                                        load.getStatus()));
+        // Calculate expired count
+        int expiredCount = (int) allJobs.stream()
+                        .filter(LaundryJob::isExpired)
+                        .filter(job -> !job.isDisposed())
+                        .count();
 
-                                        if (allCompleted) {
-                                                dto.setLaundryStatus("Completed");
-                                        } else if (anyInProgress) {
-                                                dto.setLaundryStatus("In Progress");
-                                        } else {
-                                                dto.setLaundryStatus("Not Started");
-                                        }
-                                } else {
-                                        dto.setLaundryStatus("Not Started");
-                                }
+        summary.put("todayIncome", todayIncome);
+        summary.put("todayLoads", todayLoads);
+        summary.put("unwashedCount", unwashedCount);
+        summary.put("unclaimedCount", unclaimedCount);
+        summary.put("expiredCount", expiredCount);
 
-                                dto.setExpired(job.isExpired());
+        return summary;
+    }
 
-                                dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
-                                dto.setClaimProcessedBy(job.getClaimedByStaffId());
+    public List<AdminRecordResponseDto> getAllAdminRecords() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
 
-                                dto.setDisposed(job.isDisposed());
-                                dto.setDisposedBy(job.getDisposedBy());
-                        } else {
-                                dto.setPickupStatus("UNCLAIMED");
-                                dto.setLaundryStatus("Not Started");
-                                dto.setExpired(tx.getDueDate() != null
-                                                && tx.getDueDate().isBefore(LocalDateTime.now()));
-                                dto.setLaundryProcessedBy(null);
-                                dto.setClaimProcessedBy(null);
+        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+        Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                        .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-                                dto.setDisposed(false);
-                                dto.setDisposedBy(null);
-                        }
+        return allTransactions.stream().map(tx -> {
+            AdminRecordResponseDto dto = new AdminRecordResponseDto();
+            dto.setId(tx.getId());
+            dto.setCustomerName(tx.getCustomerName());
+            dto.setContact(tx.getContact());
+            dto.setServiceName(tx.getServiceName());
+            dto.setLoads(tx.getServiceQuantity());
 
-                        return dto;
-                }).collect(Collectors.toList());
-        }
+            dto.setDetergent(tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                            .map(c -> String.valueOf(c.getQuantity()))
+                            .findFirst().orElse("—"));
 
-        public List<Transaction> findPendingGcashTransactions() {
-                return transactionRepository.findByPaymentMethodAndGcashVerified("GCash", false);
-        }
+            dto.setFabric(tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                            .map(c -> String.valueOf(c.getQuantity()))
+                            .findFirst().orElse("—"));
 
-        public Transaction findTransactionById(String id) {
-                return transactionRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Transaction not found"));
-        }
+            dto.setTotalPrice(tx.getTotalPrice());
+            dto.setPaymentMethod(tx.getPaymentMethod());
+            dto.setProcessedByStaff(tx.getStaffId());
+            dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
+            dto.setCreatedAt(tx.getCreatedAt());
 
-        public void saveTransaction(Transaction transaction) {
-                transactionRepository.save(transaction);
-        }
+            dto.setGcashVerified(tx.getGcashVerified());
+
+            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+            if (job != null) {
+                dto.setPickupStatus(
+                                job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
+                if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
+                    boolean allCompleted = job.getLoadAssignments().stream()
+                                    .allMatch(load -> "COMPLETED"
+                                                    .equalsIgnoreCase(load.getStatus()));
+
+                    boolean anyInProgress = job.getLoadAssignments().stream()
+                                    .anyMatch(load -> !"NOT_STARTED"
+                                                    .equalsIgnoreCase(load.getStatus()) &&
+                                                    !"COMPLETED".equalsIgnoreCase(
+                                                                    load.getStatus()));
+
+                    if (allCompleted) {
+                        dto.setLaundryStatus("Completed");
+                    } else if (anyInProgress) {
+                        dto.setLaundryStatus("In Progress");
+                    } else {
+                        dto.setLaundryStatus("Not Started");
+                    }
+                } else {
+                    dto.setLaundryStatus("Not Started");
+                }
+
+                dto.setExpired(job.isExpired());
+
+                dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
+                dto.setClaimProcessedBy(job.getClaimedByStaffId());
+
+                dto.setDisposed(job.isDisposed());
+                dto.setDisposedBy(job.getDisposedBy());
+            } else {
+                dto.setPickupStatus("UNCLAIMED");
+                dto.setLaundryStatus("Not Started");
+                dto.setExpired(tx.getDueDate() != null
+                                && tx.getDueDate().isBefore(LocalDateTime.now()));
+                dto.setLaundryProcessedBy(null);
+                dto.setClaimProcessedBy(null);
+
+                dto.setDisposed(false);
+                dto.setDisposedBy(null);
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    public List<Transaction> findPendingGcashTransactions() {
+        return transactionRepository.findByPaymentMethodAndGcashVerified("GCash", false);
+    }
+
+    public Transaction findTransactionById(String id) {
+        return transactionRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Transaction not found"));
+    }
+
+    public void saveTransaction(Transaction transaction) {
+        transactionRepository.save(transaction);
+    }
 }
