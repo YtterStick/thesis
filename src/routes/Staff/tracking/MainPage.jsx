@@ -2,16 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import {
-    WashingMachine,
-    RefreshCw,
-    AlertCircle,
-    ChevronLeft,
-    ChevronRight,
-    ChevronsLeft,
-    ChevronsRight,
-    CheckCircle,
-} from "lucide-react";
+import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle } from "lucide-react";
 import TrackingTable from "./TrackingTable";
 import { fetchWithTimeout, isTokenExpired, maskContact } from "./utils";
 import SkeletonLoader from "./SkeletonLoader";
@@ -97,7 +88,12 @@ export default function ServiceTrackingPage() {
                     loadNumber: l.loadNumber,
                     machineId: l.machineId || null,
                     duration: l.durationMinutes || null,
-                    status: l.status?.toUpperCase() === "NOT_STARTED" ? "UNWASHED" : l.status?.toUpperCase() === "COMPLETED" ? "COMPLETED" : l.status?.toUpperCase(),
+                    status:
+                        l.status?.toUpperCase() === "NOT_STARTED"
+                            ? "UNWASHED"
+                            : l.status?.toUpperCase() === "COMPLETED"
+                              ? "COMPLETED"
+                              : l.status?.toUpperCase(),
                     startTime: l.startTime || null,
                     endTime: l.endTime || null,
                     pending: false,
