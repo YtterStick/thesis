@@ -15,6 +15,7 @@ public class MachineItem {
   private String status;
   private String lastMaintenance;
   private String nextMaintenance;
+  
 
   public MachineItem() {}
 

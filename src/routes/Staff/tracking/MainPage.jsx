@@ -126,6 +126,51 @@ const fetchWithTimeout = (url, options = {}, timeout = REQUEST_TIMEOUT) => {
         });
 };
 
+// Skeleton Loader Component
+const SkeletonLoader = () => {
+  return (
+    <div className="space-y-4 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+          <div className="h-7 w-40 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-10 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse"></div>
+            <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <TableHead key={i}>
+                  <div className="h-4 w-20 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 5 }).map((_, rowIndex) => (
+              <TableRow key={rowIndex} className="border-t border-slate-300 dark:border-slate-700">
+                {Array.from({ length: 10 }).map((_, cellIndex) => (
+                  <TableCell key={cellIndex}>
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};
+
 export default function ServiceTrackingPage() {
     const [jobs, setJobs] = useState([]);
     const [machines, setMachines] = useState([]);
@@ -602,18 +647,7 @@ export default function ServiceTrackingPage() {
     };
 
     if (loading) {
-        return (
-            <main className="flex h-screen items-center justify-center">
-                <div className="text-center">
-                    <Lottie
-                        animationData={loaderAnimation}
-                        loop
-                        style={{ width: 120, height: 120 }}
-                    />
-                    <p className="mt-4 text-slate-600 dark:text-slate-400">Loading service data...</p>
-                </div>
-            </main>
-        );
+        return <SkeletonLoader />;
     }
 
     if (error) {
@@ -640,21 +674,6 @@ export default function ServiceTrackingPage() {
                 <div className="flex items-center gap-2">
                     <WashingMachine className="h-6 w-6 text-cyan-400" />
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Service Tracking</h1>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <Switch
-                            id="auto-refresh"
-                            checked={autoRefresh}
-                            onCheckedChange={toggleAutoRefresh}
-                        />
-                        <label
-                            htmlFor="auto-refresh"
-                            className="text-sm text-slate-600 dark:text-slate-400"
-                        >
-                            Auto Refresh
-                        </label>
-                    </div>
                 </div>
             </div>
 
@@ -928,7 +947,7 @@ export default function ServiceTrackingPage() {
                                                             {expanded ? (
                                                                 <>
                                                                     See less <ArrowUp className="h-4 w-4" />
-                                                                </>
+                                                            </>
                                                             ) : (
                                                                 <>
                                                                     See more <ArrowDown className="h-4 w-4" />

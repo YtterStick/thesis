@@ -98,12 +98,12 @@ const StaffDashboardPage = () => {
     };
 
     const getMachineStatus = (machine) => {
-        if (machine.status === "In Use") {
-            if (machine.endTime) {
-                const remaining = getRemainingTime(machine.endTime);
-                return remaining || "In Use";
+        if (machine.status === "In Use" && machine.endTime) {
+            const remaining = getRemainingTime(machine.endTime);
+            if (remaining === "Done") {
+                return "Done";
             }
-            return "In Use";
+            return remaining || "In Use";
         }
         return machine.status || "Available";
     };
@@ -117,19 +117,47 @@ const StaffDashboardPage = () => {
         return "text-slate-600 dark:text-slate-400";
     };
 
-    if (dashboardData.loading) {
-        return (
-            <div className="flex flex-col gap-y-4">
-                <h1 className="title">Staff Dashboard</h1>
-                <div className="flex h-64 items-center justify-center">
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"></div>
-                        Loading live data...
-                    </div>
-                </div>
+    // Skeleton loader components
+    const SummaryCardSkeleton = () => (
+        <div className="card animate-pulse">
+            <div className="card-header flex items-center gap-x-3">
+                <div className="w-10 h-10 bg-slate-300 dark:bg-slate-700 rounded-lg"></div>
+                <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-24"></div>
             </div>
-        );
-    }
+            <div className="card-body rounded-md bg-slate-100 p-4 dark:bg-slate-950">
+                <div className="h-8 bg-slate-300 dark:bg-slate-700 rounded"></div>
+            </div>
+        </div>
+    );
+
+    const MachineListSkeleton = () => (
+        <div className="space-y-2">
+            <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-20 mb-2"></div>
+            {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-x-2">
+                        <div className="w-5 h-5 bg-slate-300 dark:bg-slate-700 rounded"></div>
+                        <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-32"></div>
+                    </div>
+                    <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-12"></div>
+                </div>
+            ))}
+        </div>
+    );
+
+    const UnclaimedListSkeleton = () => (
+        <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between py-2">
+                    <div className="space-y-1">
+                        <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-28"></div>
+                        <div className="h-3 bg-slate-300 dark:bg-slate-700 rounded w-36"></div>
+                    </div>
+                    <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-16"></div>
+                </div>
+            ))}
+        </div>
+    );
 
     if (dashboardData.error) {
         return (
@@ -174,7 +202,6 @@ const StaffDashboardPage = () => {
     ];
 
     const washers = dashboardData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "WASHER");
-
     const dryers = dashboardData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "DRYER");
 
     return (
@@ -185,29 +212,33 @@ const StaffDashboardPage = () => {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {summaryCards.map(({ title, icon, value, growth, color, growthColor }) => (
-                    <div
-                        key={title}
-                        className="card"
-                    >
-                        <div className="card-header flex items-center gap-x-3">
-                            <div
-                                className="w-fit rounded-lg p-2"
-                                style={{
-                                    backgroundColor: `${color}33`,
-                                    color: color,
-                                }}
-                            >
-                                {icon}
+                {dashboardData.loading ? (
+                    Array.from({ length: 4 }).map((_, index) => <SummaryCardSkeleton key={index} />)
+                ) : (
+                    summaryCards.map(({ title, icon, value, growth, color, growthColor }) => (
+                        <div
+                            key={title}
+                            className="card"
+                        >
+                            <div className="card-header flex items-center gap-x-3">
+                                <div
+                                    className="w-fit rounded-lg p-2"
+                                    style={{
+                                        backgroundColor: `${color}33`,
+                                        color: color,
+                                    }}
+                                >
+                                    {icon}
+                                </div>
+                                <p className="card-title">{title}</p>
                             </div>
-                            <p className="card-title">{title}</p>
+                            <div className="card-body rounded-md bg-slate-100 p-4 dark:bg-slate-950">
+                                <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
+                                <p className={`text-xs font-medium ${growthColor}`}>{growth}</p>
+                            </div>
                         </div>
-                        <div className="card-body rounded-md bg-slate-100 p-4 dark:bg-slate-950">
-                            <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
-                            <p className={`text-xs font-medium ${growthColor}`}>{growth}</p>
-                        </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
 
             {/* Machine Status + Unclaimed Transactions */}
@@ -216,70 +247,75 @@ const StaffDashboardPage = () => {
                 <div className="card col-span-1 md:col-span-2 lg:col-span-4">
                     <div className="card-header">
                         <p className="card-title">All Machines Status</p>
-                        <span className="text-sm text-slate-500 dark:text-slate-400">
-                            {dashboardData.allMachines.length} machines • Live tracking
-                        </span>
+                        
                     </div>
                     <div className="card-body flex h-[360px] flex-col overflow-auto px-4 py-2">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            {/* Washers */}
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Washers ({washers.length})</p>
-                                {washers.length === 0 ? (
-                                    <p className="text-sm text-slate-400 dark:text-slate-500">No washers found</p>
-                                ) : (
-                                    washers.map((machine) => {
-                                        const status = getMachineStatus(machine);
-                                        return (
-                                            <div
-                                                key={machine.id}
-                                                className="flex items-center justify-between border-b border-slate-200 py-2 last:border-none dark:border-slate-700"
-                                            >
-                                                <div className="flex items-center gap-x-2 leading-tight">
-                                                    <Timer
-                                                        size={20}
-                                                        className="text-blue-500 dark:text-blue-400"
-                                                    />
-                                                    <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                                                        {machine.name || "Unnamed Washer"}
-                                                    </p>
-                                                </div>
-                                                <p className={`text-sm font-medium ${getStatusColor(status)}`}>{status}</p>
-                                            </div>
-                                        );
-                                    })
-                                )}
+                        {dashboardData.loading ? (
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <MachineListSkeleton />
+                                <MachineListSkeleton />
                             </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                {/* Washers */}
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Washers ({washers.length})</p>
+                                    {washers.length === 0 ? (
+                                        <p className="text-sm text-slate-400 dark:text-slate-500">No washers found</p>
+                                    ) : (
+                                        washers.map((machine) => {
+                                            const status = getMachineStatus(machine);
+                                            return (
+                                                <div
+                                                    key={machine.id}
+                                                    className="flex items-center justify-between border-b border-slate-200 py-2 last:border-none dark:border-slate-700"
+                                                >
+                                                    <div className="flex items-center gap-x-2 leading-tight">
+                                                        <Timer
+                                                            size={20}
+                                                            className="text-blue-500 dark:text-blue-400"
+                                                        />
+                                                        <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
+                                                            {machine.name || "Unnamed Washer"}
+                                                        </p>
+                                                    </div>
+                                                    <p className={`text-sm font-medium ${getStatusColor(status)}`}>{status}</p>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
 
-                            {/* Dryers */}
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Dryers ({dryers.length})</p>
-                                {dryers.length === 0 ? (
-                                    <p className="text-sm text-slate-400 dark:text-slate-500">No dryers found</p>
-                                ) : (
-                                    dryers.map((machine) => {
-                                        const status = getMachineStatus(machine);
-                                        return (
-                                            <div
-                                                key={machine.id}
-                                                className="flex items-center justify-between border-b border-slate-200 py-2 last:border-none dark:border-slate-700"
-                                            >
-                                                <div className="flex items-center gap-x-2 leading-tight">
-                                                    <Timer
-                                                        size={20}
-                                                        className="text-orange-500 dark:text-orange-400"
-                                                    />
-                                                    <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                                                        {machine.name || "Unnamed Dryer"}
-                                                    </p>
+                                {/* Dryers */}
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Dryers ({dryers.length})</p>
+                                    {dryers.length === 0 ? (
+                                        <p className="text-sm text-slate-400 dark:text-slate-500">No dryers found</p>
+                                    ) : (
+                                        dryers.map((machine) => {
+                                            const status = getMachineStatus(machine);
+                                            return (
+                                                <div
+                                                    key={machine.id}
+                                                    className="flex items-center justify-between border-b border-slate-200 py-2 last:border-none dark:border-slate-700"
+                                                >
+                                                    <div className="flex items-center gap-x-2 leading-tight">
+                                                        <Timer
+                                                            size={20}
+                                                            className="text-orange-500 dark:text-orange-400"
+                                                        />
+                                                        <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
+                                                            {machine.name || "Unnamed Dryer"}
+                                                        </p>
+                                                    </div>
+                                                    <p className={`text-sm font-medium ${getStatusColor(status)}`}>{status}</p>
                                                 </div>
-                                                <p className={`text-sm font-medium ${getStatusColor(status)}`}>{status}</p>
-                                            </div>
-                                        );
-                                    })
-                                )}
+                                            );
+                                        })
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
@@ -288,11 +324,17 @@ const StaffDashboardPage = () => {
                     <div className="card-header">
                         <p className="card-title">Unclaimed</p>
                         <span className="text-sm text-slate-500 dark:text-slate-400">
-                            {dashboardData.completedUnclaimedTransactions.length} unclaimed laundry
+                            {dashboardData.loading ? (
+                                <span className="inline-block h-3 bg-slate-300 dark:bg-slate-700 rounded w-28"></span>
+                            ) : (
+                                `${dashboardData.completedUnclaimedTransactions.length} unclaimed laundry`
+                            )}
                         </span>
                     </div>
                     <div className="card-body flex h-[360px] flex-col overflow-auto px-4 py-2">
-                        {dashboardData.completedUnclaimedTransactions.length === 0 ? (
+                        {dashboardData.loading ? (
+                            <UnclaimedListSkeleton />
+                        ) : dashboardData.completedUnclaimedTransactions.length === 0 ? (
                             <p className="text-sm text-slate-500 dark:text-slate-400">No unclaimed completed loads</p>
                         ) : (
                             dashboardData.completedUnclaimedTransactions.map((transaction) => (

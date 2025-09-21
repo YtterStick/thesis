@@ -34,6 +34,6 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
     List<LaundryJob> findByPickupStatusAndExpiredAndDisposed(String pickupStatus, Boolean expired, Boolean disposed);
 
     // In LaundryJobRepository.java
-@Query("{ 'loadAssignments.status': { $ne: 'COMPLETED' } }")
-List<LaundryJob> findIncompleteJobs();
+    @Query("{ 'loadAssignments.status': { $ne: 'COMPLETED' } }")
+    List<LaundryJob> findIncompleteJobs();
 }
