@@ -7,7 +7,21 @@ import { format } from "date-fns";
 
 const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Fabric", "Price", "Date", "Pickup", "Actions"];
 
-const renderStatusBadge = (status) => {
+const renderStatusBadge = (status, isExpired) => {
+    // If expired, override the status to show as expired
+    if (isExpired) {
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="inline-flex items-center justify-center">
+                        <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top">Past Due</TooltipContent>
+            </Tooltip>
+        );
+    }
+
     const iconMap = {
         EXPIRED: <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />,
         UNCLAIMED: <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400" />,
@@ -58,7 +72,11 @@ const RecordTable = ({ items = [] }) => {
         return true;
     };
 
-    const filtered = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt) && !r.disposed);
+    // Filter out disposed records and apply search/filter
+    const filtered = items.filter((r) => 
+        r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && 
+        isInRange(r.createdAt)
+    );
 
     const sorted = [...filtered].sort((a, b) => {
         const dateA = new Date(a.createdAt);
@@ -186,8 +204,8 @@ const RecordTable = ({ items = [] }) => {
                                         </td>
                                         <td className="p-2 text-slate-600 dark:text-slate-300">
                                             <div className="flex items-center gap-2">
-                                                <span>{record.pickupStatus}</span>
-                                                {renderStatusBadge(record.pickupStatus)}
+                                                <span>{record.expired ? "Past Due" : record.pickupStatus}</span>
+                                                {renderStatusBadge(record.pickupStatus, record.expired)}
                                             </div>
                                         </td>
                                         <td className="p-2">

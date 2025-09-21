@@ -28,7 +28,6 @@ const MainPage = () => {
         filterTransactions();
     }, [transactions, expiredTransactions, searchTerm, dateFilter, activeTab]);
 
-    // In the MainPage component, update the fetchCompletedTransactions function:
     const fetchCompletedTransactions = async () => {
         try {
             setIsLoading(true);
@@ -75,7 +74,6 @@ const MainPage = () => {
         }
     };
 
-    // Also update the fetchExpiredTransactions function:
     const fetchExpiredTransactions = async () => {
         try {
             setIsLoadingExpired(true);
@@ -104,6 +102,7 @@ const MainPage = () => {
             setIsLoadingExpired(false);
         }
     };
+
     const filterTransactions = () => {
         let filtered = activeTab === "unclaimed" ? transactions : expiredTransactions;
 
@@ -306,6 +305,7 @@ const MainPage = () => {
                         onClaim={handleClaim}
                         onDispose={handleDispose}
                         isExpiredTab={activeTab === "expired"}
+                        hasUnfilteredData={activeTab === "unclaimed" ? transactions.length > 0 : expiredTransactions.length > 0}
                     />
                 </CardContent>
             </Card>

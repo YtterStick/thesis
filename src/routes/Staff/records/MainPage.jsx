@@ -30,6 +30,7 @@ const MainPage = () => {
 
                 const recordsData = await recordsRes.json();
 
+                // In the fetchData function of MainPage component
                 const mapped = recordsData.map((r) => ({
                     id: r.id,
                     name: r.customerName,

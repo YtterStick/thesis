@@ -3,13 +3,14 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Clock, CheckCircle, AlertCircle, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Clock, CheckCircle, AlertCircle, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 const MissingTable = ({
     allItems,
+    totalItems,
     isLoading,
     searchTerm,
     setSearchTerm,
@@ -25,11 +26,36 @@ const MissingTable = ({
     setClaimName,
     handleClaimItem,
     machines,
+    // Pagination props
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+    totalPages,
 }) => {
     const [expandedNotes, setExpandedNotes] = useState({});
     const [laundryJobSearchResults, setLaundryJobSearchResults] = useState([]);
     const [isSearchingLaundryJobs, setIsSearchingLaundryJobs] = useState(false);
     const [searchTimeout, setSearchTimeout] = useState(null);
+
+    // Add pagination handlers
+    const handlePreviousPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    };
+    
+    const handleNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
+    
+    // Add items per page options handler
+    const handleItemsPerPageChange = (value) => {
+        setItemsPerPage(Number(value));
+        setCurrentPage(1); // Reset to first page when changing items per page
+    };
 
     // Add this function to search laundry jobs with debouncing
     const searchLaundryJobs = async (name) => {
@@ -415,6 +441,57 @@ const MissingTable = ({
                         </TableBody>
                     </Table>
                 </div>
+                
+                {/* Pagination Controls */}
+                {totalItems > 0 && (
+                    <div className="flex items-center justify-between border-t border-slate-300 px-4 py-3 dark:border-slate-700">
+                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} items
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">Items per page:</span>
+                                <Select
+                                    value={itemsPerPage.toString()}
+                                    onValueChange={handleItemsPerPageChange}
+                                >
+                                    <SelectTrigger className="h-8 w-16">
+                                        <SelectValue placeholder={itemsPerPage} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="5">5</SelectItem>
+                                        <SelectItem value="10">10</SelectItem>
+                                        <SelectItem value="20">20</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handlePreviousPage}
+                                    disabled={currentPage === 1}
+                                    className="h-8 px-2"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <div className="text-sm text-slate-600 dark:text-slate-400">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleNextPage}
+                                    disabled={currentPage === totalPages}
+                                    className="h-8 px-2"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </>
     );

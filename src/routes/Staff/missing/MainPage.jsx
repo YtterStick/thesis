@@ -10,7 +10,7 @@ const MissingItemsPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingMachines, setIsLoadingMachines] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState("unclaimed");
     const [showReportDialog, setShowReportDialog] = useState(false);
     const [showClaimDialog, setShowClaimDialog] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
@@ -20,6 +20,8 @@ const MissingItemsPage = () => {
         notes: "",
     });
     const [claimName, setClaimName] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -75,10 +77,10 @@ const MissingItemsPage = () => {
 
     const handleReportItem = async () => {
         try {
-            if (!newItem.itemDescription || !newItem.machineId) {
+            if (!newItem.itemDescription) {
                 toast({
                     title: "Error",
-                    description: "Please fill in all required fields",
+                    description: "Please provide an item description",
                     variant: "destructive",
                 });
                 return;
@@ -159,6 +161,12 @@ const MissingItemsPage = () => {
         }
     };
 
+    // Calculate pagination
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = allItems.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(allItems.length / itemsPerPage);
+
     const unclaimedItems = allItems.filter((item) => !item.claimed);
     const claimedItems = allItems.filter((item) => item.claimed);
 
@@ -183,7 +191,8 @@ const MissingItemsPage = () => {
 
             <Card className="border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <MissingTable
-                    allItems={allItems}
+                    allItems={currentItems}
+                    totalItems={allItems.length}
                     isLoading={isLoading}
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
@@ -199,6 +208,12 @@ const MissingItemsPage = () => {
                     setClaimName={setClaimName}
                     handleClaimItem={handleClaimItem}
                     machines={machines}
+                    // Pagination props
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    setItemsPerPage={setItemsPerPage}
+                    totalPages={totalPages}
                 />
             </Card>
         </div>

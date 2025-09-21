@@ -183,11 +183,11 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                             <TableRow>
                                 <TableCell
                                     colSpan={isExpiredTab ? 8 : 7}
-                                    className="py-16"
+                                    className="py-16 text-center"
                                 >
                                     <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                                         <CheckCircle2 className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-500" />
-                                        <p className="text-lg font-medium">
+                                        <p className="text-lg font-medium text-center">
                                             {isExpiredTab ? "No past due laundry!" : "All laundry has been claimed!"}
                                         </p>
                                         <p className="text-sm">
