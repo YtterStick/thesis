@@ -77,21 +77,84 @@ export default function AdminDashboardPage() {
   }, [fetchDashboardData]);
 
   const formatCurrency = (amount) => {
-    return `₱${amount.toFixed(2)}`;
+    // Format number with commas and two decimal places
+    return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
   };
+
+  // Skeleton loader components
+  const SkeletonCard = () => (
+    <div className="card">
+      <div className="card-header flex items-center gap-x-3">
+        <div className="w-fit rounded-lg p-2 bg-slate-300 dark:bg-slate-700 animate-pulse">
+          <div className="h-6 w-6"></div>
+        </div>
+        <div className="h-5 w-24 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+      </div>
+      <div className="card-body rounded-md bg-slate-100 p-4 dark:bg-slate-950">
+        <div className="h-8 w-28 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+      </div>
+    </div>
+  );
+
+  const SkeletonChart = () => (
+    <div className="card col-span-1 md:col-span-2 lg:col-span-4">
+      <div className="card-header">
+        <div className="h-6 w-40 bg-slate-300 dark:bg-slate-700 rounded animate-pulse mb-2"></div>
+        <div className="h-4 w-32 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+      </div>
+      <div className="card-body">
+        <div className="h-[285px] w-full bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+      </div>
+    </div>
+  );
+
+  const SkeletonUnclaimedList = () => (
+    <div className="card col-span-1 md:col-span-2 lg:col-span-3">
+      <div className="card-header">
+        <div className="h-6 w-32 bg-slate-300 dark:bg-slate-700 rounded animate-pulse mb-2"></div>
+        <div className="h-4 w-40 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+      </div>
+      <div className="card-body h-[310px] overflow-auto px-4 py-2 flex flex-col">
+        {[1, 2, 3, 4, 5].map((item) => (
+          <div
+            key={item}
+            className="flex items-center justify-between border-b border-slate-200 py-3 last:border-none dark:border-slate-700"
+          >
+            <div className="space-y-2">
+              <div className="h-4 w-32 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+              <div className="h-3 w-40 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+              <div className="h-3 w-24 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+            </div>
+            <div className="h-5 w-16 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   if (dashboardData.loading) {
     return (
       <div className="space-y-5 px-6 pb-4 pt-4 overflow-visible">
-        <div className="card-header flex items-center gap-2">
-          <LineChart className="h-5 w-5 text-muted-foreground" />
-          <p className="card-title">Admin Dashboard</p>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"></div>
-            Loading dashboard data...
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="card-header flex items-center gap-2">
+            <div className="h-5 w-5 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+            <div className="h-6 w-40 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
           </div>
+        </div>
+
+        {/* Summary Cards Skeleton */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+
+        {/* Chart & Unclaimed List Skeleton */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <SkeletonChart />
+          <SkeletonUnclaimedList />
         </div>
       </div>
     );
@@ -127,19 +190,19 @@ export default function AdminDashboardPage() {
     {
       title: "Total Loads",
       icon: <Package size={26} />,
-      value: dashboardData.totalLoads.toString(),
+      value: dashboardData.totalLoads.toLocaleString(),
       color: "#60A5FA",
     },
     {
       title: "Unwashed",
       icon: <Clock8 size={26} />,
-      value: dashboardData.unwashedCount.toString(),
+      value: dashboardData.unwashedCount.toLocaleString(),
       color: "#FB923C",
     },
     {
       title: "Total Unclaimed",
       icon: <PackageX size={26} />,
-      value: dashboardData.totalUnclaimed.toString(),
+      value: dashboardData.totalUnclaimed.toLocaleString(),
       color: "#F87171",
     },
   ];
@@ -152,11 +215,6 @@ export default function AdminDashboardPage() {
           <LineChart className="h-5 w-5 text-muted-foreground" />
           <p className="card-title">Admin Dashboard</p>
         </div>
-        {dashboardData.lastUpdated && (
-          <span className="text-sm text-slate-500 dark:text-slate-400">
-            Live • Updated: {dashboardData.lastUpdated.toLocaleTimeString()}
-          </span>
-        )}
       </div>
 
       {/* 📊 Summary Cards */}
@@ -192,8 +250,11 @@ export default function AdminDashboardPage() {
             </span>
           </div>
           <div className="card-body">
-            <ResponsiveContainer width="100%" height={285}>
-              <AreaChart data={dashboardData.overviewData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart 
+                data={dashboardData.overviewData} 
+                margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+              >
                 <defs>
                   <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#0891B2" stopOpacity={0.8} />
@@ -202,7 +263,7 @@ export default function AdminDashboardPage() {
                 </defs>
                 <Tooltip
                   cursor={false}
-                  formatter={(value) => [`₱${value}`, "Revenue"]}
+                  formatter={(value) => [`₱${Number(value).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`, "Revenue"]}
                   contentStyle={{
                     backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
                     border: "1px solid",
@@ -222,13 +283,16 @@ export default function AdminDashboardPage() {
                   strokeWidth={0}
                   stroke={theme === "light" ? "#475569" : "#94a3b8"}
                   tickMargin={6}
+                  tick={{ fontSize: 16 }}
                 />
                 <YAxis
                   dataKey="total"
                   strokeWidth={0}
                   stroke={theme === "light" ? "#475569" : "#94a3b8"}
-                  tickFormatter={(value) => `₱${value}`}
+                  tickFormatter={(value) => `₱${value.toLocaleString()}`}
                   tickMargin={6}
+                  tick={{ fontSize: 14 }}
+                  width={60}
                 />
                 <Area
                   type="monotone"

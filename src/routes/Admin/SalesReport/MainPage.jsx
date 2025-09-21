@@ -2,10 +2,39 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight, Info, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
+import { Label } from "@/components/ui/label";
+
+const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
+  return (
+    <div className="space-y-2">
+      <Label className="mb-1 block">Service Type</Label>
+      <Select
+        value={serviceId}
+        onValueChange={(value) => onChange("serviceId", value)}
+        disabled={isLocked}
+      >
+        <SelectTrigger className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
+          <SelectValue placeholder="Select service" />
+        </SelectTrigger>
+        <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
+          {services.map((service) => (
+            <SelectItem
+              key={service.id}
+              value={service.id}
+              className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              {service.name}
+            </SelectItem>
+          ))} 
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
 
 const formatDateForBackend = (dateString) => {
     const date = new Date(dateString);
@@ -51,7 +80,7 @@ const CustomPieTooltip = ({ active, payload }) => {
                     Count: <span className="font-medium">{data.value} transactions</span>
                 </p>
                 <p className="text-sm">
-                    Percentage: <span className="font-medium">{(data.percent * 100).toFixed(1)}%</span>
+                    Percentage: <span className="font-medium">{Math.round(data.percent * 100)}%</span>
                 </p>
             </div>
         );
@@ -83,6 +112,13 @@ const SalesReportPage = () => {
         yesterdaySales: 0,
         growthPercentage: 0,
     });
+
+    const services = [
+        { id: "all", name: "All Services" },
+        { id: "Wash & Dry", name: "Wash & Dry" },
+        { id: "Wash", name: "Wash Only" },
+        { id: "Dry", name: "Dry Only" },
+    ];
 
     useEffect(() => {
         handleDateRangeChange("today");
@@ -161,7 +197,39 @@ const SalesReportPage = () => {
 
             const data = await response.json();
 
-            setSalesData(data.salesTrend || []);
+            // If the date range is for the full year, ensure we have data for all months
+            if (dateRange === "year") {
+                // Create an array with all months of the year (abbreviated)
+                const allMonths = [
+                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                ];
+                
+                // Create a map of existing sales data by period
+                const salesMap = {};
+                (data.salesTrend || []).forEach(item => {
+                    // Convert full month names to abbreviated format
+                    const monthNames = ["January", "February", "March", "April", "May", "June", 
+                                       "July", "August", "September", "October", "November", "December"];
+                    const monthIndex = monthNames.findIndex(name => name === item.period);
+                    if (monthIndex !== -1) {
+                        salesMap[allMonths[monthIndex]] = item.sales;
+                    } else {
+                        salesMap[item.period] = item.sales;
+                    }
+                });
+                
+                // Create a complete dataset with all months
+                const completeSalesData = allMonths.map(month => ({
+                    period: month,
+                    sales: salesMap[month] || 0
+                }));
+                
+                setSalesData(completeSalesData);
+            } else {
+                setSalesData(data.salesTrend || []);
+            }
+
             setServiceDistributionData(data.serviceDistribution || []);
             setRecentTransactions(data.recentTransactions || []);
             setSummaryData(
@@ -218,6 +286,12 @@ const SalesReportPage = () => {
                 setStartDate(monthStart.toISOString().split("T")[0]);
                 setEndDate(today.toISOString().split("T")[0]);
                 break;
+            case "year":
+                const yearStart = new Date(today.getFullYear(), 0, 1); // January 1st of current year
+                const yearEnd = new Date(today.getFullYear(), 11, 31); // December 31st of current year
+                setStartDate(yearStart.toISOString().split("T")[0]);
+                setEndDate(yearEnd.toISOString().split("T")[0]);
+                break;
             default:
                 break;
         }
@@ -244,6 +318,12 @@ const SalesReportPage = () => {
                 description: "Start date automatically adjusted to match end date",
                 variant: "default",
             });
+        }
+    };
+
+    const handleServiceChange = (field, value) => {
+        if (field === "serviceId") {
+            setServiceTypeFilter(value);
         }
     };
 
@@ -295,20 +375,21 @@ const SalesReportPage = () => {
                     )}
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">Date Range</label>
+                        <div className="space-y-2">
+                            <Label className="mb-1 block">Date Range</Label>
                             <Select
                                 value={dateRange}
                                 onValueChange={handleDateRangeChange}
                             >
-                                <SelectTrigger className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
+                                <SelectTrigger className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
                                     <SelectValue placeholder="Select date range" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
                                     <SelectItem value="today">Today</SelectItem>
                                     <SelectItem value="yesterday">Yesterday</SelectItem>
                                     <SelectItem value="week">Last 7 Days</SelectItem>
                                     <SelectItem value="month">This Month</SelectItem>
+                                    <SelectItem value="year">This Year</SelectItem>
                                     <SelectItem value="custom">Custom Range</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -316,46 +397,35 @@ const SalesReportPage = () => {
 
                         {dateRange === "custom" && (
                             <>
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">Start Date</label>
+                                <div className="space-y-2">
+                                    <Label className="mb-1 block">Start Date</Label>
                                     <Input
                                         type="date"
                                         value={startDate}
                                         max={endDate || undefined}
                                         onChange={(e) => handleStartDateChange(e.target.value)}
-                                        className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
+                                        className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
                                     />
                                 </div>
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">End Date</label>
+                                <div className="space-y-2">
+                                    <Label className="mb-1 block">End Date</Label>
                                     <Input
                                         type="date"
                                         value={endDate}
                                         min={startDate || undefined}
                                         onChange={(e) => handleEndDateChange(e.target.value)}
-                                        className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950"
+                                        className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
                                     />
                                 </div>
                             </>
                         )}
 
-                        <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-muted-foreground">Service Type</label>
-                            <Select
-                                value={serviceTypeFilter}
-                                onValueChange={setServiceTypeFilter}
-                            >
-                                <SelectTrigger className="border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
-                                    <SelectValue placeholder="All Services" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Services</SelectItem>
-                                    <SelectItem value="Wash & Dry">Wash & Dry</SelectItem>
-                                    <SelectItem value="Wash">Wash Only</SelectItem>
-                                    <SelectItem value="Dry">Dry Only</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <ServiceSelector
+                            services={services}
+                            serviceId={serviceTypeFilter}
+                            onChange={handleServiceChange}
+                            isLocked={false}
+                        />
                     </div>
                 </CardContent>
             </Card>
@@ -372,7 +442,7 @@ const SalesReportPage = () => {
                                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">
                                     <span className={summaryData.growthPercentage >= 0 ? "text-green-600" : "text-red-600"}>
                                         {summaryData.growthPercentage >= 0 ? "+" : ""}
-                                        {summaryData.growthPercentage}%
+                                        {Math.round(summaryData.growthPercentage)}%
                                     </span>{" "}
                                     from previous period
                                 </p>
@@ -492,7 +562,7 @@ const SalesReportPage = () => {
                                     outerRadius={100}
                                     fill="#8884d8"
                                     dataKey="value"
-                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
                                     labelStyle={{ fill: chartColors.text }}
                                 >
                                     {serviceDistributionData.map((entry, index) => (
@@ -523,7 +593,7 @@ const SalesReportPage = () => {
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
                             <Input
                                 placeholder="Search customers..."
-                                className="w-full border-slate-300 pl-8 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50"
+                                className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 pl-8"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -576,10 +646,10 @@ const SalesReportPage = () => {
                                         setCurrentPage(1);
                                     }}
                                 >
-                                    <SelectTrigger className="w-20">
+                                    <SelectTrigger className="w-20 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
                                         <SelectValue placeholder="10" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
                                         <SelectItem value="10">10</SelectItem>
                                         <SelectItem value="25">25</SelectItem>
                                         <SelectItem value="50">50</SelectItem>
@@ -590,6 +660,7 @@ const SalesReportPage = () => {
                                     size="sm"
                                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1}
+                                    className="border-slate-300 dark:border-slate-700"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </Button>
@@ -601,6 +672,7 @@ const SalesReportPage = () => {
                                     size="sm"
                                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                                     disabled={currentPage === totalPages || totalPages === 0}
+                                    className="border-slate-300 dark:border-slate-700"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </Button>

@@ -39,7 +39,7 @@ export const navbarLinks = [
     title: "System Settings",
     Links: [
       { label: "Services & Pricing", icon: Sliders, path: "/serviceoption" },
-      { label: "Receipts & Invoice Format", icon: ScrollText, path: "/documentsettings" },
+      { label: "Receipts & Invoice", icon: ScrollText, path: "/documentsettings" },
       { label: "Payment Methods", icon: CreditCard, path: "/paymentmethod" },
     ],
   },

@@ -9,17 +9,20 @@ public class PendingGcashDto {
     private String contact;
     private Double totalPrice;
     private LocalDateTime createdAt;
+    private String gcashReference;
     
     public PendingGcashDto() {}
     
     public PendingGcashDto(String id, String invoiceNumber, String customerName, 
-                          String contact, Double totalPrice, LocalDateTime createdAt) {
+                          String contact, Double totalPrice, LocalDateTime createdAt,
+                          String gcashReference) {
         this.id = id;
         this.invoiceNumber = invoiceNumber;
         this.customerName = customerName;
         this.contact = contact;
         this.totalPrice = totalPrice;
         this.createdAt = createdAt;
+        this.gcashReference = gcashReference;
     }
     
     public String getId() { return id; }
@@ -40,6 +43,9 @@ public class PendingGcashDto {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     
+    public String getGcashReference() { return gcashReference; }
+    public void setGcashReference(String gcashReference) { this.gcashReference = gcashReference; }
+    
     @Override
     public String toString() {
         return "PendingGcashDto{" +
@@ -49,6 +55,7 @@ public class PendingGcashDto {
                 ", contact='" + contact + '\'' +
                 ", totalPrice=" + totalPrice +
                 ", createdAt=" + createdAt +
+                ", gcashReference='" + gcashReference + '\'' +
                 '}';
     }
 }

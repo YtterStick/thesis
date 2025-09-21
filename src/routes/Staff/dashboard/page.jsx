@@ -256,9 +256,9 @@ const StaffDashboardPage = () => {
                                 <MachineListSkeleton />
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                {/* Washers */}
-                                <div className="space-y-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Washers with right border */}
+                                <div className="space-y-2 border-r border-slate-200 pr-4 dark:border-slate-700">
                                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Washers ({washers.length})</p>
                                     {washers.length === 0 ? (
                                         <p className="text-sm text-slate-400 dark:text-slate-500">No washers found</p>
@@ -287,7 +287,7 @@ const StaffDashboardPage = () => {
                                 </div>
 
                                 {/* Dryers */}
-                                <div className="space-y-2">
+                                <div className="space-y-2 pl-4">
                                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Dryers ({dryers.length})</p>
                                     {dryers.length === 0 ? (
                                         <p className="text-sm text-slate-400 dark:text-slate-500">No dryers found</p>

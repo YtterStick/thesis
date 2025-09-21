@@ -11,21 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Wallet, 
   Smartphone, 
   Loader2, 
-  CalendarIcon, 
-  CheckCircle, 
-  Filter, 
-  Download 
+  CheckCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Switch from "./Switch";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 
 const PaymentManagementPage = () => {
   const { toast } = useToast();
@@ -34,8 +27,6 @@ const PaymentManagementPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [pendingTransactions, setPendingTransactions] = useState([]);
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
@@ -45,10 +36,6 @@ const PaymentManagementPage = () => {
       fetchPendingTransactions();
     }
   }, [activeTab]);
-
-  useEffect(() => {
-    filterTransactionsByDate();
-  }, [pendingTransactions, selectedDate]);
 
   const fetchPaymentSettings = async () => {
     try {
@@ -107,24 +94,6 @@ const PaymentManagementPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const filterTransactionsByDate = () => {
-    if (!selectedDate) {
-      setFilteredTransactions(pendingTransactions);
-      return;
-    }
-
-    const filtered = pendingTransactions.filter(transaction => {
-      const transactionDate = new Date(transaction.createdAt);
-      return (
-        transactionDate.getDate() === selectedDate.getDate() &&
-        transactionDate.getMonth() === selectedDate.getMonth() &&
-        transactionDate.getFullYear() === selectedDate.getFullYear()
-      );
-    });
-
-    setFilteredTransactions(filtered);
   };
 
   const handleToggleGcash = async () => {
@@ -197,31 +166,7 @@ const PaymentManagementPage = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    const csvContent = [
-      ["Invoice Number", "Customer Name", "Contact", "Total Amount", "Date", "Status"],
-      ...filteredTransactions.map(t => [
-        t.invoiceNumber,
-        t.customerName,
-        t.contact,
-        `₱${t.totalPrice.toFixed(2)}`,
-        format(new Date(t.createdAt), "MMM dd, yyyy hh:mm a"),
-        "Pending"
-      ])
-    ].map(row => row.join(",")).join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pending_gcash_payments_${format(new Date(), "yyyy-MM-dd")}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const totalPendingAmount = filteredTransactions.reduce((sum, transaction) => sum + transaction.totalPrice, 0);
+  const totalPendingAmount = pendingTransactions.reduce((sum, transaction) => sum + transaction.totalPrice, 0);
 
   return (
     <div className="space-y-6 p-6">
@@ -308,45 +253,13 @@ const PaymentManagementPage = () => {
         <TabsContent value="pending">
           <Card className="border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
             <CardHeader className="rounded-t-lg bg-slate-100 dark:bg-slate-800">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <CardTitle className="text-slate-900 dark:text-slate-50">
-                    Pending GCash Payments
-                  </CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">
-                    {filteredTransactions.length} pending GCash payments
-                    {selectedDate && ` on ${format(selectedDate, "MMM dd, yyyy")}`}
-                  </CardDescription>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "justify-start text-left font-normal",
-                          !selectedDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "MMM dd, yyyy") : "Pick a date"}
-                        <Filter className="ml-2 h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <Button onClick={handleExportCSV} variant="outline">
-                    <Download className="mr-2 h-4 w-4" />
-                    Export CSV
-                  </Button>
-                </div>
+              <div>
+                <CardTitle className="text-slate-900 dark:text-slate-50">
+                  Pending GCash Payments
+                </CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-400">
+                  {pendingTransactions.length} pending GCash payments
+                </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -357,13 +270,10 @@ const PaymentManagementPage = () => {
                     <span>Loading pending payments...</span>
                   </div>
                 </div>
-              ) : filteredTransactions.length === 0 ? (
+              ) : pendingTransactions.length === 0 ? (
                 <div className="p-8 text-center">
                   <p className="text-slate-600 dark:text-slate-400">
-                    {pendingTransactions.length === 0 
-                      ? "No pending GCash payments" 
-                      : `No pending GCash payments on ${format(selectedDate, "MMM dd, yyyy")}`
-                    }
+                    No pending GCash payments
                   </p>
                 </div>
               ) : (
@@ -379,6 +289,7 @@ const PaymentManagementPage = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Invoice #</TableHead>
+                          <TableHead>Reference #</TableHead>
                           <TableHead>Customer</TableHead>
                           <TableHead>Contact</TableHead>
                           <TableHead>Amount</TableHead>
@@ -388,14 +299,15 @@ const PaymentManagementPage = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredTransactions.map((transaction) => (
+                        {pendingTransactions.map((transaction) => (
                           <TableRow key={transaction.id}>
                             <TableCell className="font-medium">{transaction.invoiceNumber}</TableCell>
+                            <TableCell>{transaction.gcashReference || "N/A"}</TableCell>
                             <TableCell>{transaction.customerName}</TableCell>
                             <TableCell>{transaction.contact}</TableCell>
                             <TableCell>₱{transaction.totalPrice.toFixed(2)}</TableCell>
                             <TableCell>
-                              {format(new Date(transaction.createdAt), "MMM dd, yyyy hh:mm a")}
+                              {new Date(transaction.createdAt).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">

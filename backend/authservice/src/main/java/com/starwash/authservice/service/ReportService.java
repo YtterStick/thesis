@@ -37,7 +37,7 @@ public class ReportService {
                     .collect(Collectors.toList());
         }
 
-        List<Map<String, Object>> salesTrend = generateSalesTrend(transactions, reportStartDate, reportEndDate);
+        List<Map<String, Object>> salesTrend = generateSalesTrend(transactions, reportStartDate, reportEndDate, dateRange);
 
         List<Map<String, Object>> serviceDistribution = generateServiceDistribution(transactions);
 
@@ -79,35 +79,71 @@ public class ReportService {
             case "month":
                 LocalDate monthStart = today.withDayOfMonth(1);
                 return new LocalDate[] { monthStart, today };
+            case "year":
+                LocalDate yearStart = today.withDayOfYear(1);
+                LocalDate yearEnd = today.withDayOfYear(today.lengthOfYear());
+                return new LocalDate[] { yearStart, yearEnd };
             default:
                 return new LocalDate[] { today.minusDays(30), today };
         }
     }
 
     private List<Map<String, Object>> generateSalesTrend(List<Transaction> transactions, LocalDate startDate,
-            LocalDate endDate) {
-        Map<String, Double> dailySales = new LinkedHashMap<>();
+            LocalDate endDate, String dateRange) {
+        
+        // For year view, group by month with abbreviated names
+        if ("year".equals(dateRange)) {
+            Map<String, Double> monthlySales = new LinkedHashMap<>();
+            
+            // Initialize all months with 0.0
+            String[] monthAbbreviations = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+            for (String month : monthAbbreviations) {
+                monthlySales.put(month, 0.0);
+            }
+            
+            // Aggregate sales by month
+            transactions.forEach(transaction -> {
+                LocalDate transactionDate = transaction.getCreatedAt().toLocalDate();
+                String monthKey = transactionDate.format(DateTimeFormatter.ofPattern("MMM"));
+                double currentTotal = monthlySales.getOrDefault(monthKey, 0.0);
+                monthlySales.put(monthKey, currentTotal + transaction.getTotalPrice());
+            });
+            
+            return monthlySales.entrySet().stream()
+                    .map(entry -> {
+                        Map<String, Object> dataPoint = new HashMap<>();
+                        dataPoint.put("period", entry.getKey());
+                        dataPoint.put("sales", entry.getValue());
+                        return dataPoint;
+                    })
+                    .collect(Collectors.toList());
+        } 
+        // For other date ranges, use daily grouping
+        else {
+            Map<String, Double> dailySales = new LinkedHashMap<>();
 
-        LocalDate currentDate = startDate;
-        while (!currentDate.isAfter(endDate)) {
-            dailySales.put(currentDate.format(DateTimeFormatter.ofPattern("MMM dd")), 0.0);
-            currentDate = currentDate.plusDays(1);
+            LocalDate currentDate = startDate;
+            while (!currentDate.isAfter(endDate)) {
+                dailySales.put(currentDate.format(DateTimeFormatter.ofPattern("MMM dd")), 0.0);
+                currentDate = currentDate.plusDays(1);
+            }
+
+            transactions.forEach(transaction -> {
+                String dateKey = transaction.getCreatedAt().toLocalDate().format(DateTimeFormatter.ofPattern("MMM dd"));
+                double currentTotal = dailySales.getOrDefault(dateKey, 0.0);
+                dailySales.put(dateKey, currentTotal + transaction.getTotalPrice());
+            });
+
+            return dailySales.entrySet().stream()
+                    .map(entry -> {
+                        Map<String, Object> dataPoint = new HashMap<>();
+                        dataPoint.put("period", entry.getKey());
+                        dataPoint.put("sales", entry.getValue());
+                        return dataPoint;
+                    })
+                    .collect(Collectors.toList());
         }
-
-        transactions.forEach(transaction -> {
-            String dateKey = transaction.getCreatedAt().toLocalDate().format(DateTimeFormatter.ofPattern("MMM dd"));
-            double currentTotal = dailySales.getOrDefault(dateKey, 0.0);
-            dailySales.put(dateKey, currentTotal + transaction.getTotalPrice());
-        });
-
-        return dailySales.entrySet().stream()
-                .map(entry -> {
-                    Map<String, Object> dataPoint = new HashMap<>();
-                    dataPoint.put("period", entry.getKey());
-                    dataPoint.put("sales", entry.getValue());
-                    return dataPoint;
-                })
-                .collect(Collectors.toList());
     }
 
     private List<Map<String, Object>> generateServiceDistribution(List<Transaction> transactions) {

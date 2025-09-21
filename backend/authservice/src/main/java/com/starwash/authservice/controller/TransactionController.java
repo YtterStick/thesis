@@ -127,7 +127,7 @@ public class TransactionController {
         try {
             List<Transaction> pendingTransactions = transactionService.findPendingGcashTransactions();
             
-            // Convert to DTO
+            // Convert to DTO - ADD GCASH REFERENCE HERE
             List<PendingGcashDto> dtos = pendingTransactions.stream()
                     .map(tx -> new PendingGcashDto(
                             tx.getId(),
@@ -135,7 +135,8 @@ public class TransactionController {
                             tx.getCustomerName(),
                             tx.getContact(),
                             tx.getTotalPrice(),
-                            tx.getCreatedAt()))
+                            tx.getCreatedAt(),
+                            tx.getGcashReference()))  // Add GCash reference
                     .collect(Collectors.toList());
                     
             return ResponseEntity.ok(dtos);
