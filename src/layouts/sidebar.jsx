@@ -10,7 +10,7 @@ import { useClickOutside } from "@/hooks/use-click-outside";
 import { useLogout } from "@/hooks/useLogout";
 import { ChevronDown, LogOut, User } from "lucide-react";
 
-export const Sidebar = forwardRef(({ collapsed, links, user, role }, ref) => {
+export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = false }, ref) => {
     const { theme } = useTheme();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [activeGroup, setActiveGroup] = useState(null);
@@ -29,6 +29,83 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role }, ref) => {
             .toUpperCase()
             .slice(0, 2);
     };
+
+    if (isLoading) {
+        return (
+            <aside
+                ref={ref}
+                className={cn(
+                    "fixed z-50 flex h-screen flex-col border-r transition-all duration-300 ease-in-out",
+                    collapsed ? "max-md:-left-full md:w-[70px]" : "max-md:left-0 md:w-[240px]",
+                    theme === "dark" ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
+                )}
+            >
+                {/* Skeleton Logo */}
+                <div className={cn(
+                    "flex items-center p-3 min-h-[60px] flex-shrink-0",
+                    collapsed ? "justify-center" : "gap-x-3"
+                )}>
+                    <div className={cn(
+                        "rounded-full animate-pulse",
+                        collapsed ? "h-8 w-8" : "h-6 w-6"
+                    )} />
+                    {!collapsed && (
+                        <div className="h-4 w-24 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
+                    )}
+                </div>
+
+                {/* Skeleton Navigation Links */}
+                <div className="flex flex-1 flex-col gap-y-4 p-3 min-h-0 overflow-y-auto">
+                    {[1, 2].map((group) => (
+                        <nav
+                            key={group}
+                            className={cn("flex flex-col gap-y-2", collapsed && "items-center")}
+                        >
+                            {!collapsed && (
+                                <div className="h-3 w-16 bg-slate-300 dark:bg-slate-700 rounded animate-pulse mb-1" />
+                            )}
+                            <div className="flex flex-col gap-y-1">
+                                {[1, 2, 3].map((link) => (
+                                    <div
+                                        key={link}
+                                        className={cn(
+                                            "flex items-center gap-x-3 rounded px-3 py-2",
+                                            collapsed ? "justify-center" : ""
+                                        )}
+                                    >
+                                        <div className="h-6 w-6 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
+                                        {!collapsed && (
+                                            <div className="h-4 w-24 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </nav>
+                    ))}
+                </div>
+
+                {/* Skeleton Profile Section */}
+                <div className={cn(
+                    "mt-auto border-t p-3 flex-shrink-0",
+                    theme === "dark" ? "border-slate-700" : "border-slate-200"
+                )}>
+                    {collapsed ? (
+                        <div className="flex justify-center">
+                            <div className="h-10 w-10 bg-slate-300 dark:bg-slate-700 rounded-full animate-pulse" />
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-slate-300 dark:bg-slate-700 rounded-full animate-pulse" />
+                            <div className="flex-1 space-y-2">
+                                <div className="h-3 w-20 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
+                                <div className="h-2 w-16 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </aside>
+        );
+    }
 
     return (
         <aside
@@ -252,4 +329,5 @@ Sidebar.propTypes = {
     links: PropTypes.array.isRequired,
     user: PropTypes.object,
     role: PropTypes.string,
+    isLoading: PropTypes.bool,
 };
