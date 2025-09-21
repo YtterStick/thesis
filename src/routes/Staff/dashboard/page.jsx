@@ -181,11 +181,6 @@ const StaffDashboardPage = () => {
         <div className="flex flex-col gap-y-4">
             <div className="flex items-center justify-between">
                 <h1 className="title">Staff Dashboard</h1>
-                {dashboardData.lastUpdated && (
-                    <span className="text-sm text-slate-500 dark:text-slate-400">
-                        Live • Updated: {dashboardData.lastUpdated.toLocaleTimeString()}
-                    </span>
-                )}
             </div>
 
             {/* Summary Cards */}

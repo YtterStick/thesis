@@ -163,7 +163,7 @@ const MainPage = () => {
       console.error(error);
       let errorMessage;
       if (error.message.includes("expired")) {
-        errorMessage = "Cannot claim expired laundry. Please dispose instead.";
+        errorMessage = "Cannot claim past due laundry. Please dispose instead.";
       } else if (error.message.includes("GCash")) {
         errorMessage = "Cannot claim laundry with unverified GCash payment.";
       } else {
@@ -189,7 +189,7 @@ const MainPage = () => {
 
     toast({
       title: "Success",
-      description: "Expired laundry has been disposed.",
+      description: "Past due laundry has been disposed.",
     });
 
     // Remove from expired list
@@ -198,7 +198,7 @@ const MainPage = () => {
     console.error(error);
     toast({ 
       title: "Error", 
-      description: error.message || "Failed to dispose expired laundry", 
+      description: error.message || "Failed to dispose past due laundry", 
       variant: "destructive" 
     });
   }
@@ -215,7 +215,7 @@ const MainPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Laundry Claiming & Disposing </h1>
-          <p className="mt-1 text-slate-600 dark:text-slate-400">Manage completed and expired laundry</p>
+          <p className="mt-1 text-slate-600 dark:text-slate-400">Manage completed and past due laundry</p>
         </div>
       </div>
 
@@ -224,11 +224,11 @@ const MainPage = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className="text-slate-900 dark:text-slate-50">
-                {activeTab === "unclaimed" ? "Completed & Unclaimed Laundry" : "Expired Laundry"}
+                {activeTab === "unclaimed" ? "Completed & Unclaimed Laundry" : "Past Due Laundry"}
               </CardTitle>
               <CardDescription className="text-slate-600 dark:text-slate-400">
                 {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""}{" "}
-                {activeTab === "unclaimed" ? "ready for pickup" : "expired and need disposal"}
+                {activeTab === "unclaimed" ? "ready for pickup" : "past due and need disposal"}
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -251,7 +251,7 @@ const MainPage = () => {
                   }`}
                   onClick={() => setActiveTab("expired")}
                 >
-                  Expired ({expiredTransactions.length})
+                  Past Due ({expiredTransactions.length})
                 </button>
               </div>
               <div className="relative">

@@ -161,7 +161,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                             <TableHead>Loads</TableHead>
                             <TableHead>Date Completed</TableHead>
                             {!isExpiredTab && <TableHead>Due Date</TableHead>}
-                            {isExpiredTab && <TableHead>Expired On</TableHead>}
+                            {isExpiredTab && <TableHead>Past Due On</TableHead>}
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -175,7 +175,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                 >
                                     <Loader className="mx-auto mb-2 h-8 w-8 animate-spin" />
                                     <div className="text-slate-600 dark:text-slate-400">
-                                        {isExpiredTab ? "Loading expired transactions..." : "Loading transactions..."}
+                                        {isExpiredTab ? "Loading past due transactions..." : "Loading transactions..."}
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -188,10 +188,10 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                                         <CheckCircle2 className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-500" />
                                         <p className="text-lg font-medium">
-                                            {isExpiredTab ? "No expired laundry!" : "All laundry has been claimed!"}
+                                            {isExpiredTab ? "No past due laundry!" : "All laundry has been claimed!"}
                                         </p>
                                         <p className="text-sm">
-                                            {isExpiredTab ? "No expired transactions found." : "No unclaimed completed transactions found."}
+                                            {isExpiredTab ? "No past due transactions found." : "No unclaimed completed transactions found."}
                                         </p>
                                     </div>
                                 </TableCell>
@@ -250,7 +250,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                         <TableCell>
                                             {isExpired ? (
                                                 <Badge className="flex w-24 items-center justify-center gap-1 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
-                                                    <AlertTriangle className="h-3 w-3" /> Expired
+                                                    <AlertTriangle className="h-3 w-3" /> Past Due
                                                 </Badge>
                                             ) : transaction.pickupStatus === "UNCLAIMED" ? (
                                                 <Badge className="flex w-24 items-center justify-center gap-1 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
