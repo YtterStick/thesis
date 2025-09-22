@@ -431,7 +431,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                         </div>
 
                         <p className="mb-6 text-slate-600 dark:text-slate-300">
-                            This laundry item was not claimed by the customer. Are you sure you want to disposed it?
+                            This laundry item was not claimed by the customer. Are you sure you want to dispose it?
                         </p>
 
                         <div className="flex justify-end gap-3">

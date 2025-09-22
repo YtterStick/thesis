@@ -7,6 +7,8 @@ public class ServiceInvoiceDto {
 
     private String invoiceNumber;
 
+    private String staffId;
+
     private String customerName;
     private String contact;
 
@@ -39,7 +41,7 @@ public class ServiceInvoiceDto {
                              String paymentMethod,
                              LocalDateTime issueDate, LocalDateTime dueDate,
                              FormatSettingsDto formatSettings,
-                             int detergentQty, int fabricQty, int plasticQty, int loads) {
+                             int detergentQty, int fabricQty, int plasticQty, int loads, String staffId) {
         this.invoiceNumber = invoiceNumber;
         this.customerName = customerName;
         this.contact = contact;
@@ -57,8 +59,11 @@ public class ServiceInvoiceDto {
         this.fabricQty = fabricQty;
         this.plasticQty = plasticQty;
         this.loads = loads;
+        this.staffId = staffId;
     }
 
+    public String getStaffId() { return staffId; }
+    public void getStaffId(String staffId) { this.staffId = staffId; }
     public String getInvoiceNumber() { return invoiceNumber; }
     public String getCustomerName() { return customerName; }
     public String getContact() { return contact; }

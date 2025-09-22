@@ -11,6 +11,7 @@ import com.starwash.authservice.service.TransactionService;
 import com.starwash.authservice.service.LaundryJobService;
 import com.starwash.authservice.repository.LaundryJobRepository;
 import com.starwash.authservice.repository.TransactionRepository;
+import com.starwash.authservice.security.JwtUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,15 +36,18 @@ public class TransactionController {
     private final LaundryJobService laundryJobService;
     private final LaundryJobRepository laundryJobRepository;
     private final TransactionRepository transactionRepository;
+    private final JwtUtil jwtUtil;
 
     public TransactionController(TransactionService transactionService,
                                  LaundryJobService laundryJobService,
                                  LaundryJobRepository laundryJobRepository,
-                                 TransactionRepository transactionRepository) {
+                                 TransactionRepository transactionRepository,
+                                 JwtUtil jwtUtil) {
         this.transactionService = transactionService;
         this.laundryJobService = laundryJobService;
         this.laundryJobRepository = laundryJobRepository;
         this.transactionRepository = transactionRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     /**
@@ -57,11 +61,16 @@ public class TransactionController {
         }
 
         try {
-            // ✅ Create the service invoice
-            ServiceInvoiceDto invoice = transactionService.createServiceInvoiceTransaction(request);
-            log.info("🧾 Service invoice created | invoiceNumber={} | customer={}",
+            // Extract staffId from JWT token
+            String token = authHeader.replace("Bearer ", "");
+            String staffId = jwtUtil.getUsername(token);
+            
+            // ✅ Create the service invoice with staffId
+            ServiceInvoiceDto invoice = transactionService.createServiceInvoiceTransaction(request, staffId);
+            log.info("🧾 Service invoice created | invoiceNumber={} | customer={} | staffId={}",
                     invoice.getInvoiceNumber(),
-                    invoice.getCustomerName()
+                    invoice.getCustomerName(),
+                    staffId
             );
 
             // ✅ Build per-load assignments

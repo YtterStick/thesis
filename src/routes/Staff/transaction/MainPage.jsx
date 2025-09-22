@@ -28,6 +28,17 @@ const secureFetch = async (endpoint, method = "POST", body = null) => {
         throw new Error("Token expired or invalid");
     }
 
+    // Extract staffId from token and store it
+    try {
+        const payload = token.split(".")[1];
+        const decoded = JSON.parse(atob(payload));
+        if (decoded.sub) {
+            localStorage.setItem("staffId", decoded.sub);
+        }
+    } catch (err) {
+        console.warn("❌ Failed to extract staffId from token:", err);
+    }
+
     const headers = {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -73,6 +84,13 @@ const MainPage = () => {
         };
     }, []);
 
+    // Add cleanup for staffId on component unmount
+    useEffect(() => {
+        return () => {
+            localStorage.removeItem("staffId");
+        };
+    }, []);
+
     const handleSubmit = async (payload) => {
         if (isSubmitting) return;
         setIsSubmitting(true);
@@ -81,11 +99,17 @@ const MainPage = () => {
         try {
             const response = await secureFetch("/transactions", "POST", payload);
             console.log("🧾 Invoice saved:", response.invoiceNumber);
+
+            // Get staffId from localStorage
+            const staffId = localStorage.getItem("staffId");
+
             setInvoice({
                 ...payload,
                 invoiceNumber: response.invoiceNumber,
                 formatSettings: response.formatSettings || {},
+                staffId: staffId || "Unknown", // Add staffId to the invoice
             });
+
             setPreviewData({
                 totalAmount: 0,
                 amountGiven: 0,
@@ -110,7 +134,7 @@ const MainPage = () => {
         });
         setShowActions(false);
         setErrorMessage(null);
-        setIsLocked(false); 
+        setIsLocked(false);
         formRef.current?.resetForm();
     };
 

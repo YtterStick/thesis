@@ -303,6 +303,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             totalPrice: totalAmount,
             issueDate: new Date().toISOString(),
             dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            staffId: localStorage.getItem("staffId"),
         };
 
         onSubmit(payload);

@@ -13,7 +13,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
     dueDate,
     customerName,
     contact,
-    staffName,
+    staffId,
     amountGiven = 0,
     change = 0,
     paymentMethod,
@@ -97,7 +97,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
             Contact: <span className="font-bold">{contact || "—"}</span>
           </div>
           <div>
-            Staff: <span className="font-bold">{staffName}</span>
+            Staff: <span className="font-bold">{staffId || "—"}</span>
           </div>
           <div className="text-right">
             Payment: <span className="font-bold">{paymentMethod}</span>

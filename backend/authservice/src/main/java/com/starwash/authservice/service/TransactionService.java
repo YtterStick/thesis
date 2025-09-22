@@ -33,7 +33,7 @@ public class TransactionService {
         this.laundryJobRepository = laundryJobRepository;
     }
 
-    public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request) {
+    public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request, String staffId) {
         ServiceItem service = serviceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
@@ -93,7 +93,7 @@ public class TransactionService {
                 change,
                 issueDate,
                 dueDate,
-                request.getStaffId(),
+                staffId,  // Use the staffId parameter
                 now);
 
         // Set GCash reference if payment method is GCash
@@ -139,7 +139,8 @@ public class TransactionService {
                 detergentQty,
                 fabricQty,
                 plasticQty,
-                loads);
+                loads,
+                staffId);  // Add staffId as staffName
     }
 
     public ServiceInvoiceDto getServiceInvoiceByTransactionId(String id) {
@@ -194,7 +195,8 @@ public class TransactionService {
                 detergentQty,
                 fabricQty,
                 plasticQty,
-                tx.getServiceQuantity());
+                tx.getServiceQuantity(),
+                tx.getStaffId());  // Add staffId to the invoice
     }
 
     public List<RecordResponseDto> getAllRecords() {
