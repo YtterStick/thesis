@@ -18,7 +18,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         serviceId: "",
         amountGiven: 0,
         paymentMethod: "Cash",
-        gcashReference: ""
+        gcashReference: "",
     });
 
     const [loads, setLoads] = useState(1);
@@ -32,7 +32,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
     const handleChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
-        
+
         if (field === "paymentMethod" && value !== "GCash") {
             setForm((prev) => ({ ...prev, gcashReference: "" }));
         }
@@ -47,7 +47,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 serviceId: defaultService?.id || "",
                 amountGiven: 0,
                 paymentMethod: "Cash",
-                gcashReference: ""
+                gcashReference: "",
             });
             setLoads(1);
             setSupplySource("in-store");
@@ -128,7 +128,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         Authorization: `Bearer ${token}`,
                     },
                 });
-                
+
                 if (res.ok) {
                     const data = await res.json();
                     const methods = ["Cash"];
@@ -136,9 +136,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         methods.push("GCash");
                     }
                     setPaymentMethods(methods);
-                    
+
                     if (form.paymentMethod === "GCash" && !data.gcashEnabled) {
-                        setForm(prev => ({ ...prev, paymentMethod: "Cash" }));
+                        setForm((prev) => ({ ...prev, paymentMethod: "Cash" }));
                     }
                 }
             } catch (error) {
@@ -242,7 +242,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 });
                 return;
             }
-            
+
             // Validate that reference is numeric
             if (!/^\d+$/.test(form.gcashReference)) {
                 toast({
@@ -252,7 +252,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 });
                 return;
             }
-            
+
             // Validate exact amount for GCash
             if (parseFloat(form.amountGiven || 0) !== totalAmount) {
                 toast({

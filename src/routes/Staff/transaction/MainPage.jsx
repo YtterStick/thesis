@@ -28,7 +28,6 @@ const secureFetch = async (endpoint, method = "POST", body = null) => {
         throw new Error("Token expired or invalid");
     }
 
-    // Extract staffId from token and store it
     try {
         const payload = token.split(".")[1];
         const decoded = JSON.parse(atob(payload));
@@ -84,7 +83,6 @@ const MainPage = () => {
         };
     }, []);
 
-    // Add cleanup for staffId on component unmount
     useEffect(() => {
         return () => {
             localStorage.removeItem("staffId");
@@ -100,14 +98,13 @@ const MainPage = () => {
             const response = await secureFetch("/transactions", "POST", payload);
             console.log("🧾 Invoice saved:", response.invoiceNumber);
 
-            // Get staffId from localStorage
             const staffId = localStorage.getItem("staffId");
 
             setInvoice({
                 ...payload,
                 invoiceNumber: response.invoiceNumber,
                 formatSettings: response.formatSettings || {},
-                staffId: staffId || "Unknown", // Add staffId to the invoice
+                staffId: staffId || "Unknown",
             });
 
             setPreviewData({

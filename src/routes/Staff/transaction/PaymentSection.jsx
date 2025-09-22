@@ -40,7 +40,6 @@ const PaymentSection = ({
   };
 
   const handleGcashReferenceChange = (value) => {
-    // Only allow numbers
     const numericValue = value.replace(/[^0-9]/g, '');
     onGcashReferenceChange(numericValue);
   };
@@ -88,7 +87,6 @@ const PaymentSection = ({
             maxLength={20}
             className="border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
           />
-          <p className="text-xs text-slate-500 mt-1">Enter numbers only</p>
         </div>
       )}
 

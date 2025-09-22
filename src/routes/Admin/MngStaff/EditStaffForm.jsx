@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import PropTypes from "prop-types";
 import {
   Dialog,
@@ -33,12 +33,14 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [contactError, setContactError] = useState("");
   const [showPasswordInfo, setShowPasswordInfo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const roles = ["STAFF", "ADMIN"];
   const { toast } = useToast();
 
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
   const validatePassword = (password) => {
     if (password && !passwordRegex.test(password)) {
@@ -47,11 +49,28 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
     return "";
   };
 
+  const validateContact = (contact) => {
+    const digitsOnly = contact.replace(/\D/g, "");
+    if (!digitsOnly.startsWith("09")) {
+      return "Phone number must start with '09'";
+    }
+    if (digitsOnly.length !== 11) {
+      return "Phone number must be exactly 11 digits";
+    }
+    return "";
+  };
+
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    
+
     if (field === "password") {
       setPasswordError(validatePassword(value));
+    }
+
+    if (field === "contact") {
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 11);
+      setForm((prev) => ({ ...prev, contact: digitsOnly }));
+      setContactError(validateContact(digitsOnly));
     }
   };
 
@@ -59,7 +78,6 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validate passwords match if password is provided
     if (form.password && form.password !== form.confirmPassword) {
       toast({
         title: "Error",
@@ -70,7 +88,6 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
       return;
     }
 
-    // Validate password strength if password is provided
     if (form.password) {
       const error = validatePassword(form.password);
       if (error) {
@@ -85,12 +102,23 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
       }
     }
 
+    const contactValidationError = validateContact(form.contact);
+    if (contactValidationError) {
+      setContactError(contactValidationError);
+      toast({
+        title: "Error",
+        description: contactValidationError,
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     const payload = {
-      contact: "+63" + form.contact.trim(),
+      contact: form.contact.trim(),
       role: form.role,
     };
 
-    // Only include password if it was provided
     if (form.password) {
       payload.password = form.password.trim();
     }
@@ -129,7 +157,9 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
     <Dialog open={true} onOpenChange={isSubmitting ? undefined : onClose}>
       <DialogContent className="rounded-lg border border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-950 text-slate-900 dark:text-white">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">Edit Staff Account</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">
+            Edit Staff Account
+          </DialogTitle>
           <DialogDescription className="sr-only">
             Update contact number, role, or password for this staff account.
           </DialogDescription>
@@ -171,11 +201,11 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                 </button>
               </div>
             </div>
-            
+
             {passwordError && (
               <p className="text-red-500 text-xs">{passwordError}</p>
             )}
-            
+
             {showPasswordInfo && (
               <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-700 dark:text-blue-300">
                 <p>Password must contain:</p>
@@ -196,7 +226,9 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm New Password"
               value={form.confirmPassword}
-              onChange={(e) => handleChange("confirmPassword", e.target.value)}
+              onChange={(e) =>
+                handleChange("confirmPassword", e.target.value)
+              }
               className="pr-10 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
             />
             <button
@@ -209,20 +241,23 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
           </div>
 
           {/* Contact Input */}
-          <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-950 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-400 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-slate-950">
-            <span className="px-3 text-slate-500 dark:text-slate-400">+63</span>
-            <Input
-              type="tel"
-              inputMode="numeric"
-              maxLength={10}
-              placeholder="9123456789"
-              value={form.contact}
-              onChange={(e) =>
-                handleChange("contact", e.target.value.replace(/\D/g, ""))
-              }
-              required
-              className="flex-1 border-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none"
-            />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-950 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-400 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-slate-950">
+              
+              <Input
+                type="tel"
+                inputMode="numeric"
+                maxLength={11}
+                placeholder="09123456789"
+                value={form.contact}
+                onChange={(e) => handleChange("contact", e.target.value)}
+                required
+                className="flex-1 border-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none"
+              />
+            </div>
+            {contactError && (
+              <p className="text-red-500 text-xs">{contactError}</p>
+            )}
           </div>
 
           {/* Role Select */}

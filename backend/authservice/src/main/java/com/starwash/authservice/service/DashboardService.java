@@ -1,7 +1,6 @@
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.LaundryJob;
-import com.starwash.authservice.model.LaundryJob.LoadAssignment;
 import com.starwash.authservice.model.MachineItem;
 import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.repository.LaundryJobRepository;
