@@ -33,16 +33,13 @@ const MissingItemsPage = () => {
         try {
             setIsLoading(true);
             const token = localStorage.getItem("authToken");
-            const response = await fetch(
-                `http://localhost:8080/api/missing-items?t=${new Date().getTime()}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                    cache: "no-cache",
+            const response = await fetch(`http://localhost:8080/api/missing-items?t=${new Date().getTime()}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
                 },
-            );
+                cache: "no-cache",
+            });
             if (!response.ok) throw new Error("Failed to fetch missing items");
             const data = await response.json();
             setAllItems(data);
@@ -171,9 +168,7 @@ const MissingItemsPage = () => {
                 (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase()));
 
             const matchesStatus =
-                statusFilter === "all" || 
-                (statusFilter === "unclaimed" && !item.claimed) || 
-                (statusFilter === "claimed" && item.claimed);
+                statusFilter === "all" || (statusFilter === "unclaimed" && !item.claimed) || (statusFilter === "claimed" && item.claimed);
 
             return matchesSearch && matchesStatus;
         });
@@ -185,7 +180,7 @@ const MissingItemsPage = () => {
     };
 
     const filteredItems = getFilteredItems();
-    
+
     // Calculate pagination based on filtered items
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;

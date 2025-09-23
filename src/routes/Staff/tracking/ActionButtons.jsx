@@ -1,9 +1,9 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import DryAgainButton from "./DryAgainButton";
-import NextButton from "./NextButton";
-import StartButton from "./StartButton";
-import ProceedToFoldingButton from "./ProceedToFoldingButton";
+import NextButton from "./components/NextButton";
+import StartButton from "./components/StartButton";
+import ProceedToFoldingButton from "./components/ProceedToFoldingButton";
 import Loader from "@/components/loader";
 import { Check } from "lucide-react";
 

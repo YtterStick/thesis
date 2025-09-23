@@ -4,7 +4,7 @@ import {
     unwashedAnimation,
     dryingAnimation,
     foldingAnimation
-} from "./lottieAnimations";
+} from "./components/lottieAnimations";
 
 export const STATUS_ICONS = {
     UNWASHED: { label: "Not Started", animation: unwashedAnimation },

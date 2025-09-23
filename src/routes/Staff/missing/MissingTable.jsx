@@ -26,7 +26,6 @@ const MissingTable = ({
     handleClaimItem,
     machines,
 
-
     currentPage,
     setCurrentPage,
     itemsPerPage,
@@ -43,13 +42,13 @@ const MissingTable = ({
             setCurrentPage(currentPage - 1);
         }
     };
-    
+
     const handleNextPage = () => {
         if (currentPage < totalPages) {
             setCurrentPage(currentPage + 1);
         }
     };
-    
+
     // Add items per page options handler
     const handleItemsPerPageChange = (value) => {
         setItemsPerPage(Number(value));
@@ -226,7 +225,8 @@ const MissingTable = ({
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                allItems.map((item) => { // Changed from filteredItems to allItems
+                                allItems.map((item) => {
+                                    // Changed from filteredItems to allItems
                                     const machineName = getMachineName(item.machineId);
                                     const isExpanded = expandedNotes[item.id];
                                     const shouldTruncate = isLongNote(item.notes) && !isExpanded;
@@ -425,12 +425,12 @@ const MissingTable = ({
                         </TableBody>
                     </Table>
                 </div>
-                
+
                 {/* Pagination Controls */}
                 {totalItems > 0 && (
                     <div className="flex items-center justify-between border-t border-slate-300 px-4 py-3 dark:border-slate-700">
                         <div className="text-sm text-slate-600 dark:text-slate-400">
-                            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} items
+                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} items
                         </div>
                         <div className="flex items-center space-x-2">
                             <div className="flex items-center space-x-2">
