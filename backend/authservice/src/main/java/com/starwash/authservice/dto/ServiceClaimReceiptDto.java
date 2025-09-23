@@ -9,7 +9,8 @@ public class ServiceClaimReceiptDto {
     private String contact;
     private String serviceType;
     private int totalLoads;
-    private LocalDateTime claimDate;
+    private LocalDateTime completionDate; // When laundry was completed
+    private LocalDateTime claimDate; // When it was claimed
     private String claimedByStaff;
     private FormatSettingsDto formatSettings;
 
@@ -17,19 +18,21 @@ public class ServiceClaimReceiptDto {
 
     public ServiceClaimReceiptDto(String claimReceiptNumber, String originalInvoiceNumber, 
                                  String customerName, String contact, String serviceType, 
-                                 int totalLoads, LocalDateTime claimDate, String claimedByStaff,
-                                 FormatSettingsDto formatSettings) {
+                                 int totalLoads, LocalDateTime completionDate, LocalDateTime claimDate, 
+                                 String claimedByStaff, FormatSettingsDto formatSettings) {
         this.claimReceiptNumber = claimReceiptNumber;
         this.originalInvoiceNumber = originalInvoiceNumber;
         this.customerName = customerName;
         this.contact = contact;
         this.serviceType = serviceType;
         this.totalLoads = totalLoads;
+        this.completionDate = completionDate;
         this.claimDate = claimDate;
         this.claimedByStaff = claimedByStaff;
         this.formatSettings = formatSettings;
     }
 
+    // Getters and setters
     public String getClaimReceiptNumber() { return claimReceiptNumber; }
     public void setClaimReceiptNumber(String claimReceiptNumber) { this.claimReceiptNumber = claimReceiptNumber; }
     
@@ -47,6 +50,9 @@ public class ServiceClaimReceiptDto {
     
     public int getTotalLoads() { return totalLoads; }
     public void setTotalLoads(int totalLoads) { this.totalLoads = totalLoads; }
+    
+    public LocalDateTime getCompletionDate() { return completionDate; }
+    public void setCompletionDate(LocalDateTime completionDate) { this.completionDate = completionDate; }
     
     public LocalDateTime getClaimDate() { return claimDate; }
     public void setClaimDate(LocalDateTime claimDate) { this.claimDate = claimDate; }

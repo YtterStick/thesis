@@ -4,8 +4,10 @@ import com.starwash.authservice.dto.FormatSettingsDto;
 import com.starwash.authservice.dto.ServiceClaimReceiptDto;
 import com.starwash.authservice.model.FormatSettings;
 import com.starwash.authservice.model.LaundryJob;
+import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.repository.FormatSettingsRepository;
 import com.starwash.authservice.repository.LaundryJobRepository;
+import com.starwash.authservice.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -17,11 +19,14 @@ public class ClaimingService {
 
     private final LaundryJobRepository laundryJobRepository;
     private final FormatSettingsRepository formatSettingsRepository;
+    private final TransactionRepository transactionRepository;
 
     public ClaimingService(LaundryJobRepository laundryJobRepository,
-            FormatSettingsRepository formatSettingsRepository) {
+                          FormatSettingsRepository formatSettingsRepository,
+                          TransactionRepository transactionRepository) {
         this.laundryJobRepository = laundryJobRepository;
         this.formatSettingsRepository = formatSettingsRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     public ServiceClaimReceiptDto claimLaundry(String transactionId, String staffName) {
@@ -36,6 +41,16 @@ public class ClaimingService {
             throw new RuntimeException("Cannot claim expired job");
         }
 
+        // Check if this is a GCash transaction and verify it's verified
+        Transaction transaction = transactionRepository.findByInvoiceNumber(transactionId)
+                .orElse(null);
+        
+        if (transaction != null && "GCash".equals(transaction.getPaymentMethod())) {
+            if (!Boolean.TRUE.equals(transaction.getGcashVerified())) {
+                throw new RuntimeException("Cannot claim laundry with unverified GCash payment");
+            }
+        }
+
         String claimReceiptNumber = "CLM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
         job.setPickupStatus("CLAIMED");
@@ -47,15 +62,26 @@ public class ClaimingService {
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
+        // Calculate completion date from load assignments (latest endTime)
+        LocalDateTime completionDate = job.getLoadAssignments().stream()
+                .filter(load -> load.getEndTime() != null)
+                .map(LaundryJob.LoadAssignment::getEndTime)
+                .max(LocalDateTime::compareTo)
+                .orElse(job.getClaimDate()); // Fallback to claim date if no endTime found
+
+        // Get actual number of loads (not just completed ones)
+        int totalLoads = job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0;
+
         return new ServiceClaimReceiptDto(
                 claimReceiptNumber,
-                job.getTransactionId(),
+                job.getTransactionId(), // This is the invoice number
                 job.getCustomerName(),
                 job.getContact(),
                 job.getServiceType(),
-                job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0,
-                job.getClaimDate(),
-                staffName,
+                totalLoads, // Use actual number of loads
+                completionDate, // When laundry was actually completed
+                job.getClaimDate(), // When it was claimed (different from completion)
+                staffName, // Staff who processed the claim
                 new FormatSettingsDto(settings));
     }
 
@@ -70,13 +96,24 @@ public class ClaimingService {
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
+        // Calculate completion date from load assignments (latest endTime)
+        LocalDateTime completionDate = job.getLoadAssignments().stream()
+                .filter(load -> load.getEndTime() != null)
+                .map(LaundryJob.LoadAssignment::getEndTime)
+                .max(LocalDateTime::compareTo)
+                .orElse(job.getClaimDate());
+
+        // Get actual number of loads
+        int totalLoads = job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0;
+
         return new ServiceClaimReceiptDto(
                 job.getClaimReceiptNumber(),
                 job.getTransactionId(),
                 job.getCustomerName(),
                 job.getContact(),
                 job.getServiceType(),
-                job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0,
+                totalLoads,
+                completionDate,
                 job.getClaimDate(),
                 job.getClaimedByStaffId() != null ? job.getClaimedByStaffId() : "Staff",
                 new FormatSettingsDto(settings));

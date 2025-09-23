@@ -7,26 +7,45 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
 
     if (!transaction || !settings) return null;
 
-    const formatCurrency = (value) => (typeof value === "number" ? `₱${value.toFixed(2)}` : "₱0.00");
-
-    const formatDate = (dateStr) => {
+    const formatDateTime = (dateStr) => {
+        if (!dateStr) return "N/A";
         const date = new Date(dateStr);
-        return isNaN(date)
-            ? "Invalid Date"
-            : date.toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-              });
+        return date.toLocaleString(undefined, {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
     };
 
-    const completionDate = transaction.loadAssignments?.reduce((latest, load) => {
-        if (load.endTime) {
-            const loadDate = new Date(load.endTime);
-            return !latest || loadDate > latest ? loadDate : latest;
-        }
-        return latest;
-    }, null);
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "Invalid Date";
+        const date = new Date(dateStr);
+        return date.toLocaleDateString("en-PH", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+        });
+    };
+
+    const transactionNumber = transaction.originalInvoiceNumber || transaction.transactionId || "N/A";
+    
+    const staffId = transaction.claimedByStaff || transaction.claimedByStaffId || "Staff";
+    
+    const numberOfLoads = transaction.totalLoads || (transaction.loadAssignments ? transaction.loadAssignments.length : 0);
+
+    const claimDate = transaction.claimDate ? new Date(transaction.claimDate) : new Date();
+
+    const completionDate = transaction.completionDate 
+        ? new Date(transaction.completionDate) 
+        : (transaction.loadAssignments?.reduce((latest, load) => {
+            if (load.endTime) {
+                const loadDate = new Date(load.endTime);
+                return !latest || loadDate > latest ? loadDate : latest;
+            }
+            return latest;
+        }, null) || claimDate);
 
     const handlePrint = () => {
         setIsPrinting(true);
@@ -39,7 +58,6 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 dark:bg-black dark:bg-opacity-80">
             <div className="relative mx-auto max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-slate-900">
-                {/* Improved Close button */}
                 <button
                     onClick={onClose}
                     className="absolute -right-3 -top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-red-500 transition-all duration-200 print:hidden"
@@ -63,13 +81,13 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
                         {/* Receipt Header */}
                         <div className="text-md text-center font-bold dark:text-white">LAUNDRY CLAIM RECEIPT</div>
 
-                        {/* Receipt Meta */}
+                        {/* Receipt Meta*/}
                         <div className="grid grid-cols-2 gap-1 text-xs dark:text-gray-300">
                             <div>
-                                Transaction #: <span className="font-bold">{transaction.transactionId}</span>
+                                Transaction #: <span className="font-bold">{transactionNumber}</span>
                             </div>
                             <div className="text-right">
-                                Claim Date: <span className="font-bold">{formatDate(new Date())}</span>
+                                Service: <span className="font-bold">{transaction.serviceType}</span>
                             </div>
                             <div>
                                 Customer: <span className="font-bold">{transaction.customerName}</span>
@@ -77,17 +95,13 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
                             <div className="text-right">
                                 Contact: <span className="font-bold">{transaction.contact || "—"}</span>
                             </div>
-                            <div>
-                                Completed On: <span className="font-bold">{completionDate ? formatDate(completionDate) : "N/A"}</span>
-                            </div>
-                            <div className="text-right">
-                                Service: <span className="font-bold">{transaction.serviceType}</span>
+                            <div className="col-span-2">
+                                Processed By: <span className="font-bold">{staffId}</span>
                             </div>
                         </div>
 
                         <hr className="my-2 border-gray-300 dark:border-gray-600" />
 
-                        {/* Service Details */}
                         <div className="space-y-1 dark:text-white">
                             <div className="flex justify-between">
                                 <span>Service Type:</span>
@@ -95,7 +109,7 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
                             </div>
                             <div className="flex justify-between">
                                 <span>Number of Loads:</span>
-                                <span className="font-bold">{transaction.loadAssignments?.length || 0}</span>
+                                <span className="font-bold">{numberOfLoads}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span>Status:</span>
@@ -105,12 +119,25 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
 
                         <hr className="my-2 border-gray-300 dark:border-gray-600" />
 
+                        <div className="space-y-1 text-xs dark:text-gray-300">
+                            <div className="flex justify-between">
+                                <span>Laundry Completed:</span>
+                                <span className="font-bold">{formatDateTime(completionDate)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Claimed On:</span>
+                                <span className="font-bold">{formatDateTime(claimDate)}</span>
+                            </div>
+                        </div>
+
+                        <hr className="my-2 border-gray-300 dark:border-gray-600" />
+
                         {/* Claim Confirmation */}
                         <div className="mt-2 text-xs text-slate-600 dark:text-gray-300">
                             <strong className="mb-1 block text-sm text-slate-700 dark:text-slate-200">Claim Confirmation</strong>
                             <p>
-                                This receipt confirms that {transaction.customerName} has claimed their laundry on {formatDate(new Date())}. All items
-                                have been verified and released to the customer.
+                                This receipt confirms that {transaction.customerName} has claimed their laundry on {formatDate(claimDate)}. All items
+                                have been verified and released to the customer. Laundry was completed on {formatDate(completionDate)}.
                             </p>
                         </div>
 
@@ -119,7 +146,6 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
                     </div>
                 </div>
 
-                {/* Print Button Only */}
                 <div className="mt-4 flex justify-center print:hidden">
                     <button
                         onClick={handlePrint}

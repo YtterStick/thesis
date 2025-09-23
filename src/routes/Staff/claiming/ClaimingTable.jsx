@@ -106,22 +106,24 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = transactions.slice(startIndex, endIndex);
 
-    const handleClaimClick = async (transaction) => {
-        setLoadingTransactionId(transaction.id);
-        setSelectedTransaction(transaction);
+    // In the handleClaimClick function, ensure the transaction has the completion date
+   // In ClaimingTable.js, update the handleClaimClick function:
+const handleClaimClick = async (transaction) => {
+    setLoadingTransactionId(transaction.id);
 
-        try {
-            const claimedTransaction = await onClaim(transaction.id);
-            if (claimedTransaction) {
-                setSelectedTransaction(claimedTransaction);
-                setShowReceipt(true);
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoadingTransactionId(null);
+    try {
+        const claimedTransaction = await onClaim(transaction.id);
+        if (claimedTransaction) {
+            // Use the claimed transaction data from backend which includes correct dates and staff ID
+            setSelectedTransaction(claimedTransaction);
+            setShowReceipt(true);
         }
-    };
+    } catch (error) {
+        console.error(error);
+    } finally {
+        setLoadingTransactionId(null);
+    }
+};
 
     const handleDisposeClick = (transaction) => {
         setTransactionToDispose(transaction);
