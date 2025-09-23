@@ -16,7 +16,6 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
         address: "123 Laundry Street, City, State 12345",
         phone: "Tel: (123) 456-7890",
         footerNote: "Thank you for your business!",
-        trackingUrl: null,
     };
 
     // Map invoice data
@@ -77,19 +76,23 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
         }
     };
 
-    // QR Code logic - use actual tracking URL from settings
-    const qrValue = settings.trackingUrl && invoiceNumber ? settings.trackingUrl.replace("{id}", invoiceNumber) : null;
+    // FIXED: Simple tracking URL using invoice number
+    const qrValue = invoiceNumber ? `http://localhost:3000/track/${invoiceNumber}` : null;
 
     useEffect(() => {
         if (qrValue) {
+            console.log("📱 QR Code will direct to:", qrValue);
             QR.toDataURL(qrValue, { width: 80 }, (err, url) => {
-                if (!err) setQrImage(url);
+                if (!err) {
+                    setQrImage(url);
+                } else {
+                    console.error("❌ QR Code generation error:", err);
+                }
             });
         }
     }, [qrValue]);
 
     const consumableTotal = consumables.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
-
     const loadsTotal = loads * servicePrice;
     const finalTotal = totalPrice != null ? totalPrice : consumableTotal + loadsTotal;
 
@@ -220,18 +223,33 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                     </p>
                 </div>
 
-                {/* QR Code Section */}
+                {/* FIXED QR Code Section - Simple tracking URL */}
                 {qrValue && (
                     <div className="mt-1 text-center">
                         <div className="flex justify-center">
                             <div className="rounded border border-gray-300 bg-white p-1 dark:border-gray-600">
-                                <QRCode
-                                    value={qrValue}
-                                    size={60}
-                                />
+                                {/* Screen QR Code */}
+                                <div className="print:hidden">
+                                    <QRCode
+                                        value={qrValue}
+                                        size={60}
+                                    />
+                                </div>
+                                {/* Print QR Code */}
+                                {qrImage && (
+                                    <div className="hidden print:block">
+                                        <img 
+                                            src={qrImage} 
+                                            alt="QR Code" 
+                                            className="h-[60px] w-[60px]"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="mt-0.5 text-[9px] text-gray-600 dark:text-gray-400">Scan to track your laundry status</div>
+                        <div className="mt-0.5 text-[9px] text-gray-600 dark:text-gray-400">
+                            Scan to track your laundry status
+                        </div>
                     </div>
                 )}
 
@@ -334,6 +352,14 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                     .bg-gray-100,
                     .dark\\:bg-slate-700 {
                         background: #f9fafb !important;
+                    }
+
+                    /* Ensure QR code is visible in print */
+                    .hidden.print\\:block {
+                        display: block !important;
+                    }
+                    .print\\:hidden {
+                        display: none !important;
                     }
                 }
             `}</style>

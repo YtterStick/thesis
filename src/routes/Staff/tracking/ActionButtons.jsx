@@ -15,7 +15,9 @@ const ActionButtons = ({
     isLoadRunning,
     startAction,
     advanceStatus,
-    startDryingAgain
+    startDryingAgain,
+    getMachineTypeForStep, // Add this prop
+    machines // Add this prop to check available machines
 }) => {
     if (isLoadRunning(load)) {
         return (
@@ -37,6 +39,12 @@ const ActionButtons = ({
             </div>
         );
     }
+
+    // Check if the correct machine type is assigned for the current step
+    const machineType = getMachineTypeForStep(load.status, job.serviceType);
+    const hasCorrectMachine = machineType ? 
+        (load.machineId && machines[machineType]?.some(m => m.id === load.machineId)) : 
+        true;
 
     return (
         <div className="flex flex-col items-end gap-2">
@@ -62,7 +70,8 @@ const ActionButtons = ({
             ) : ["UNWASHED", "WASHED"].includes(load.status) ? (
                 <StartButton
                     onClick={() => startAction(jobKey, loadIndex)}
-                    disabled={!load.machineId || load.pending}
+                    disabled={!hasCorrectMachine || load.pending} // Use hasCorrectMachine instead of !load.machineId
+                    title={!hasCorrectMachine ? "Please assign a " + (machineType?.toLowerCase() || "machine") + " first" : ""}
                 />
             ) : ["DRYING", "FOLDING"].includes(load.status) ? (
                 <NextButton

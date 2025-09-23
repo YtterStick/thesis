@@ -9,7 +9,6 @@ import MachineSelector from "./MachineSelector";
 import StatusIndicator from "./StatusIndicator";
 import ActionButtons from "./ActionButtons";
 
-
 const TrackingTable = ({
     jobs,
     expandedJobs,
@@ -25,7 +24,7 @@ const TrackingTable = ({
     getRemainingTime,
     getMachineTypeForStep,
     isLoadRunning,
-    maskContact
+    maskContact,
 }) => {
     return (
         <div className="rounded-md border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
@@ -47,7 +46,10 @@ const TrackingTable = ({
                 <TableBody>
                     {jobs.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={10} className="py-16">
+                            <TableCell
+                                colSpan={10}
+                                className="py-16"
+                            >
                                 <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                                     <CheckCircle className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-500" />
                                     <p className="text-lg font-medium">No laundry jobs found</p>
@@ -59,9 +61,9 @@ const TrackingTable = ({
                         jobs.map((job) => {
                             const jobKey = getJobKey(job);
                             const expanded = expandedJobs[jobKey] || false;
-                            
+
                             // Filter out completed loads for this job
-                            const activeLoads = job.loads.filter(load => load.status !== "COMPLETED");
+                            const activeLoads = job.loads.filter((load) => load.status !== "COMPLETED");
                             const visibleLoads = expanded ? activeLoads : activeLoads.slice(0, 1);
 
                             // Skip entire job if no active loads
@@ -71,27 +73,19 @@ const TrackingTable = ({
                                 <React.Fragment key={jobKey}>
                                     {visibleLoads.map((load, i) => {
                                         // Find the original index in the job.loads array
-                                        const originalIndex = job.loads.findIndex(l => 
-                                            l.loadNumber === load.loadNumber && 
-                                            l.status === load.status
+                                        const originalIndex = job.loads.findIndex(
+                                            (l) => l.loadNumber === load.loadNumber && l.status === load.status,
                                         );
 
                                         const machineType = getMachineTypeForStep(load.status, job.serviceType);
-                                        const options =
-                                            machineType === "WASHER"
-                                                ? machines.WASHER
-                                                : machineType === "DRYER"
-                                                  ? machines.DRYER
-                                                  : [];
+                                        const options = machineType === "WASHER" ? machines.WASHER : machineType === "DRYER" ? machines.DRYER : [];
 
                                         return (
                                             <TableRow
                                                 key={`${jobKey}-load${load.loadNumber}`}
                                                 className="border-t border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
                                             >
-                                                <TableCell className="font-medium text-slate-900 dark:text-slate-100">
-                                                    {job.customerName}
-                                                </TableCell>
+                                                <TableCell className="font-medium text-slate-900 dark:text-slate-100">{job.customerName}</TableCell>
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
                                                     {job.contact ? maskContact(job.contact) : "—"}
                                                 </TableCell>
@@ -103,9 +97,7 @@ const TrackingTable = ({
                                                         {job.serviceType?.toLowerCase() || "—"}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    {Math.ceil(job.fabricQty ?? 0)}
-                                                </TableCell>
+                                                <TableCell className="text-slate-700 dark:text-slate-300">{Math.ceil(job.fabricQty ?? 0)}</TableCell>
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
                                                     {Math.ceil(job.detergentQty ?? 0)}
                                                 </TableCell>
@@ -124,9 +116,7 @@ const TrackingTable = ({
                                                             options={options}
                                                             jobs={jobs}
                                                             assignMachine={(machineId) => assignMachine(jobKey, originalIndex, machineId)}
-                                                            disabled={
-                                                                isLoadRunning(load) || load.status === "FOLDING" || load.status === "COMPLETED"
-                                                            }
+                                                            disabled={isLoadRunning(load) || load.status === "FOLDING" || load.status === "COMPLETED"}
                                                         />
                                                     )}
                                                 </TableCell>
@@ -180,6 +170,8 @@ const TrackingTable = ({
                                                         startAction={startAction}
                                                         advanceStatus={advanceStatus}
                                                         startDryingAgain={startDryingAgain}
+                                                        getMachineTypeForStep={getMachineTypeForStep}
+                                                        machines={machines}
                                                     />
                                                 </TableCell>
                                             </TableRow>
@@ -188,7 +180,10 @@ const TrackingTable = ({
 
                                     {job.loads.length > 1 && (
                                         <TableRow>
-                                            <TableCell colSpan={10} className="p-2">
+                                            <TableCell
+                                                colSpan={10}
+                                                className="p-2"
+                                            >
                                                 <div className="flex justify-center">
                                                     <Button
                                                         variant="ghost"

@@ -274,58 +274,74 @@ export default function ServiceTrackingPage() {
     };
 
     const startAction = async (jobKey, loadIndex) => {
-        const job = jobs.find((j) => getJobKey(j) === jobKey);
-        if (!job?.id) return;
-        const load = job.loads[loadIndex];
-        if (!load.machineId) return alert("Please assign a machine first.");
+    const job = jobs.find((j) => getJobKey(j) === jobKey);
+    if (!job?.id) return;
+    const load = job.loads[loadIndex];
+    
+    // Determine the next status first
+    let status = load.status;
+    if (job.serviceType === "Wash") {
+        if (load.status === "UNWASHED") status = "WASHING";
+    } else if (job.serviceType === "Dry") {
+        if (load.status === "UNWASHED") status = "DRYING";
+    } else if (job.serviceType === "Wash & Dry") {
+        if (load.status === "UNWASHED") status = "WASHING";
+        else if (load.status === "WASHED") status = "DRYING";
+    }
 
-        let status = load.status;
-        if (job.serviceType === "Wash") {
-            if (load.status === "UNWASHED") status = "WASHING";
-        } else if (job.serviceType === "Dry") {
-            if (load.status === "UNWASHED") status = "DRYING";
-        } else if (job.serviceType === "Wash & Dry") {
-            if (load.status === "UNWASHED") status = "WASHING";
-            else if (load.status === "WASHED") status = "DRYING";
+    // Get the required machine type for the NEXT step
+    const requiredMachineType = getMachineTypeForStep(status, job.serviceType);
+    
+    // Check if the assigned machine matches the required type
+    if (requiredMachineType) {
+        const assignedMachine = machines.find(m => m.id === load.machineId);
+        const isCorrectMachineType = assignedMachine && 
+            (assignedMachine.type || "").toUpperCase() === requiredMachineType;
+        
+        if (!isCorrectMachineType) {
+            const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
+            return alert(`Please assign a ${machineTypeName} machine first.`);
         }
+    }
 
-        const duration =
-            load.duration && load.duration > 0
-                ? load.duration
-                : status === "WASHING"
-                  ? DEFAULT_DURATION.washing
-                  : status === "DRYING"
-                    ? DEFAULT_DURATION.drying
-                    : null;
+    // Rest of your existing code...
+    const duration =
+        load.duration && load.duration > 0
+            ? load.duration
+            : status === "WASHING"
+              ? DEFAULT_DURATION.washing
+              : status === "DRYING"
+                ? DEFAULT_DURATION.drying
+                : null;
 
-        const startTime = new Date().toISOString();
+    const startTime = new Date().toISOString();
 
-        const timerKey = `${job.id}-${load.loadNumber}`;
-        activeTimersRef.current.set(timerKey, startTime);
+    const timerKey = `${job.id}-${load.loadNumber}`;
+    activeTimersRef.current.set(timerKey, startTime);
 
-        setJobs((prev) =>
-            prev.map((j) =>
-                getJobKey(j) === jobKey
-                    ? {
-                          ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status, startTime, duration } : l)),
-                      }
-                    : j,
-            ),
+    setJobs((prev) =>
+        prev.map((j) =>
+            getJobKey(j) === jobKey
+                ? {
+                      ...j,
+                      loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status, startTime, duration } : l)),
+                  }
+                : j,
+        ),
+    );
+
+    try {
+        await fetchWithTimeout(
+            `http://localhost:8080/api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`,
+            {
+                method: "PATCH",
+            },
         );
-
-        try {
-            await fetchWithTimeout(
-                `http://localhost:8080/api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`,
-                {
-                    method: "PATCH",
-                },
-            );
-            fetchData();
-        } catch (err) {
-            console.error("Failed to start load:", err);
-        }
-    };
+        fetchData();
+    } catch (err) {
+        console.error("Failed to start load:", err);
+    }
+};
 
     const advanceStatus = async (jobKey, loadIndex) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
