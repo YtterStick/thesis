@@ -57,18 +57,17 @@ const MissingForm = ({ showReportDialog, setShowReportDialog, newItem, setNewIte
                         />
                     </div>
                     <div>
-                        {/* Updated label to indicate machine is optional */}
                         <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground">Machine Found In (Optional)</label>
                         <Select
                             value={newItem.machineId}
-                            onValueChange={(value) => setNewItem({ ...newItem, machineId: value })}
+                            onValueChange={(value) => setNewItem({ ...newItem, machineId: value === "none" ? "" : value })}
                         >
                             <SelectTrigger className={selectTriggerClass}>
                                 <SelectValue placeholder="Select machine (optional)" />
                             </SelectTrigger>
                             <SelectContent className="border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                {/* Added option for no machine */}
-                                <SelectItem value="">Not associated with a machine</SelectItem>
+                                {/* Fixed: Changed value from "" to "none" */}
+                                <SelectItem value="none">Not associated with a machine</SelectItem>
                                 {isLoadingMachines ? (
                                     <SelectItem
                                         value="loading"
@@ -78,7 +77,7 @@ const MissingForm = ({ showReportDialog, setShowReportDialog, newItem, setNewIte
                                     </SelectItem>
                                 ) : machines.length === 0 ? (
                                     <SelectItem
-                                        value="none"
+                                        value="no-machines"
                                         disabled
                                     >
                                         No machines available

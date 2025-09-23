@@ -161,14 +161,44 @@ const MissingItemsPage = () => {
         }
     };
 
-    // Calculate pagination
+    // Filter items first, then paginate
+    const getFilteredItems = () => {
+        return allItems.filter((item) => {
+            const machineName = getMachineName(item.machineId);
+            const matchesSearch =
+                item.itemDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                machineName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+
+            const matchesStatus =
+                statusFilter === "all" || 
+                (statusFilter === "unclaimed" && !item.claimed) || 
+                (statusFilter === "claimed" && item.claimed);
+
+            return matchesSearch && matchesStatus;
+        });
+    };
+
+    const getMachineName = (machineId) => {
+        const machine = machines.find((m) => m.id === machineId);
+        return machine ? machine.name : machineId;
+    };
+
+    const filteredItems = getFilteredItems();
+    
+    // Calculate pagination based on filtered items
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = allItems.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(allItems.length / itemsPerPage);
+    const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
     const unclaimedItems = allItems.filter((item) => !item.claimed);
     const claimedItems = allItems.filter((item) => item.claimed);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
 
     return (
         <div className="space-y-6 p-6">
@@ -192,7 +222,7 @@ const MissingItemsPage = () => {
             <Card className="border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <MissingTable
                     allItems={currentItems}
-                    totalItems={allItems.length}
+                    totalItems={filteredItems.length} // Pass filtered count, not allItems count
                     isLoading={isLoading}
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}

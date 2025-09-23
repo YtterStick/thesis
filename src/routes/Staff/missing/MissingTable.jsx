@@ -7,7 +7,6 @@ import { Search, Clock, CheckCircle, AlertCircle, Filter, ChevronDown, ChevronUp
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-
 const MissingTable = ({
     allItems,
     totalItems,
@@ -26,7 +25,8 @@ const MissingTable = ({
     setClaimName,
     handleClaimItem,
     machines,
-    // Pagination props
+
+
     currentPage,
     setCurrentPage,
     itemsPerPage,
@@ -38,7 +38,6 @@ const MissingTable = ({
     const [isSearchingLaundryJobs, setIsSearchingLaundryJobs] = useState(false);
     const [searchTimeout, setSearchTimeout] = useState(null);
 
-    // Add pagination handlers
     const handlePreviousPage = () => {
         if (currentPage > 1) {
             setCurrentPage(currentPage - 1);
@@ -57,14 +56,11 @@ const MissingTable = ({
         setCurrentPage(1); // Reset to first page when changing items per page
     };
 
-    // Add this function to search laundry jobs with debouncing
     const searchLaundryJobs = async (name) => {
-        // Clear previous timeout
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
 
-        // Set a new timeout to debounce the search
         const newTimeout = setTimeout(async () => {
             if (name.length < 2) {
                 setLaundryJobSearchResults([]);
@@ -89,12 +85,11 @@ const MissingTable = ({
             } finally {
                 setIsSearchingLaundryJobs(false);
             }
-        }, 300); // 300ms debounce
+        }, 300);
 
         setSearchTimeout(newTimeout);
     };
 
-    // Helper function to get machine names from a laundry job
     const getMachineNamesFromJob = (job) => {
         if (!job.loadAssignments) return [];
 
@@ -106,7 +101,6 @@ const MissingTable = ({
         });
     };
 
-    // Helper function to highlight matching text
     const highlightMatch = (text, searchTerm) => {
         if (!searchTerm || !text) return text;
 
@@ -141,18 +135,7 @@ const MissingTable = ({
         return note.length > 10 ? `${note.substring(0, 10)}...` : note;
     };
 
-    const filteredItems = allItems.filter((item) => {
-        const machineName = getMachineName(item.machineId);
-        const matchesSearch =
-            item.itemDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            machineName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        const matchesStatus =
-            statusFilter === "all" || (statusFilter === "unclaimed" && !item.claimed) || (statusFilter === "claimed" && item.claimed);
-
-        return matchesSearch && matchesStatus;
-    });
+    // REMOVED the filteredItems calculation since it's now done in the parent
 
     const inputClass =
         "bg-white dark:bg-slate-950 text-slate-700 dark:text-muted-foreground placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950";
@@ -165,7 +148,8 @@ const MissingTable = ({
                     <div>
                         <CardTitle className="text-slate-900 dark:text-slate-50">Missing Items</CardTitle>
                         <CardDescription className="text-slate-600 dark:text-slate-400">
-                            {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} found
+                            {/* Updated to use allItems.length (which is the filtered items count) */}
+                            {allItems.length} item{allItems.length !== 1 ? "s" : ""} found
                             {statusFilter !== "all" &&
                                 ` (${statusFilter === "unclaimed" ? unclaimedItems.length : claimedItems.length} ${statusFilter})`}
                         </CardDescription>
@@ -228,7 +212,7 @@ const MissingTable = ({
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            ) : filteredItems.length === 0 ? (
+                            ) : allItems.length === 0 ? ( // Changed from filteredItems to allItems
                                 <TableRow>
                                     <TableCell
                                         colSpan={9}
@@ -242,7 +226,7 @@ const MissingTable = ({
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredItems.map((item) => {
+                                allItems.map((item) => { // Changed from filteredItems to allItems
                                     const machineName = getMachineName(item.machineId);
                                     const isExpanded = expandedNotes[item.id];
                                     const shouldTruncate = isLongNote(item.notes) && !isExpanded;

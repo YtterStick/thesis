@@ -9,6 +9,7 @@ import MachineSelector from "./MachineSelector";
 import StatusIndicator from "./StatusIndicator";
 import ActionButtons from "./ActionButtons";
 
+
 const TrackingTable = ({
     jobs,
     expandedJobs,
@@ -46,10 +47,7 @@ const TrackingTable = ({
                 <TableBody>
                     {jobs.length === 0 ? (
                         <TableRow>
-                            <TableCell
-                                colSpan={10}
-                                className="py-16"
-                            >
+                            <TableCell colSpan={10} className="py-16">
                                 <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                                     <CheckCircle className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-500" />
                                     <p className="text-lg font-medium">No laundry jobs found</p>
@@ -61,11 +59,23 @@ const TrackingTable = ({
                         jobs.map((job) => {
                             const jobKey = getJobKey(job);
                             const expanded = expandedJobs[jobKey] || false;
-                            const visibleLoads = expanded ? job.loads : job.loads.slice(0, 1);
+                            
+                            // Filter out completed loads for this job
+                            const activeLoads = job.loads.filter(load => load.status !== "COMPLETED");
+                            const visibleLoads = expanded ? activeLoads : activeLoads.slice(0, 1);
+
+                            // Skip entire job if no active loads
+                            if (activeLoads.length === 0) return null;
 
                             return (
                                 <React.Fragment key={jobKey}>
                                     {visibleLoads.map((load, i) => {
+                                        // Find the original index in the job.loads array
+                                        const originalIndex = job.loads.findIndex(l => 
+                                            l.loadNumber === load.loadNumber && 
+                                            l.status === load.status
+                                        );
+
                                         const machineType = getMachineTypeForStep(load.status, job.serviceType);
                                         const options =
                                             machineType === "WASHER"
@@ -76,7 +86,7 @@ const TrackingTable = ({
 
                                         return (
                                             <TableRow
-                                                key={`${jobKey}-load${i + 1}`}
+                                                key={`${jobKey}-load${load.loadNumber}`}
                                                 className="border-t border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
                                             >
                                                 <TableCell className="font-medium text-slate-900 dark:text-slate-100">
@@ -113,7 +123,7 @@ const TrackingTable = ({
                                                             load={load}
                                                             options={options}
                                                             jobs={jobs}
-                                                            assignMachine={(machineId) => assignMachine(jobKey, i, machineId)}
+                                                            assignMachine={(machineId) => assignMachine(jobKey, originalIndex, machineId)}
                                                             disabled={
                                                                 isLoadRunning(load) || load.status === "FOLDING" || load.status === "COMPLETED"
                                                             }
@@ -139,7 +149,7 @@ const TrackingTable = ({
                                                         ) && (
                                                             <Select
                                                                 value={load.duration?.toString() ?? ""}
-                                                                onValueChange={(val) => updateDuration(jobKey, i, parseInt(val))}
+                                                                onValueChange={(val) => updateDuration(jobKey, originalIndex, parseInt(val))}
                                                                 disabled={load.status === "FOLDING" || load.status === "COMPLETED"}
                                                             >
                                                                 <SelectTrigger className="mx-auto w-[120px] border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
@@ -148,7 +158,7 @@ const TrackingTable = ({
                                                                 <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                                                                     {[1, 20, 25, 30, 35, 40, 45, 50, 60].map((d) => (
                                                                         <SelectItem
-                                                                            key={`${jobKey}-${i}-${d}`}
+                                                                            key={`${jobKey}-${originalIndex}-${d}`}
                                                                             value={d.toString()}
                                                                             className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
                                                                         >
@@ -165,7 +175,7 @@ const TrackingTable = ({
                                                         load={load}
                                                         job={job}
                                                         jobKey={jobKey}
-                                                        loadIndex={i}
+                                                        loadIndex={originalIndex}
                                                         isLoadRunning={isLoadRunning}
                                                         startAction={startAction}
                                                         advanceStatus={advanceStatus}
@@ -178,10 +188,7 @@ const TrackingTable = ({
 
                                     {job.loads.length > 1 && (
                                         <TableRow>
-                                            <TableCell
-                                                colSpan={10}
-                                                className="p-2"
-                                            >
+                                            <TableCell colSpan={10} className="p-2">
                                                 <div className="flex justify-center">
                                                     <Button
                                                         variant="ghost"
@@ -196,7 +203,7 @@ const TrackingTable = ({
                                                         {expanded ? (
                                                             <>
                                                                 See less <ArrowUp className="h-4 w-4" />
-                                                        </>
+                                                            </>
                                                         ) : (
                                                             <>
                                                                 See more <ArrowDown className="h-4 w-4" />
