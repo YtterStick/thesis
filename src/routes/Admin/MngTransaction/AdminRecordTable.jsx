@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
-import PrintableReceipt from "./PrintableReceipt";
+import PrintableReceipt from "@/components/PrintableReceipt";
 
 const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Price", "Date", "Payment", "Laundry Status", "Pickup Status", "Actions"];
 

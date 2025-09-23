@@ -30,9 +30,9 @@ const MainPage = () => {
 
                 const recordsData = await recordsRes.json();
 
-                // In the fetchData function of MainPage component
+                // Make sure to include the id field for the print functionality
                 const mapped = recordsData.map((r) => ({
-                    id: r.id,
+                    id: r.id, // This is crucial for the print API call
                     name: r.customerName,
                     service: r.serviceName,
                     loads: r.loads,

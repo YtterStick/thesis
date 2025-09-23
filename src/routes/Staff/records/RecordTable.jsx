@@ -4,6 +4,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import PrintableReceipt from "@/components/PrintableReceipt";
 
 const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Fabric", "Price", "Date", "Pickup", "Actions"];
 
@@ -45,6 +46,9 @@ const RecordTable = ({ items = [] }) => {
     const [showCalendar, setShowCalendar] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortOrder, setSortOrder] = useState("desc");
+    const [printData, setPrintData] = useState(null);
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [isPrinting, setIsPrinting] = useState(false);
 
     const rowsPerPage = 6;
     const calendarRef = useRef(null);
@@ -87,12 +91,47 @@ const RecordTable = ({ items = [] }) => {
     const totalPages = Math.ceil(sorted.length / rowsPerPage);
     const paginated = sorted.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-    const handlePrint = (record) => {
-        console.log("🖨️ Printing receipt for:", record);
+    const handlePrint = async (record) => {
+        try {
+            setIsPrinting(true);
+            console.log("🖨️ Printing receipt for:", record);
+
+            const token = localStorage.getItem("authToken");
+            const response = await fetch(`http://localhost:8080/api/transactions/${record.id}/service-invoice`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch invoice: ${response.status}`);
+            }
+
+            const invoiceData = await response.json();
+            console.log("📄 Invoice data:", invoiceData);
+
+            setPrintData(invoiceData);
+            setShowPrintModal(true);
+        } catch (error) {
+            console.error("❌ Error printing receipt:", error);
+            alert("Failed to print receipt. Please try again.");
+        } finally {
+            setIsPrinting(false);
+        }
     };
 
     const handlePageChange = (page) => {
         if (page >= 1 && page <= totalPages) setCurrentPage(page);
+    };
+
+    const closePrintModal = () => {
+        setShowPrintModal(false);
+        setPrintData(null);
+    };
+
+    const clearDateFilter = () => {
+        setSelectedRange({ from: null, to: null });
     };
 
     return (
@@ -130,7 +169,8 @@ const RecordTable = ({ items = [] }) => {
                             onClick={() => setShowCalendar((p) => !p)}
                             className="bg-[#0891B2] text-white hover:bg-[#0E7490]"
                         >
-                            <CalendarIcon className="mr-2 h-4 w-4" /> Date Range
+                            <CalendarIcon className="mr-2 h-4 w-4" /> 
+                            {selectedRange.from || selectedRange.to ? "Filtered" : "Date Range"}
                         </Button>
                         {showCalendar && (
                             <div className="absolute right-0 z-50 mt-2 rounded-md border bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
@@ -140,6 +180,16 @@ const RecordTable = ({ items = [] }) => {
                                     onSelect={setSelectedRange}
                                     className="max-w-[350px] text-xs [&_button]:h-7 [&_button]:w-7 [&_button]:text-[11px] [&_td]:p-1 [&_thead_th]:text-[11px]"
                                 />
+                                {(selectedRange.from || selectedRange.to) && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clearDateFilter}
+                                        className="mt-2 w-full"
+                                    >
+                                        Clear Filter
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -174,12 +224,15 @@ const RecordTable = ({ items = [] }) => {
                                         <div className="flex flex-col items-center gap-2">
                                             <AlertCircle className="h-5 w-5 text-slate-400" />
                                             <span>No records found.</span>
-                                            {searchTerm && (
+                                            {(searchTerm || selectedRange.from || selectedRange.to) && (
                                                 <Button
                                                     variant="ghost"
-                                                    onClick={() => setSearchTerm("")}
+                                                    onClick={() => {
+                                                        setSearchTerm("");
+                                                        setSelectedRange({ from: null, to: null });
+                                                    }}
                                                 >
-                                                    Clear search
+                                                    Clear filters
                                                 </Button>
                                             )}
                                         </div>
@@ -213,12 +266,15 @@ const RecordTable = ({ items = [] }) => {
                                                 <TooltipTrigger asChild>
                                                     <button
                                                         onClick={() => handlePrint(record)}
-                                                        className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
+                                                        disabled={isPrinting}
+                                                        className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
                                                     >
                                                         <Printer className="h-4 w-4 text-slate-700 dark:text-slate-200" />
                                                     </button>
                                                 </TooltipTrigger>
-                                                <TooltipContent side="top">Print Receipt</TooltipContent>
+                                                <TooltipContent side="top">
+                                                    {isPrinting ? "Printing..." : "Print Receipt"}
+                                                </TooltipContent>
                                             </Tooltip>
                                         </td>
                                     </tr>
@@ -259,6 +315,18 @@ const RecordTable = ({ items = [] }) => {
                         >
                             Next
                         </button>
+                    </div>
+                )}
+
+                {/* Print Modal */}
+                {showPrintModal && printData && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                        <div className="mx-auto w-full max-w-sm">
+                            <PrintableReceipt
+                                invoiceData={printData}
+                                onClose={closePrintModal}
+                            />
+                        </div>
                     </div>
                 )}
             </div>
