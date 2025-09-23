@@ -129,10 +129,12 @@ public class TransactionService {
                 serviceDto,
                 consumableDtos,
                 total,
-                0.0,
-                0.0,
+                0.0,  // tax
+                0.0,  // discount
                 total,
                 request.getPaymentMethod(),
+                amountGiven,  // ✅ FIXED: Use actual amountGiven
+                change,       // ✅ FIXED: Use actual change
                 issueDate,
                 dueDate,
                 new FormatSettingsDto(settings),
@@ -185,10 +187,12 @@ public class TransactionService {
                 serviceDto,
                 consumableDtos,
                 tx.getTotalPrice(),
-                0.0,
-                0.0,
+                0.0,  // tax
+                0.0,  // discount
                 tx.getTotalPrice(),
                 tx.getPaymentMethod(),
+                tx.getAmountGiven(),  // ✅ FIXED: Use transaction's amountGiven
+                tx.getChange(),       // ✅ FIXED: Use transaction's change
                 tx.getIssueDate(),
                 tx.getDueDate(),
                 new FormatSettingsDto(settings),

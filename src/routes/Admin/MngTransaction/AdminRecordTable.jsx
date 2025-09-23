@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
+import PrintableReceipt from "./PrintableReceipt";
 
 const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Price", "Date", "Payment", "Laundry Status", "Pickup Status", "Actions"];
 
@@ -45,6 +46,9 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
     const [tableSortOrder, setTableSortOrder] = useState("desc");
     const [tableSortField, setTableSortField] = useState("createdAt");
     const [expandedRows, setExpandedRows] = useState(new Set());
+    const [printData, setPrintData] = useState(null);
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [isPrinting, setIsPrinting] = useState(false);
 
     const rowsPerPage = 10;
     const calendarRef = useRef(null);
@@ -130,8 +134,34 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
     const totalPages = Math.ceil(sorted.length / rowsPerPage);
     const paginated = sorted.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-    const handlePrint = (record) => {
-        console.log("🖨️ Printing receipt for:", record);
+    const handlePrint = async (record) => {
+        try {
+            setIsPrinting(true);
+            console.log("🖨️ Printing receipt for:", record);
+
+            const token = localStorage.getItem("authToken");
+            const response = await fetch(`http://localhost:8080/api/transactions/${record.id}/service-invoice`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch invoice: ${response.status}`);
+            }
+
+            const invoiceData = await response.json();
+            console.log("📄 Invoice data:", invoiceData);
+
+            setPrintData(invoiceData);
+            setShowPrintModal(true);
+        } catch (error) {
+            console.error("❌ Error printing receipt:", error);
+            alert("Failed to print receipt. Please try again.");
+        } finally {
+            setIsPrinting(false);
+        }
     };
 
     const handleExport = () => {
@@ -177,6 +207,15 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
 
     const clearDateFilter = () => {
         setSelectedRange({ from: null, to: null });
+    };
+
+    const closePrintModal = () => {
+        setShowPrintModal(false);
+        setPrintData(null);
+    };
+
+    const handlePrintNow = () => {
+        window.print();
     };
 
     return (
@@ -380,12 +419,13 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                                         <TooltipTrigger asChild>
                                                             <button
                                                                 onClick={() => handlePrint(record)}
-                                                                className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
+                                                                disabled={isPrinting}
+                                                                className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
                                                             >
                                                                 <Printer className="h-4 w-4 text-slate-700 dark:text-slate-200" />
                                                             </button>
                                                         </TooltipTrigger>
-                                                        <TooltipContent side="top">Print Receipt</TooltipContent>
+                                                        <TooltipContent side="top">{isPrinting ? "Printing..." : "Print Receipt"}</TooltipContent>
                                                     </Tooltip>
                                                 </td>
                                             </tr>
@@ -457,6 +497,20 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                         >
                             Next
                         </button>
+                    </div>
+                )}
+
+                {/* Print Modal */}
+                {showPrintModal && printData && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                        <div className="mx-auto w-full max-w-sm">
+                            {" "}
+                            {/* Changed to max-w-sm */}
+                            <PrintableReceipt
+                                invoiceData={printData}
+                                onClose={closePrintModal}
+                            />
+                        </div>
                     </div>
                 )}
             </div>

@@ -173,7 +173,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
           </strong>
           <p>
             Laundry must be claimed within 7 days. Unclaimed items may be
-            subject to disposal or storage fees. Please retain your invoice for
+            subject to disposal. Please retain your invoice for
             verification.
           </p>
         </div>
