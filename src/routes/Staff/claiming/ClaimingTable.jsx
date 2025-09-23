@@ -21,6 +21,72 @@ import {
 } from "lucide-react";
 import ServiceReceiptCard from "@/components/ServiceReceiptCard";
 
+// Skeleton Loader Components
+const SkeletonRow = ({ isExpiredTab }) => (
+    <TableRow className="border-t border-slate-300 dark:border-slate-700">
+        <TableCell className="py-4">
+            <div className="flex items-center">
+                <div className="skeleton h-4 w-4 rounded mr-2"></div>
+                <div className="skeleton h-4 w-32 rounded"></div>
+            </div>
+        </TableCell>
+        <TableCell>
+            <div className="skeleton h-4 w-24 rounded"></div>
+        </TableCell>
+        <TableCell>
+            <div className="skeleton h-6 w-20 rounded-full"></div>
+        </TableCell>
+        <TableCell>
+            <div className="flex justify-center">
+                <div className="skeleton h-6 w-8 rounded-full"></div>
+            </div>
+        </TableCell>
+        <TableCell>
+            <div className="flex items-center">
+                <div className="skeleton h-4 w-4 rounded mr-1"></div>
+                <div className="skeleton h-4 w-28 rounded"></div>
+            </div>
+        </TableCell>
+        {!isExpiredTab && (
+            <TableCell>
+                <div className="skeleton h-4 w-28 rounded"></div>
+            </TableCell>
+        )}
+        {isExpiredTab && (
+            <TableCell>
+                <div className="skeleton h-4 w-28 rounded"></div>
+            </TableCell>
+        )}
+        <TableCell>
+            <div className="skeleton h-6 w-24 rounded-full"></div>
+        </TableCell>
+        <TableCell>
+            <div className="skeleton h-8 w-full rounded"></div>
+        </TableCell>
+    </TableRow>
+);
+
+SkeletonRow.propTypes = {
+    isExpiredTab: PropTypes.bool,
+};
+
+const SkeletonPagination = () => (
+    <div className="flex flex-col items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700 sm:flex-row">
+        <div className="mb-4 flex items-center space-x-2 sm:mb-0">
+            <div className="skeleton h-4 w-16 rounded"></div>
+            <div className="skeleton h-8 w-16 rounded-md"></div>
+        </div>
+        <div className="flex items-center space-x-2">
+            <div className="skeleton h-4 w-24 rounded"></div>
+            <div className="flex space-x-1">
+                {[1, 2, 3, 4].map((item) => (
+                    <div key={item} className="skeleton h-8 w-8 rounded-md"></div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
 const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose, isExpiredTab, hasUnfilteredData }) => {
     const [selectedTransaction, setSelectedTransaction] = useState(null);
     const [showReceipt, setShowReceipt] = useState(false);
@@ -98,6 +164,58 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
         }
     };
 
+    // Show skeleton loader while loading
+    if (isLoading) {
+        return (
+            <div className="rounded-md border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="border-b border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                            <TableHead>Customer</TableHead>
+                            <TableHead>Contact</TableHead>
+                            <TableHead>Service</TableHead>
+                            <TableHead>Loads</TableHead>
+                            <TableHead>Date Completed</TableHead>
+                            {!isExpiredTab && <TableHead>Due Date</TableHead>}
+                            {isExpiredTab && <TableHead>Past Due On</TableHead>}
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Array.from({ length: itemsPerPage }).map((_, index) => (
+                            <SkeletonRow key={index} isExpiredTab={isExpiredTab} />
+                        ))}
+                    </TableBody>
+                </Table>
+                <SkeletonPagination />
+                
+                {/* Add CSS for skeleton animation */}
+                <style jsx>{`
+                    .skeleton {
+                        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                        background-size: 200% 100%;
+                        animation: loading 1.5s infinite;
+                    }
+                    
+                    .dark .skeleton {
+                        background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+                        background-size: 200% 100%;
+                    }
+                    
+                    @keyframes loading {
+                        0% {
+                            background-position: 200% 0;
+                        }
+                        100% {
+                            background-position: -200% 0;
+                        }
+                    }
+                `}</style>
+            </div>
+        );
+    }
+
     if (!hasFetched) return null;
 
     const totalItems = transactions.length;
@@ -106,24 +224,21 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = transactions.slice(startIndex, endIndex);
 
-    // In the handleClaimClick function, ensure the transaction has the completion date
-   // In ClaimingTable.js, update the handleClaimClick function:
-const handleClaimClick = async (transaction) => {
-    setLoadingTransactionId(transaction.id);
+    const handleClaimClick = async (transaction) => {
+        setLoadingTransactionId(transaction.id);
 
-    try {
-        const claimedTransaction = await onClaim(transaction.id);
-        if (claimedTransaction) {
-            // Use the claimed transaction data from backend which includes correct dates and staff ID
-            setSelectedTransaction(claimedTransaction);
-            setShowReceipt(true);
+        try {
+            const claimedTransaction = await onClaim(transaction.id);
+            if (claimedTransaction) {
+                setSelectedTransaction(claimedTransaction);
+                setShowReceipt(true);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoadingTransactionId(null);
         }
-    } catch (error) {
-        console.error(error);
-    } finally {
-        setLoadingTransactionId(null);
-    }
-};
+    };
 
     const handleDisposeClick = (transaction) => {
         setTransactionToDispose(transaction);
@@ -186,19 +301,7 @@ const handleClaimClick = async (transaction) => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoading ? (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={isExpiredTab ? 8 : 8}
-                                    className="py-16 text-center"
-                                >
-                                    <Loader className="mx-auto mb-2 h-8 w-8 animate-spin" />
-                                    <div className="text-slate-600 dark:text-slate-400">
-                                        {isExpiredTab ? "Loading past due transactions..." : "Loading transactions..."}
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ) : transactions.length === 0 && !hasUnfilteredData ? (
+                        {transactions.length === 0 && !hasUnfilteredData ? (
                             <TableRow>
                                 <TableCell
                                     colSpan={isExpiredTab ? 8 : 8}

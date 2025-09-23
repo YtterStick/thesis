@@ -38,6 +38,13 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     };
 
+    // Function to validate and handle name input
+    const handleNameChange = (value) => {
+        // Remove any numbers from the input
+        const cleanedValue = value.replace(/[0-9]/g, '');
+        handleChange("name", cleanedValue);
+    };
+
     useImperativeHandle(ref, () => ({
         resetForm: () => {
             const defaultService = services[0];
@@ -222,6 +229,17 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             return;
         }
 
+        // Validate name doesn't contain numbers
+        const nameHasNumbers = /[0-9]/.test(form.name);
+        if (nameHasNumbers) {
+            toast({
+                title: "Invalid Name",
+                description: "Customer name should not contain numbers.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         const isValidContact = /^09\d{9}$/.test(form.contact);
         if (!isValidContact) {
             toast({
@@ -329,7 +347,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         <Input
                             placeholder="Customer Name"
                             value={form.name}
-                            onChange={(e) => handleChange("name", e.target.value)}
+                            onChange={(e) => handleNameChange(e.target.value)}
                             required
                             disabled={isLocked}
                             className="input"
