@@ -9,6 +9,7 @@ import SkeletonLoader from "./SkeletonLoader";
 
 const POLLING_INTERVAL = 10000;
 const ACTIVE_POLLING_INTERVAL = 5000;
+const TIMER_CHECK_INTERVAL = 1000; // Check timers every second
 
 export default function ServiceTrackingPage() {
     const [jobs, setJobs] = useState([]);
@@ -19,9 +20,10 @@ export default function ServiceTrackingPage() {
     const [error, setError] = useState(null);
     const [isPolling, setIsPolling] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
-    const [smsStatus, setSmsStatus] = useState({}); // Added SMS status state
+    const [smsStatus, setSmsStatus] = useState({});
     const pollRef = useRef(null);
     const clockRef = useRef(null);
+    const timerCheckRef = useRef(null);
     const completedTimersRef = useRef(new Set());
     const activeTimersRef = useRef(new Map());
 
@@ -101,38 +103,7 @@ export default function ServiceTrackingPage() {
                 })),
             }));
 
-            setJobs((prev) =>
-                jobsWithLoads.map((newJob) => {
-                    const oldJob = prev.find((j) => j.id === newJob.id);
-                    if (!oldJob) return newJob;
-
-                    return {
-                        ...newJob,
-                        loads: newJob.loads.map((newLoad) => {
-                            const oldLoad = oldJob.loads.find((l) => l.loadNumber === newLoad.loadNumber);
-                            if (!oldLoad) return { ...newLoad };
-
-                            const timerKey = `${newJob.id}-${newLoad.loadNumber}`;
-                            const preservedStartTime = activeTimersRef.current.get(timerKey);
-
-                            const flow = SERVICE_FLOWS[newJob.serviceType] || ["UNWASHED", "COMPLETED"];
-                            const oldIdx = flow.indexOf(oldLoad.status);
-                            const newIdx = flow.indexOf(newLoad.status);
-
-                            const shouldUseOldStatus = oldIdx > newIdx && oldIdx !== -1 && newIdx !== -1;
-
-                            return {
-                                ...newLoad,
-                                status: shouldUseOldStatus ? oldLoad.status : newLoad.status,
-                                machineId: oldLoad.machineId ?? newLoad.machineId,
-                                duration: oldLoad.duration ?? newLoad.duration,
-                                startTime: preservedStartTime || oldLoad.startTime || newLoad.startTime,
-                                pending: oldLoad.pending && oldLoad.status === newLoad.status ? false : false,
-                            };
-                        }),
-                    };
-                }),
-            );
+            setJobs(jobsWithLoads);
             setError(null);
             return true;
         } catch (err) {
@@ -157,15 +128,17 @@ export default function ServiceTrackingPage() {
         }
     };
 
-    const fetchData = async () => {
-        if (isPolling || !autoRefresh) return;
+    const fetchData = async (force = false) => {
+        if ((isPolling && !force) || !autoRefresh) return;
 
         setIsPolling(true);
         try {
-            const [jobsSuccess] = await Promise.all([fetchJobs(), fetchMachines()]);
+            const [jobsSuccess, machinesSuccess] = await Promise.allSettled([fetchJobs(), fetchMachines()]);
 
-            if (jobsSuccess) {
+            if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
                 setLoading(false);
+            } else if (jobsSuccess.status === "rejected") {
+                throw new Error(jobsSuccess.reason?.message || "Failed to fetch jobs");
             }
         } catch (err) {
             console.error("Failed to fetch data:", err);
@@ -176,6 +149,47 @@ export default function ServiceTrackingPage() {
         }
     };
 
+    // Improved timer completion detection
+    // Replace the checkTimerCompletions function with this improved version:
+    const checkTimerCompletions = useCallback(() => {
+        let needsRefresh = false;
+        const currentTime = Date.now();
+
+        jobs.forEach((job) => {
+            job.loads.forEach((load) => {
+                if (load.status === "WASHING" || load.status === "DRYING") {
+                    const timerKey = `${job.id}-${load.loadNumber}`;
+
+                    if (load.startTime && load.duration) {
+                        const endTime = new Date(load.startTime).getTime() + load.duration * 60000;
+                        const timeRemaining = endTime - currentTime;
+
+                        // If timer completed (with 1-second buffer) but not yet marked as completed
+                        if (timeRemaining <= 1000 && !completedTimersRef.current.has(timerKey)) {
+                            completedTimersRef.current.add(timerKey);
+                            needsRefresh = true;
+                            console.log(`Timer completed for ${job.customerName} load ${load.loadNumber}, refreshing in 1 second...`);
+                        }
+
+                        // If timer is still running but was marked as completed, remove it
+                        if (timeRemaining > 1000 && completedTimersRef.current.has(timerKey)) {
+                            completedTimersRef.current.delete(timerKey);
+                        }
+                    }
+                }
+            });
+        });
+
+        if (needsRefresh) {
+            // Wait 1 second before refreshing to ensure backend has processed the status change
+            setTimeout(() => {
+                console.log("Refreshing data after timer completion...");
+                fetchData(true); // Force refresh
+            }, 1000);
+        }
+    }, [jobs]);
+
+    // Setup polling interval
     useEffect(() => {
         const interval = getPollingInterval();
 
@@ -195,8 +209,26 @@ export default function ServiceTrackingPage() {
                 clearInterval(pollRef.current);
             }
         };
-    }, [autoRefresh, hasActiveJobs]);
+    }, [autoRefresh, hasActiveJobs, fetchData]);
 
+    // Setup timer check interval (runs every second)
+    useEffect(() => {
+        if (timerCheckRef.current) {
+            clearInterval(timerCheckRef.current);
+        }
+
+        timerCheckRef.current = setInterval(() => {
+            checkTimerCompletions();
+        }, TIMER_CHECK_INTERVAL);
+
+        return () => {
+            if (timerCheckRef.current) {
+                clearInterval(timerCheckRef.current);
+            }
+        };
+    }, [checkTimerCompletions]);
+
+    // Setup clock and initial data fetch
     useEffect(() => {
         const token = localStorage.getItem("authToken");
         if (!token || isTokenExpired(token)) {
@@ -211,6 +243,7 @@ export default function ServiceTrackingPage() {
         return () => {
             clearInterval(clockRef.current);
             if (pollRef.current) clearInterval(pollRef.current);
+            if (timerCheckRef.current) clearInterval(timerCheckRef.current);
         };
     }, []);
 
@@ -225,8 +258,8 @@ export default function ServiceTrackingPage() {
     // Add SMS notification function
     const sendSmsNotification = async (job, serviceType) => {
         const jobKey = getJobKey(job);
-        setSmsStatus(prev => ({ ...prev, [jobKey]: 'sending' }));
-        
+        setSmsStatus((prev) => ({ ...prev, [jobKey]: "sending" }));
+
         try {
             const response = await fetchWithTimeout("http://localhost:8080/api/send-completion-sms", {
                 method: "POST",
@@ -237,21 +270,21 @@ export default function ServiceTrackingPage() {
                     transactionId: job.id,
                     customerName: job.customerName,
                     phoneNumber: job.contact,
-                    serviceType: serviceType
+                    serviceType: serviceType,
                 }),
             });
-            
+
             if (response.ok) {
-                setSmsStatus(prev => ({ ...prev, [jobKey]: 'sent' }));
+                setSmsStatus((prev) => ({ ...prev, [jobKey]: "sent" }));
                 setTimeout(() => {
-                    setSmsStatus(prev => ({ ...prev, [jobKey]: null }));
+                    setSmsStatus((prev) => ({ ...prev, [jobKey]: null }));
                 }, 3000);
             } else {
-                setSmsStatus(prev => ({ ...prev, [jobKey]: 'failed' }));
+                setSmsStatus((prev) => ({ ...prev, [jobKey]: "failed" }));
             }
         } catch (error) {
             console.error("Error sending SMS:", error);
-            setSmsStatus(prev => ({ ...prev, [jobKey]: 'failed' }));
+            setSmsStatus((prev) => ({ ...prev, [jobKey]: "failed" }));
         }
     };
 
@@ -275,9 +308,10 @@ export default function ServiceTrackingPage() {
                 `http://localhost:8080/api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`,
                 { method: "PATCH" },
             );
-            fetchData();
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to assign machine:", err);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -301,9 +335,10 @@ export default function ServiceTrackingPage() {
                 `http://localhost:8080/api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`,
                 { method: "PATCH" },
             );
-            fetchData();
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to update duration:", err);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -311,7 +346,7 @@ export default function ServiceTrackingPage() {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
         if (!job?.id) return;
         const load = job.loads[loadIndex];
-        
+
         // Determine the next status first
         let status = load.status;
         if (job.serviceType === "Wash") {
@@ -325,13 +360,12 @@ export default function ServiceTrackingPage() {
 
         // Get the required machine type for the NEXT step
         const requiredMachineType = getMachineTypeForStep(status, job.serviceType);
-        
+
         // Check if the assigned machine matches the required type
         if (requiredMachineType) {
-            const assignedMachine = machines.find(m => m.id === load.machineId);
-            const isCorrectMachineType = assignedMachine && 
-                (assignedMachine.type || "").toUpperCase() === requiredMachineType;
-            
+            const assignedMachine = machines.find((m) => m.id === load.machineId);
+            const isCorrectMachineType = assignedMachine && (assignedMachine.type || "").toUpperCase() === requiredMachineType;
+
             if (!isCorrectMachineType) {
                 const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
                 return alert(`Please assign a ${machineTypeName} machine first.`);
@@ -351,6 +385,8 @@ export default function ServiceTrackingPage() {
 
         const timerKey = `${job.id}-${load.loadNumber}`;
         activeTimersRef.current.set(timerKey, startTime);
+        // Remove from completed timers if it was there
+        completedTimersRef.current.delete(timerKey);
 
         setJobs((prev) =>
             prev.map((j) =>
@@ -370,9 +406,10 @@ export default function ServiceTrackingPage() {
                     method: "PATCH",
                 },
             );
-            fetchData();
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to start load:", err);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -388,6 +425,7 @@ export default function ServiceTrackingPage() {
         if (load.status === "WASHING" || load.status === "DRYING") {
             const timerKey = `${job.id}-${load.loadNumber}`;
             activeTimersRef.current.delete(timerKey);
+            completedTimersRef.current.delete(timerKey);
         }
 
         let updatedLoad = { ...load, status: nextStatus, pending: true };
@@ -438,10 +476,10 @@ export default function ServiceTrackingPage() {
                 sendSmsNotification(job, job.serviceType);
             }
 
-            fetchData();
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to advance load status:", err);
-            fetchData();
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -454,6 +492,7 @@ export default function ServiceTrackingPage() {
 
         const timerKey = `${job.id}-${load.loadNumber}`;
         activeTimersRef.current.set(timerKey, startTime);
+        completedTimersRef.current.delete(timerKey);
 
         setJobs((prev) =>
             prev.map((j) =>
@@ -468,9 +507,10 @@ export default function ServiceTrackingPage() {
 
         try {
             await fetchWithTimeout(`http://localhost:8080/api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`, { method: "PATCH" });
-            fetchData();
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to start drying again:", err);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -488,43 +528,6 @@ export default function ServiceTrackingPage() {
         const remaining = getRemainingTime(load);
         return remaining !== null && remaining > 0 && (load.status === "WASHING" || load.status === "DRYING");
     };
-
-    useEffect(() => {
-        const checkCompletedTimers = () => {
-            let shouldRefresh = false;
-            const completedTimers = new Set();
-
-            jobs.forEach((job) => {
-                job.loads.forEach((load) => {
-                    if (isLoadRunning(load)) {
-                        const remaining = getRemainingTime(load);
-                        const timerKey = `${getJobKey(job)}-load${load.loadNumber}`;
-
-                        if (remaining === 0 && !completedTimersRef.current.has(timerKey)) {
-                            completedTimersRef.current.add(timerKey);
-                            shouldRefresh = true;
-                        } else if (remaining > 0 && completedTimersRef.current.has(timerKey)) {
-                            completedTimersRef.current.delete(timerKey);
-                        }
-
-                        completedTimers.add(timerKey);
-                    }
-                });
-            });
-
-            completedTimersRef.current.forEach((timerKey) => {
-                if (!completedTimers.has(timerKey)) {
-                    completedTimersRef.current.delete(timerKey);
-                }
-            });
-
-            if (shouldRefresh) {
-                fetchData();
-            }
-        };
-
-        checkCompletedTimers();
-    }, [jobs, now]);
 
     const machineOptions = useMemo(() => {
         const byType = { WASHER: [], DRYER: [] };
@@ -552,7 +555,7 @@ export default function ServiceTrackingPage() {
                     <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">Failed to Load Data</h2>
                     <p className="mb-4 text-slate-600 dark:text-slate-400">{error}</p>
                     <Button
-                        onClick={fetchData}
+                        onClick={() => fetchData(true)}
                         className="mx-auto flex items-center gap-2"
                     >
                         <RefreshCw className="h-4 w-4" /> Try Again
@@ -568,6 +571,23 @@ export default function ServiceTrackingPage() {
                 <div className="flex items-center gap-2">
                     <WashingMachine className="h-6 w-6 text-cyan-400" />
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Service Tracking</h1>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <Switch
+                            checked={autoRefresh}
+                            onCheckedChange={toggleAutoRefresh}
+                        />
+                    </div>
+                    <Button
+                        onClick={() => fetchData(true)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${isPolling ? "animate-spin" : ""}`} />
+                        Refresh
+                    </Button>
                 </div>
             </div>
 
@@ -588,11 +608,12 @@ export default function ServiceTrackingPage() {
                     getMachineTypeForStep={getMachineTypeForStep}
                     isLoadRunning={isLoadRunning}
                     maskContact={maskContact}
-                    smsStatus={smsStatus} // Pass SMS status to TrackingTable
-                    sendSmsNotification={sendSmsNotification} // Pass SMS function to TrackingTable
+                    smsStatus={smsStatus}
+                    sendSmsNotification={sendSmsNotification}
                 />
             </TooltipProvider>
 
+            {/* Rest of your component remains the same */}
             {jobs.length > 0 && (
                 <div className="flex flex-col items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700 sm:flex-row">
                     <div className="mb-4 flex items-center space-x-2 sm:mb-0">

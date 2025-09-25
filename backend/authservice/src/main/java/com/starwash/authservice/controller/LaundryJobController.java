@@ -81,6 +81,15 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
+    @PatchMapping("/{transactionId}/force-advance")
+public ResponseEntity<LaundryJobDto> forceAdvanceLoad(@PathVariable String transactionId,
+        @RequestParam int loadNumber,
+        @RequestHeader("Authorization") String authHeader) {
+    String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
+    LaundryJob job = laundryJobService.forceAdvanceLoad(transactionId, loadNumber, username);
+    return ResponseEntity.ok(toDto(job));
+}
+
     // Start load
     @PatchMapping("/{transactionId}/start-load")
     public ResponseEntity<LaundryJobDto> startLoad(@PathVariable String transactionId,

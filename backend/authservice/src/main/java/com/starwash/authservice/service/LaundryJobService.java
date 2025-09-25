@@ -274,10 +274,10 @@ public class LaundryJobService {
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
-        
+
         // Send SMS notification when load is completed
         sendCompletionSmsNotification(job, loadNumber);
-        
+
         return job;
     }
 
@@ -286,21 +286,20 @@ public class LaundryJobService {
             // Check if this is the last load to complete
             boolean allLoadsCompleted = job.getLoadAssignments().stream()
                     .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
-            
+
             if (allLoadsCompleted) {
                 // Get transaction details for service type
                 Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
                         .orElse(null);
-                
+
                 String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
-                
+
                 // Send SMS notification
                 smsService.sendLoadCompletedNotification(
-                    job.getContact(),
-                    job.getCustomerName(),
-                    serviceType
-                );
-                
+                        job.getContact(),
+                        job.getCustomerName(),
+                        serviceType);
+
                 System.out.println("📱 SMS notification sent for completed job: " + job.getTransactionId());
             }
         } catch (Exception e) {
@@ -493,11 +492,11 @@ public class LaundryJobService {
         }
 
         laundryJobRepository.save(job);
-        
+
         // Check if this completion makes all loads completed
         boolean allCompleted = job.getLoadAssignments().stream()
                 .allMatch(l -> STATUS_COMPLETED.equalsIgnoreCase(l.getStatus()));
-        
+
         if (allCompleted) {
             sendCompletionSmsNotification(job, loadNumber);
         }
@@ -558,11 +557,51 @@ public class LaundryJobService {
         }
     }
 
-    // para sa missing item
-
-    // Change the search method to be case sensitive
     public List<LaundryJob> searchLaundryJobsByCustomerName(String customerName) {
-        // Use exact case-sensitive matching
         return laundryJobRepository.findByCustomerName(customerName);
+    }
+
+    // Add to LaundryJobService.java
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob forceAdvanceLoad(String transactionId, int loadNumber, String processedBy) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        // Force advance based on current status
+        String currentStatus = load.getStatus();
+        String newStatus = currentStatus;
+
+        switch (currentStatus.toUpperCase()) {
+            case STATUS_WASHING:
+                newStatus = STATUS_WASHED;
+                releaseMachine(load);
+                break;
+            case STATUS_DRYING:
+                newStatus = STATUS_DRIED;
+                releaseMachine(load);
+                break;
+            case STATUS_WASHED:
+                newStatus = STATUS_DRYING;
+                break;
+            case STATUS_DRIED:
+                newStatus = STATUS_FOLDING;
+                break;
+            case STATUS_FOLDING:
+                newStatus = STATUS_COMPLETED;
+                break;
+            default:
+                throw new RuntimeException("Cannot force advance from status: " + currentStatus);
+        }
+
+        load.setStatus(newStatus);
+        load.setStartTime(null);
+        load.setEndTime(null);
+
+        job.setLaundryProcessedBy(processedBy);
+        return laundryJobRepository.save(job);
     }
 }
