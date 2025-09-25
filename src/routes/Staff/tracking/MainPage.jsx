@@ -19,9 +19,10 @@ export default function ServiceTrackingPage() {
     const [error, setError] = useState(null);
     const [isPolling, setIsPolling] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
+    const [smsStatus, setSmsStatus] = useState({}); // Added SMS status state
     const pollRef = useRef(null);
     const clockRef = useRef(null);
-    const completedTimersRef = useRef(new Set()); // Fixed: Added this line
+    const completedTimersRef = useRef(new Set());
     const activeTimersRef = useRef(new Map());
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -221,6 +222,39 @@ export default function ServiceTrackingPage() {
         return Math.max(Math.floor((end - now) / 1000), 0);
     };
 
+    // Add SMS notification function
+    const sendSmsNotification = async (job, serviceType) => {
+        const jobKey = getJobKey(job);
+        setSmsStatus(prev => ({ ...prev, [jobKey]: 'sending' }));
+        
+        try {
+            const response = await fetchWithTimeout("http://localhost:8080/api/send-completion-sms", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    transactionId: job.id,
+                    customerName: job.customerName,
+                    phoneNumber: job.contact,
+                    serviceType: serviceType
+                }),
+            });
+            
+            if (response.ok) {
+                setSmsStatus(prev => ({ ...prev, [jobKey]: 'sent' }));
+                setTimeout(() => {
+                    setSmsStatus(prev => ({ ...prev, [jobKey]: null }));
+                }, 3000);
+            } else {
+                setSmsStatus(prev => ({ ...prev, [jobKey]: 'failed' }));
+            }
+        } catch (error) {
+            console.error("Error sending SMS:", error);
+            setSmsStatus(prev => ({ ...prev, [jobKey]: 'failed' }));
+        }
+    };
+
     const assignMachine = async (jobKey, loadIndex, machineId) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
         if (!job?.id) return;
@@ -274,74 +308,73 @@ export default function ServiceTrackingPage() {
     };
 
     const startAction = async (jobKey, loadIndex) => {
-    const job = jobs.find((j) => getJobKey(j) === jobKey);
-    if (!job?.id) return;
-    const load = job.loads[loadIndex];
-    
-    // Determine the next status first
-    let status = load.status;
-    if (job.serviceType === "Wash") {
-        if (load.status === "UNWASHED") status = "WASHING";
-    } else if (job.serviceType === "Dry") {
-        if (load.status === "UNWASHED") status = "DRYING";
-    } else if (job.serviceType === "Wash & Dry") {
-        if (load.status === "UNWASHED") status = "WASHING";
-        else if (load.status === "WASHED") status = "DRYING";
-    }
-
-    // Get the required machine type for the NEXT step
-    const requiredMachineType = getMachineTypeForStep(status, job.serviceType);
-    
-    // Check if the assigned machine matches the required type
-    if (requiredMachineType) {
-        const assignedMachine = machines.find(m => m.id === load.machineId);
-        const isCorrectMachineType = assignedMachine && 
-            (assignedMachine.type || "").toUpperCase() === requiredMachineType;
+        const job = jobs.find((j) => getJobKey(j) === jobKey);
+        if (!job?.id) return;
+        const load = job.loads[loadIndex];
         
-        if (!isCorrectMachineType) {
-            const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
-            return alert(`Please assign a ${machineTypeName} machine first.`);
+        // Determine the next status first
+        let status = load.status;
+        if (job.serviceType === "Wash") {
+            if (load.status === "UNWASHED") status = "WASHING";
+        } else if (job.serviceType === "Dry") {
+            if (load.status === "UNWASHED") status = "DRYING";
+        } else if (job.serviceType === "Wash & Dry") {
+            if (load.status === "UNWASHED") status = "WASHING";
+            else if (load.status === "WASHED") status = "DRYING";
         }
-    }
 
-    // Rest of your existing code...
-    const duration =
-        load.duration && load.duration > 0
-            ? load.duration
-            : status === "WASHING"
-              ? DEFAULT_DURATION.washing
-              : status === "DRYING"
-                ? DEFAULT_DURATION.drying
-                : null;
+        // Get the required machine type for the NEXT step
+        const requiredMachineType = getMachineTypeForStep(status, job.serviceType);
+        
+        // Check if the assigned machine matches the required type
+        if (requiredMachineType) {
+            const assignedMachine = machines.find(m => m.id === load.machineId);
+            const isCorrectMachineType = assignedMachine && 
+                (assignedMachine.type || "").toUpperCase() === requiredMachineType;
+            
+            if (!isCorrectMachineType) {
+                const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
+                return alert(`Please assign a ${machineTypeName} machine first.`);
+            }
+        }
 
-    const startTime = new Date().toISOString();
+        const duration =
+            load.duration && load.duration > 0
+                ? load.duration
+                : status === "WASHING"
+                  ? DEFAULT_DURATION.washing
+                  : status === "DRYING"
+                    ? DEFAULT_DURATION.drying
+                    : null;
 
-    const timerKey = `${job.id}-${load.loadNumber}`;
-    activeTimersRef.current.set(timerKey, startTime);
+        const startTime = new Date().toISOString();
 
-    setJobs((prev) =>
-        prev.map((j) =>
-            getJobKey(j) === jobKey
-                ? {
-                      ...j,
-                      loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status, startTime, duration } : l)),
-                  }
-                : j,
-        ),
-    );
+        const timerKey = `${job.id}-${load.loadNumber}`;
+        activeTimersRef.current.set(timerKey, startTime);
 
-    try {
-        await fetchWithTimeout(
-            `http://localhost:8080/api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`,
-            {
-                method: "PATCH",
-            },
+        setJobs((prev) =>
+            prev.map((j) =>
+                getJobKey(j) === jobKey
+                    ? {
+                          ...j,
+                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status, startTime, duration } : l)),
+                      }
+                    : j,
+            ),
         );
-        fetchData();
-    } catch (err) {
-        console.error("Failed to start load:", err);
-    }
-};
+
+        try {
+            await fetchWithTimeout(
+                `http://localhost:8080/api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`,
+                {
+                    method: "PATCH",
+                },
+            );
+            fetchData();
+        } catch (err) {
+            console.error("Failed to start load:", err);
+        }
+    };
 
     const advanceStatus = async (jobKey, loadIndex) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
@@ -398,6 +431,11 @@ export default function ServiceTrackingPage() {
                 } catch (err) {
                     console.error("Failed to release machine:", err);
                 }
+            }
+
+            // Send SMS notification when job is completed
+            if (nextStatus === "COMPLETED") {
+                sendSmsNotification(job, job.serviceType);
             }
 
             fetchData();
@@ -550,6 +588,8 @@ export default function ServiceTrackingPage() {
                     getMachineTypeForStep={getMachineTypeForStep}
                     isLoadRunning={isLoadRunning}
                     maskContact={maskContact}
+                    smsStatus={smsStatus} // Pass SMS status to TrackingTable
+                    sendSmsNotification={sendSmsNotification} // Pass SMS function to TrackingTable
                 />
             </TooltipProvider>
 

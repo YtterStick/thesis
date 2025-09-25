@@ -38,6 +38,9 @@ public class LaundryJobService {
     @Autowired
     private MachineRepository machineRepository;
 
+    @Autowired
+    private SmsService smsService;
+
     private static final String STATUS_AVAILABLE = "Available";
     private static final String STATUS_IN_USE = "In Use";
 
@@ -270,7 +273,39 @@ public class LaundryJobService {
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
-        return advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
+        LaundryJob job = advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
+        
+        // Send SMS notification when load is completed
+        sendCompletionSmsNotification(job, loadNumber);
+        
+        return job;
+    }
+
+    private void sendCompletionSmsNotification(LaundryJob job, int loadNumber) {
+        try {
+            // Check if this is the last load to complete
+            boolean allLoadsCompleted = job.getLoadAssignments().stream()
+                    .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
+            
+            if (allLoadsCompleted) {
+                // Get transaction details for service type
+                Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
+                        .orElse(null);
+                
+                String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
+                
+                // Send SMS notification
+                smsService.sendLoadCompletedNotification(
+                    job.getContact(),
+                    job.getCustomerName(),
+                    serviceType
+                );
+                
+                System.out.println("📱 SMS notification sent for completed job: " + job.getTransactionId());
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send SMS notification: " + e.getMessage());
+        }
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
@@ -458,6 +493,14 @@ public class LaundryJobService {
         }
 
         laundryJobRepository.save(job);
+        
+        // Check if this completion makes all loads completed
+        boolean allCompleted = job.getLoadAssignments().stream()
+                .allMatch(l -> STATUS_COMPLETED.equalsIgnoreCase(l.getStatus()));
+        
+        if (allCompleted) {
+            sendCompletionSmsNotification(job, loadNumber);
+        }
     }
 
     public List<LaundryJob> getCompletedUnclaimedJobs() {
