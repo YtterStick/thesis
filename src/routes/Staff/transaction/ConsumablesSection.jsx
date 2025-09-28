@@ -134,7 +134,7 @@ ConsumablesSection.propTypes = {
   plasticOverrides: PropTypes.object.isRequired,
   setPlasticOverrides: PropTypes.func.isRequired,
   supplySource: PropTypes.string.isRequired,
-  isLocked: PropTypes.bool, // ✅ added
+  isLocked: PropTypes.bool,
 };
 
 export default ConsumablesSection;

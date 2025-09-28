@@ -20,17 +20,23 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final FormatSettingsRepository formatSettingsRepository;
     private final LaundryJobRepository laundryJobRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public TransactionService(ServiceRepository serviceRepository,
             StockRepository stockRepository,
             TransactionRepository transactionRepository,
             FormatSettingsRepository formatSettingsRepository,
-            LaundryJobRepository laundryJobRepository) {
+            LaundryJobRepository laundryJobRepository,
+            NotificationService notificationService,
+            UserRepository userRepository) {
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
         this.transactionRepository = transactionRepository;
         this.formatSettingsRepository = formatSettingsRepository;
         this.laundryJobRepository = laundryJobRepository;
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
     }
 
     public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request, String staffId) {
@@ -104,6 +110,9 @@ public class TransactionService {
 
         transactionRepository.save(transaction);
 
+        // 🔔 Create notification for new laundry service
+        createNewLaundryServiceNotification(transaction);
+
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
@@ -143,6 +152,23 @@ public class TransactionService {
                 plasticQty,
                 loads,
                 staffId);  // Add staffId as staffName
+    }
+
+    private void createNewLaundryServiceNotification(Transaction transaction) {
+        try {
+            String title = "New Laundry Service";
+            String message = String.format("New laundry service for %s - %s with %d loads", 
+                transaction.getCustomerName(), 
+                transaction.getServiceName(), 
+                transaction.getServiceQuantity());
+
+            // Notify all staff users about the new laundry service
+            notificationService.notifyAllStaff("new_laundry_service", title, message, transaction.getId());
+            
+            System.out.println("🔔 Notification created for new laundry service: " + transaction.getInvoiceNumber());
+        } catch (Exception e) {
+            System.err.println("❌ Failed to create notification for new laundry service: " + e.getMessage());
+        }
     }
 
     public ServiceInvoiceDto getServiceInvoiceByTransactionId(String id) {

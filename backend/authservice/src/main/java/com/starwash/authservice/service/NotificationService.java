@@ -18,12 +18,13 @@ public class NotificationService {
         this.userRepository = userRepository;
     }
 
+    // Enhanced notification method for different types
     public Notification createNotification(String userId, String type, String title, String message, String relatedEntityId) {
         Notification notification = new Notification(userId, type, title, message, relatedEntityId);
         return notificationRepository.save(notification);
     }
 
-    // Notify both admin and staff
+    // Notify both admin and staff for laundry services
     public void notifyAllUsers(String type, String title, String message, String relatedEntityId) {
         userRepository.findAll().forEach(user -> {
             if ("ADMIN".equals(user.getRole()) || "STAFF".equals(user.getRole())) {
