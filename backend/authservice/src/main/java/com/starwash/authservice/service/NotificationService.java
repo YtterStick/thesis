@@ -45,6 +45,66 @@ public class NotificationService {
         });
     }
 
+    // Add these specific laundry status notification methods (Focus on Washed/Dried)
+    public void notifyLoadWashed(String customerName, String transactionId, int loadNumber) {
+        String title = "Load Washed - Ready for Drying";
+        String message = String.format("Load %d for %s has been washed and is ready for drying.", 
+            loadNumber, customerName, transactionId);
+        
+        notifyAllUsers(Notification.TYPE_LOAD_WASHED, title, message, transactionId);
+        System.out.println("📢 Load washed notification sent: " + message);
+    }
+
+    public void notifyLoadDried(String customerName, String transactionId, int loadNumber) {
+        String title = "Load Dried - Ready for Folding";
+        String message = String.format("Load %d for %s has been dried and is ready for folding.", 
+            loadNumber, customerName, transactionId);
+        
+        notifyAllUsers(Notification.TYPE_LOAD_DRIED, title, message, transactionId);
+        System.out.println("📢 Load dried notification sent: " + message);
+    }
+
+    public void notifyLoadCompleted(String customerName, String transactionId, int loadNumber) {
+        String title = "Load Completed";
+        String message = String.format("Load %d for %s has been completed.", 
+            loadNumber, customerName, transactionId);
+        
+        notifyAllUsers(Notification.TYPE_LOAD_COMPLETED, title, message, transactionId);
+        System.out.println("📢 Load completed notification sent: " + message);
+    }
+
+    // Keep the generic laundry status change method for backward compatibility
+    public void notifyLaundryStatusChange(String type, String customerName, String serviceType, 
+                                        String transactionId, int loadNumber, String status) {
+        String title = "";
+        String message = "";
+
+        switch (type) {
+            case "load_washed":
+                title = "Load Washed - Ready for Drying";
+                message = String.format("Load %d for %s has been washed and is ready for drying.", 
+                    loadNumber, customerName, transactionId);
+                break;
+            case "load_dried":
+                title = "Load Dried - Ready for Folding";
+                message = String.format("Load %d for %s has been dried and is ready for folding.", 
+                    loadNumber, customerName, transactionId);
+                break;
+            case "new_laundry_service":
+                title = "New Laundry Service Created";
+                message = String.format("New laundry service created for %s. Service: %s.", 
+                    customerName, serviceType, transactionId);
+                break;
+            case "load_completed":
+                title = "Load Completed";
+                message = String.format("Load %d for %s has been completed.", 
+                    loadNumber, customerName, transactionId);
+                break;
+        }
+
+        notifyAllUsers(type, title, message, transactionId);
+    }
+
     // Enhanced stock level notification logic
     public void checkAndNotifyStockLevel(StockItem item, Integer previousQuantity) {
         if (item.getLowStockThreshold() == null || item.getAdequateStockThreshold() == null) {

@@ -41,6 +41,9 @@ public class LaundryJobService {
     @Autowired
     private SmsService smsService;
 
+    @Autowired
+    private NotificationService notificationService; // Add this
+
     private static final String STATUS_AVAILABLE = "Available";
     private static final String STATUS_IN_USE = "In Use";
 
@@ -102,6 +105,26 @@ public class LaundryJobService {
 
         System.out.println("Creating laundry job with dueDate: " + job.getDueDate() +
                 " for transaction: " + dto.getTransactionId());
+
+        // Send notification for new laundry service creation
+        try {
+            String title = "New Laundry Service Created";
+            String message = String.format(
+                "New laundry service created for %s. Service: %s. Transaction: %s",
+                job.getCustomerName(),
+                job.getServiceType(),
+                job.getTransactionId()
+            );
+            
+            notificationService.notifyAllUsers(
+                "new_laundry_service",
+                title,
+                message,
+                job.getTransactionId()
+            );
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send new service notification: " + e.getMessage());
+        }
 
         return laundryJobRepository.save(job);
     }
@@ -261,7 +284,11 @@ public class LaundryJobService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
 
+        String previousStatus = load.getStatus();
         load.setStatus(newStatus);
+
+        // Send notifications for status changes
+        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
 
         if (STATUS_WASHED.equalsIgnoreCase(newStatus) || STATUS_DRIED.equalsIgnoreCase(newStatus)) {
             releaseMachine(load);
@@ -272,11 +299,110 @@ public class LaundryJobService {
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
+    private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+        Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
+        String svc = (txn != null ? txn.getServiceName() : serviceType);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElse(null);
+
+        if (load == null)
+            return;
+
+        String previousStatus = load.getStatus();
+        if (STATUS_COMPLETED.equals(previousStatus) || STATUS_FOLDING.equals(previousStatus))
+            return;
+
+        switch (previousStatus.toUpperCase()) {
+            case STATUS_WASHING:
+                load.setStatus(STATUS_WASHED);
+                releaseMachine(load);
+                break;
+            case STATUS_DRYING:
+                load.setStatus(STATUS_DRIED);
+                releaseMachine(load);
+                break;
+        }
+
+        // Send notifications for automatic status changes
+        sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
+
+        laundryJobRepository.save(job);
+
+        // Check if this completion makes all loads completed
+        boolean allCompleted = job.getLoadAssignments().stream()
+                .allMatch(l -> STATUS_COMPLETED.equalsIgnoreCase(l.getStatus()));
+
+        if (allCompleted) {
+            sendCompletionSmsNotification(job, loadNumber);
+        }
+    }
+
+  // In LaundryJobService, update the sendStatusChangeNotifications method:
+
+private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, String previousStatus, String newStatus) {
+    try {
+        // Notify when load is washed
+        if ("WASHED".equalsIgnoreCase(newStatus) && !"WASHED".equalsIgnoreCase(previousStatus)) {
+            notificationService.notifyLoadWashed(
+                job.getCustomerName(),
+                job.getTransactionId(),
+                load.getLoadNumber()
+            );
+        }
+
+        // Notify when load is dried
+        if ("DRIED".equalsIgnoreCase(newStatus) && !"DRIED".equalsIgnoreCase(previousStatus)) {
+            notificationService.notifyLoadDried(
+                job.getCustomerName(),
+                job.getTransactionId(),
+                load.getLoadNumber()
+            );
+        }
+
+        // Notify when load is completed
+        if ("COMPLETED".equalsIgnoreCase(newStatus) && !"COMPLETED".equalsIgnoreCase(previousStatus)) {
+            notificationService.notifyLoadCompleted(
+                job.getCustomerName(),
+                job.getTransactionId(),
+                load.getLoadNumber()
+            );
+        }
+
+    } catch (Exception e) {
+        System.err.println("❌ Failed to send status change notification: " + e.getMessage());
+    }
+}
+
+    @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
 
         // Send SMS notification when load is completed
         sendCompletionSmsNotification(job, loadNumber);
+
+        // Also send internal notification
+        try {
+            String title = "Load Completed";
+            String message = String.format(
+                "Load %d for %s has been completed. Transaction: %s",
+                loadNumber,
+                job.getCustomerName(),
+                job.getTransactionId()
+            );
+            
+            notificationService.notifyAllUsers(
+                "load_completed",
+                title,
+                message,
+                job.getTransactionId()
+            );
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send completion notification: " + e.getMessage());
+        }
 
         return job;
     }
@@ -459,46 +585,6 @@ public class LaundryJobService {
                 machine.setStatus(STATUS_AVAILABLE);
                 machineRepository.save(machine);
             });
-        }
-    }
-
-    @CacheEvict(value = "laundryJobs", allEntries = true)
-    private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
-        LaundryJob job = findSingleJobByTransaction(transactionId);
-        Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
-        String svc = (txn != null ? txn.getServiceName() : serviceType);
-
-        LoadAssignment load = job.getLoadAssignments().stream()
-                .filter(l -> l.getLoadNumber() == loadNumber)
-                .findFirst()
-                .orElse(null);
-
-        if (load == null)
-            return;
-
-        String status = load.getStatus();
-        if (STATUS_COMPLETED.equals(status) || STATUS_FOLDING.equals(status))
-            return;
-
-        switch (status.toUpperCase()) {
-            case STATUS_WASHING:
-                load.setStatus(STATUS_WASHED);
-                releaseMachine(load);
-                break;
-            case STATUS_DRYING:
-                load.setStatus(STATUS_DRIED);
-                releaseMachine(load);
-                break;
-        }
-
-        laundryJobRepository.save(job);
-
-        // Check if this completion makes all loads completed
-        boolean allCompleted = job.getLoadAssignments().stream()
-                .allMatch(l -> STATUS_COMPLETED.equalsIgnoreCase(l.getStatus()));
-
-        if (allCompleted) {
-            sendCompletionSmsNotification(job, loadNumber);
         }
     }
 

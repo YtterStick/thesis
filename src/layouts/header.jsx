@@ -1,7 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { ChevronsLeft, Moon, Search, Sun, Bell, X, CheckCircle, AlertCircle, Info, ClipboardList } from "lucide-react";
+import { 
+    ChevronsLeft, 
+    Moon, 
+    Search, 
+    Sun, 
+    Bell, 
+    X, 
+    CheckCircle, 
+    AlertCircle, 
+    Info, 
+    ClipboardList,
+    RefreshCw // Added RefreshCw import
+} from "lucide-react";
 import PropTypes from "prop-types";
 
 export const Header = ({ collapsed, setCollapsed }) => {
@@ -319,11 +331,23 @@ export const Header = ({ collapsed, setCollapsed }) => {
                                                                 className="text-blue-500"
                                                             />
                                                         )}
-                                                        {/* Add new notification types for laundry services */}
+                                                        {/* Laundry service notifications */}
                                                         {notification.type === "new_laundry_service" && (
                                                             <Bell
                                                                 size={18}
                                                                 className="text-purple-500"
+                                                            />
+                                                        )}
+                                                        {notification.type === "load_washed" && (
+                                                            <RefreshCw
+                                                                size={18}
+                                                                className="text-blue-500"
+                                                            />
+                                                        )}
+                                                        {notification.type === "load_dried" && (
+                                                            <Sun
+                                                                size={18}
+                                                                className="text-orange-500"
                                                             />
                                                         )}
                                                         {notification.type === "load_completed" && (
