@@ -34,7 +34,9 @@ public class StockService {
         newItem.setLastRestock(newItem.getLastRestock() != null ? newItem.getLastRestock() : LocalDateTime.now());
         
         StockItem savedItem = stockRepository.save(newItem);
-        checkStockStatusAndNotify(savedItem);
+        
+        // Notify about initial stock status
+        notificationService.notifyCurrentStockStatus(savedItem);
         return savedItem;
     }
 
@@ -42,13 +44,14 @@ public class StockService {
         validateThresholds(updatedItem);
         
         return stockRepository.findById(id).map(existing -> {
+            Integer previousQuantity = existing.getQuantity();
+            
             existing.setName(updatedItem.getName());
             existing.setQuantity(updatedItem.getQuantity());
             existing.setUnit(updatedItem.getUnit());
             existing.setUpdatedBy(updatedItem.getUpdatedBy());
             existing.setLowStockThreshold(updatedItem.getLowStockThreshold());
             existing.setAdequateStockThreshold(updatedItem.getAdequateStockThreshold());
-            existing.setPreviousQuantity(updatedItem.getPreviousQuantity());
             
             if (updatedItem.getLastRestock() != null) {
                 existing.setLastRestock(updatedItem.getLastRestock());
@@ -58,7 +61,9 @@ public class StockService {
             existing.setLastUpdated(LocalDateTime.now());
             
             StockItem savedItem = stockRepository.save(existing);
-            checkStockStatusAndNotify(savedItem);
+            
+            // Check for stock level changes and notify
+            notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
             return savedItem;
         });
     }
@@ -73,8 +78,8 @@ public class StockService {
 
     public Optional<StockItem> addStock(String id, int amount, String updatedBy) {
         return stockRepository.findById(id).map(item -> {
-            int previousQuantity = item.getQuantity();
-            item.setPreviousQuantity(previousQuantity);
+            Integer previousQuantity = item.getQuantity();
+            
             item.setQuantity(item.getQuantity() + amount);
             item.setLastRestockAmount(amount);
             item.setLastRestock(LocalDateTime.now());
@@ -83,29 +88,21 @@ public class StockService {
             
             StockItem savedItem = stockRepository.save(item);
             
+            // Notify about restock
             String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s", 
                 item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
             
-            notificationService.notifyAllStaff("inventory_update", 
-                "Inventory Updated", message, item.getId());
+            notificationService.notifyAllUsers("inventory_update", 
+                "Restock Completed", message, item.getId());
             
-            checkStockStatusAndNotify(savedItem);
+            // Check for stock level transitions
+            notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
             
             return savedItem;
         });
     }
 
-    private void checkStockStatusAndNotify(StockItem item) {
-        if (item.getQuantity() == 0) {
-            String message = String.format("%s is out of stock. Please restock immediately.", item.getName());
-            notificationService.notifyAllAdmins("stock_alert", "Out of Stock Alert", message, item.getId());
-        } else if (item.getQuantity() <= item.getLowStockThreshold()) {
-            String message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
-                item.getName(), item.getQuantity(), item.getUnit(), 
-                item.getLowStockThreshold(), item.getUnit());
-            notificationService.notifyAllAdmins("stock_alert", "Low Stock Alert", message, item.getId());
-        }
-    }
+    // Remove the old checkStockStatusAndNotify method since we're using the enhanced version in NotificationService
 
     private void validateThresholds(StockItem item) {
         Integer low = item.getLowStockThreshold();

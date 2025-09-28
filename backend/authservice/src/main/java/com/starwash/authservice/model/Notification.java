@@ -1,4 +1,3 @@
-// Notification Model
 package com.starwash.authservice.model;
 
 import org.springframework.data.annotation.Id;
@@ -10,7 +9,7 @@ public class Notification {
     @Id
     private String id;
     private String userId;
-    private String type;
+    private String type; // stock_alert, inventory_update, stock_info
     private String title;
     private String message;
     private boolean read;
@@ -31,6 +30,7 @@ public class Notification {
         this.relatedEntityId = relatedEntityId;
     }
 
+    // Getters and setters...
     public String getId() { return id; }
     public String getUserId() { return userId; }
     public String getType() { return type; }
@@ -39,6 +39,7 @@ public class Notification {
     public boolean isRead() { return read; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public String getRelatedEntityId() { return relatedEntityId; }
+    
     public void setId(String id) { this.id = id; }
     public void setUserId(String userId) { this.userId = userId; }
     public void setType(String type) { this.type = type; }

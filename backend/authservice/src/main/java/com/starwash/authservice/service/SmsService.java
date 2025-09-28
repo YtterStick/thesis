@@ -10,7 +10,7 @@ import java.util.Map;
 @Service
 public class SmsService {
     
-    private static final String SMS_SERVER_URL = "http://192.168.3.100:5000/send-sms";
+    private static final String SMS_SERVER_URL = "http://192.168.3.100:5001/send-sms";
     
     @Autowired
     private RestTemplate restTemplate;
