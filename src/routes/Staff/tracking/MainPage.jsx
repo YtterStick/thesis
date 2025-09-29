@@ -473,6 +473,7 @@ export default function ServiceTrackingPage() {
 
             // Send SMS notification when job is completed
             if (nextStatus === "COMPLETED") {
+                console.log("🎯 Load completed, triggering SMS for job:", job);
                 sendSmsNotification(job, job.serviceType);
             }
 

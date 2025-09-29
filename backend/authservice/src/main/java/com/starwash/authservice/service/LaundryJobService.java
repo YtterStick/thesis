@@ -106,25 +106,7 @@ public class LaundryJobService {
         System.out.println("Creating laundry job with dueDate: " + job.getDueDate() +
                 " for transaction: " + dto.getTransactionId());
 
-        // Send notification for new laundry service creation
-        try {
-            String title = "New Laundry Service Created";
-            String message = String.format(
-                "New laundry service created for %s. Service: %s. Transaction: %s",
-                job.getCustomerName(),
-                job.getServiceType(),
-                job.getTransactionId()
-            );
-            
-            notificationService.notifyAllUsers(
-                "new_laundry_service",
-                title,
-                message,
-                job.getTransactionId()
-            );
-        } catch (Exception e) {
-            System.err.println("❌ Failed to send new service notification: " + e.getMessage());
-        }
+        
 
         return laundryJobRepository.save(job);
     }
@@ -341,41 +323,39 @@ public class LaundryJobService {
         }
     }
 
-  // In LaundryJobService, update the sendStatusChangeNotifications method:
+    // In LaundryJobService, update the sendStatusChangeNotifications method:
 
-private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, String previousStatus, String newStatus) {
-    try {
-        // Notify when load is washed
-        if ("WASHED".equalsIgnoreCase(newStatus) && !"WASHED".equalsIgnoreCase(previousStatus)) {
-            notificationService.notifyLoadWashed(
-                job.getCustomerName(),
-                job.getTransactionId(),
-                load.getLoadNumber()
-            );
+    private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, String previousStatus,
+            String newStatus) {
+        try {
+            // Notify when load is washed
+            if ("WASHED".equalsIgnoreCase(newStatus) && !"WASHED".equalsIgnoreCase(previousStatus)) {
+                notificationService.notifyLoadWashed(
+                        job.getCustomerName(),
+                        job.getTransactionId(),
+                        load.getLoadNumber());
+            }
+
+            // Notify when load is dried
+            if ("DRIED".equalsIgnoreCase(newStatus) && !"DRIED".equalsIgnoreCase(previousStatus)) {
+                notificationService.notifyLoadDried(
+                        job.getCustomerName(),
+                        job.getTransactionId(),
+                        load.getLoadNumber());
+            }
+
+            // Notify when load is completed
+            if ("COMPLETED".equalsIgnoreCase(newStatus) && !"COMPLETED".equalsIgnoreCase(previousStatus)) {
+                notificationService.notifyLoadCompleted(
+                        job.getCustomerName(),
+                        job.getTransactionId(),
+                        load.getLoadNumber());
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send status change notification: " + e.getMessage());
         }
-
-        // Notify when load is dried
-        if ("DRIED".equalsIgnoreCase(newStatus) && !"DRIED".equalsIgnoreCase(previousStatus)) {
-            notificationService.notifyLoadDried(
-                job.getCustomerName(),
-                job.getTransactionId(),
-                load.getLoadNumber()
-            );
-        }
-
-        // Notify when load is completed
-        if ("COMPLETED".equalsIgnoreCase(newStatus) && !"COMPLETED".equalsIgnoreCase(previousStatus)) {
-            notificationService.notifyLoadCompleted(
-                job.getCustomerName(),
-                job.getTransactionId(),
-                load.getLoadNumber()
-            );
-        }
-
-    } catch (Exception e) {
-        System.err.println("❌ Failed to send status change notification: " + e.getMessage());
     }
-}
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
@@ -388,18 +368,16 @@ private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, 
         try {
             String title = "Load Completed";
             String message = String.format(
-                "Load %d for %s has been completed. Transaction: %s",
-                loadNumber,
-                job.getCustomerName(),
-                job.getTransactionId()
-            );
-            
+                    "Load %d for %s has been completed. Transaction: %s",
+                    loadNumber,
+                    job.getCustomerName(),
+                    job.getTransactionId());
+
             notificationService.notifyAllUsers(
-                "load_completed",
-                title,
-                message,
-                job.getTransactionId()
-            );
+                    "load_completed",
+                    title,
+                    message,
+                    job.getTransactionId());
         } catch (Exception e) {
             System.err.println("❌ Failed to send completion notification: " + e.getMessage());
         }
@@ -407,31 +385,59 @@ private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, 
         return job;
     }
 
-    private void sendCompletionSmsNotification(LaundryJob job, int loadNumber) {
-        try {
-            // Check if this is the last load to complete
-            boolean allLoadsCompleted = job.getLoadAssignments().stream()
-                    .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
+   private void sendCompletionSmsNotification(LaundryJob job, int loadNumber) {
+    System.out.println("🎯 sendCompletionSmsNotification called!");
+    System.out.println("🎯 Job: " + job.getTransactionId());
+    System.out.println("🎯 Customer: " + job.getCustomerName());
+    System.out.println("🎯 Contact: " + job.getContact());
+    System.out.println("🎯 Load that triggered completion: " + loadNumber);
+    
+    try {
+        boolean allLoadsCompleted = job.getLoadAssignments().stream()
+            .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
 
-            if (allLoadsCompleted) {
-                // Get transaction details for service type
-                Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
-                        .orElse(null);
+        System.out.println("🎯 All loads completed: " + allLoadsCompleted);
+        
+        // Log all load statuses
+        System.out.println("🎯 Load statuses:");
+        job.getLoadAssignments().forEach(load -> {
+            System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus() + 
+                             " (Machine: " + load.getMachineId() + ")");
+        });
+        
+        if (allLoadsCompleted) {
+            System.out.println("🚀 ALL LOADS COMPLETED! Sending SMS notification...");
+            
+            Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
+                    .orElse(null);
 
-                String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
-
-                // Send SMS notification
-                smsService.sendLoadCompletedNotification(
-                        job.getContact(),
-                        job.getCustomerName(),
-                        serviceType);
-
-                System.out.println("📱 SMS notification sent for completed job: " + job.getTransactionId());
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Failed to send SMS notification: " + e.getMessage());
+            String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
+            
+            System.out.println("📱 SMS Details:");
+            System.out.println("   📞 Phone: " + job.getContact());
+            System.out.println("   👤 Customer: " + job.getCustomerName());
+            System.out.println("   🛠️ Service: " + serviceType);
+            
+            // Send SMS notification
+            smsService.sendLoadCompletedNotification(
+                    job.getContact(),
+                    job.getCustomerName(),
+                    serviceType);
+                    
+            System.out.println("✅ SMS notification process completed for job: " + job.getTransactionId());
+            
+        } else {
+            System.out.println("⏳ Not all loads completed yet. Skipping SMS.");
+            int completedCount = (int) job.getLoadAssignments().stream()
+                .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
+                .count();
+            System.out.println("⏳ Completed: " + completedCount + "/" + job.getLoadAssignments().size());
         }
+    } catch (Exception e) {
+        System.err.println("❌ Error in sendCompletionSmsNotification: " + e.getMessage());
+        e.printStackTrace();
     }
+}
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob updateLoadDuration(String transactionId, int loadNumber, int durationMinutes,

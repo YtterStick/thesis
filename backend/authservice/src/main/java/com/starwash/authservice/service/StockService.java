@@ -32,37 +32,38 @@ public class StockService {
         newItem.setCreatedAt(LocalDateTime.now());
         newItem.setLastUpdated(LocalDateTime.now());
         newItem.setLastRestock(newItem.getLastRestock() != null ? newItem.getLastRestock() : LocalDateTime.now());
-        
+
         StockItem savedItem = stockRepository.save(newItem);
-        
+
         // Notify about initial stock status
         notificationService.notifyCurrentStockStatus(savedItem);
         return savedItem;
     }
 
+    // In StockService.java - Update the updateItem method
     public Optional<StockItem> updateItem(String id, StockItem updatedItem) {
         validateThresholds(updatedItem);
-        
+
         return stockRepository.findById(id).map(existing -> {
             Integer previousQuantity = existing.getQuantity();
-            
+
             existing.setName(updatedItem.getName());
             existing.setQuantity(updatedItem.getQuantity());
             existing.setUnit(updatedItem.getUnit());
             existing.setUpdatedBy(updatedItem.getUpdatedBy());
             existing.setLowStockThreshold(updatedItem.getLowStockThreshold());
             existing.setAdequateStockThreshold(updatedItem.getAdequateStockThreshold());
-            
+
             if (updatedItem.getLastRestock() != null) {
                 existing.setLastRestock(updatedItem.getLastRestock());
             }
-            
+
             existing.setLastRestockAmount(updatedItem.getLastRestockAmount());
             existing.setLastUpdated(LocalDateTime.now());
-            
+
             StockItem savedItem = stockRepository.save(existing);
-            
-            // Check for stock level changes and notify
+
+            // Always check stock level, not just on transitions
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
             return savedItem;
         });
@@ -79,30 +80,31 @@ public class StockService {
     public Optional<StockItem> addStock(String id, int amount, String updatedBy) {
         return stockRepository.findById(id).map(item -> {
             Integer previousQuantity = item.getQuantity();
-            
+
             item.setQuantity(item.getQuantity() + amount);
             item.setLastRestockAmount(amount);
             item.setLastRestock(LocalDateTime.now());
             item.setLastUpdated(LocalDateTime.now());
             item.setUpdatedBy(updatedBy);
-            
+
             StockItem savedItem = stockRepository.save(item);
-            
+
             // Notify about restock
-            String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s", 
-                item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
-            
-            notificationService.notifyAllUsers("inventory_update", 
-                "Restock Completed", message, item.getId());
-            
+            String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s",
+                    item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
+
+            notificationService.notifyAllUsers("inventory_update",
+                    "Restock Completed", message, item.getId());
+
             // Check for stock level transitions
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
-            
+
             return savedItem;
         });
     }
 
-    // Remove the old checkStockStatusAndNotify method since we're using the enhanced version in NotificationService
+    // Remove the old checkStockStatusAndNotify method since we're using the
+    // enhanced version in NotificationService
 
     private void validateThresholds(StockItem item) {
         Integer low = item.getLowStockThreshold();

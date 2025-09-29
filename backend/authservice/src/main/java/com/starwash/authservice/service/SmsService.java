@@ -1,16 +1,19 @@
 package com.starwash.authservice.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
 public class SmsService {
     
-    private static final String SMS_SERVER_URL = "http://192.168.3.100:5001/send-sms";
+    @Value("${sms.server.url}")
+    private String smsServerUrl;
     
     @Autowired
     private RestTemplate restTemplate;
@@ -21,6 +24,12 @@ public class SmsService {
             customerName, serviceType
         );
         
+        System.out.println("🚀 SMS Notification Triggered!");
+        System.out.println("📞 Phone: " + phoneNumber);
+        System.out.println("👤 Customer: " + customerName);
+        System.out.println("🛠️ Service: " + serviceType);
+        System.out.println("🔗 SMS Server URL: " + smsServerUrl);
+        
         sendSms(phoneNumber, message);
     }
     
@@ -30,19 +39,20 @@ public class SmsService {
         request.put("message", message);
         
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                SMS_SERVER_URL, 
+            System.out.println("📤 Making POST request to: " + smsServerUrl);
+            
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                smsServerUrl, 
                 request, 
-                Map.class
+                String.class
             );
             
-            if (response.getStatusCode().is2xxSuccessful()) {
-                System.out.println("✅ SMS sent to " + phoneNumber);
-            } else {
-                System.out.println("❌ SMS failed: " + response.getBody());
-            }
+            System.out.println("✅ SMS Server Response Status: " + response.getStatusCode());
+            System.out.println("✅ SMS Server Response Body: " + response.getBody());
+            
         } catch (Exception e) {
             System.err.println("❌ Failed to send SMS: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

@@ -105,7 +105,7 @@ public class NotificationService {
         notifyAllUsers(type, title, message, transactionId);
     }
 
-    // Enhanced stock level notification logic
+    // Enhanced stock level notification logic - UPDATED VERSION
     public void checkAndNotifyStockLevel(StockItem item, Integer previousQuantity) {
         if (item.getLowStockThreshold() == null || item.getAdequateStockThreshold() == null) {
             return;
@@ -115,33 +115,43 @@ public class NotificationService {
         int lowThreshold = item.getLowStockThreshold();
         int adequateThreshold = item.getAdequateStockThreshold();
 
-        // Notify for initial item creation
-        if (previousQuantity == null) {
-            handleInitialStockNotification(item, currentQuantity, lowThreshold, adequateThreshold);
-            return;
+        // Always check current status regardless of previous quantity
+        checkCurrentStockStatus(item, currentQuantity, lowThreshold, adequateThreshold);
+        
+        // Also check transitions if we have previous quantity
+        if (previousQuantity != null) {
+            handleStockLevelTransitions(item, previousQuantity, currentQuantity, lowThreshold, adequateThreshold);
         }
-
-        // Check stock level transitions
-        handleStockLevelTransitions(item, previousQuantity, currentQuantity, lowThreshold, adequateThreshold);
     }
 
-    private void handleInitialStockNotification(StockItem item, int currentQuantity, int lowThreshold, int adequateThreshold) {
+    private void checkCurrentStockStatus(StockItem item, int currentQuantity, int lowThreshold, int adequateThreshold) {
+        String message;
+        String title;
+        String type;
+        
         if (currentQuantity == 0) {
-            String message = String.format("%s is out of stock. Please restock immediately.", item.getName());
-            notifyAllUsers("stock_alert", "Out of Stock Alert", message, item.getId());
+            title = "Out of Stock Alert";
+            message = String.format("%s is out of stock. Please restock immediately.", item.getName());
+            type = "stock_alert";
         } else if (currentQuantity <= lowThreshold) {
-            String message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
+            title = "Low Stock Alert";
+            message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
                 item.getName(), currentQuantity, item.getUnit(), lowThreshold, item.getUnit());
-            notifyAllUsers("stock_alert", "Low Stock Alert", message, item.getId());
+            type = "stock_alert";
         } else if (currentQuantity <= adequateThreshold) {
-            String message = String.format("%s is at adequate level. Current quantity: %d %s.", 
+            title = "Adequate Stock";
+            message = String.format("%s is at adequate level. Current quantity: %d %s.", 
                 item.getName(), currentQuantity, item.getUnit());
-            notifyAllUsers("stock_info", "Adequate Stock", message, item.getId());
+            type = "stock_info";
         } else {
-            String message = String.format("%s is fully stocked. Current quantity: %d %s.", 
+            title = "Fully Stocked";
+            message = String.format("%s is fully stocked. Current quantity: %d %s.", 
                 item.getName(), currentQuantity, item.getUnit());
-            notifyAllUsers("stock_info", "Fully Stocked", message, item.getId());
+            type = "stock_info";
         }
+        
+        // Only notify if this is a meaningful state change
+        notifyAllUsers(type, title, message, item.getId());
     }
 
     private void handleStockLevelTransitions(StockItem item, int previousQuantity, int currentQuantity, 

@@ -1,18 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { 
-    ChevronsLeft, 
-    Moon, 
-    Search, 
-    Sun, 
-    Bell, 
-    X, 
-    CheckCircle, 
-    AlertCircle, 
-    Info, 
+import {
+    ChevronsLeft,
+    Moon,
+    Search,
+    Sun,
+    Bell,
+    X,
+    CheckCircle,
+    AlertCircle,
+    Info,
     ClipboardList,
-    RefreshCw // Added RefreshCw import
+    RefreshCw,
 } from "lucide-react";
 import PropTypes from "prop-types";
 
@@ -22,6 +22,8 @@ export const Header = ({ collapsed, setCollapsed }) => {
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [showNewNotification, setShowNewNotification] = useState(false);
+    const [latestNotification, setLatestNotification] = useState(null);
     const notificationRef = useRef(null);
 
     // Fetch notifications
@@ -65,9 +67,12 @@ export const Header = ({ collapsed, setCollapsed }) => {
             if (response.ok) {
                 const count = await response.json();
                 setUnreadCount(count);
+                return count;
             }
+            return unreadCount;
         } catch (error) {
             console.error("Error fetching unread count:", error);
+            return unreadCount;
         }
     };
 
@@ -126,6 +131,39 @@ export const Header = ({ collapsed, setCollapsed }) => {
         }
     };
 
+    // Helper functions for notification styling
+    const getNotificationColor = (type) => {
+        switch (type) {
+            case "stock_alert": return "#ef4444"; // red
+            case "inventory_update": return "#10b981"; // green
+            case "stock_info": return "#3b82f6"; // blue
+            case "load_washed": return "#3b82f6"; // blue
+            case "load_dried": return "#f59e0b"; // orange
+            case "load_completed": return "#10b981"; // green
+            default: return "#6b7280"; // gray
+        }
+    };
+
+    const getNotificationIcon = (type) => {
+        const iconProps = { size: 18 };
+        switch (type) {
+            case "stock_alert":
+                return <AlertCircle {...iconProps} className="text-red-500" />;
+            case "inventory_update":
+                return <CheckCircle {...iconProps} className="text-green-500" />;
+            case "stock_info":
+                return <Info {...iconProps} className="text-blue-500" />;
+            case "load_washed":
+                return <RefreshCw {...iconProps} className="text-blue-500" />;
+            case "load_dried":
+                return <Sun {...iconProps} className="text-orange-500" />;
+            case "load_completed":
+                return <CheckCircle {...iconProps} className="text-green-500" />;
+            default:
+                return <Bell {...iconProps} className="text-gray-500" />;
+        }
+    };
+
     // Close notification dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
@@ -139,7 +177,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
         };
     }, []);
 
-    // Fetch notifications when dropdown opens
+    // Enhanced useEffect for notifications
     useEffect(() => {
         if (notificationOpen) {
             fetchNotifications();
@@ -147,14 +185,35 @@ export const Header = ({ collapsed, setCollapsed }) => {
         }
     }, [notificationOpen]);
 
-    // Periodically check for new notifications
+    // New useEffect for real-time notification handling
     useEffect(() => {
+        const checkForNewNotifications = async () => {
+            const previousUnreadCount = unreadCount;
+            const newUnreadCount = await fetchUnreadCount();
+            
+            // If unread count increased, show notification
+            if (newUnreadCount > previousUnreadCount && previousUnreadCount >= 0) {
+                // Fetch the latest notification to show
+                await fetchNotifications();
+                const latestUnread = notifications.find(n => !n.read);
+                if (latestUnread) {
+                    setLatestNotification(latestUnread);
+                    setShowNewNotification(true);
+                    
+                    // Auto-hide after 5 seconds
+                    setTimeout(() => {
+                        setShowNewNotification(false);
+                    }, 5000);
+                }
+            }
+        };
+
         const interval = setInterval(() => {
-            fetchUnreadCount();
-        }, 30000); // Check every 30 seconds
+            checkForNewNotifications();
+        }, 10000); // Check every 10 seconds
 
         return () => clearInterval(interval);
-    }, []);
+    }, [unreadCount, notifications]);
 
     return (
         <header
@@ -249,15 +308,15 @@ export const Header = ({ collapsed, setCollapsed }) => {
                         />
                     </button>
 
-                    {/* 🔔 Notifications */}
-                    <div
-                        className="relative"
-                        ref={notificationRef}
-                    >
+                    {/* 🔔 Enhanced Notification System */}
+                    <div className="relative" ref={notificationRef}>
                         <button
                             className="group relative size-10 rounded-md transition-colors hover:bg-slate-200 dark:hover:bg-slate-800"
                             title="Notifications"
-                            onClick={() => setNotificationOpen(!notificationOpen)}
+                            onClick={() => {
+                                setNotificationOpen(!notificationOpen);
+                                setShowNewNotification(false); // Hide toast when opening dropdown
+                            }}
                             onMouseEnter={() => setNotificationOpen(true)}
                         >
                             <Bell
@@ -272,6 +331,54 @@ export const Header = ({ collapsed, setCollapsed }) => {
                                 </span>
                             )}
                         </button>
+
+                        {/* Toast Notification for new alerts */}
+                        <AnimatePresence>
+                            {showNewNotification && latestNotification && (
+                                <motion.div
+                                    className="absolute right-0 top-12 z-50 w-80 rounded-md border shadow-lg cursor-pointer"
+                                    initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                                    transition={{ duration: 0.3 }}
+                                    onClick={() => {
+                                        setNotificationOpen(true);
+                                        setShowNewNotification(false);
+                                        markAsRead(latestNotification.id);
+                                    }}
+                                    style={{
+                                        backgroundColor: theme === "dark" ? "#1e293b" : "white",
+                                        borderColor: theme === "dark" ? "#334155" : "#e2e8f0",
+                                        borderLeft: `4px solid ${getNotificationColor(latestNotification.type)}`
+                                    }}
+                                >
+                                    <div className="p-3">
+                                        <div className="flex items-start gap-3">
+                                            <div className="mt-0.5">
+                                                {getNotificationIcon(latestNotification.type)}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="text-sm font-medium text-white">
+                                                    {latestNotification.title}
+                                                </h4>
+                                                <p className="mt-1 text-sm text-slate-300">
+                                                    {latestNotification.message}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowNewNotification(false);
+                                                }}
+                                                className="text-slate-400 hover:text-white"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Notification dropdown */}
                         <AnimatePresence>
@@ -313,49 +420,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
                                                     onClick={() => markAsRead(notification.id)}
                                                 >
                                                     <div className="mt-0.5">
-                                                        {notification.type === "stock_alert" && (
-                                                            <AlertCircle
-                                                                size={18}
-                                                                className="text-red-500"
-                                                            />
-                                                        )}
-                                                        {notification.type === "inventory_update" && (
-                                                            <CheckCircle
-                                                                size={18}
-                                                                className="text-green-500"
-                                                            />
-                                                        )}
-                                                        {notification.type === "stock_info" && (
-                                                            <Info
-                                                                size={18}
-                                                                className="text-blue-500"
-                                                            />
-                                                        )}
-                                                        {/* Laundry service notifications */}
-                                                        {notification.type === "new_laundry_service" && (
-                                                            <Bell
-                                                                size={18}
-                                                                className="text-purple-500"
-                                                            />
-                                                        )}
-                                                        {notification.type === "load_washed" && (
-                                                            <RefreshCw
-                                                                size={18}
-                                                                className="text-blue-500"
-                                                            />
-                                                        )}
-                                                        {notification.type === "load_dried" && (
-                                                            <Sun
-                                                                size={18}
-                                                                className="text-orange-500"
-                                                            />
-                                                        )}
-                                                        {notification.type === "load_completed" && (
-                                                            <CheckCircle
-                                                                size={18}
-                                                                className="text-green-500"
-                                                            />
-                                                        )}
+                                                        {getNotificationIcon(notification.type)}
                                                     </div>
                                                     <div className="flex-1">
                                                         <h4
