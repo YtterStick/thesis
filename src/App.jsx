@@ -30,6 +30,9 @@ import StaffServiceTracking from "@/routes/Staff/tracking/MainPage";
 import StaffClaimingLaundry from "@/routes/Staff/claiming/MainPage";
 import MissingItemsPage from "./routes/Staff/missing/MainPage";
 
+// 👤 User Landing Page (No Login Required)
+import LandingPage from "@/routes/User/landing-page/LandingPage";
+
 // ✅ Toast Provider
 import { Toaster } from "@/components/ui/toaster";
 
@@ -64,7 +67,8 @@ const UnauthorizedPage = () => (
 
 function App() {
   const router = createBrowserRouter([
-    { path: "/", element: <Navigate to="/login" replace /> },
+    { path: "/", element: <Navigate to="/home" replace /> }, // Changed default to home
+    { path: "/home", element: <LandingPage /> }, // User landing page
     { path: "/login", element: <LoginPage /> },
     { path: "/unauthorized", element: <UnauthorizedPage /> },
 
