@@ -4,16 +4,33 @@ import { motion } from "framer-motion";
 // Components
 import Header from "@/routes/User/layouts/Header";
 import Footer from "@/routes/User/layouts/Footer";
+import Services from "./services";
+import ServiceTracking from "./ServiceTracking"; // New component
 
 // Assets
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
-import assetClothing from "@/assets/USER_ASSET/asset_clothing.png";
 
 const LandingPage = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeSection, setActiveSection] = useState("home"); // Track active section
 
   useEffect(() => {
     setIsVisible(true);
+    
+    // Check if mobile on component mount
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
   }, []);
 
   const stats = [
@@ -22,27 +39,9 @@ const LandingPage = () => {
     { number: "10", label: "Total No. of Drying" }
   ];
 
-  const services = [
-    {
-      title: "Wash Only",
-      description:
-        "Our wash-only service includes the provision of detergent and softener, and ensures your clothes are thoroughly cleaned and fresh-smelling."
-    },
-    {
-      title: "Dry Only",
-      description:
-        "Our dry-only service is focused solely on getting your clothes dried quickly and efficiently, using our high-capacity dryers."
-    },
-    {
-      title: "Wash and Dry",
-      description:
-        "Our combined wash and dry service ensures your clothes are cleaned and dried in one seamless process, saving you time and effort."
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-[#0B2B26] text-white font-poppins" id="home">
-      <Header />
+      <Header activeSection={activeSection} setActiveSection={setActiveSection} />
 
       <div className="h-24" />
 
@@ -80,6 +79,7 @@ const LandingPage = () => {
                 className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center items-center"
               >
                 <button 
+                  onClick={() => setActiveSection("services")}
                   className="px-6 py-3 md:px-10 md:py-4 rounded-xl font-semibold text-base md:text-lg transition-all transform hover:scale-105 border-2 shadow-lg"
                   style={{ 
                     backgroundColor: '#D5DCDB',
@@ -90,6 +90,7 @@ const LandingPage = () => {
                   Our Service
                 </button>
                 <button 
+                  onClick={() => setActiveSection("service_tracking")}
                   className="px-6 py-3 md:px-10 md:py-4 rounded-xl font-semibold text-base md:text-lg transition-all transform hover:scale-105 border-2 shadow-lg"
                   style={{ 
                     backgroundColor: '#18442AF5',
@@ -148,42 +149,11 @@ const LandingPage = () => {
         </div>
       </motion.section>
 
-      <motion.section
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isVisible ? 1 : 0 }}
-        transition={{ duration: 0.8, delay: 1.2 }}
-        className="py-16 md:py-20 px-4 bg-[#0B2B26]"
-        id="services"
-      >
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-bold text-center mb-12 md:mb-16 text-white">
-            Our <span className="text-white font-light">Services</span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {services.map((service, index) => (
-              <motion.div
-                key={service.title}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 1.4 + index * 0.2 }}
-                className="bg-[#1C3F3A] rounded-2xl p-6 md:p-8 border-2 border-[#2A524C] hover:border-white/30 hover:shadow-2xl transition-all duration-300 h-full flex flex-col"
-              >
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-4 md:mb-6 text-center">
-                  {service.title}
-                </h3>
-                <p className="text-white/90 leading-relaxed text-base md:text-lg flex-grow">
-                  {service.description}
-                </p>
-                <div className="text-center mt-6">
-                  <button className="text-white hover:text-white font-semibold text-base md:text-lg border-b-2 border-white hover:border-white transition-all py-1">
-                    Details →
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
+      {/* Services Section */}
+      <Services isVisible={isVisible} isMobile={isMobile} />
+
+      {/* Service Tracking Section */}
+      <ServiceTracking isVisible={isVisible} />
 
       <Footer />
     </div>
