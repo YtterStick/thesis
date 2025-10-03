@@ -1,7 +1,21 @@
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import Lottie from "lottie-react";
-import { QrCode, Search, Camera, Upload, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { 
+  QrCode, 
+  Search, 
+  Camera, 
+  Upload, 
+  X, 
+  ChevronDown, 
+  ChevronUp, 
+  ChevronLeft, 
+  ChevronRight,
+  CheckCircle2,
+  AlertTriangle,
+  Bell,
+  Phone
+} from "lucide-react";
 
 // Import Lottie animations
 import washingMachine from "@/assets/lottie/washing-machine.json";
@@ -21,6 +35,7 @@ const ServiceTracking = ({ isVisible }) => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const progressSectionRef = useRef(null);
+  const mainCardRef = useRef(null);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -36,15 +51,16 @@ const ServiceTracking = ({ isVisible }) => {
     };
   }, []);
 
-  // Auto-scroll to progress section when status is shown
+  // Auto-scroll to show the entire main card when status is shown
   useEffect(() => {
-    if (showStatus && progressSectionRef.current) {
+    if (showStatus && mainCardRef.current) {
       setTimeout(() => {
-        progressSectionRef.current.scrollIntoView({ 
+        mainCardRef.current.scrollIntoView({ 
           behavior: 'smooth',
-          block: 'start'
+          block: 'start',
+          inline: 'nearest'
         });
-      }, 300);
+      }, 100);
     }
   }, [showStatus]);
 
@@ -322,36 +338,37 @@ const ServiceTracking = ({ isVisible }) => {
     >
       <div className="max-w-[90%] mx-auto">
         <motion.div
+          ref={mainCardRef}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 2.0 }}
-          className="rounded-2xl p-6 md:p-8 border-2 mb-8"
+          className="rounded-xl p-4 md:p-6 border-2 mb-8"
           style={{
             backgroundColor: '#F3EDE3',
             borderColor: '#2A524C',
             color: '#13151B'
           }}
         >
-          {/* Receipt Input Section */}
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6">
+          {/* Receipt Input Section - REDUCED SIZE */}
+          <div className="mb-6">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4">
               {/* "ENTER RECEIPT NUMBER:" text */}
-              <h3 className="text-lg md:text-2xl font-bold whitespace-nowrap" style={{ color: '#13151B' }}>
+              <h3 className="text-base md:text-xl font-bold whitespace-nowrap" style={{ color: '#13151B' }}>
                 ENTER RECEIPT NUMBER:
               </h3>
               
               {/* Input and Button Container */}
-              <form onSubmit={handleSubmit} className="flex flex-1 max-w-2xl w-full items-center gap-2 md:gap-3">
+              <form onSubmit={handleSubmit} className="flex flex-1 max-w-2xl w-full items-center gap-2">
                 <div className="relative flex-1">
-                  <div className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2">
-                    <Search className="w-4 h-4 md:w-5 md:h-5 text-[#6B7280]" />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                    <Search className="w-4 h-4 text-[#6B7280]" />
                   </div>
                   <input
                     type="text"
                     value={receiptNumber}
                     onChange={(e) => setReceiptNumber(e.target.value)}
                     placeholder="Write here..."
-                    className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2 md:py-3 bg-white border-2 border-[#2A524C] rounded-xl text-[#13151B] placeholder-[#6B7280] focus:outline-none focus:border-[#4A756D] text-sm md:text-base"
+                    className="w-full pl-9 pr-3 py-2 bg-white border-2 border-[#2A524C] rounded-lg text-[#13151B] placeholder-[#6B7280] focus:outline-none focus:border-[#4A756D] text-sm"
                     style={{ backgroundColor: '#FFFFFF' }}
                   />
                 </div>
@@ -359,14 +376,14 @@ const ServiceTracking = ({ isVisible }) => {
                 {/* View Button for Manual Input */}
                 <button
                   type="submit"
-                  className="py-2 md:py-3 px-4 md:px-6 font-semibold rounded-xl transition-all transform hover:scale-105 text-sm md:text-base border-2 shadow-lg flex items-center justify-center gap-1 md:gap-2 whitespace-nowrap flex-shrink-0"
+                  className="py-2 px-3 font-semibold rounded-lg transition-all transform hover:scale-105 text-sm border shadow flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0"
                   style={{ 
                     backgroundColor: '#18442AF5',
                     color: '#D5DCDB',
                     borderColor: '#18442AF5'
                   }}
                 >
-                  <Search className="w-4 h-4 md:w-5 md:h-5" />
+                  <Search className="w-4 h-4" />
                   View
                 </button>
 
@@ -374,7 +391,7 @@ const ServiceTracking = ({ isVisible }) => {
                 <button
                   type="button"
                   onClick={handleScanQR}
-                  className="py-2 md:py-3 px-3 md:px-4 font-semibold rounded-xl transition-all transform hover:scale-105 text-sm md:text-base border-2 shadow-lg flex items-center justify-center gap-1 md:gap-2 whitespace-nowrap flex-shrink-0"
+                  className="py-2 px-3 font-semibold rounded-lg transition-all transform hover:scale-105 text-sm border shadow flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0"
                   style={{ 
                     backgroundColor: '#2A524C',
                     color: '#D5DCDB',
@@ -383,9 +400,9 @@ const ServiceTracking = ({ isVisible }) => {
                   disabled={isScanning}
                 >
                   {isScanning ? (
-                    <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <QrCode className="w-4 h-4 md:w-5 md:h-5" />
+                    <QrCode className="w-4 h-4" />
                   )}
                   <span className="hidden sm:inline">Scan QR</span>
                 </button>
@@ -393,41 +410,41 @@ const ServiceTracking = ({ isVisible }) => {
             </div>
           </div>
 
-          {/* QR Scanner Modal */}
+          {/* QR Scanner Modal - REDUCED SIZE */}
           {showScanner && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
             >
-              <div className="bg-white p-4 md:p-6 rounded-2xl max-w-md w-full mx-4 relative">
+              <div className="bg-white p-4 rounded-xl max-w-md w-full mx-4 relative">
                 {/* Close Button */}
                 <button
                   onClick={closeScanner}
-                  className="absolute top-2 right-2 md:top-4 md:right-4 text-gray-500 hover:text-gray-700"
+                  className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
                 >
-                  <X className="w-5 h-5 md:w-6 md:h-6" />
+                  <X className="w-5 h-5" />
                 </button>
 
-                <h3 className="text-lg md:text-xl font-bold mb-4 text-center">Scan QR Code</h3>
+                <h3 className="text-lg font-bold mb-3 text-center">Scan QR Code</h3>
                 
                 {/* Choice Modal - Show when no method selected */}
                 {!scanMethod && (
-                  <div className="space-y-3 md:space-y-4">
-                    <p className="text-gray-600 text-center text-sm md:text-base mb-4">
+                  <div className="space-y-3">
+                    <p className="text-gray-600 text-center text-sm mb-3">
                       Choose how you want to scan the QR code:
                     </p>
                     
                     <button
                       onClick={startCameraScan}
-                      className="w-full py-3 md:py-4 px-4 md:px-6 bg-[#18442A] text-white rounded-xl font-semibold hover:bg-[#2A524C] transition-colors flex items-center justify-center gap-2 md:gap-3 text-sm md:text-base"
+                      className="w-full py-3 px-4 bg-[#18442A] text-white rounded-lg font-semibold hover:bg-[#2A524C] transition-colors flex items-center justify-center gap-2 text-sm"
                     >
-                      <Camera className="w-4 h-4 md:w-6 md:h-6" />
+                      <Camera className="w-4 h-4" />
                       Use Camera
                     </button>
                     
-                    <label className="block w-full py-3 md:py-4 px-4 md:px-6 bg-[#2A524C] text-white rounded-xl font-semibold hover:bg-[#3A635C] transition-colors flex items-center justify-center gap-2 md:gap-3 cursor-pointer text-sm md:text-base">
-                      <Upload className="w-4 h-4 md:w-6 md:h-6" />
+                    <label className="block w-full py-3 px-4 bg-[#2A524C] text-white rounded-lg font-semibold hover:bg-[#3A635C] transition-colors flex items-center justify-center gap-2 cursor-pointer text-sm">
+                      <Upload className="w-4 h-4" />
                       Upload Image
                       <input
                         type="file"
@@ -442,7 +459,7 @@ const ServiceTracking = ({ isVisible }) => {
                 {/* Camera Preview */}
                 {scanMethod === 'camera' && (
                   <>
-                    <div className="w-full h-48 md:h-64 bg-black rounded-lg mb-4 relative overflow-hidden">
+                    <div className="w-full h-48 bg-black rounded-lg mb-3 relative overflow-hidden">
                       <video
                         ref={videoRef}
                         className="w-full h-full object-cover"
@@ -452,21 +469,21 @@ const ServiceTracking = ({ isVisible }) => {
                       
                       {/* QR Scanner Frame Overlay */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-32 h-32 md:w-48 md:h-48 border-2 border-green-400 border-dashed rounded-lg"></div>
+                        <div className="w-32 h-32 border-2 border-green-400 border-dashed rounded-lg"></div>
                       </div>
                       
                       {isScanning && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                           <div className="text-center text-white">
-                            <div className="w-8 h-8 md:w-12 md:h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                            <p className="text-sm md:text-base">Scanning QR code...</p>
+                            <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            <p className="text-sm">Scanning QR code...</p>
                           </div>
                         </div>
                       )}
                     </div>
                     
-                    <div className="text-center mb-4">
-                      <p className="text-xs md:text-sm text-gray-600">
+                    <div className="text-center mb-3">
+                      <p className="text-xs text-gray-600">
                         Position the QR code within the frame
                       </p>
                     </div>
@@ -475,11 +492,11 @@ const ServiceTracking = ({ isVisible }) => {
 
                 {/* File Upload Preview */}
                 {scanMethod === 'file' && isScanning && (
-                  <div className="w-full h-48 md:h-64 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
+                  <div className="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
                     <div className="text-center">
-                      <div className="w-8 h-8 md:w-12 md:h-12 border-4 border-[#18442A] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                      <p className="text-gray-600 text-sm md:text-base">Processing image...</p>
-                      <p className="text-gray-500 text-xs md:text-sm mt-2">Detecting QR code...</p>
+                      <div className="w-6 h-6 border-4 border-[#18442A] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <p className="text-gray-600 text-sm">Processing image...</p>
+                      <p className="text-gray-500 text-xs mt-1">Detecting QR code...</p>
                     </div>
                   </div>
                 )}
@@ -488,7 +505,7 @@ const ServiceTracking = ({ isVisible }) => {
                 {scanMethod && (
                   <button
                     onClick={closeScanner}
-                    className="w-full py-2 md:py-3 bg-gray-500 text-white rounded-xl font-semibold hover:bg-gray-600 transition-colors text-sm md:text-base"
+                    className="w-full py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors text-sm"
                   >
                     Cancel Scan
                   </button>
@@ -497,33 +514,33 @@ const ServiceTracking = ({ isVisible }) => {
             </motion.div>
           )}
 
-          {/* Customer Information & Laundry Progress - Only show when View is clicked */}
+          {/* Customer Information & Laundry Progress - REDUCED SIZE */}
           {showStatus && (
             <motion.div
               ref={progressSectionRef}
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               transition={{ duration: 0.5 }}
-              className="border-t border-[#2A524C] pt-6 md:pt-8"
+              className="border-t border-[#2A524C] pt-4"
             >
               {/* Customer Information Section */}
-              <div className="mb-6 md:mb-8">
-                <h3 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center" style={{ color: '#13151B' }}>
+              <div className="mb-4">
+                <h3 className="text-lg md:text-xl font-bold mb-3 text-center" style={{ color: '#13151B' }}>
                   Customer Information
                 </h3>
                 
                 {/* Mobile View - Compact Customer Info */}
                 {isMobile && !showFullCustomerInfo && (
-                  <div className="bg-white rounded-xl border-2 border-[#2A524C] p-4">
+                  <div className="bg-white rounded-lg border-2 border-[#2A524C] p-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#18442A] rounded-full flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-[#18442A] rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold text-xs">
                             {customerData.name.charAt(0)}
                           </span>
                         </div>
                         <div>
-                          <h4 className="font-semibold text-[#13151B] text-base">
+                          <h4 className="font-semibold text-[#13151B] text-sm">
                             {customerData.name}
                           </h4>
                           <p className="text-[#6B7280] text-xs">
@@ -533,10 +550,10 @@ const ServiceTracking = ({ isVisible }) => {
                       </div>
                       <button
                         onClick={toggleFullCustomerInfo}
-                        className="flex items-center gap-1 text-[#18442A] font-semibold text-sm"
+                        className="flex items-center gap-1 text-[#18442A] font-semibold text-xs"
                       >
                         View All
-                        <ChevronDown className="w-4 h-4" />
+                        <ChevronDown className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
@@ -544,41 +561,41 @@ const ServiceTracking = ({ isVisible }) => {
 
                 {/* Mobile View - Full Customer Info (when expanded) */}
                 {isMobile && showFullCustomerInfo && (
-                  <div className="bg-white rounded-xl border-2 border-[#2A524C] p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-[#13151B]">Customer Details</h4>
+                  <div className="bg-white rounded-lg border-2 border-[#2A524C] p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-[#13151B] text-sm">Customer Details</h4>
                       <button
                         onClick={toggleFullCustomerInfo}
-                        className="flex items-center gap-1 text-[#18442A] font-semibold text-sm"
+                        className="flex items-center gap-1 text-[#18442A] font-semibold text-xs"
                       >
                         Show Less
-                        <ChevronUp className="w-4 h-4" />
+                        <ChevronUp className="w-3 h-3" />
                       </button>
                     </div>
                     
-                    <div className="space-y-3">
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-[#6B7280] text-sm">Customer Name</span>
+                        <span className="text-[#6B7280]">Customer Name</span>
                         <span className="font-semibold text-[#13151B]">{customerData.name}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#6B7280] text-sm">Number of Loads</span>
+                        <span className="text-[#6B7280]">Number of Loads</span>
                         <span className="font-semibold text-[#13151B]">{customerData.loads}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#6B7280] text-sm">Detergent</span>
+                        <span className="text-[#6B7280]">Detergent</span>
                         <span className="font-semibold text-[#13151B]">{customerData.detergent}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#6B7280] text-sm">Fabric</span>
+                        <span className="text-[#6B7280]">Fabric</span>
                         <span className="font-semibold text-[#13151B]">{customerData.fabric}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#6B7280] text-sm">Date Created</span>
+                        <span className="text-[#6B7280]">Date Created</span>
                         <span className="font-semibold text-[#13151B]">{customerData.dateCreated}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#6B7280] text-sm">Staff Processed By</span>
+                        <span className="text-[#6B7280]">Staff Processed By</span>
                         <span className="font-semibold text-[#13151B]">{customerData.staffProcessedBy}</span>
                       </div>
                     </div>
@@ -587,36 +604,36 @@ const ServiceTracking = ({ isVisible }) => {
 
                 {/* Desktop View - Full Customer Info */}
                 {!isMobile && (
-                  <div className="bg-white rounded-xl border-2 border-[#2A524C] p-4 md:p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  <div className="bg-white rounded-lg border-2 border-[#2A524C] p-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                       <div className="flex flex-col">
-                        <span className="text-xs md:text-sm text-[#6B7280] font-medium">Customer Name</span>
-                        <span className="text-base md:text-lg font-semibold text-[#13151B]">{customerData.name}</span>
+                        <span className="text-xs text-[#6B7280] font-medium">Customer Name</span>
+                        <span className="font-semibold text-[#13151B]">{customerData.name}</span>
                       </div>
                       
                       <div className="flex flex-col">
-                        <span className="text-xs md:text-sm text-[#6B7280] font-medium">Number of Loads</span>
-                        <span className="text-base md:text-lg font-semibold text-[#13151B]">{customerData.loads}</span>
+                        <span className="text-xs text-[#6B7280] font-medium">Number of Loads</span>
+                        <span className="font-semibold text-[#13151B]">{customerData.loads}</span>
                       </div>
                       
                       <div className="flex flex-col">
-                        <span className="text-xs md:text-sm text-[#6B7280] font-medium">Detergent</span>
-                        <span className="text-base md:text-lg font-semibold text-[#13151B]">{customerData.detergent}</span>
+                        <span className="text-xs text-[#6B7280] font-medium">Detergent</span>
+                        <span className="font-semibold text-[#13151B]">{customerData.detergent}</span>
                       </div>
                       
                       <div className="flex flex-col">
-                        <span className="text-xs md:text-sm text-[#6B7280] font-medium">Fabric</span>
-                        <span className="text-base md:text-lg font-semibold text-[#13151B]">{customerData.fabric}</span>
+                        <span className="text-xs text-[#6B7280] font-medium">Fabric</span>
+                        <span className="font-semibold text-[#13151B]">{customerData.fabric}</span>
                       </div>
                       
                       <div className="flex flex-col">
-                        <span className="text-xs md:text-sm text-[#6B7280] font-medium">Date Created</span>
-                        <span className="text-base md:text-lg font-semibold text-[#13151B]">{customerData.dateCreated}</span>
+                        <span className="text-xs text-[#6B7280] font-medium">Date Created</span>
+                        <span className="font-semibold text-[#13151B]">{customerData.dateCreated}</span>
                       </div>
                       
                       <div className="flex flex-col">
-                        <span className="text-xs md:text-sm text-[#6B7280] font-medium">Staff Processed By</span>
-                        <span className="text-base md:text-lg font-semibold text-[#13151B]">{customerData.staffProcessedBy}</span>
+                        <span className="text-xs text-[#6B7280] font-medium">Staff Processed By</span>
+                        <span className="font-semibold text-[#13151B]">{customerData.staffProcessedBy}</span>
                       </div>
                     </div>
                   </div>
@@ -624,94 +641,99 @@ const ServiceTracking = ({ isVisible }) => {
               </div>
 
               {/* Laundry Progress Section */}
-              <div className="mb-6 md:mb-8">
-                <div className="flex items-center justify-between mb-4 md:mb-6">
-                  <h3 className="text-xl md:text-2xl font-bold" style={{ color: '#13151B' }}>
+              <div className="mb-4">
+                {/* Improved Header with Better Pagination */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                  <h3 className="text-lg md:text-xl font-bold text-center sm:text-left" style={{ color: '#13151B' }}>
                     Laundry Progress
                   </h3>
                   
-                  {/* Load Navigation */}
-                  <div className="flex items-center gap-2 md:gap-4">
-                    <span className="text-sm md:text-base text-[#6B7280]">
+                  {/* Improved Pagination Controls */}
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    {/* Load Indicator */}
+                    <div className="text-sm font-semibold text-[#18442A] bg-white px-3 py-1 rounded-lg border border-[#2A524C]">
                       Load {currentLoadIndex + 1} of {laundryLoads.length}
-                    </span>
-                    <div className="flex items-center gap-1">
+                    </div>
+                    
+                    {/* Navigation Buttons */}
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={prevLoad}
                         disabled={currentLoadIndex === 0}
-                        className="p-1 md:p-2 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        className="p-2 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:bg-[#2A524C] hover:text-white"
                         style={{ 
                           backgroundColor: currentLoadIndex === 0 ? '#E5E7EB' : '#18442A',
-                          color: currentLoadIndex === 0 ? '#9CA3AF' : 'white'
+                          color: currentLoadIndex === 0 ? '#9CA3AF' : 'white',
+                          border: '2px solid #2A524C'
                         }}
                       >
-                        <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+                        <ChevronLeft className="w-4 h-4" />
                       </button>
+                      
+                      {/* Load Selector Dots - More Visible */}
+                      <div className="flex gap-1 mx-2">
+                        {laundryLoads.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => goToLoad(index)}
+                            className={`w-3 h-3 rounded-full transition-all ${
+                              index === currentLoadIndex 
+                                ? 'bg-[#18442A] scale-125 border-2 border-white shadow-lg' 
+                                : 'bg-gray-300 hover:bg-gray-400 border border-gray-400'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      
                       <button
                         onClick={nextLoad}
                         disabled={currentLoadIndex === laundryLoads.length - 1}
-                        className="p-1 md:p-2 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        className="p-2 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:bg-[#2A524C] hover:text-white"
                         style={{ 
                           backgroundColor: currentLoadIndex === laundryLoads.length - 1 ? '#E5E7EB' : '#18442A',
-                          color: currentLoadIndex === laundryLoads.length - 1 ? '#9CA3AF' : 'white'
+                          color: currentLoadIndex === laundryLoads.length - 1 ? '#9CA3AF' : 'white',
+                          border: '2px solid #2A524C'
                         }}
                       >
-                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                        <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 </div>
 
                 {/* Load Details */}
-                <div className="bg-white rounded-xl border-2 border-[#2A524C] p-4 mb-4 md:mb-6">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 text-center">
+                <div className="bg-white rounded-lg border-2 border-[#2A524C] p-3 mb-3">
+                  <div className="grid grid-cols-3 gap-3 text-center text-sm">
                     <div>
-                      <span className="text-xs md:text-sm text-[#6B7280]">Load Number</span>
-                      <p className="font-semibold text-[#13151B] text-lg md:text-xl">{currentLoad.loadNumber}</p>
+                      <span className="text-xs text-[#6B7280]">Load Number</span>
+                      <p className="font-semibold text-[#13151B]">{currentLoad.loadNumber}</p>
                     </div>
                     <div>
-                      <span className="text-xs md:text-sm text-[#6B7280]">Fabric Type</span>
+                      <span className="text-xs text-[#6B7280]">Fabric Type</span>
                       <p className="font-semibold text-[#13151B]">{currentLoad.fabricType}</p>
                     </div>
                     <div>
-                      <span className="text-xs md:text-sm text-[#6B7280]">Detergent</span>
+                      <span className="text-xs text-[#6B7280]">Detergent</span>
                       <p className="font-semibold text-[#13151B]">{currentLoad.detergent}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Load Progress Dots */}
-                <div className="flex justify-center mb-4 md:mb-6">
-                  <div className="flex gap-2">
-                    {laundryLoads.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => goToLoad(index)}
-                        className={`w-3 h-3 rounded-full transition-all ${
-                          index === currentLoadIndex 
-                            ? 'bg-[#18442A] scale-125' 
-                            : 'bg-gray-300 hover:bg-gray-400'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
                 {/* Mobile View - Current Step Only */}
                 {isMobile && (
-                  <div className="bg-white rounded-xl border-2 border-[#2A524C] p-4">
-                    <div className="text-center mb-4">
-                      <div className="w-16 h-16 mx-auto mb-3">
+                  <div className="bg-white rounded-lg border-2 border-[#2A524C] p-3">
+                    <div className="text-center mb-3">
+                      <div className="w-12 h-12 mx-auto mb-2">
                         <Lottie 
                           animationData={currentStep.lottie}
                           loop={currentStep.active}
                           autoplay={true}
                         />
                       </div>
-                      <h4 className="font-semibold text-[#13151B] text-lg mb-1">
+                      <h4 className="font-semibold text-[#13151B] text-sm mb-1">
                         {currentStep.title}
                       </h4>
-                      <p className="text-[#6B7280] text-sm mb-3">
+                      <p className="text-[#6B7280] text-xs mb-2">
                         {currentStep.description}
                       </p>
                       {currentStep.startedAt && (
@@ -721,12 +743,12 @@ const ServiceTracking = ({ isVisible }) => {
                       )}
                     </div>
                     
-                    <div className="bg-[#18442A] text-white p-3 rounded-lg text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                        <span className="text-sm font-semibold">Live</span>
+                    <div className="bg-[#18442A] text-white p-2 rounded-lg text-center text-xs">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                        <span className="font-semibold">Live</span>
                       </div>
-                      <p className="text-sm font-semibold">EST: {currentStep.estimatedTime}</p>
+                      <p className="font-semibold">EST: {currentStep.estimatedTime}</p>
                     </div>
                   </div>
                 )}
@@ -735,22 +757,22 @@ const ServiceTracking = ({ isVisible }) => {
                 {!isMobile && (
                   <>
                     {/* Improved Horizontal Progress Steps */}
-                    <div className="relative mb-6 md:mb-8">
+                    <div className="relative mb-4">
                       {/* Progress Line */}
-                      <div className="absolute top-12 left-0 right-0 h-1 bg-gray-300 z-10"></div>
+                      <div className="absolute top-8 left-0 right-0 h-1 bg-gray-300 z-10"></div>
                       <div 
-                        className="absolute top-12 left-0 h-1 bg-[#18442A] z-20 transition-all duration-500"
+                        className="absolute top-8 left-0 h-1 bg-[#18442A] z-20 transition-all duration-500"
                         style={{ 
                           width: `${(currentLoad.statusSteps.findIndex(s => s.active) + 1) / currentLoad.statusSteps.length * 100}%` 
                         }}
                       ></div>
 
                       {/* Steps Container */}
-                      <div className="relative z-30 grid grid-cols-4 gap-2 md:gap-4">
+                      <div className="relative z-30 grid grid-cols-4 gap-2">
                         {currentLoad.statusSteps.map((step, index) => (
                           <div key={index} className="flex flex-col items-center">
                             {/* Progress Circle */}
-                            <div className={`w-6 h-6 rounded-full border-4 mb-6 z-30 ${
+                            <div className={`w-4 h-4 rounded-full border-3 mb-4 z-30 ${
                               step.active 
                                 ? 'bg-[#18442A] border-[#18442A] scale-110' 
                                 : index < currentLoad.statusSteps.findIndex(s => s.active) 
@@ -759,17 +781,17 @@ const ServiceTracking = ({ isVisible }) => {
                             } transition-all duration-300`}></div>
 
                             {/* Lottie Icon */}
-                            <div className={`mb-4 transition-all duration-300 ${
+                            <div className={`mb-2 transition-all duration-300 ${
                               step.active ? 'scale-110' : 'opacity-50 grayscale'
                             }`}>
-                              <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center">
+                              <div className="w-12 h-12 flex items-center justify-center">
                                 <Lottie 
                                   animationData={step.lottie}
                                   loop={step.active}
                                   autoplay={true}
                                   style={{ 
-                                    width: step.active ? 80 : 64,
-                                    height: step.active ? 80 : 64
+                                    width: step.active ? 48 : 40,
+                                    height: step.active ? 48 : 40
                                   }}
                                 />
                               </div>
@@ -777,12 +799,12 @@ const ServiceTracking = ({ isVisible }) => {
 
                             {/* Step Content */}
                             <div className="text-center w-full px-1">
-                              <h4 className={`font-semibold mb-2 text-xs md:text-sm leading-tight ${
+                              <h4 className={`font-semibold mb-1 text-xs leading-tight ${
                                 step.active ? "text-[#13151B]" : "text-[#6B7280]"
                               }`}>
                                 {step.title}
                               </h4>
-                              <p className={`text-xs mb-3 leading-tight ${
+                              <p className={`text-xs mb-2 leading-tight ${
                                 step.active ? "text-[#6B7280]" : "text-[#93A29F]"
                               }`}>
                                 {step.description}
@@ -790,13 +812,13 @@ const ServiceTracking = ({ isVisible }) => {
                               
                               {/* Started Time */}
                               {step.startedAt && (
-                                <p className="text-xs text-[#18442A] font-semibold mb-2">
+                                <p className="text-xs text-[#18442A] font-semibold mb-1">
                                   Started: {step.startedAt}
                                 </p>
                               )}
                               
                               {/* Estimated Time */}
-                              <div className={`p-2 rounded-lg font-semibold text-xs min-h-[2.5rem] flex items-center justify-center ${
+                              <div className={`p-1 rounded font-semibold text-xs min-h-[2rem] flex items-center justify-center ${
                                 step.active 
                                   ? "bg-[#18442A] text-white" 
                                   : "bg-gray-200 text-gray-600"
@@ -812,10 +834,10 @@ const ServiceTracking = ({ isVisible }) => {
                     </div>
 
                     {/* Estimated Time Summary */}
-                    <div className="mt-6 p-4 bg-white rounded-xl border border-[#2A524C] text-center">
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="w-3 h-3 bg-[#18442A] rounded-full animate-pulse" />
-                        <p className="text-[#18442A] font-semibold text-base md:text-lg">
+                    <div className="mt-4 p-3 bg-white rounded-lg border border-[#2A524C] text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-2 h-2 bg-[#18442A] rounded-full animate-pulse" />
+                        <p className="text-[#18442A] font-semibold text-sm">
                           Total Estimated Time: ~2 hours
                         </p>
                       </div>
@@ -827,9 +849,9 @@ const ServiceTracking = ({ isVisible }) => {
           )}
         </motion.div>
 
-        {/* Bottom Section - 3 Columns */}
+        {/* Bottom Section - 3 Columns - UNCHANGED */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          {/* Left Column - History Cards with Scroll */}
+          {/* Left Column - History Cards with Scroll - UNCHANGED */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -866,7 +888,7 @@ const ServiceTracking = ({ isVisible }) => {
             </div>
           </motion.div>
 
-          {/* Middle Column - Stats Cards */}
+          {/* Middle Column - Stats Cards - UNCHANGED */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -893,7 +915,7 @@ const ServiceTracking = ({ isVisible }) => {
             ))}
           </motion.div>
 
-          {/* Right Column - Reminder Card */}
+          {/* Right Column - Reminder Card with Lucide Icons - UNCHANGED */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -915,21 +937,21 @@ const ServiceTracking = ({ isVisible }) => {
             
             <div className="space-y-3 mb-4">
               <div className="flex items-start space-x-3">
-                <div className="text-[#18442A] text-lg mt-0.5">☑</div>
+                <CheckCircle2 className="w-5 h-5 text-[#18442A] mt-0.5 flex-shrink-0" />
                 <p className="text-[#6B7280] text-xs md:text-sm flex-1 leading-relaxed">
                   You will receive an SMS notification once your laundry is ready for pickup.
                 </p>
               </div>
               
               <div className="flex items-start space-x-3">
-                <div className="text-[#18442A] text-lg mt-0.5">☑</div>
+                <Bell className="w-5 h-5 text-[#18442A] mt-0.5 flex-shrink-0" />
                 <p className="text-[#6B7280] text-xs md:text-sm flex-1 leading-relaxed">
                   If your laundry remains unclaimed for 3 days, you will receive a reminder notification.
                 </p>
               </div>
               
               <div className="flex items-start space-x-3">
-                <div className="text-[#E53E3E] text-lg mt-0.5">▲</div>
+                <AlertTriangle className="w-5 h-5 text-[#E53E3E] mt-0.5 flex-shrink-0" />
                 <p className="text-[#6B7280] text-xs md:text-sm flex-1 leading-relaxed">
                   If your laundry is still uncollected after 7 days, a final notice will be sent, stating that your laundry will be disposed of.
                 </p>
@@ -937,9 +959,12 @@ const ServiceTracking = ({ isVisible }) => {
             </div>
             
             <div className="p-3 bg-white rounded-xl border border-[#2A524C] mb-3">
-              <p className="text-[#6B7280] text-center text-xs md:text-sm leading-relaxed">
-                Please make sure your contact number is accurate and active to receive updates.
-              </p>
+              <div className="flex items-center justify-center space-x-2">
+                <Phone className="w-4 h-4 text-[#18442A]" />
+                <p className="text-[#6B7280] text-center text-xs md:text-sm leading-relaxed">
+                  Please make sure your contact number is accurate and active to receive updates.
+                </p>
+              </div>
             </div>
             
             <div className="text-center">
