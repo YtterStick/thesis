@@ -56,6 +56,30 @@ const LandingPage = () => {
     setIsDarkMode(darkMode);
   };
 
+  // Function to handle Our Service button click
+  const handleOurServiceClick = () => {
+    setActiveSection("services");
+    // Scroll to services section
+    setTimeout(() => {
+      const servicesElement = document.getElementById("services");
+      if (servicesElement) {
+        servicesElement.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 100);
+  };
+
+  // Function to handle My Laundry button click
+  const handleMyLaundryClick = () => {
+    setActiveSection("service_tracking");
+    // Scroll to service tracking section
+    setTimeout(() => {
+      const trackingElement = document.getElementById("service_tracking");
+      if (trackingElement) {
+        trackingElement.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 100);
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode ? 'bg-[#0B2B26] text-white' : 'bg-[#E0EAE8] text-[#0B2B26]'
@@ -104,7 +128,7 @@ const LandingPage = () => {
                 className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center items-center"
               >
                 <button 
-                  onClick={() => setActiveSection("services")}
+                  onClick={handleOurServiceClick}
                   className="px-6 py-3 md:px-10 md:py-4 rounded-xl font-semibold text-base md:text-lg transition-all transform hover:scale-105 border-2 shadow-lg"
                   style={{ 
                     backgroundColor: '#D5DCDB',
@@ -115,7 +139,7 @@ const LandingPage = () => {
                   Our Service
                 </button>
                 <button 
-                  onClick={() => setActiveSection("service_tracking")}
+                  onClick={handleMyLaundryClick}
                   className="px-6 py-3 md:px-10 md:py-4 rounded-xl font-semibold text-base md:text-lg transition-all transform hover:scale-105 border-2 shadow-lg"
                   style={{ 
                     backgroundColor: '#18442AF5',
@@ -197,10 +221,14 @@ const LandingPage = () => {
       </motion.section>
 
       {/* Services Section */}
-      <Services isVisible={isVisible} isMobile={isMobile} isDarkMode={isDarkMode} />
+      <div id="services">
+        <Services isVisible={isVisible} isMobile={isMobile} isDarkMode={isDarkMode} />
+      </div>
 
       {/* Service Tracking Section */}
-      <ServiceTracking isVisible={isVisible} isDarkMode={isDarkMode} />
+      <div id="service_tracking">
+        <ServiceTracking isVisible={isVisible} isDarkMode={isDarkMode} />
+      </div>
 
       {/* Terms & Conditions Section */}
       <TermsCondition isVisible={isVisible} isMobile={isMobile} isDarkMode={isDarkMode} />

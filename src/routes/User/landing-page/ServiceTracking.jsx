@@ -33,6 +33,7 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
   const [showFullCustomerInfo, setShowFullCustomerInfo] = useState(false);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
   const [showReceiptOptions, setShowReceiptOptions] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const progressSectionRef = useRef(null);
@@ -53,6 +54,21 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
     };
   }, []);
 
+  // Load recent searches from localStorage on component mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('recentLaundrySearches');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setRecentSearches(parsed.slice(0, 5)); // Keep only last 5
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load recent searches:', error);
+    }
+  }, []);
+
   // Auto-scroll to show the entire main card when status is shown
   useEffect(() => {
     if (showStatus && mainCardRef.current) {
@@ -65,15 +81,6 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
       }, 100);
     }
   }, [showStatus]);
-
-  // Sample history data
-  const historyItems = [
-    { receiptNumber: "R-meh77tu", status: "Your laundry has been picked up", date: "09/22/2025" },
-    { receiptNumber: "R-meh74tu", status: "Your laundry has been picked up", date: "09/21/2025" },
-    { receiptNumber: "R-meh72tu", status: "Your laundry has been picked up", date: "09/20/2025" },
-    { receiptNumber: "R-meh70tu", status: "Your laundry has been picked up", date: "09/19/2025" },
-    { receiptNumber: "R-meh68tu", status: "Your laundry has been picked up", date: "09/18/2025" },
-  ];
 
   const stats = [
     { number: "50", label: "Total No. of Laundry" },
@@ -223,12 +230,41 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
     }
   ];
 
+  // Function to add receipt to recent searches
+  const addToRecentSearches = (receiptNum) => {
+    if (!receiptNum?.trim()) return;
+    
+    try {
+      const newSearch = {
+        receiptNumber: receiptNum.trim(),
+        searchedAt: new Date().toLocaleDateString(),
+        timestamp: Date.now()
+      };
+
+      setRecentSearches(prev => {
+        const filtered = prev.filter(item => 
+          item.receiptNumber !== newSearch.receiptNumber
+        );
+        const updated = [newSearch, ...filtered].slice(0, 5);
+        
+        // Save to localStorage
+        localStorage.setItem('recentLaundrySearches', JSON.stringify(updated));
+        return updated;
+      });
+    } catch (error) {
+      console.warn('Failed to save recent search:', error);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Receipt submitted:", receiptNumber);
     setShowStatus(true);
     setShowFullCustomerInfo(false);
     setCurrentLoadIndex(0);
+    
+    // Save to recent searches
+    addToRecentSearches(receiptNumber);
   };
 
   const handleScanQR = () => {
@@ -266,6 +302,7 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
       setTimeout(() => {
         const scannedReceipt = "R-meh77tu";
         setReceiptNumber(scannedReceipt);
+        addToRecentSearches(scannedReceipt);
         closeScanner();
         setShowStatus(true);
         setShowFullCustomerInfo(false);
@@ -291,6 +328,7 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
       setTimeout(() => {
         const scannedReceipt = "R-meh77tu";
         setReceiptNumber(scannedReceipt);
+        addToRecentSearches(scannedReceipt);
         closeScanner();
         setShowStatus(true);
         setShowFullCustomerInfo(false);
@@ -362,6 +400,14 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
     setShowReceiptOptions(false);
   };
 
+  // Function to handle clicking on a recent search item
+  const handleRecentSearchClick = (receiptNum) => {
+    setReceiptNumber(receiptNum);
+    setShowStatus(true);
+    setShowFullCustomerInfo(false);
+    setCurrentLoadIndex(0);
+  };
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 50 }}
@@ -414,7 +460,9 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
                 
                 <button
                   type="submit"
-                  className="py-2 px-3 font-semibold rounded-lg transition-all transform hover:scale-105 text-sm border shadow flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0"
+                  className={`py-2 px-3 font-semibold rounded-lg transition-all text-sm border shadow flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0 ${
+                    isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
+                  }`}
                   style={{ 
                     backgroundColor: isDarkMode ? '#18442AF5' : '#F3EDE3',
                     color: isDarkMode ? '#D5DCDB' : '#183D3D',
@@ -428,7 +476,9 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
                 <button
                   type="button"
                   onClick={handleScanQR}
-                  className="py-2 px-3 font-semibold rounded-lg transition-all transform hover:scale-105 text-sm border shadow flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0"
+                  className={`py-2 px-3 font-semibold rounded-lg transition-all text-sm border shadow flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0 ${
+                    isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
+                  }`}
                   style={{ 
                     backgroundColor: isDarkMode ? '#2A524C' : '#F3EDE3',
                     color: isDarkMode ? '#D5DCDB' : '#183D3D',
@@ -488,7 +538,9 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
                     
                     <button
                       onClick={startCameraScan}
-                      className="w-full py-3 px-4 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-sm"
+                      className={`w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
+                        isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
+                      }`}
                       style={{
                         backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
                         color: isDarkMode ? '#D5DCDB' : '#183D3D'
@@ -501,7 +553,9 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
                     <div className="relative">
                       <button
                         onClick={handleUploadClick}
-                        className="w-full py-3 px-4 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-sm"
+                        className={`w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
+                          isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
+                        }`}
                         style={{
                           backgroundColor: isDarkMode ? '#2A524C' : '#F3EDE3',
                           color: isDarkMode ? '#D5DCDB' : '#183D3D'
@@ -585,7 +639,9 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
                 {scanMethod && (
                   <button
                     onClick={closeScanner}
-                    className="w-full py-2 rounded-lg font-semibold transition-colors text-sm"
+                    className={`w-full py-2 rounded-lg font-semibold transition-colors text-sm ${
+                      isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
+                    }`}
                     style={{
                       backgroundColor: isDarkMode ? '#6B7280' : '#2A524C',
                       color: '#FFFFFF'
@@ -645,7 +701,7 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
 
         {/* Bottom Section - 3 Columns */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          {/* Left Column - History Cards */}
+          {/* Left Column - Recent Searches Cards */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -658,36 +714,57 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
             }}
           >
             <h3 className="text-lg md:text-xl font-bold mb-4">
-              Recent History
+              Recent Searches
             </h3>
             
             <div className="max-h-80 md:max-h-96 overflow-y-auto space-y-3 md:space-y-4 pr-2">
-              {historyItems.map((item, index) => (
-                <div
-                  key={index}
-                  className="rounded-xl p-3 md:p-4 border"
+              {recentSearches.length > 0 ? (
+                recentSearches.map((item, index) => (
+                  <div
+                    key={index}
+                    className={`rounded-xl p-3 md:p-4 border cursor-pointer transition-all ${
+                      isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
+                    }`}
+                    style={{
+                      backgroundColor: isDarkMode ? '#FFFFFF' : '#F3EDE3',
+                      borderColor: isDarkMode ? '#2A524C' : '#183D3D',
+                      color: isDarkMode ? '#13151B' : '#183D3D'
+                    }}
+                    onClick={() => handleRecentSearchClick(item.receiptNumber)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-mono font-semibold text-sm md:text-base"
+                        style={{ color: isDarkMode ? '#18442A' : '#183D3D' }}>
+                        {item.receiptNumber}
+                      </p>
+                    </div>
+                    <h4 className="text-base md:text-lg font-semibold mb-1"
+                      style={{ color: isDarkMode ? '#13151B' : '#183D3D' }}>
+                      Click to track again
+                    </h4>
+                    <p className="text-xs md:text-sm"
+                      style={{ color: isDarkMode ? '#6B7280' : '#183D3D' }}>
+                      Last searched: {item.searchedAt}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div 
+                  className="text-center p-4 rounded-xl border"
                   style={{
                     backgroundColor: isDarkMode ? '#FFFFFF' : '#F3EDE3',
                     borderColor: isDarkMode ? '#2A524C' : '#183D3D',
                     color: isDarkMode ? '#13151B' : '#183D3D'
                   }}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <p className="font-mono font-semibold text-sm md:text-base"
-                      style={{ color: isDarkMode ? '#18442A' : '#183D3D' }}>
-                      {item.receiptNumber}
-                    </p>
-                  </div>
-                  <h4 className="text-base md:text-lg font-semibold mb-1"
-                    style={{ color: isDarkMode ? '#13151B' : '#183D3D' }}>
-                    {item.status}
-                  </h4>
-                  <p className="text-xs md:text-sm"
-                    style={{ color: isDarkMode ? '#6B7280' : '#183D3D' }}>
-                    {item.date}
+                  <p className="text-sm md:text-base">
+                    No recent searches yet
+                  </p>
+                  <p className="text-xs mt-1 opacity-70">
+                    Your searched receipts will appear here
                   </p>
                 </div>
-              ))}
+              )}
             </div>
           </motion.div>
 
@@ -701,7 +778,9 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
             {stats.map((stat, index) => (
               <div
                 key={index}
-                className="rounded-2xl p-4 md:p-6 border-2 text-center flex-1"
+                className={`rounded-2xl p-4 md:p-6 border-2 text-center flex-1 transition-all ${
+                  isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
+                }`}
                 style={{
                   backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D',
                   borderColor: isDarkMode ? '#2A524C' : '#183D3D',
@@ -754,7 +833,9 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
             </div>
             
             <div 
-              className="p-3 rounded-xl border mb-3"
+              className={`p-3 rounded-xl border mb-3 transition-all ${
+                isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
+              }`}
               style={{
                 backgroundColor: isDarkMode ? '#FFFFFF' : '#2A524C',
                 borderColor: isDarkMode ? '#2A524C' : '#F3EDE3'

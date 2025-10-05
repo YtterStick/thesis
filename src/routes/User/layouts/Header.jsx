@@ -37,8 +37,8 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
 
   const navItems = [
     { href: "#home", label: "Home" },
-    { href: "#services", label: "Services" },
-    { href: "#service_tracking", label: "Service Tracking" },
+    { href: "#services", label: "Services & Pricing" },
+  { href: "#service_tracking", label: "Laundry Tracking" },
     { href: "#terms", label: "Terms & Condition" },
   ];
 
