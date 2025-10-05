@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Components
 import Header from "@/routes/User/layouts/Header";
@@ -11,11 +11,66 @@ import TermsCondition from "./TermsCondition";
 // Assets
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
 
+// API base URL - adjust according to your backend
+const API_BASE_URL = "http://localhost:8080/api";
+
+// Animated Number Component with flip animation
+const AnimatedNumber = ({ value, isChanging }) => {
+  if (!isChanging) {
+    return <span>{value}</span>;
+  }
+
+  return (
+    <div className="relative inline-block">
+      <AnimatePresence mode="popLayout">
+        <motion.span
+          key={value}
+          initial={{ 
+            opacity: 0, 
+            y: 30,
+            scale: 1.2,
+            rotateX: 90
+          }}
+          animate={{ 
+            opacity: 1, 
+            y: 0,
+            scale: 1,
+            rotateX: 0
+          }}
+          exit={{ 
+            opacity: 0, 
+            y: -30,
+            scale: 0.8,
+            rotateX: -90
+          }}
+          transition={{ 
+            duration: 0.6,
+            ease: "easeOut"
+          }}
+          className="inline-block"
+          style={{
+            transformStyle: "preserve-3d"
+          }}
+        >
+          {value}
+        </motion.span>
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const LandingPage = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [stats, setStats] = useState([
+    { number: "0", label: "Total Laundry Load", changing: false },
+    { number: "0", label: "Total No. of Washing", changing: false },
+    { number: "0", label: "Total No. of Drying", changing: false }
+  ]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   useEffect(() => {
     setIsVisible(true);
@@ -46,11 +101,155 @@ const LandingPage = () => {
     };
   }, []);
 
-  const stats = [
-    { number: "50", label: "Total Laundry Load" },
-    { number: "15", label: "Total No. of Washing" },
-    { number: "10", label: "Total No. of Drying" }
-  ];
+  // Separate useEffect for data fetching with dependency
+  useEffect(() => {
+    fetchLaundryStats();
+  }, [refreshCounter]);
+
+  // Auto-refresh every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log("🔄 Auto-refreshing laundry stats...");
+      setRefreshCounter(prev => prev + 1);
+    }, 15000); // 15 seconds
+
+    return () => {
+      console.log("🧹 Cleaning up auto-refresh interval");
+      clearInterval(interval);
+    };
+  }, []);
+
+  const fetchLaundryStats = async () => {
+    let controller = null;
+    
+    try {
+      setIsRefreshing(true);
+      console.log("🔄 Fetching laundry stats...");
+      
+      // Create AbortController for timeout
+      controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      // Fetch all laundry jobs using fetch API
+      const response = await fetch(`${API_BASE_URL}/laundry-jobs`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const laundryJobs = await response.json();
+      console.log(`📦 Found ${laundryJobs.length} laundry jobs`);
+
+      // Calculate statistics
+      let totalUnwashed = 0;
+      let totalWashing = 0;
+      let totalDrying = 0;
+
+      // Iterate through all laundry jobs and their load assignments
+      laundryJobs.forEach(job => {
+        if (job.loadAssignments && job.loadAssignments.length > 0) {
+          job.loadAssignments.forEach(load => {
+            const status = load.status?.toUpperCase();
+            
+            switch (status) {
+              case "NOT_STARTED":
+                totalUnwashed++;
+                break;
+              case "WASHING":
+                totalWashing++;
+                break;
+              case "DRYING":
+                totalDrying++;
+                break;
+              default:
+                break;
+            }
+          });
+        }
+      });
+
+      console.log("📊 Calculated stats:", { 
+        totalUnwashed, 
+        totalWashing, 
+        totalDrying 
+      });
+
+      // Update stats state with change detection
+      setStats(prevStats => {
+        const newUnwashed = totalUnwashed.toString();
+        const newWashing = totalWashing.toString();
+        const newDrying = totalDrying.toString();
+
+        const newStats = [
+          { 
+            number: newUnwashed, 
+            label: "Total Laundry Load", 
+            changing: newUnwashed !== prevStats[0].number 
+          },
+          { 
+            number: newWashing, 
+            label: "Total No. of Washing", 
+            changing: newWashing !== prevStats[1].number 
+          },
+          { 
+            number: newDrying, 
+            label: "Total No. of Drying", 
+            changing: newDrying !== prevStats[2].number 
+          }
+        ];
+        
+        // Check if any stats changed
+        const hasChanged = newStats.some(stat => stat.changing);
+        
+        if (hasChanged) {
+          console.log("🔄 Stats updated with changes:", {
+            unwashed: { old: prevStats[0].number, new: newUnwashed, changing: newUnwashed !== prevStats[0].number },
+            washing: { old: prevStats[1].number, new: newWashing, changing: newWashing !== prevStats[1].number },
+            drying: { old: prevStats[2].number, new: newDrying, changing: newDrying !== prevStats[2].number }
+          });
+          
+          // Reset changing flags after animation completes
+          setTimeout(() => {
+            setStats(currentStats => 
+              currentStats.map(stat => ({ ...stat, changing: false }))
+            );
+          }, 1000);
+          
+          return newStats;
+        } else {
+          console.log("✅ Stats unchanged, skipping update");
+          return prevStats;
+        }
+      });
+
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error("⏰ Request timeout fetching laundry stats");
+      } else {
+        console.error("❌ Error fetching laundry stats:", error);
+      }
+      
+      // Only update if it's a real error (not abort)
+      if (error.name !== 'AbortError') {
+        setStats([
+          { number: "0", label: "Total Laundry Load", changing: false },
+          { number: "0", label: "Total No. of Washing", changing: false },
+          { number: "0", label: "Total No. of Drying", changing: false }
+        ]);
+      }
+    } finally {
+      setIsRefreshing(false);
+      controller = null;
+    }
+  };
 
   const handleThemeChange = (darkMode) => {
     setIsDarkMode(darkMode);
@@ -172,7 +371,10 @@ const LandingPage = () => {
                   <div className={`text-6xl font-bold mb-1 ${
                     isDarkMode ? 'text-white' : 'text-[#1C3F3A]'
                   }`}>
-                    {stat.number}
+                    <AnimatedNumber 
+                      value={stat.number} 
+                      isChanging={stat.changing} 
+                    />
                   </div>
                   <div className={`text-sm font-normal max-w-[140px] leading-tight ${
                     isDarkMode ? 'text-white/80' : 'text-[#1C3F3A]/80'
@@ -206,7 +408,10 @@ const LandingPage = () => {
                   <div className={`text-4xl font-bold mb-2 ${
                     isDarkMode ? 'text-white' : 'text-[#1C3F3A]'
                   }`}>
-                    {stat.number}
+                    <AnimatedNumber 
+                      value={stat.number} 
+                      isChanging={stat.changing} 
+                    />
                   </div>
                   <div className={`text-base font-normal leading-tight ${
                     isDarkMode ? 'text-white/80' : 'text-[#1C3F3A]/80'
