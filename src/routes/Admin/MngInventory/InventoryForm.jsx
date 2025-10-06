@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -42,7 +42,14 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
 
         const { name, quantity, unit, price, lowStockThreshold, adequateStockThreshold } = form;
 
-        if (!name || quantity === "" || price === "" || isNaN(quantity) || isNaN(price)) return;
+        if (!name || quantity === "" || price === "" || isNaN(quantity) || isNaN(price)) {
+            toast({
+                title: "Missing Fields",
+                description: "Please fill in all required fields.",
+                variant: "destructive",
+            });
+            return;
+        }
 
         const low = parseInt(lowStockThreshold);
         const adequate = parseInt(adequateStockThreshold);
@@ -88,37 +95,32 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
         };
 
         onAdd(result);
-        setForm({
-            name: "",
-            quantity: "",
-            unit: "pcs",
-            price: "",
-            lowStockThreshold: "",
-            adequateStockThreshold: "",
-        });
     };
 
     return (
-        <Dialog
-            open={true}
-            onOpenChange={onClose}
-        >
-            <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" />
-            <DialogContent className="z-50 rounded-lg border border-slate-300 bg-white p-6 text-slate-900 shadow-xl dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold">{isEditMode ? "Edit Item" : "Add New Item"}</DialogTitle>
-                    <DialogDescription className="sr-only">
-                        {isEditMode
-                            ? "Edit the inventory item's name, quantity, unit, and price."
-                            : "Provide item name, quantity, unit, and price to add to inventory."}
-                    </DialogDescription>
-                    <DialogClose />
-                </DialogHeader>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Backdrop */}
+            <div 
+                className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                onClick={onClose}
+            />
+            
+            {/* Modal */}
+            <div className="relative z-50 w-full max-w-md rounded-lg border border-slate-300 bg-white p-6 text-slate-900 shadow-xl dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                {/* Header */}
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">
+                        {isEditMode ? "Edit Item" : "Add New Item"}
+                    </h2>
+                    <button
+                        onClick={onClose}
+                        className="rounded-sm p-1 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="mt-2 space-y-4"
-                >
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label
                             htmlFor="name"
@@ -132,7 +134,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             value={form.name}
                             onChange={(e) => handleChange("name", e.target.value)}
                             required
-                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 placeholder:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
+                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
                         />
                     </div>
 
@@ -152,7 +154,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             required
                             min="0"
                             step="1"
-                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 placeholder:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
+                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
                         />
                     </div>
 
@@ -174,7 +176,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                                 required
                                 min="0"
                                 step="0.01"
-                                className="flex-1 border-none bg-transparent text-slate-900 placeholder:text-slate-400 placeholder:opacity-70 dark:text-white dark:placeholder:text-slate-500"
+                                className="flex-1 border-none bg-transparent text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
                             />
                         </div>
                     </div>
@@ -225,7 +227,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             onChange={(e) => handleChange("lowStockThreshold", e.target.value)}
                             min="1"
                             step="1"
-                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 placeholder:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
+                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
                         />
                     </div>
 
@@ -244,19 +246,19 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             onChange={(e) => handleChange("adequateStockThreshold", e.target.value)}
                             min="1"
                             step="1"
-                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 placeholder:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
+                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
                         />
                     </div>
 
                     <Button
                         type="submit"
-                        className="w-full rounded-md bg-[#0891B2] px-4 py-2 text-white transition-colors hover:bg-[#0E7490] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-cyan-400 dark:focus-visible:ring-offset-slate-950"
+                        className="w-full rounded-md bg-[#0891B2] px-4 py-2 text-white transition-colors hover:bg-[#0E7490]"
                     >
                         {isEditMode ? "Update Item" : "Save Item"}
                     </Button>
                 </form>
-            </DialogContent>
-        </Dialog>
+            </div>
+        </div>
     );
 };
 

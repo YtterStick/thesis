@@ -8,6 +8,8 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [services, setServices] = useState([]);
+  const [stockItems, setStockItems] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch services from backend
@@ -35,13 +37,93 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
       console.error('❌ Error fetching services:', err);
       console.error('❌ Error message:', err.message);
       setServices([]);
-    } finally {
-      setLoading(false);
     }
   };
 
+  // Fetch stock items from backend
+  const fetchStockItems = async () => {
+    try {
+      console.log("🔄 Fetching stock items...");
+      const response = await fetch('http://localhost:8080/api/stock');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const stockData = await response.json();
+      console.log('✅ Successfully fetched stock items:', stockData);
+      setStockItems(stockData);
+    } catch (err) {
+      console.error('❌ Error fetching stock items:', err);
+      setStockItems([]);
+    }
+  };
+
+  // Fetch machines from backend
+  const fetchMachines = async () => {
+    try {
+      console.log("🔄 Fetching machines...");
+      const response = await fetch('http://localhost:8080/api/machines');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const machinesData = await response.json();
+      console.log('✅ Successfully fetched machines:', machinesData);
+      setMachines(machinesData);
+    } catch (err) {
+      console.error('❌ Error fetching machines:', err);
+      setMachines([]);
+    }
+  };
+
+  // Get plastic price from inventory
+  const getPlasticPrice = () => {
+    const plasticItem = stockItems.find(item => 
+      item.name.toLowerCase().includes('plastic')
+    );
+    return plasticItem ? plasticItem.price : 3; // Default to 3 PHP if not found
+  };
+
+  // Get customer provided items (excluding plastic)
+  const getCustomerProvidedItems = () => {
+    return stockItems.filter(item => 
+      !item.name.toLowerCase().includes('plastic')
+    );
+  };
+
+  // Get highest machine capacity
+  const getHighestMachineCapacity = () => {
+    if (machines.length === 0) return "8kg"; // Default fallback
+    
+    const capacities = machines
+      .map(machine => machine.capacityKg)
+      .filter(capacity => capacity != null);
+    
+    if (capacities.length === 0) return "8kg"; // Default fallback
+    
+    const maxCapacity = Math.max(...capacities);
+    return `${maxCapacity}kg`;
+  };
+
   useEffect(() => {
-    fetchServices();
+    const fetchAllData = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([
+          fetchServices(),
+          fetchStockItems(),
+          fetchMachines()
+        ]);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
   }, []);
 
   const handleDetailsClick = (service) => {
@@ -53,6 +135,10 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
     setShowModal(false);
     setSelectedService(null);
   };
+
+  const plasticPrice = getPlasticPrice();
+  const customerItems = getCustomerProvidedItems();
+  const machineCapacity = getHighestMachineCapacity();
 
   return (
     <>
@@ -169,7 +255,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
                             className="text-xs block mt-1"
                             style={{ color: isDarkMode ? '#6B7280' : '#E0EAE8' }}
                           >
-                            + ₱3 for plastic
+                            + ₱{plasticPrice} for plastic
                           </span>
                         </div>
                       </div>
@@ -200,7 +286,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
         </div>
       </motion.section>
 
-      {/* Pricing Modal - Constant content */}
+      {/* Pricing Modal - Dynamic content */}
       {showModal && selectedService && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -279,7 +365,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
                     </span>
                   </div>
                   <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
-                    ₱3
+                    ₱{plasticPrice}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-lg border"
@@ -304,40 +390,34 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
             {/* Customer Provided Items */}
             <div className="mb-6">
               <h4 className="text-lg font-semibold mb-3">Customer Provided Items</h4>
-              <p className="mb-3 text-sm">You can bring your own detergent and fabric softener. If not provided, we offer:</p>
+              <p className="mb-3 text-sm">You can bring your own items. If not provided, we offer:</p>
               <div className="space-y-2">
-                <div className="flex justify-between items-center p-3 rounded-lg border"
-                  style={{
-                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
-                    borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
-                  }}
-                >
-                  <div>
-                    <span className="font-medium">Detergent</span>
-                    <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
-                      (per use)
-                    </span>
+                {customerItems.length > 0 ? (
+                  customerItems.map((item) => (
+                    <div 
+                      key={item.id}
+                      className="flex justify-between items-center p-3 rounded-lg border"
+                      style={{
+                        backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
+                        borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
+                      }}
+                    >
+                      <div>
+                        <span className="font-medium capitalize">{item.name}</span>
+                        <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+                          (per use)
+                        </span>
+                      </div>
+                      <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
+                        ₱{item.price}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+                    No additional items available at the moment.
                   </div>
-                  <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
-                    ₱14
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg border"
-                  style={{
-                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
-                    borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
-                  }}
-                >
-                  <div>
-                    <span className="font-medium">Fabric Softener</span>
-                    <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
-                      (per use)
-                    </span>
-                  </div>
-                  <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
-                    ₱18
-                  </span>
-                </div>
+                )}
               </div>
             </div>
 
@@ -351,7 +431,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
                 }}
               >
                 <p style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }} className="font-medium">
-                  8kg capacity per load
+                  {machineCapacity} capacity per load
                 </p>
               </div>
             </div>

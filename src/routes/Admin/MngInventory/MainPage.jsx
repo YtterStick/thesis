@@ -102,18 +102,21 @@ const MainPage = () => {
       } else {
         await secureFetch("/stock", "POST", data);
       }
-      fetchInventory();
+      // Close modal immediately before fetching
       setShowForm(false);
       setEditingItem(null);
+      // Then refresh data
+      await fetchInventory();
     } catch (error) {
       console.error("Error saving item:", error);
+      // Keep modal open on error so user can fix and retry
     }
   };
 
   const handleDelete = async (item) => {
     try {
       await secureFetch(`/stock/${item.id}`, "DELETE");
-      fetchInventory();
+      await fetchInventory();
     } catch (error) {
       console.error("Error deleting item:", error);
     }
@@ -127,12 +130,14 @@ const MainPage = () => {
   const handleAddStock = async (amount) => {
     try {
       await secureFetch(`/stock/${selectedItem.id}/restock?amount=${amount}`, "PUT");
-      fetchInventory();
-    } catch (error) {
-      console.error("Error adding stock:", error);
-    } finally {
+      // Close modal immediately before fetching
       setSelectedItem(null);
       setShowStockModal(false);
+      // Then refresh data
+      await fetchInventory();
+    } catch (error) {
+      console.error("Error adding stock:", error);
+      // Keep modal open on error
     }
   };
 
@@ -144,6 +149,16 @@ const MainPage = () => {
   const closeStockModal = () => {
     setSelectedItem(null);
     setShowStockModal(false);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingItem(null);
+  };
+
+  const openAddForm = () => {
+    setEditingItem(null);
+    setShowForm(true);
   };
 
   const { out, low, adequate } = getStockStatusCounts(items);
@@ -158,10 +173,7 @@ const MainPage = () => {
         </div>
         {!loading && items.length > 0 && (
           <button
-            onClick={() => {
-              setEditingItem(null);
-              setShowForm(true);
-            }}
+            onClick={openAddForm}
             className="flex items-center gap-2 text-slate-900 transition-colors hover:text-cyan-500 dark:text-white dark:hover:text-cyan-400"
           >
             <Plus size={18} />
@@ -197,7 +209,7 @@ const MainPage = () => {
             value: adequate,
             color: "#60A5FA",
           },
-        ].map(({ title, icon, value, growth, color, growthColor }) => (
+        ].map(({ title, icon, value, color }) => (
           <div key={title} className="card">
             <div className="card-header flex items-center gap-x-3">
               <div
@@ -213,7 +225,6 @@ const MainPage = () => {
             </div>
             <div className="card-body rounded-md bg-slate-100 p-4 transition-colors dark:bg-slate-950">
               <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
-              <p className={`text-xs font-medium ${growthColor}`}>{growth}</p>
             </div>
           </div>
         ))}
@@ -241,11 +252,8 @@ const MainPage = () => {
           />
           <p className="mb-2 text-slate-500 dark:text-slate-400">No inventory items yet.</p>
           <button
-            onClick={() => {
-              setEditingItem(null);
-              setShowForm(true);
-            }}
-            className="flex items-center gap-2 text-slate-900 transition-colors hover:text-cyan-500 dark:text-white             dark:hover:text-cyan-400"
+            onClick={openAddForm}
+            className="flex items-center gap-2 text-slate-900 transition-colors hover:text-cyan-500 dark:text-white dark:hover:text-cyan-400"
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Add Your First Item</span>
@@ -253,15 +261,12 @@ const MainPage = () => {
         </div>
       )}
 
-      {/* Inventory Form */}
-      {showForm && !showStockModal && (
+      {/* Inventory Form Modal */}
+      {showForm && (
         <InventoryForm
           item={editingItem}
           onAdd={handleSave}
-          onClose={() => {
-            setShowForm(false);
-            setEditingItem(null);
-          }}
+          onClose={closeForm}
           existingItems={items}
         />
       )}

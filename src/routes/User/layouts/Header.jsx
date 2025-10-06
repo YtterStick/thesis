@@ -372,7 +372,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                     borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26'
                   }}
                   initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                  animate={{ opacity: 1 }}  
                   transition={{ delay: 0.5 }}
                 >
                   <div className="text-sm opacity-70 transition-colors"

@@ -39,7 +39,8 @@ public class SecurityConfig {
                         "/login", 
                         "/register", 
                         "/logout",
-                        "/api/services/**"  // ✅ ADD THIS LINE - Make services endpoint public
+                        "/api/services/**",
+                        "/api/stock/**" // ✅ ADD THIS LINE - Make services endpoint public
                     ).permitAll()
                     
                     // Authenticated endpoints
@@ -47,7 +48,6 @@ public class SecurityConfig {
                     
                     // Role-based endpoints
                     .requestMatchers("/api/accounts/**").hasRole("ADMIN")
-                    .requestMatchers("/api/stock/**").hasAnyRole("ADMIN", "STAFF")
                     
                     // Other public endpoints
                     .requestMatchers("/api/laundry-jobs/**", "/api/machines/**").permitAll()

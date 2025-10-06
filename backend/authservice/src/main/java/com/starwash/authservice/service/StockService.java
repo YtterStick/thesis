@@ -89,22 +89,17 @@ public class StockService {
 
             StockItem savedItem = stockRepository.save(item);
 
-            // Notify about restock
             String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s",
                     item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
 
             notificationService.notifyAllUsers("inventory_update",
                     "Restock Completed", message, item.getId());
 
-            // Check for stock level transitions
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
 
             return savedItem;
         });
     }
-
-    // Remove the old checkStockStatusAndNotify method since we're using the
-    // enhanced version in NotificationService
 
     private void validateThresholds(StockItem item) {
         Integer low = item.getLowStockThreshold();
