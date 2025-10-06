@@ -7,7 +7,6 @@ public class ServiceItem {
 
   @Id
   private String id;
-
   private String name;
   private String description;
   private Double price;
@@ -54,4 +53,3 @@ public class ServiceItem {
     this.price = price;
   }
 }
-

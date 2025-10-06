@@ -8,6 +8,9 @@ import Services from "./services";
 import ServiceTracking from "./ServiceTracking";
 import TermsCondition from "./TermsCondition";
 
+// Hooks
+import { useScrollSpy } from "./useScrollSpy"; // Adjust path as needed
+
 // Assets
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
 
@@ -62,7 +65,6 @@ const AnimatedNumber = ({ value, isChanging }) => {
 const LandingPage = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [activeSection, setActiveSection] = useState("home");
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [stats, setStats] = useState([
     { number: "0", label: "Total Laundry Load", changing: false },
@@ -71,6 +73,14 @@ const LandingPage = () => {
   ]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
+
+  // Define section IDs for scroll spy
+  const sectionIds = ['home', 'services', 'service_tracking', 'terms'];
+  
+  // Use scroll spy hook
+  const { activeSection, isScrolling } = useScrollSpy(sectionIds, {
+    throttle: 150 // Adjust throttle as needed for performance
+  });
 
   useEffect(() => {
     setIsVisible(true);
@@ -257,7 +267,6 @@ const LandingPage = () => {
 
   // Function to handle Our Service button click
   const handleOurServiceClick = () => {
-    setActiveSection("services");
     // Scroll to services section
     setTimeout(() => {
       const servicesElement = document.getElementById("services");
@@ -269,7 +278,6 @@ const LandingPage = () => {
 
   // Function to handle My Laundry button click
   const handleMyLaundryClick = () => {
-    setActiveSection("service_tracking");
     // Scroll to service tracking section
     setTimeout(() => {
       const trackingElement = document.getElementById("service_tracking");
@@ -283,7 +291,8 @@ const LandingPage = () => {
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode ? 'bg-[#0B2B26] text-white' : 'bg-[#E0EAE8] text-[#0B2B26]'
     } font-poppins`} id="home">
-      <Header activeSection={activeSection} setActiveSection={setActiveSection} onThemeChange={handleThemeChange} />
+      {/* Pass activeSection to Header */}
+      <Header activeSection={activeSection} onThemeChange={handleThemeChange} />
 
       <div className="h-24" />
 
@@ -295,6 +304,8 @@ const LandingPage = () => {
           isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
         }`}
       >
+        {/* ... rest of your LandingPage JSX remains the same ... */}
+        
         <div className={`relative max-w-[90%] mx-auto overflow-hidden rounded-tl-2xl rounded-tr-2xl ${
           isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
         }`}>
@@ -436,7 +447,9 @@ const LandingPage = () => {
       </div>
 
       {/* Terms & Conditions Section */}
-      <TermsCondition isVisible={isVisible} isMobile={isMobile} isDarkMode={isDarkMode} />
+      <div id="terms">
+        <TermsCondition isVisible={isVisible} isMobile={isMobile} isDarkMode={isDarkMode} />
+      </div>
 
       <Footer isDarkMode={isDarkMode} />
     </div>

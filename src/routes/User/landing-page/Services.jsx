@@ -7,71 +7,42 @@ import assetClothing from "@/assets/USER_ASSET/asset_clothing.png";
 const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const services = [
-    {
-      title: "Wash Only",
-      description: "Get your clothes professionally washed with your preferred detergent. Includes free folding and plastic packaging for fresh, ready-to-wear laundry.",
-      basePrice: 65,
-      details: {
-        pricing: [
-          { item: "Base Service Cost", price: 65 },
-          { item: "Plastic Packaging", price: 3, note: "per load" },
-          { item: "Folding Service", price: 0, note: "free" }
-        ],
-        customerOptions: {
-          title: "Customer Provided Items",
-          description: "You can bring your own detergent and fabric softener. If not provided, we offer:",
-          items: [
-            { name: "Detergent", price: 14, note: "per use" },
-            { name: "Fabric Softener", price: 18, note: "per use" }
-          ]
-        },
-        machineInfo: {
-          capacity: "8kg capacity per load"
-        }
+  // Fetch services from backend
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      console.log("🔄 Starting to fetch services from backend...");
+      
+      const response = await fetch('http://localhost:8080/api/services');
+      
+      console.log("📡 Response status:", response.status);
+      console.log("📡 Response ok:", response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Response not OK. Response text:", errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    },
-    {
-      title: "Dry Only",
-      description: "Perfect for pre-washed clothes! We'll dry, neatly fold, and pack your laundry. Includes free professional folding and plastic packaging.",
-      basePrice: 65,
-      details: {
-        pricing: [
-          { item: "Base Service Cost", price: 65 },
-          { item: "Plastic Packaging", price: 3, note: "per load" },
-          { item: "Folding Service", price: 0, note: "free" }
-        ],
-        machineInfo: {
-          capacity: "8kg capacity per load"
-        }
-      }
-    },
-    {
-      title: "Wash and Dry",
-      description: "The complete solution! We wash, dry, and professionally fold your clothes. All-in-one service with free folding and plastic packaging included.",
-      basePrice: 130,
-      details: {
-        pricing: [
-          { item: "Base Service Cost", price: 130 },
-          { item: "Plastic Packaging", price: 3, note: "per load" },
-          { item: "Folding Service", price: 0, note: "free" }
-        ],
-        customerOptions: {
-          title: "Customer Provided Items",
-          description: "You can bring your own detergent and fabric softener. If not provided, we offer:",
-          items: [
-            { name: "Detergent", price: 14, note: "per use" },
-            { name: "Fabric Softener", price: 18, note: "per use" }
-          ]
-        },
-        machineInfo: {
-          washer: { capacity: "8kg capacity" },
-          dryer: { capacity: "8kg capacity" }
-        }
-      }
+      
+      const servicesData = await response.json();
+      console.log('✅ Successfully fetched services:', servicesData);
+      setServices(servicesData);
+      
+    } catch (err) {
+      console.error('❌ Error fetching services:', err);
+      console.error('❌ Error message:', err.message);
+      setServices([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
 
   const handleDetailsClick = (service) => {
     setSelectedService(service);
@@ -143,69 +114,93 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
                 </motion.h2>
               )}
               
-              <div className="flex flex-col gap-4 md:gap-4">
-                {services.map((service, index) => (
-                  <motion.div
-                    key={service.title}
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 1.5 + index * 0.2 }}
-                    className="rounded-lg p-5 md:p-6 border-2 hover:shadow-lg transition-all duration-300 w-full cursor-default"
-                    style={{
-                      backgroundColor: isDarkMode ? '#F3EDE3' : '#1C3F3A',
-                      borderColor: isDarkMode ? '#2A524C' : '#1C3F3A',
-                      color: isDarkMode ? '#13151B' : '#FFFFFF'
-                    }}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 
-                        className="text-lg md:text-xl font-bold"
+              {/* Loading State */}
+              {loading && (
+                <div className="flex justify-center items-center py-12">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#183D3D] mx-auto mb-4"></div>
+                    <p className={isDarkMode ? 'text-white' : 'text-[#183D3D]'}>
+                      Loading services...
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Empty State - No services loaded */}
+              {!loading && services.length === 0 && (
+                <div className="text-center py-12">
+                  <p className={isDarkMode ? 'text-white' : 'text-[#183D3D]'}>
+                    No services available at the moment.
+                  </p>
+                </div>
+              )}
+              
+              {/* Services Cards */}
+              {!loading && services.length > 0 && (
+                <div className="flex flex-col gap-4 md:gap-4">
+                  {services.map((service, index) => (
+                    <motion.div
+                      key={service.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 1.5 + index * 0.2 }}
+                      className="rounded-lg p-5 md:p-6 border-2 hover:shadow-lg transition-all duration-300 w-full cursor-default"
+                      style={{
+                        backgroundColor: isDarkMode ? '#F3EDE3' : '#1C3F3A',
+                        borderColor: isDarkMode ? '#2A524C' : '#1C3F3A',
+                        color: isDarkMode ? '#13151B' : '#FFFFFF'
+                      }}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 
+                          className="text-lg md:text-xl font-bold"
+                          style={{ color: isDarkMode ? '#13151B' : '#FFFFFF' }}
+                        >
+                          {service.name}
+                        </h3>
+                        <div className="text-right">
+                          <span 
+                            className="text-lg md:text-xl font-bold block"
+                            style={{ color: isDarkMode ? '#2A524C' : '#FFFFFF' }}
+                          >
+                            ₱{service.price}
+                          </span>
+                          <span 
+                            className="text-xs block mt-1"
+                            style={{ color: isDarkMode ? '#6B7280' : '#E0EAE8' }}
+                          >
+                            + ₱3 for plastic
+                          </span>
+                        </div>
+                      </div>
+                      <p 
+                        className="leading-relaxed text-sm md:text-base mb-4"
                         style={{ color: isDarkMode ? '#13151B' : '#FFFFFF' }}
                       >
-                        {service.title}
-                      </h3>
-                      <div className="text-right">
-                        <span 
-                          className="text-lg md:text-xl font-bold block"
-                          style={{ color: isDarkMode ? '#2A524C' : '#FFFFFF' }}
+                        {service.description}
+                      </p>
+                      <div className="text-left">
+                        <button 
+                          onClick={() => handleDetailsClick(service)}
+                          className="font-semibold text-sm md:text-base border-b-2 transition-all py-1 hover:scale-105 transform cursor-pointer"
+                          style={{ 
+                            color: isDarkMode ? '#13151B' : '#FFFFFF',
+                            borderColor: isDarkMode ? '#13151B' : '#FFFFFF'
+                          }}
                         >
-                          ₱{service.basePrice}
-                        </span>
-                        <span 
-                          className="text-xs block mt-1"
-                          style={{ color: isDarkMode ? '#6B7280' : '#E0EAE8' }}
-                        >
-                          + ₱3 for plastic
-                        </span>
+                          Pricing →
+                        </button>
                       </div>
-                    </div>
-                    <p 
-                      className="leading-relaxed text-sm md:text-base mb-4"
-                      style={{ color: isDarkMode ? '#13151B' : '#FFFFFF' }}
-                    >
-                      {service.description}
-                    </p>
-                    <div className="text-left">
-                      <button 
-                        onClick={() => handleDetailsClick(service)}
-                        className="font-semibold text-sm md:text-base border-b-2 transition-all py-1 hover:scale-105 transform cursor-pointer"
-                        style={{ 
-                          color: isDarkMode ? '#13151B' : '#FFFFFF',
-                          borderColor: isDarkMode ? '#13151B' : '#FFFFFF'
-                        }}
-                      >
-                        Pricing →
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </motion.section>
 
-      {/* Pricing Modal */}
+      {/* Pricing Modal - Constant content */}
       {showModal && selectedService && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -227,7 +222,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold">{selectedService.title} - Pricing</h3>
+              <h3 className="text-2xl font-bold">{selectedService.name} - Pricing</h3>
               <button
                 onClick={closeModal}
                 className="text-2xl font-bold hover:opacity-70 transition-colors"
@@ -258,95 +253,107 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
             <div className="mb-6">
               <h4 className="text-lg font-semibold mb-3">Service Pricing</h4>
               <div className="space-y-2">
-                {selectedService.details.pricing.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 rounded-lg border"
-                    style={{
-                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
-                      borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
-                    }}
-                  >
-                    <div>
-                      <span className="font-medium">{item.item}</span>
-                      {item.note && <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
-                        ({item.note})
-                      </span>}
-                    </div>
-                    <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
-                      {item.price === 0 ? 'FREE' : `₱${item.price}`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Customer Provided Items */}
-            {selectedService.details.customerOptions && (
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold mb-3">{selectedService.details.customerOptions.title}</h4>
-                <p className="mb-3 text-sm">{selectedService.details.customerOptions.description}</p>
-                <div className="space-y-2">
-                  {selectedService.details.customerOptions.items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 rounded-lg border"
-                      style={{
-                        backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
-                        borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
-                      }}
-                    >
-                      <div>
-                        <span className="font-medium">{item.name}</span>
-                        {item.note && <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
-                          ({item.note})
-                        </span>}
-                      </div>
-                      <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
-                        ₱{item.price}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Machine Capacity */}
-            <div className="mb-6">
-              <h4 className="text-lg font-semibold mb-3">Machine Capacity</h4>
-              {selectedService.title === "Wash and Dry" ? (
-                <div className="space-y-3">
-                  <div className="p-3 rounded-lg border"
-                    style={{
-                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
-                      borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
-                    }}
-                  >
-                    <p className="font-medium">Washing Machine</p>
-                    <p style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }} className="font-medium">
-                      {selectedService.details.machineInfo.washer.capacity}
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg border"
-                    style={{
-                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
-                      borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
-                    }}
-                  >
-                    <p className="font-medium">Dryer Machine</p>
-                    <p style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }} className="font-medium">
-                      {selectedService.details.machineInfo.dryer.capacity}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 rounded-lg border"
+                <div className="flex justify-between items-center p-3 rounded-lg border"
                   style={{
                     backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
                     borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
                   }}
                 >
-                  <p style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }} className="font-medium">
-                    {selectedService.details.machineInfo.capacity}
-                  </p>
+                  <div>
+                    <span className="font-medium">Base Service Cost</span>
+                  </div>
+                  <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
+                    ₱{selectedService.price}
+                  </span>
                 </div>
-              )}
+                <div className="flex justify-between items-center p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
+                    borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
+                  }}
+                >
+                  <div>
+                    <span className="font-medium">Plastic Packaging</span>
+                    <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+                      (per load)
+                    </span>
+                  </div>
+                  <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
+                    ₱3
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
+                    borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
+                  }}
+                >
+                  <div>
+                    <span className="font-medium">Folding Service</span>
+                    <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+                      (free)
+                    </span>
+                  </div>
+                  <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
+                    FREE
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Provided Items */}
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold mb-3">Customer Provided Items</h4>
+              <p className="mb-3 text-sm">You can bring your own detergent and fabric softener. If not provided, we offer:</p>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
+                    borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
+                  }}
+                >
+                  <div>
+                    <span className="font-medium">Detergent</span>
+                    <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+                      (per use)
+                    </span>
+                  </div>
+                  <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
+                    ₱14
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
+                    borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
+                  }}
+                >
+                  <div>
+                    <span className="font-medium">Fabric Softener</span>
+                    <span className="text-sm ml-2" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+                      (per use)
+                    </span>
+                  </div>
+                  <span className="font-semibold" style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }}>
+                    ₱18
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Machine Capacity */}
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold mb-3">Machine Capacity</h4>
+              <div className="p-3 rounded-lg border"
+                style={{
+                  backgroundColor: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.05)',
+                  borderColor: isDarkMode ? '#2A524C' : '#0B2B26'
+                }}
+              >
+                <p style={{ color: isDarkMode ? '#2A524C' : '#0B2B26' }} className="font-medium">
+                  8kg capacity per load
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end mt-6">

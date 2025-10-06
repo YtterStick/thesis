@@ -1,7 +1,6 @@
 package com.starwash.authservice.security;
 
 import com.starwash.authservice.service.CustomUserDetailsService;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,14 +34,26 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login", "/register", "/logout").permitAll()
-                .requestMatchers("/me").authenticated()
-                .requestMatchers("/api/accounts/**").hasRole("ADMIN")
-                .requestMatchers("/api/stock/**").hasAnyRole("ADMIN", "STAFF")
-                .requestMatchers("/api/laundry-jobs/**", "/api/machines/**").permitAll()
-                .anyRequest().authenticated()
-            )
-
+                    // Public endpoints - no authentication required
+                    .requestMatchers(
+                        "/login", 
+                        "/register", 
+                        "/logout",
+                        "/api/services/**"  // ✅ ADD THIS LINE - Make services endpoint public
+                    ).permitAll()
+                    
+                    // Authenticated endpoints
+                    .requestMatchers("/me").authenticated()
+                    
+                    // Role-based endpoints
+                    .requestMatchers("/api/accounts/**").hasRole("ADMIN")
+                    .requestMatchers("/api/stock/**").hasAnyRole("ADMIN", "STAFF")
+                    
+                    // Other public endpoints
+                    .requestMatchers("/api/laundry-jobs/**", "/api/machines/**").permitAll()
+                    
+                    .anyRequest().authenticated()
+                )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .logout(logout -> logout.disable())
                 .authenticationProvider(authenticationProvider())
