@@ -40,7 +40,8 @@ public class SecurityConfig {
                         "/register", 
                         "/logout",
                         "/api/services/**",
-                        "/api/stock/**" // ✅ ADD THIS LINE - Make services endpoint public
+                        "/api/stock/**",
+                        "/api/track/**"  // ✅ ADD THIS LINE - Make tracking endpoints public for users
                     ).permitAll()
                     
                     // Authenticated endpoints

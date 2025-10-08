@@ -10,7 +10,17 @@ const CustomerInfo = ({
   handleViewReceipt, 
   customerData 
 }) => {
-  if (!isVisible) return null;
+  if (!isVisible || !customerData) return null;
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-PH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   return (
     <motion.div
@@ -43,15 +53,15 @@ const CustomerInfo = ({
                 }}
               >
                 <span className="font-semibold text-xs">
-                  {customerData.name.charAt(0)}
+                  {customerData.customerName?.charAt(0) || 'C'}
                 </span>
               </div>
               <div>
                 <h4 className="font-semibold text-sm">
-                  {customerData.name}
+                  {customerData.customerName || '—'}
                 </h4>
                 <p className="text-xs">
-                  {customerData.loads} loads • {customerData.detergent} detergent • {customerData.fabric} fabric
+                  {customerData.loads || 0} loads • {customerData.detergentQty || 0} detergent • {customerData.fabricQty || 0} fabric
                 </p>
               </div>
             </div>
@@ -103,12 +113,15 @@ const CustomerInfo = ({
           
           <div className="space-y-2 text-sm">
             {Object.entries({
-              'Customer Name': customerData.name,
-              'Number of Loads': customerData.loads,
-              'Detergent': customerData.detergent,
-              'Fabric': customerData.fabric,
-              'Date Created': customerData.dateCreated,
-              'Staff Processed By': customerData.staffProcessedBy
+              'Customer Name': customerData.customerName || '—',
+              'Contact': customerData.contact || '—',
+              'Number of Loads': customerData.loads || 0,
+              'Detergent': customerData.detergentQty || 0,
+              'Fabric': customerData.fabricQty || 0,
+              'Service Type': customerData.serviceName || '—',
+              'Date Created': formatDate(customerData.createdAt),
+              'Due Date': formatDate(customerData.dueDate),
+              'Staff Processed By': customerData.staffId || '—'
             }).map(([key, value]) => (
               <div key={key} className="flex justify-between">
                 <span>{key}</span>
@@ -144,12 +157,15 @@ const CustomerInfo = ({
         >
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
             {Object.entries({
-              'Customer Name': customerData.name,
-              'Number of Loads': customerData.loads,
-              'Detergent': customerData.detergent,
-              'Fabric': customerData.fabric,
-              'Date Created': customerData.dateCreated,
-              'Staff Processed By': customerData.staffProcessedBy
+              'Customer Name': customerData.customerName || '—',
+              'Contact': customerData.contact || '—',
+              'Number of Loads': customerData.loads || 0,
+              'Detergent': customerData.detergentQty || 0,
+              'Fabric': customerData.fabricQty || 0,
+              'Service Type': customerData.serviceName || '—',
+              'Date Created': formatDate(customerData.createdAt),
+              'Due Date': formatDate(customerData.dueDate),
+              'Staff Processed By': customerData.staffId || '—'
             }).map(([key, value]) => (
               <div key={key} className="flex flex-col">
                 <span className="text-xs font-medium">{key}</span>

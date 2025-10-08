@@ -9,7 +9,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Bell,
-  Phone
+  Phone,
+  Loader2
 } from "lucide-react";
 
 // Import components
@@ -34,6 +35,10 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
   const [showReceiptOptions, setShowReceiptOptions] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [trackingData, setTrackingData] = useState(null);
+  
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const progressSectionRef = useRef(null);
@@ -61,7 +66,7 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          setRecentSearches(parsed.slice(0, 5)); // Keep only last 5
+          setRecentSearches(parsed.slice(0, 5));
         }
       }
     } catch (error) {
@@ -82,152 +87,73 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
     }
   }, [showStatus]);
 
+  // Fetch tracking data from backend
+  const fetchTrackingData = async (invoiceNumber) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/track/${invoiceNumber}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Receipt number not found');
+        }
+        throw new Error('Failed to fetch tracking data');
+      }
+      
+      const data = await response.json();
+      setTrackingData(data);
+      setShowStatus(true);
+      setShowFullCustomerInfo(false);
+      setCurrentLoadIndex(0);
+      
+    } catch (err) {
+      setError(err.message);
+      setShowStatus(false);
+      setTrackingData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Search by customer name
+  const searchByCustomerName = async (customerName) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/track/search?customerName=${encodeURIComponent(customerName)}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to search by customer name');
+      }
+      
+      const data = await response.json();
+      // Handle multiple results - for now, take the first one
+      if (data.length > 0) {
+        setTrackingData(data[0]);
+        setShowStatus(true);
+        setShowFullCustomerInfo(false);
+        setCurrentLoadIndex(0);
+        
+        // Add to recent searches
+        addToRecentSearches(data[0].invoiceNumber);
+      } else {
+        setError('No transactions found for this customer name');
+      }
+      
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const stats = [
     { number: "50", label: "Total No. of Laundry" },
     { number: "50", label: "Total No. of Washing" },
     { number: "50", label: "Total No. of Drying" }
-  ];
-
-  // Sample customer data
-  const customerData = {
-    name: "Andrei",
-    loads: 3,
-    detergent: 2,
-    fabric: 3,
-    dateCreated: "10-04-2024",
-    staffProcessedBy: "staffandrei"
-  };
-
-  // Sample receipt data
-  const receiptData = {
-    receiptNumber: "R-meh77tu",
-    dateCreated: "10-04-2024",
-    customerName: "Andrei",
-    items: [
-      { description: "Regular Wash", quantity: 1, price: 150.00 },
-      { description: "Drying Service", quantity: 1, price: 100.00 },
-      { description: "Folding Service", quantity: 1, price: 50.00 }
-    ],
-    subtotal: 300.00,
-    tax: 18.00,
-    total: 318.00,
-    paymentMethod: "Cash",
-    staff: "staffandrei"
-  };
-
-  // Sample laundry loads with different statuses
-  const laundryLoads = [
-    {
-      loadNumber: 1,
-      statusSteps: [
-        {
-          lottie: washingMachine,
-          title: "Washing",
-          description: "Your laundry is now being washed",
-          active: true,
-          estimatedTime: "35 min",
-          startedAt: "10:00 AM"
-        },
-        {
-          lottie: dryerMachine,
-          title: "Drying", 
-          description: "Your laundry is now being dried",
-          active: false,
-          estimatedTime: "40-60 min"
-        },
-        {
-          lottie: clothes,
-          title: "Folding",
-          description: "Your laundry is now being folded",
-          active: false,
-          estimatedTime: "20-30 min"
-        },
-        {
-          lottie: unwashed,
-          title: "Ready",
-          description: "Ready for pickup at the counter",
-          active: false,
-          estimatedTime: "5 min"
-        }
-      ],
-      fabricType: 2,
-      detergent: 1,
-      weight: "5 kg"
-    },
-    {
-      loadNumber: 2,
-      statusSteps: [
-        {
-          lottie: washingMachine,
-          title: "Washing",
-          description: "Your laundry is now being washed",
-          active: false,
-          estimatedTime: "35 min"
-        },
-        {
-          lottie: dryerMachine,
-          title: "Drying", 
-          description: "Your laundry is now being dried",
-          active: true,
-          estimatedTime: "40-60 min",
-          startedAt: "11:15 AM"
-        },
-        {
-          lottie: clothes,
-          title: "Folding",
-          description: "Your laundry is now being folded",
-          active: false,
-          estimatedTime: "20-30 min"
-        },
-        {
-          lottie: unwashed,
-          title: "Ready",
-          description: "Ready for pickup at the counter",
-          active: false,
-          estimatedTime: "5 min"
-        }
-      ],
-      fabricType: 1,
-      detergent: 2,
-      weight: "3 kg"
-    },
-    {
-      loadNumber: 3,
-      statusSteps: [
-        {
-          lottie: washingMachine,
-          title: "Washing",
-          description: "Your laundry is now being washed",
-          active: false,
-          estimatedTime: "35 min"
-        },
-        {
-          lottie: dryerMachine,
-          title: "Drying", 
-          description: "Your laundry is now being dried",
-          active: false,
-          estimatedTime: "40-60 min"
-        },
-        {
-          lottie: clothes,
-          title: "Folding",
-          description: "Your laundry is now being folded",
-          active: true,
-          estimatedTime: "20-30 min",
-          startedAt: "12:30 PM"
-        },
-        {
-          lottie: unwashed,
-          title: "Ready",
-          description: "Ready for pickup at the counter",
-          active: false,
-          estimatedTime: "5 min"
-        }
-      ],
-      fabricType: 3,
-      detergent: 1,
-      weight: "7 kg"
-    }
   ];
 
   // Function to add receipt to recent searches
@@ -258,10 +184,13 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!receiptNumber.trim()) {
+      setError('Please enter a receipt number');
+      return;
+    }
+    
     console.log("Receipt submitted:", receiptNumber);
-    setShowStatus(true);
-    setShowFullCustomerInfo(false);
-    setCurrentLoadIndex(0);
+    fetchTrackingData(receiptNumber);
     
     // Save to recent searches
     addToRecentSearches(receiptNumber);
@@ -299,14 +228,13 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
         videoRef.current.play();
       }
       
+      // Simulate QR scan - in real implementation, you'd use a QR scanner library
       setTimeout(() => {
-        const scannedReceipt = "R-meh77tu";
+        const scannedReceipt = "INV-MGFFH82K"; // Example from your transaction
         setReceiptNumber(scannedReceipt);
         addToRecentSearches(scannedReceipt);
         closeScanner();
-        setShowStatus(true);
-        setShowFullCustomerInfo(false);
-        setCurrentLoadIndex(0);
+        fetchTrackingData(scannedReceipt);
       }, 3000);
 
     } catch (error) {
@@ -325,14 +253,13 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
       
       console.log("Processing file:", file.name);
       
+      // Simulate QR scan from file - in real implementation, process the image
       setTimeout(() => {
-        const scannedReceipt = "R-meh77tu";
+        const scannedReceipt = "INV-MGFFH82K"; // Example from your transaction
         setReceiptNumber(scannedReceipt);
         addToRecentSearches(scannedReceipt);
         closeScanner();
-        setShowStatus(true);
-        setShowFullCustomerInfo(false);
-        setCurrentLoadIndex(0);
+        fetchTrackingData(scannedReceipt);
         
         event.target.value = '';
       }, 2000);
@@ -365,7 +292,7 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
   };
 
   const nextLoad = () => {
-    if (currentLoadIndex < laundryLoads.length - 1) {
+    if (trackingData?.loadAssignments && currentLoadIndex < trackingData.loadAssignments.length - 1) {
       setCurrentLoadIndex(currentLoadIndex + 1);
     }
   };
@@ -385,13 +312,13 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
   };
 
   const handlePrintReceipt = () => {
-    console.log("Printing receipt:", receiptData);
+    console.log("Printing receipt:", trackingData);
     alert("Printing receipt...");
     setShowReceiptOptions(false);
   };
 
   const handleDownloadReceipt = () => {
-    console.log("Downloading receipt:", receiptData);
+    console.log("Downloading receipt:", trackingData);
     alert("Downloading receipt as PDF...");
     setShowReceiptOptions(false);
   };
@@ -403,10 +330,62 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
   // Function to handle clicking on a recent search item
   const handleRecentSearchClick = (receiptNum) => {
     setReceiptNumber(receiptNum);
-    setShowStatus(true);
-    setShowFullCustomerInfo(false);
-    setCurrentLoadIndex(0);
+    fetchTrackingData(receiptNum);
   };
+
+  // Convert backend data to frontend format for laundry progress
+  const convertToLaundryLoads = (trackingData) => {
+    if (!trackingData?.loadAssignments) return [];
+
+    return trackingData.loadAssignments.map((load, index) => {
+      const status = load.status || 'NOT_STARTED';
+      
+      // Map backend status to frontend steps
+      const statusSteps = [
+        {
+          lottie: washingMachine,
+          title: "Washing",
+          description: "Your laundry is now being washed",
+          active: status === 'WASHING',
+          estimatedTime: "35 min",
+          startedAt: load.startTime ? new Date(load.startTime).toLocaleTimeString() : undefined
+        },
+        {
+          lottie: dryerMachine,
+          title: "Drying", 
+          description: "Your laundry is now being dried",
+          active: status === 'DRYING',
+          estimatedTime: "40-60 min",
+          startedAt: load.startTime ? new Date(load.startTime).toLocaleTimeString() : undefined
+        },
+        {
+          lottie: clothes,
+          title: "Folding",
+          description: "Your laundry is now being folded",
+          active: status === 'FOLDING',
+          estimatedTime: "20-30 min",
+          startedAt: load.startTime ? new Date(load.startTime).toLocaleTimeString() : undefined
+        },
+        {
+          lottie: unwashed,
+          title: "Ready",
+          description: "Ready for pickup at the counter",
+          active: status === 'COMPLETED',
+          estimatedTime: "5 min"
+        }
+      ];
+
+      return {
+        loadNumber: load.loadNumber || index + 1,
+        statusSteps,
+        fabricType: trackingData.fabricQty || 1,
+        detergent: trackingData.detergentQty || 1,
+        weight: "5 kg" // Default weight, you can calculate based on your business logic
+      };
+    });
+  };
+
+  const laundryLoads = convertToLaundryLoads(trackingData);
 
   return (
     <motion.section
@@ -460,41 +439,55 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
                 
                 <button
                   type="submit"
+                  disabled={isLoading}
                   className={`py-2 px-3 font-semibold rounded-lg transition-all text-sm border shadow flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0 ${
                     isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
-                  }`}
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   style={{ 
                     backgroundColor: isDarkMode ? '#18442AF5' : '#F3EDE3',
                     color: isDarkMode ? '#D5DCDB' : '#183D3D',
                     borderColor: isDarkMode ? '#18442AF5' : '#F3EDE3'
                   }}
                 >
-                  <Search className="w-4 h-4" />
-                  View
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                  {isLoading ? 'Loading...' : 'View'}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleScanQR}
+                  disabled={isLoading || isScanning}
                   className={`py-2 px-3 font-semibold rounded-lg transition-all text-sm border shadow flex items-center justify-center gap-1 whitespace-nowrap flex-shrink-0 ${
                     isDarkMode ? 'hover:bg-[#2A524C]' : 'hover:bg-[#D5DCDB]'
-                  }`}
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   style={{ 
                     backgroundColor: isDarkMode ? '#2A524C' : '#F3EDE3',
                     color: isDarkMode ? '#D5DCDB' : '#183D3D',
                     borderColor: isDarkMode ? '#2A524C' : '#F3EDE3'
                   }}
-                  disabled={isScanning}
                 >
                   {isScanning ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <QrCode className="w-4 h-4" />
                   )}
-                  <span className="hidden sm:inline">Scan QR</span>
+                  <span className="hidden sm:inline">
+                    {isScanning ? 'Scanning...' : 'Scan QR'}
+                  </span>
                 </button>
               </form>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mt-3 text-center">
+                <p className="text-red-500 text-sm font-medium">{error}</p>
+              </div>
+            )}
           </div>
 
           {/* QR Scanner Modal */}
@@ -655,7 +648,7 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
           )}
 
           {/* Customer Information & Laundry Progress */}
-          {showStatus && (
+          {showStatus && trackingData && (
             <motion.div
               ref={progressSectionRef}
               initial={{ opacity: 0, height: 0 }}
@@ -671,19 +664,21 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
                 showFullCustomerInfo={showFullCustomerInfo}
                 toggleFullCustomerInfo={toggleFullCustomerInfo}
                 handleViewReceipt={handleViewReceipt}
-                customerData={customerData}
+                customerData={trackingData}
               />
 
-              <LaundryProgress
-                isVisible={showStatus}
-                isDarkMode={isDarkMode}
-                isMobile={isMobile}
-                currentLoadIndex={currentLoadIndex}
-                laundryLoads={laundryLoads}
-                prevLoad={prevLoad}
-                nextLoad={nextLoad}
-                goToLoad={goToLoad}
-              />
+              {laundryLoads.length > 0 && (
+                <LaundryProgress
+                  isVisible={showStatus}
+                  isDarkMode={isDarkMode}
+                  isMobile={isMobile}
+                  currentLoadIndex={currentLoadIndex}
+                  laundryLoads={laundryLoads}
+                  prevLoad={prevLoad}
+                  nextLoad={nextLoad}
+                  goToLoad={goToLoad}
+                />
+              )}
             </motion.div>
           )}
         </motion.div>
@@ -696,7 +691,7 @@ const ServiceTracking = ({ isVisible, isDarkMode }) => {
           closeReceiptOptions={closeReceiptOptions}
           handlePrintReceipt={handlePrintReceipt}
           handleDownloadReceipt={handleDownloadReceipt}
-          receiptData={receiptData}
+          receiptData={trackingData}
         />
 
         {/* Bottom Section - 3 Columns */}

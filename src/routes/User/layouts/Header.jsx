@@ -5,6 +5,10 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [previousSection, setPreviousSection] = useState('');
+  const [internalActiveSection, setInternalActiveSection] = useState('home');
+
+  // Use internal state if prop is not provided
+  const currentActiveSection = activeSection || internalActiveSection;
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -13,10 +17,10 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
 
   // Track section changes for animation direction
   useEffect(() => {
-    if (activeSection && activeSection !== previousSection) {
-      setPreviousSection(activeSection);
+    if (currentActiveSection && currentActiveSection !== previousSection) {
+      setPreviousSection(currentActiveSection);
     }
-  }, [activeSection, previousSection]);
+  }, [currentActiveSection, previousSection]);
 
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
@@ -51,14 +55,30 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
   ];
 
   const handleNavClick = (href, label) => {
-    setActiveSection(href.replace('#', ''));
+    const sectionId = href.replace('#', '');
+    
+    // Use provided setActiveSection or fall back to internal state
+    if (setActiveSection) {
+      setActiveSection(sectionId);
+    } else {
+      setInternalActiveSection(sectionId);
+    }
+    
+    // Scroll to section if setActiveSection isn't provided
+    if (!setActiveSection) {
+      const element = document.querySelector(href);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    
     closeMobileMenu();
   };
 
   // Determine animation direction based on section order
   const getAnimationDirection = (sectionId) => {
     const sections = ['home', 'services', 'service_tracking', 'terms'];
-    const currentIndex = sections.indexOf(activeSection);
+    const currentIndex = sections.indexOf(currentActiveSection);
     const targetIndex = sections.indexOf(sectionId);
     
     if (currentIndex === -1 || targetIndex === -1) return 0;
@@ -154,7 +174,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-8">
               {navItems.map((item) => {
-                const isActive = activeSection === item.href.replace('#', '');
+                const isActive = currentActiveSection === item.href.replace('#', '');
                 const direction = getAnimationDirection(item.href.replace('#', ''));
                 
                 return (
@@ -322,7 +342,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
             >
               <nav className="flex flex-col p-6 space-y-6">
                 {navItems.map((item, index) => {
-                  const isActive = activeSection === item.href.replace('#', '');
+                  const isActive = currentActiveSection === item.href.replace('#', '');
                   
                   return (
                     <motion.a
