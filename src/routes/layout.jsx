@@ -2,7 +2,7 @@ import { Sidebar } from "@/layouts/sidebar";
 import { Header } from "@/layouts/header";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useMediaQuery } from "@uidotdev/usehooks";
-import { useLocation, Navigate } from "react-router-dom";
+import { useLocation, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
@@ -17,6 +17,7 @@ const Layout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(!isDesktopDevice);
   const sidebarRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const { loading, isAuthenticated, role, user } = useAuth();
   const { theme } = useTheme();
 
@@ -38,6 +39,15 @@ const Layout = ({ children }) => {
       setCollapsed(true);
     }
   });
+
+  // Handle search result click - navigate to the selected page
+  const handleSearchResultClick = (result) => {
+    navigate(result.path);
+    // Close sidebar on mobile after navigation
+    if (!isDesktopDevice) {
+      setCollapsed(true);
+    }
+  };
 
   if (loading) {
     return <AuthLoader />;
@@ -73,8 +83,13 @@ const Layout = ({ children }) => {
           collapsed ? "md:ml-[70px]" : "md:ml-[240px]"
         )}
       >
-        {/* Header */}
-        <Header collapsed={collapsed} setCollapsed={setCollapsed} role={role} />
+        {/* Header with search functionality */}
+        <Header 
+          collapsed={collapsed} 
+          setCollapsed={setCollapsed} 
+          sidebarLinks={sidebarLinks}
+          onSearchResultClick={handleSearchResultClick}
+        />
 
         {/* Page content */}
         <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 bg-slate-100 dark:bg-slate-950">

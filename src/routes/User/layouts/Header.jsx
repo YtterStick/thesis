@@ -1,19 +1,18 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import { useTheme } from "@/hooks/use-theme"; // Import your theme hook
 
 const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const { theme, setTheme } = useTheme(); // Use your theme hook
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [previousSection, setPreviousSection] = useState('');
   const [internalActiveSection, setInternalActiveSection] = useState('home');
 
+  // Calculate isDarkMode based on theme
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   // Use internal state if prop is not provided
   const currentActiveSection = activeSection || internalActiveSection;
-
-  useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setIsDarkMode(isDark);
-  }, []);
 
   // Track section changes for animation direction
   useEffect(() => {
@@ -23,19 +22,11 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
   }, [currentActiveSection, previousSection]);
 
   const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    }
+    const newTheme = isDarkMode ? "light" : "dark";
+    setTheme(newTheme);
     
     if (onThemeChange) {
-      onThemeChange(newDarkMode);
+      onThemeChange(!isDarkMode);
     }
   };
 

@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QRCode from "react-qr-code";
 import { ScrollText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
 const ALLOWED_SKEW_MS = 5000;
 
 const isTokenExpired = (token) => {

@@ -7,6 +7,7 @@ import ServiceTracking from "./ServiceTracking";
 import TermsCondition from "./TermsCondition";
 import { useScrollSpy } from "./useScrollSpy";
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
+import { useTheme } from "@/hooks/use-theme";
 
 const API_BASE_URL = "http://localhost:8080/api";
 
@@ -57,7 +58,6 @@ const AnimatedNumber = ({ value, isChanging }) => {
 const LandingPage = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [stats, setStats] = useState([
     { number: "0", label: "Total Laundry Load", changing: false },
     { number: "0", label: "Total No. of Washing", changing: false },
@@ -65,6 +65,12 @@ const LandingPage = () => {
   ]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
+
+  // Use your theme hook
+  const { theme } = useTheme();
+  
+  // Calculate isDarkMode based on theme
+  const isDarkMode = theme === "dark" || (theme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   const sectionIds = ['home', 'services', 'service_tracking', 'terms'];
   const { activeSection, isScrolling } = useScrollSpy(sectionIds, {
@@ -79,21 +85,10 @@ const LandingPage = () => {
     };
     
     checkMobile();
-    
     window.addEventListener('resize', checkMobile);
-    
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(mediaQuery.matches);
-    
-    const handleChange = (e) => {
-      setIsDarkMode(e.matches);
-    };
-    
-    mediaQuery.addEventListener('change', handleChange);
     
     return () => {
       window.removeEventListener('resize', checkMobile);
-      mediaQuery.removeEventListener('change', handleChange);
     };
   }, []);
 
@@ -214,10 +209,6 @@ const LandingPage = () => {
     }
   };
 
-  const handleThemeChange = (darkMode) => {
-    setIsDarkMode(darkMode);
-  };
-
   const handleOurServiceClick = () => {
     setTimeout(() => {
       const servicesElement = document.getElementById("services");
@@ -240,7 +231,8 @@ const LandingPage = () => {
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode ? 'bg-[#0B2B26] text-white' : 'bg-[#E0EAE8] text-[#0B2B26]'
     } font-poppins`} id="home">
-      <Header activeSection={activeSection} onThemeChange={handleThemeChange} />
+      {/* Remove onThemeChange prop since Header now uses the theme hook internally */}
+      <Header activeSection={activeSection} />
 
       <div className="h-24" />
 
