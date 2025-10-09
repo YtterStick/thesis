@@ -144,11 +144,6 @@ const LaundryProgress = ({
             <p className="text-xs mb-2">
               {currentStep.description}
             </p>
-            {currentStep.startedAt && (
-              <p className="text-xs font-semibold">
-                Started at: {currentStep.startedAt}
-              </p>
-            )}
           </div>
           
           <div className="p-2 rounded-lg text-center text-xs"
@@ -220,12 +215,6 @@ const LaundryProgress = ({
                       {step.description}
                     </p>
                     
-                    {step.startedAt && (
-                      <p className="text-xs mb-1 font-semibold">
-                          Started: {step.startedAt}
-                      </p>
-                    )}
-                    
                     <div className={`p-1 rounded font-semibold text-xs min-h-[2rem] flex items-center justify-center ${
                       step.active 
                         ? (isDarkMode ? "text-white" : "text-[#183D3D]") 
@@ -241,25 +230,6 @@ const LaundryProgress = ({
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div 
-            className="mt-4 p-3 rounded-lg border text-center"
-            style={{
-              backgroundColor: isDarkMode ? '#FFFFFF' : '#183D3D',
-              borderColor: isDarkMode ? '#2A524C' : '#F3EDE3',
-              color: isDarkMode ? '#13151B' : '#F3EDE3'
-            }}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <div 
-                className="w-2 h-2 rounded-full animate-pulse"
-                style={{ backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3' }} 
-              />
-              <p className="font-semibold text-sm">
-                Total Estimated Time: ~2 hours
-              </p>
             </div>
           </div>
         </>

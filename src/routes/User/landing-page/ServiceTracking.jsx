@@ -1,11 +1,13 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
-import { QrCode, Search, Camera, Upload, X, CheckCircle2, AlertTriangle, Bell, Phone, Loader2 } from "lucide-react";
+import { Search, Loader2, CheckCircle2,Bell,AlertTriangle,Clock,Phone} from "lucide-react";
 
 // Import components
 import ViewReceipt from "./ViewReceipt";
 import CustomerInfo from "./CustomerInfo";
 import LaundryProgress from "./LaundryProgress";
+import QRScanner from "./QRScanner";
+import RecentSearches from "./RecentSearches";
 
 // Import Lottie animations
 import washingMachine from "@/assets/lottie/washing-machine.json";
@@ -18,7 +20,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
     const [showStatus, setShowStatus] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
-    const [scanMethod, setScanMethod] = useState(null);
     const [isMobile, setIsMobile] = useState(propIsMobile || false);
     const [showFullCustomerInfo, setShowFullCustomerInfo] = useState(false);
     const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
@@ -27,13 +28,22 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [trackingData, setTrackingData] = useState(null);
-    const [qrLoading, setQrLoading] = useState(false);
-    const [qrError, setQrError] = useState(null);
-    const [scannedUrl, setScannedUrl] = useState(null);
 
-    const fileInputRef = useRef(null);
-    const scannerRef = useRef(null);
-    const scannerInstanceRef = useRef(null);
+    const mainCardRef = useRef(null);
+
+    // Check if mobile on mount and resize
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+
+        checkMobile();
+        window.addEventListener("resize", checkMobile);
+
+        return () => {
+            window.removeEventListener("resize", checkMobile);
+        };
+    }, []);
 
     // Load recent searches from localStorage
     useEffect(() => {
@@ -50,12 +60,18 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
         }
     }, []);
 
-    // Clean up on unmount
+    // Auto-scroll to show the entire main card when status is shown
     useEffect(() => {
-        return () => {
-            stopScanner();
-        };
-    }, []);
+        if (showStatus && mainCardRef.current) {
+            setTimeout(() => {
+                mainCardRef.current.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                    inline: "nearest",
+                });
+            }, 100);
+        }
+    }, [showStatus]);
 
     // Fetch tracking data
     const fetchTrackingData = async (invoiceNumber) => {
@@ -125,235 +141,27 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
 
     const handleScanQR = () => {
         setShowScanner(true);
-        setScanMethod(null);
-        setQrError(null);
-        setScannedUrl(null);
     };
 
-    // Camera Scanner with Html5Qrcode - UPDATED VERSION
-    const startCameraScan = async () => {
-        try {
-            setIsScanning(true);
-            setScanMethod("camera");
-            setQrLoading(true);
-            setQrError(null);
-            setScannedUrl(null);
+    // Handle QR scan result
+    const handleQRScanned = (receiptNumber, scannedUrl) => {
+        console.log("✅ QR code scanned successfully!");
+        console.log("🔗 Full scanned URL:", scannedUrl);
+        console.log("📄 Receipt number extracted:", receiptNumber);
 
-            // Wait for DOM to update
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            try {
-                const { Html5Qrcode } = await import("html5-qrcode");
-                console.log("✅ Html5Qrcode loaded successfully");
-
-                const scannerElementId = "html5qr-code-scanner";
-                const scannerElement = document.getElementById(scannerElementId);
-                
-                if (!scannerElement) {
-                    throw new Error("Scanner element not found");
-                }
-
-                console.log("🎥 Starting camera with Html5Qrcode...");
-                
-                // Create scanner instance
-                const scanner = new Html5Qrcode(scannerElementId);
-                scannerInstanceRef.current = scanner;
-
-                await scanner.start(
-                    { 
-                        facingMode: "environment" 
-                    },
-                    {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 }
-                    },
-                    (decodedText) => {
-                        console.log("✅ QR Code detected:", decodedText);
-                        handleScannedQRCode(decodedText);
-                    },
-                    (errorMessage) => {
-                        // This is normal - it's called when no QR code is found
-                        console.log("🔍 Scanning...", errorMessage);
-                    }
-                ).catch(error => {
-                    console.error("❌ Scanner start error:", error);
-                    setQrError("Failed to start camera: " + error.message);
-                    setQrLoading(false);
-                    setIsScanning(false);
-                });
-
-                setQrLoading(false);
-                console.log("✅ Camera started successfully");
-
-            } catch (error) {
-                console.error("❌ Camera error:", error);
-                setQrError("Cannot access camera. Please check permissions.");
-                setIsScanning(false);
-                setScanMethod(null);
-                setQrLoading(false);
-            }
-        } catch (error) {
-            console.error("❌ Scanner setup error:", error);
-            setQrError("Cannot start QR scanner.");
-            setIsScanning(false);
-            setScanMethod(null);
-            setQrLoading(false);
-        }
+        setReceiptNumber(receiptNumber);
+        addToRecentSearches(receiptNumber);
+        fetchTrackingData(receiptNumber);
     };
 
-    // File Upload with Html5Qrcode - UPDATED VERSION
-    const handleFileUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        console.log("📁 Processing image with Html5Qrcode:", file.name);
-        setIsScanning(true);
-        setScanMethod("file");
-        setQrLoading(true);
-        setQrError(null);
-        setScannedUrl(null);
-
-        try {
-            event.target.value = "";
-
-            if (!file.type.startsWith("image/")) {
-                throw new Error("Please upload an image file");
-            }
-
-            const { Html5Qrcode } = await import("html5-qrcode");
-            console.log("✅ Html5Qrcode loaded for file scan");
-            
-            // Create a temporary hidden element for file scanning
-            const tempScannerId = "temp-file-scanner-" + Date.now();
-            const tempDiv = document.createElement("div");
-            tempDiv.id = tempScannerId;
-            tempDiv.style.display = "none";
-            document.body.appendChild(tempDiv);
-            
-            try {
-                const scanner = new Html5Qrcode(tempScannerId);
-                
-                console.log("🔍 Scanning file with Html5Qrcode...");
-                const decodedText = await scanner.scanFile(file, true);
-                
-                if (decodedText) {
-                    console.log("🎉 QR CODE FOUND!", decodedText);
-                    handleScannedQRCode(decodedText);
-                } else {
-                    console.log("❌ No QR code found in image");
-                    setQrError("No QR code found. Please try a clearer image.");
-                    setIsScanning(false);
-                    setQrLoading(false);
-                }
-            } finally {
-                // Always clean up the temporary element
-                if (document.body.contains(tempDiv)) {
-                    document.body.removeChild(tempDiv);
-                }
-            }
-            
-        } catch (error) {
-            console.error("❌ Upload/scan error:", error);
-            
-            // Handle specific error cases
-            let errorMessage = "Scan failed: " + error.message;
-            if (error.message && typeof error.message === 'string') {
-                if (error.message.includes("No MultiFormat Readers") || 
-                    error.message.includes("NotFoundException")) {
-                    errorMessage = "No QR code found in the image. Please try a clearer image.";
-                } else if (error.message.includes("file format")) {
-                    errorMessage = "Unsupported image format. Please use JPG, PNG, or WebP.";
-                }
-            }
-            
-            setQrError(errorMessage);
-            setIsScanning(false);
-            setQrLoading(false);
-        }
-    };
-
-    // Handle scanned QR code data - UPDATED VERSION
-    const handleScannedQRCode = (decodedText) => {
-        console.log("📱 Raw QR data:", decodedText);
-        
-        // Set the scanned URL for logging
-        setScannedUrl(decodedText);
-        
-        // Log the URL to console so you can see if it's working
-        console.log("🎯 SCANNED URL:", decodedText);
-        console.log("🔗 URL Type:", typeof decodedText);
-        console.log("📏 URL Length:", decodedText.length);
-        
-        // Extract receipt number from URL if it's a full URL, otherwise use raw data
-        let receiptNumber = decodedText.trim();
-        
-        // If it's a URL, try to extract the invoice number
-        if (decodedText.includes('/')) {
-            try {
-                const url = new URL(decodedText);
-                const pathParts = url.pathname.split('/');
-                const lastPart = pathParts[pathParts.length - 1];
-                
-                if (lastPart && lastPart !== 'track') {
-                    receiptNumber = lastPart;
-                    console.log("📄 Extracted receipt number from URL:", receiptNumber);
-                }
-            } catch (e) {
-                console.log("⚠️ Not a valid URL, using raw data as receipt number");
-            }
-        }
-        
-        console.log("🎯 Final receipt number to use:", receiptNumber);
-
-        if (receiptNumber && receiptNumber.length > 0) {
-            // Set the receipt number
-            setReceiptNumber(receiptNumber);
-            addToRecentSearches(receiptNumber);
-            
-            // Show success message with the scanned URL
-            console.log("✅ QR code scanned successfully!");
-            console.log("🔗 Full scanned URL:", decodedText);
-            console.log("📄 Receipt number extracted:", receiptNumber);
-            
-            // Auto-fetch tracking data
-            fetchTrackingData(receiptNumber);
-            
-            // Close scanner after short delay to show success
-            setTimeout(() => {
-                closeScanner();
-            }, 1000);
-        } else {
-            console.error("❌ Invalid QR code - empty data");
-            setQrError("Invalid QR code - no data found");
-            setIsScanning(false);
-            setQrLoading(false);
-        }
-    };
-
-    const handleUploadClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const stopScanner = () => {
-        if (scannerInstanceRef.current) {
-            scannerInstanceRef.current.stop().then(() => {
-                console.log("✅ Scanner stopped successfully");
-                scannerInstanceRef.current.clear();
-                scannerInstanceRef.current = null;
-            }).catch(error => {
-                console.warn("Scanner stop warning:", error);
-                scannerInstanceRef.current = null;
-            });
-        }
-    };
-
-    const closeScanner = () => {
-        stopScanner();
-        setShowScanner(false);
-        setIsScanning(false);
-        setScanMethod(null);
-        setQrLoading(false);
-        setQrError(null);
+    // Close tracking function
+    const handleCloseTracking = () => {
+        setShowStatus(false);
+        setTrackingData(null);
+        setReceiptNumber("");
+        setError(null);
+        setCurrentLoadIndex(0);
+        setShowFullCustomerInfo(false);
     };
 
     const toggleFullCustomerInfo = () => {
@@ -415,7 +223,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                     description: "Your laundry is now being washed",
                     active: status === "WASHING",
                     estimatedTime: "35 min",
-                    startedAt: load.startTime ? new Date(load.startTime).toLocaleTimeString() : undefined,
                 },
                 {
                     lottie: dryerMachine,
@@ -423,7 +230,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                     description: "Your laundry is now being dried",
                     active: status === "DRYING",
                     estimatedTime: "40-60 min",
-                    startedAt: load.startTime ? new Date(load.startTime).toLocaleTimeString() : undefined,
                 },
                 {
                     lottie: clothes,
@@ -431,7 +237,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                     description: "Your laundry is now being folded",
                     active: status === "FOLDING",
                     estimatedTime: "20-30 min",
-                    startedAt: load.startTime ? new Date(load.startTime).toLocaleTimeString() : undefined,
                 },
                 {
                     lottie: unwashed,
@@ -452,12 +257,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
         });
     };
 
-    const stats = [
-        { number: "50", label: "Total No. of Laundry" },
-        { number: "50", label: "Total No. of Washing" },
-        { number: "50", label: "Total No. of Drying" },
-    ];
-
     const laundryLoads = convertToLaundryLoads(trackingData);
 
     return (
@@ -470,6 +269,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
         >
             <div className="mx-auto max-w-[90%]">
                 <motion.div
+                    ref={mainCardRef}
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 2.0 }}
@@ -480,7 +280,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                         color: isDarkMode ? "#13151B" : "#F3EDE3",
                     }}
                 >
-                    {/* Receipt Input Section */}
+                    {/* Receipt Input Section - Mobile Optimized */}
                     <div className="mb-6">
                         <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
                             <h3
@@ -492,7 +292,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
 
                             <form
                                 onSubmit={handleSubmit}
-                                className="flex w-full max-w-2xl flex-1 items-center gap-2"
+                                className="flex w-full max-w-2xl flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-2"
                             >
                                 <div className="relative flex-1">
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 transform">
@@ -506,7 +306,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                                         value={receiptNumber}
                                         onChange={(e) => setReceiptNumber(e.target.value)}
                                         placeholder="Write here..."
-                                        className="w-full rounded-lg border-2 py-2 pl-9 pr-3 text-sm placeholder-gray-500 focus:outline-none"
+                                        className="w-full rounded-lg border-2 py-3 pl-9 pr-3 text-sm placeholder-gray-500 focus:outline-none sm:py-2"
                                         style={{
                                             backgroundColor: "#FFFFFF",
                                             borderColor: isDarkMode ? "#2A524C" : "#F3EDE3",
@@ -515,42 +315,56 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                                     />
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className={`flex flex-shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-semibold shadow transition-all ${
-                                        isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                                    } ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#18442AF5" : "#F3EDE3",
-                                        color: isDarkMode ? "#D5DCDB" : "#183D3D",
-                                        borderColor: isDarkMode ? "#18442AF5" : "#F3EDE3",
-                                    }}
-                                >
-                                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                                    {isLoading ? "Loading..." : "View"}
-                                </button>
+                                <div className="flex w-full gap-2 sm:w-auto">
+                                    <motion.button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        whileHover={{ 
+                                            scale: 1.05,
+                                            backgroundColor: isDarkMode ? "#2A524C" : "#D5DCDB",
+                                            transition: { duration: 0.2 }
+                                        }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-4 py-3 text-sm font-semibold shadow sm:flex-shrink-0 sm:py-2 ${
+                                            isLoading ? "cursor-not-allowed opacity-50" : ""
+                                        }`}
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#18442AF5" : "#F3EDE3",
+                                            color: isDarkMode ? "#D5DCDB" : "#183D3D",
+                                            borderColor: isDarkMode ? "#18442AF5" : "#F3EDE3",
+                                        }}
+                                    >
+                                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                        {isLoading ? "Loading..." : "View"}
+                                    </motion.button>
 
-                                <button
-                                    type="button"
-                                    onClick={handleScanQR}
-                                    disabled={isLoading || isScanning}
-                                    className={`flex flex-shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-semibold shadow transition-all ${
-                                        isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                                    } ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#2A524C" : "#F3EDE3",
-                                        color: isDarkMode ? "#D5DCDB" : "#183D3D",
-                                        borderColor: isDarkMode ? "#2A524C" : "#F3EDE3",
-                                    }}
-                                >
-                                    {isScanning ? (
-                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                    ) : (
-                                        <QrCode className="h-4 w-4" />
-                                    )}
-                                    <span className="hidden sm:inline">{isScanning ? "Scanning..." : "Scan QR"}</span>
-                                </button>
+                                    <motion.button
+                                        type="button"
+                                        onClick={handleScanQR}
+                                        disabled={isLoading || isScanning}
+                                        whileHover={{ 
+                                            scale: 1.05,
+                                            backgroundColor: isDarkMode ? "#3A635C" : "#E8F0EF",
+                                            transition: { duration: 0.2 }
+                                        }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-4 py-3 text-sm font-semibold shadow sm:flex-shrink-0 sm:py-2 ${
+                                            isLoading ? "cursor-not-allowed opacity-50" : ""
+                                        }`}
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#2A524C" : "#F3EDE3",
+                                            color: isDarkMode ? "#D5DCDB" : "#183D3D",
+                                            borderColor: isDarkMode ? "#2A524C" : "#F3EDE3",
+                                        }}
+                                    >
+                                        {isScanning ? (
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                        ) : (
+                                            <Search className="h-4 w-4" />
+                                        )}
+                                        <span>{isScanning ? "Scanning..." : "Scan QR"}</span>
+                                    </motion.button>
+                                </div>
                             </form>
                         </div>
 
@@ -562,209 +376,72 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                     </div>
 
                     {/* QR Scanner Modal */}
-                    {showScanner && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
-                        >
-                            <div
-                                className="relative mx-4 w-full max-w-md rounded-xl border-2 p-4"
-                                style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
-                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                    color: isDarkMode ? "#13151B" : "#F3EDE3",
-                                }}
-                            >
-                                <button
-                                    onClick={closeScanner}
-                                    className="absolute right-2 top-2 transition-colors hover:opacity-70"
-                                    style={{ color: isDarkMode ? "#13151B" : "#F3EDE3" }}
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
-
-                                <h3
-                                    className="mb-3 text-center text-lg font-bold"
-                                    style={{ color: isDarkMode ? "#13151B" : "#F3EDE3" }}
-                                >
-                                    Scan QR Code
-                                </h3>
-
-                                {!scanMethod && (
-                                    <div className="space-y-3">
-                                        <p
-                                            className="mb-3 text-center text-sm"
-                                            style={{ color: isDarkMode ? "#6B7280" : "#F3EDE3" }}
-                                        >
-                                            Choose how you want to scan the QR code:
-                                        </p>
-
-                                        <button
-                                            onClick={startCameraScan}
-                                            className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all ${
-                                                isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                                            }`}
-                                            style={{
-                                                backgroundColor: isDarkMode ? "#18442A" : "#F3EDE3",
-                                                color: isDarkMode ? "#D5DCDB" : "#183D3D",
-                                            }}
-                                        >
-                                            <Camera className="h-4 w-4" />
-                                            Use Camera
-                                        </button>
-
-                                        <div className="relative">
-                                            <button
-                                                onClick={handleUploadClick}
-                                                className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all ${
-                                                    isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                                                }`}
-                                                style={{
-                                                    backgroundColor: isDarkMode ? "#2A524C" : "#F3EDE3",
-                                                    color: isDarkMode ? "#D5DCDB" : "#183D3D",
-                                                }}
-                                            >
-                                                <Upload className="h-4 w-4" />
-                                                Upload Image
-                                            </button>
-                                            <input
-                                                ref={fileInputRef}
-                                                type="file"
-                                                accept="image/*,.jpg,.jpeg,.png,.gif,.bmp,.webp"
-                                                onChange={handleFileUpload}
-                                                className="hidden"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {scanMethod === "camera" && (
-                                    <>
-                                        <div className="relative mb-3 h-64 w-full overflow-hidden rounded-lg bg-black">
-                                            <div 
-                                                id="html5qr-code-scanner"
-                                                className="h-full w-full"
-                                            />
-                                            
-                                            {qrLoading && (
-                                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                                                    <div className="text-center text-white">
-                                                        <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin" />
-                                                        <p>Loading Camera...</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {scannedUrl && (
-                                            <div className="mb-3 p-2 rounded bg-green-100 border border-green-400">
-                                                <p className="text-green-700 text-xs font-medium">QR Code Scanned Successfully!</p>
-                                                <p className="text-green-600 text-xs break-all mt-1">URL: {scannedUrl}</p>
-                                            </div>
-                                        )}
-
-                                        {qrError && (
-                                            <div className="mb-3 text-center">
-                                                <p className="text-sm text-red-500">{qrError}</p>
-                                            </div>
-                                        )}
-
-                                        {isScanning && !qrLoading && !qrError && !scannedUrl && (
-                                            <div className="text-center">
-                                                <p
-                                                    className="text-xs"
-                                                    style={{ color: isDarkMode ? "#6B7280" : "#F3EDE3" }}
-                                                >
-                                                    Position the QR code within the frame
-                                                </p>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-
-                                {scanMethod === "file" && (
-                                    <div className="mb-3 text-center">
-                                        {qrLoading ? (
-                                            <div className="flex h-64 items-center justify-center rounded-lg bg-gray-100">
-                                                <div className="text-center">
-                                                    <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin" />
-                                                    <p>Processing image...</p>
-                                                    <p className="text-xs mt-1 text-gray-600">Checking for QR code</p>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="h-64 rounded-lg bg-gray-100 flex items-center justify-center">
-                                                <p className="text-gray-600">Select an image containing QR code</p>
-                                            </div>
-                                        )}
-                                        
-                                        {scannedUrl && (
-                                            <div className="mt-3 p-2 rounded bg-green-100 border border-green-400">
-                                                <p className="text-green-700 text-xs font-medium">QR Code Scanned Successfully!</p>
-                                                <p className="text-green-600 text-xs break-all mt-1">URL: {scannedUrl}</p>
-                                            </div>
-                                        )}
-                                        
-                                        {qrError && (
-                                            <div className="mt-2 text-center">
-                                                <p className="text-sm text-red-500">{qrError}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {scanMethod && (
-                                    <button
-                                        onClick={closeScanner}
-                                        className={`mt-3 w-full rounded-lg py-2 text-sm font-semibold transition-colors ${
-                                            isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                                        }`}
-                                        style={{
-                                            backgroundColor: isDarkMode ? "#6B7280" : "#2A524C",
-                                            color: "#FFFFFF",
-                                        }}
-                                    >
-                                        Cancel Scan
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
+                    <QRScanner
+                        showScanner={showScanner}
+                        setShowScanner={setShowScanner}
+                        isScanning={isScanning}
+                        setIsScanning={setIsScanning}
+                        isDarkMode={isDarkMode}
+                        isMobile={isMobile}
+                        onQRScanned={handleQRScanned}
+                    />
 
                     {/* Customer Information & Laundry Progress */}
-                    {showStatus && trackingData && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            transition={{ duration: 0.5 }}
-                            className="border-t pt-4"
-                            style={{ borderColor: isDarkMode ? "#2A524C" : "#F3EDE3" }}
-                        >
-                            <CustomerInfo
-                                isVisible={showStatus}
-                                isDarkMode={isDarkMode}
-                                isMobile={isMobile}
-                                showFullCustomerInfo={showFullCustomerInfo}
-                                toggleFullCustomerInfo={toggleFullCustomerInfo}
-                                handleViewReceipt={handleViewReceipt}
-                                customerData={trackingData}
-                            />
+                    <AnimatePresence>
+                        {showStatus && trackingData && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.5 }}
+                                className="border-t pt-4"
+                                style={{ borderColor: isDarkMode ? "#2A524C" : "#F3EDE3" }}
+                            >
+                                {/* Close Tracking Button */}
+                                <div className="mb-4 flex justify-end">
+                                    <motion.button
+                                        onClick={handleCloseTracking}
+                                        whileHover={{ 
+                                            scale: 1.05,
+                                            backgroundColor: isDarkMode ? "#EF4444" : "#DC2626",
+                                            transition: { duration: 0.2 }
+                                        }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#DC2626" : "#EF4444",
+                                        }}
+                                    >
+                                        <Search className="h-4 w-4" />
+                                        Close Tracking
+                                    </motion.button>
+                                </div>
 
-                            {laundryLoads.length > 0 && (
-                                <LaundryProgress
+                                <CustomerInfo
                                     isVisible={showStatus}
                                     isDarkMode={isDarkMode}
                                     isMobile={isMobile}
-                                    currentLoadIndex={currentLoadIndex}
-                                    laundryLoads={laundryLoads}
-                                    prevLoad={prevLoad}
-                                    nextLoad={nextLoad}
-                                    goToLoad={goToLoad}
+                                    showFullCustomerInfo={showFullCustomerInfo}
+                                    toggleFullCustomerInfo={toggleFullCustomerInfo}
+                                    handleViewReceipt={handleViewReceipt}
+                                    customerData={trackingData}
                                 />
-                            )}
-                        </motion.div>
-                    )}
+
+                                {laundryLoads.length > 0 && (
+                                    <LaundryProgress
+                                        isVisible={showStatus}
+                                        isDarkMode={isDarkMode}
+                                        isMobile={isMobile}
+                                        currentLoadIndex={currentLoadIndex}
+                                        laundryLoads={laundryLoads}
+                                        prevLoad={prevLoad}
+                                        nextLoad={nextLoad}
+                                        goToLoad={goToLoad}
+                                    />
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
 
                 {/* View Receipt Modal */}
@@ -778,27 +455,142 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                     receiptData={trackingData}
                 />
 
-                {/* Bottom Section - 3 Columns */}
+                {/* Bottom Section - 3 Columns (Recent Searches: 1, Reminder: 2) */}
                 <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-3">
-                    {/* Recent Searches */}
+                    {/* Recent Searches - Takes 1 column */}
+                    <RecentSearches
+                        isDarkMode={isDarkMode}
+                        recentSearches={recentSearches}
+                        onRecentSearchClick={handleRecentSearchClick}
+                    />
+
+                    {/* Reminder Card - Takes 2 columns (wider) */}
                     <motion.div
-                        initial={{ opacity: 0, x: -30 }}
+                        initial={{ opacity: 0, x: 30 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.5, delay: 2.2 }}
-                        className="rounded-2xl border-2 p-4 md:p-6"
+                        transition={{ duration: 0.5, delay: 2.6 }}
+                        className="rounded-2xl border-2 p-4 md:p-6 lg:col-span-2"
                         style={{
                             backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
                             borderColor: isDarkMode ? "#2A524C" : "#183D3D",
                             color: isDarkMode ? "#13151B" : "#F3EDE3",
                         }}
                     >
-                        <h3 className="mb-4 text-lg font-bold md:text-xl">Recent Searches</h3>
-                        <div className="max-h-80 space-y-3 overflow-y-auto pr-2 md:max-h-96 md:space-y-4">
-                            {recentSearches.length > 0 ? (
-                                recentSearches.map((item, index) => (
-                                    <div
-                                        key={index}
-                                        className={`cursor-pointer rounded-xl border p-3 transition-all md:p-4 ${
+                        <h3 className="mb-4 text-lg font-bold md:text-xl">Reminder & Information</h3>
+
+                        <div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+                            {/* Notification System */}
+                            <div className="flex flex-col">
+                                <h4 className="mb-3 text-sm font-semibold md:text-base">Notification System:</h4>
+                                <div className="flex-1 space-y-3">
+                                    {[
+                                        {
+                                            icon: CheckCircle2,
+                                            text: "Ready for Pickup",
+                                            description: "SMS notification when your laundry is ready",
+                                            time: "Immediate",
+                                            color: "green",
+                                        },
+                                        {
+                                            icon: Bell,
+                                            text: "3-Day Reminder",
+                                            description: "Reminder notification if unclaimed after 3 days",
+                                            time: "72 hours",
+                                            color: "yellow",
+                                        },
+                                        {
+                                            icon: AlertTriangle,
+                                            text: "Final Notice",
+                                            description: "Final notice before disposal after 7 days",
+                                            time: "7 days",
+                                            color: "red",
+                                        },
+                                    ].map((item, index) => (
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            whileHover={{ 
+                                                scale: 1.02,
+                                                y: -2,
+                                                transition: { duration: 0.2 }
+                                            }}
+                                            className={`rounded-xl border p-3 transition-all ${
+                                                isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
+                                            }`}
+                                            style={{
+                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                                borderColor: isDarkMode ? "#2A524C" : "#183D3D",
+                                                color: isDarkMode ? "#13151B" : "#183D3D",
+                                            }}
+                                        >
+                                            <div className="flex items-start space-x-3">
+                                                <motion.div
+                                                    whileHover={{ scale: 1.1 }}
+                                                    className={`rounded-full p-2 ${
+                                                        item.color === "green"
+                                                            ? isDarkMode
+                                                                ? "bg-green-100 text-green-600"
+                                                                : "bg-green-50 text-green-700"
+                                                            : item.color === "yellow"
+                                                              ? isDarkMode
+                                                                  ? "bg-yellow-100 text-yellow-600"
+                                                                  : "bg-yellow-50 text-yellow-700"
+                                                              : isDarkMode
+                                                                ? "bg-red-100 text-red-600"
+                                                                : "bg-red-50 text-red-700"
+                                                    }`}
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+                                                </motion.div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <h5
+                                                            className="text-sm font-bold md:text-base"
+                                                            style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                        >
+                                                            {item.text}
+                                                        </h5>
+                                                        <motion.span
+                                                            whileHover={{ scale: 1.05 }}
+                                                            className="rounded-full px-2 py-1 text-xs font-medium"
+                                                            style={{
+                                                                backgroundColor: isDarkMode ? "rgba(0,0,0,0.1)" : "rgba(24, 61, 61, 0.1)",
+                                                                color: isDarkMode ? "#13151B" : "#183D3D",
+                                                            }}
+                                                        >
+                                                            {item.time}
+                                                        </motion.span>
+                                                    </div>
+                                                    <p
+                                                        className="mt-1 text-xs leading-relaxed md:text-sm"
+                                                        style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
+                                                    >
+                                                        {item.description}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Operating Hours & Contact */}
+                            <div className="flex flex-col">
+                                <h4 className="mb-3 text-sm font-semibold md:text-base">Store Information:</h4>
+                                <div className="flex-1 space-y-4">
+                                    {/* Operating Hours */}
+                                    <motion.div
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.2 }}
+                                        whileHover={{ 
+                                            scale: 1.02,
+                                            y: -2,
+                                            transition: { duration: 0.2 }
+                                        }}
+                                        className={`rounded-xl border p-4 transition-all ${
                                             isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
                                         }`}
                                         style={{
@@ -806,121 +598,100 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
                                             borderColor: isDarkMode ? "#2A524C" : "#183D3D",
                                             color: isDarkMode ? "#13151B" : "#183D3D",
                                         }}
-                                        onClick={() => handleRecentSearchClick(item.receiptNumber)}
                                     >
-                                        <div className="mb-2 flex items-start justify-between">
-                                            <p
-                                                className="font-mono text-sm font-semibold md:text-base"
-                                                style={{ color: isDarkMode ? "#18442A" : "#183D3D" }}
+                                        <div className="mb-3 flex items-center space-x-2">
+                                            <motion.div
+                                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                                className={`rounded-full p-2 ${
+                                                    isDarkMode ? "bg-blue-100 text-blue-600" : "bg-blue-50 text-blue-700"
+                                                }`}
                                             >
-                                                {item.receiptNumber}
-                                            </p>
+                                                <Clock className="h-4 w-4" />
+                                            </motion.div>
+                                            <h5
+                                                className="text-sm font-bold md:text-base"
+                                                style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                            >
+                                                Operating Hours
+                                            </h5>
                                         </div>
-                                        <h4
-                                            className="mb-1 text-base font-semibold md:text-lg"
-                                            style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
-                                        >
-                                            Click to track again
-                                        </h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex items-center justify-between py-1">
+                                                <span
+                                                    className="font-medium"
+                                                    style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                >
+                                                    Mon - Sun
+                                                </span>
+                                                <motion.span
+                                                    whileHover={{ scale: 1.05 }}
+                                                    className="font-semibold"
+                                                    style={{ color: isDarkMode ? "#18442A" : "#18442A" }}
+                                                >
+                                                    7:00 AM - 7:00 PM
+                                                </motion.span>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+
+                                    {/* Contact Info */}
+                                    <motion.div
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.3 }}
+                                        whileHover={{ 
+                                            scale: 1.02,
+                                            y: -2,
+                                            transition: { duration: 0.2 }
+                                        }}
+                                        className={`rounded-xl border p-4 transition-all ${
+                                            isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
+                                        }`}
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                            borderColor: isDarkMode ? "#2A524C" : "#183D3D",
+                                            color: isDarkMode ? "#13151B" : "#183D3D",
+                                        }}
+                                    >
+                                        <div className="mb-3 flex items-center space-x-2">
+                                            <motion.div
+                                                whileHover={{ scale: 1.1, rotate: -5 }}
+                                                className={`rounded-full p-2 ${
+                                                    isDarkMode ? "bg-purple-100 text-purple-600" : "bg-purple-50 text-purple-700"
+                                                }`}
+                                            >
+                                                <Phone className="h-4 w-4" />
+                                            </motion.div>
+                                            <h5
+                                                className="text-sm font-bold md:text-base"
+                                                style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                            >
+                                                Contact Information
+                                            </h5>
+                                        </div>
                                         <p
-                                            className="text-xs md:text-sm"
+                                            className="text-sm leading-relaxed"
                                             style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
                                         >
-                                            Last searched: {item.searchedAt}
+                                            Ensure your contact number is accurate to receive service updates and notifications.
                                         </p>
-                                    </div>
-                                ))
-                            ) : (
-                                <div
-                                    className="rounded-xl border p-4 text-center"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                        color: isDarkMode ? "#13151B" : "#183D3D",
-                                    }}
-                                >
-                                    <p className="text-sm md:text-base">No recent searches yet</p>
-                                    <p className="mt-1 text-xs opacity-70">Your searched receipts will appear here</p>
+                                        <motion.div
+                                            whileHover={{ scale: 1.02 }}
+                                            className="mt-3 rounded-lg p-2 text-center"
+                                            style={{
+                                                backgroundColor: isDarkMode ? "rgba(0,0,0,0.1)" : "rgba(24, 61, 61, 0.1)",
+                                            }}
+                                        >
+                                            <p
+                                                className="text-xs font-semibold"
+                                                style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                            >
+                                                📱 Keep your phone active for updates
+                                            </p>
+                                        </motion.div>
+                                    </motion.div>
                                 </div>
-                            )}
-                        </div>
-                    </motion.div>
-
-                    {/* Stats Cards */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 2.4 }}
-                        className="flex flex-col space-y-4 md:space-y-6"
-                    >
-                        {stats.map((stat, index) => (
-                            <div
-                                key={index}
-                                className={`flex-1 rounded-2xl border-2 p-4 text-center transition-all md:p-6 ${
-                                    isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                                }`}
-                                style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
-                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                    color: isDarkMode ? "#13151B" : "#F3EDE3",
-                                }}
-                            >
-                                <div className="mb-2 text-2xl font-bold md:text-4xl">{stat.number}</div>
-                                <div className="text-sm font-semibold md:text-lg">{stat.label}</div>
                             </div>
-                        ))}
-                    </motion.div>
-
-                    {/* Reminder Card */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.5, delay: 2.6 }}
-                        className="rounded-2xl border-2 p-4 md:p-6"
-                        style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
-                            borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                            color: isDarkMode ? "#13151B" : "#F3EDE3",
-                        }}
-                    >
-                        <h3 className="mb-4 text-lg font-bold md:text-xl">Reminder:</h3>
-                        <p className="mb-4 text-sm leading-relaxed md:text-base">
-                            We value your trust in our laundry service. To keep you updated, we have a Notification System in place:
-                        </p>
-                        <div className="mb-4 space-y-3">
-                            {[
-                                { icon: CheckCircle2, text: "You will receive an SMS notification once your laundry is ready for pickup." },
-                                { icon: Bell, text: "If your laundry remains unclaimed for 3 days, you will receive a reminder notification." },
-                                {
-                                    icon: AlertTriangle,
-                                    text: "If your laundry is still uncollected after 7 days, a final notice will be sent, stating that your laundry will be disposed of.",
-                                },
-                            ].map((item, index) => (
-                                <div
-                                    key={index}
-                                    className="flex items-start space-x-3"
-                                >
-                                    <item.icon className="mt-0.5 h-5 w-5 flex-shrink-0" />
-                                    <p className="flex-1 text-xs leading-relaxed md:text-sm">{item.text}</p>
-                                </div>
-                            ))}
-                        </div>
-                        <div
-                            className={`mb-3 rounded-xl border p-3 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
-                            style={{
-                                backgroundColor: isDarkMode ? "#FFFFFF" : "#2A524C",
-                                borderColor: isDarkMode ? "#2A524C" : "#F3EDE3",
-                            }}
-                        >
-                            <div className="flex items-center justify-center space-x-2">
-                                <Phone className="h-4 w-4" />
-                                <p className="text-center text-xs leading-relaxed md:text-sm">
-                                    Please make sure your contact number is accurate and active to receive updates.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-xs font-semibold italic md:text-sm">Thank you for your cooperation!</p>
                         </div>
                     </motion.div>
                 </div>
