@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import {
   PackageX,
@@ -6,6 +7,8 @@ import {
   Clock8,
   LineChart,
   AlertCircle,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -19,6 +22,10 @@ import {
 
 export default function AdminDashboardPage() {
   const { theme } = useTheme();
+  
+  // Calculate isDarkMode based on theme - matching User side
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   const [dashboardData, setDashboardData] = useState({
     totalIncome: 0,
     totalLoads: 0,
@@ -77,74 +84,143 @@ export default function AdminDashboardPage() {
   }, [fetchDashboardData]);
 
   const formatCurrency = (amount) => {
-    // Format number with commas and two decimal places
     return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
   };
 
-  // Skeleton loader components
+  // Skeleton loader components with updated colors
   const SkeletonCard = () => (
-    <div className="card">
-      <div className="card-header flex items-center gap-x-3">
-        <div className="w-fit rounded-lg p-2 bg-slate-300 dark:bg-slate-700 animate-pulse">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="flex items-center gap-x-3 mb-4">
+        <div className="w-fit rounded-lg p-2 animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}>
           <div className="h-6 w-6"></div>
         </div>
-        <div className="h-5 w-24 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+        <div className="h-5 w-28 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
       </div>
-      <div className="card-body rounded-md bg-slate-100 p-4 dark:bg-slate-950">
-        <div className="h-8 w-28 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+      <div className="rounded-lg p-3 animate-pulse"
+           style={{
+             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+           }}>
+        <div className="h-8 w-32 rounded"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
       </div>
-    </div>
+    </motion.div>
   );
 
   const SkeletonChart = () => (
-    <div className="card col-span-1 md:col-span-2 lg:col-span-4">
-      <div className="card-header">
-        <div className="h-6 w-40 bg-slate-300 dark:bg-slate-700 rounded animate-pulse mb-2"></div>
-        <div className="h-4 w-32 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 col-span-1 md:col-span-2 lg:col-span-4 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="mb-5">
+        <div className="h-6 w-44 rounded animate-pulse mb-2"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+        <div className="h-4 w-36 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
       </div>
-      <div className="card-body">
-        <div className="h-[285px] w-full bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
-      </div>
-    </div>
+      <div className="h-[280px] w-full rounded-lg animate-pulse"
+           style={{
+             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+           }}></div>
+    </motion.div>
   );
 
   const SkeletonUnclaimedList = () => (
-    <div className="card col-span-1 md:col-span-2 lg:col-span-3">
-      <div className="card-header">
-        <div className="h-6 w-32 bg-slate-300 dark:bg-slate-700 rounded animate-pulse mb-2"></div>
-        <div className="h-4 w-40 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 col-span-1 md:col-span-2 lg:col-span-3 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="mb-5">
+        <div className="h-6 w-36 rounded animate-pulse mb-2"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+        <div className="h-4 w-44 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
       </div>
-      <div className="card-body h-[310px] overflow-auto px-4 py-2 flex flex-col">
+      <div className="h-[280px] overflow-auto px-2 py-2 flex flex-col space-y-3">
         {[1, 2, 3, 4, 5].map((item) => (
           <div
             key={item}
-            className="flex items-center justify-between border-b border-slate-200 py-3 last:border-none dark:border-slate-700"
+            className="flex items-center justify-between border-b py-3 last:border-none"
+            style={{ borderColor: isDarkMode ? "#2A524C" : "#E0EAE8" }}
           >
             <div className="space-y-2">
-              <div className="h-4 w-32 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
-              <div className="h-3 w-40 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
-              <div className="h-3 w-24 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+              <div className="h-4 w-36 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+              <div className="h-3 w-44 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+              <div className="h-3 w-28 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
             </div>
-            <div className="h-5 w-16 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+            <div className="h-5 w-20 rounded animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
           </div>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 
   if (dashboardData.loading) {
     return (
-      <div className="space-y-5 px-6 pb-4 pt-4 overflow-visible">
+      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
         {/* Header Skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="card-header flex items-center gap-2">
-            <div className="h-5 w-5 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
-            <div className="h-6 w-40 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
-          </div>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 mb-4"
+        >
+          <div className="h-8 w-8 rounded-lg animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+          <div className="h-8 w-44 rounded-lg animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+        </motion.div>
 
         {/* Summary Cards Skeleton */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -152,7 +228,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Chart & Unclaimed List Skeleton */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
           <SkeletonChart />
           <SkeletonUnclaimedList />
         </div>
@@ -162,20 +238,39 @@ export default function AdminDashboardPage() {
 
   if (dashboardData.error) {
     return (
-      <div className="space-y-5 px-6 pb-4 pt-4 overflow-visible">
-        <div className="card-header flex items-center gap-2">
-          <LineChart className="h-5 w-5 text-muted-foreground" />
-          <p className="card-title">Admin Dashboard</p>
-        </div>
-        <div className="flex items-center justify-center h-64">
+      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 mb-4"
+        >
+          <LineChart size={22} style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }} />
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+            Admin Dashboard
+          </p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex items-center justify-center h-52 rounded-xl border-2 p-6"
+          style={{
+            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
           <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <p className="text-slate-600 dark:text-slate-400">Failed to load dashboard data</p>
-            <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
+            <AlertCircle className="h-14 w-14 mx-auto mb-3" 
+                         style={{ color: '#F87171' }} />
+            <p className="text-base font-semibold mb-1"
+               style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              Failed to load dashboard data
+            </p>
+            <p className="text-sm"
+               style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
               Auto-retrying in 30 seconds...
             </p>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -186,71 +281,150 @@ export default function AdminDashboardPage() {
       icon: <PhilippinePeso size={26} />,
       value: formatCurrency(dashboardData.totalIncome),
       color: "#3DD9B6",
+      description: "Total revenue generated",
     },
     {
       title: "Total Loads",
       icon: <Package size={26} />,
       value: dashboardData.totalLoads.toLocaleString(),
       color: "#60A5FA",
+      description: "Laundry loads processed",
     },
     {
       title: "Unwashed",
       icon: <Clock8 size={26} />,
       value: dashboardData.unwashedCount.toLocaleString(),
       color: "#FB923C",
+      description: "Waiting to be washed",
     },
     {
-      title: "Total Unclaimed",
+      title: "Unclaimed",
       icon: <PackageX size={26} />,
       value: dashboardData.totalUnclaimed.toLocaleString(),
       color: "#F87171",
+      description: "Not picked up",
     },
   ];
 
   return (
-    <div className="space-y-5 px-6 pb-4 pt-4 overflow-visible">
+    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
       {/* 🧢 Section Header */}
-      <div className="flex items-center justify-between">
-        <div className="card-header flex items-center gap-2">
-          <LineChart className="h-5 w-5 text-muted-foreground" />
-          <p className="card-title">Admin Dashboard</p>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3 mb-3"
+      >
+        <motion.div
+          whileHover={{ scale: 1.1, rotate: 5 }}
+          className="rounded-lg p-2"
+          style={{
+            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+            color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+          }}
+        >
+          <LineChart size={22} />
+        </motion.div>
+        <div>
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+            Admin Dashboard
+          </p>
+          <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+            Real-time business overview and analytics
+          </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* 📊 Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {summaryCards.map(({ title, icon, value, color }) => (
-          <div key={title} className="card">
-            <div className="card-header flex items-center gap-x-3">
-              <div
-                className="w-fit rounded-lg p-2"
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {summaryCards.map(({ title, icon, value, color, description }, index) => (
+          <motion.div
+            key={title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            whileHover={{ 
+              scale: 1.03,
+              y: -2,
+              transition: { duration: 0.2 }
+            }}
+            className="rounded-xl border-2 p-5 transition-all cursor-pointer"
+            style={{
+              backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+              borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className="rounded-lg p-2"
                 style={{
-                  backgroundColor: `${color}33`,
+                  backgroundColor: `${color}20`,
                   color: color,
                 }}
               >
                 {icon}
-              </div>
-              <p className="card-title">{title}</p>
+              </motion.div>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: index * 0.2 }}
+                className="text-right"
+              >
+                <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  {value}
+                </p>
+              </motion.div>
             </div>
-            <div className="card-body rounded-md bg-slate-100 p-4 dark:bg-slate-950">
-              <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                {title}
+              </h3>
+              <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+                {description}
+              </p>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
       {/* 📈 Chart & Unclaimed List */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <div className="card col-span-1 md:col-span-2 lg:col-span-4">
-          <div className="card-header">
-            <p className="card-title">Yearly Revenue Overview</p>
-            <span className="text-sm text-slate-500 dark:text-slate-400">
-              {new Date().getFullYear()} Revenue by Month
-            </span>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
+        {/* Chart Card */}
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          whileHover={{ scale: 1.01 }}
+          className="rounded-xl border-2 p-5 col-span-1 md:col-span-2 lg:col-span-4 transition-all"
+          style={{
+            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                Revenue Overview
+              </p>
+              <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                {new Date().getFullYear()} Monthly Revenue
+              </span>
+            </div>
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              className="rounded-lg p-2"
+              style={{
+                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+              }}
+            >
+              <TrendingUp size={18} />
+            </motion.div>
           </div>
-          <div className="card-body">
-            <ResponsiveContainer width="100%" height={320}>
+          
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart 
                 data={dashboardData.overviewData} 
                 margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
@@ -265,14 +439,13 @@ export default function AdminDashboardPage() {
                   cursor={false}
                   formatter={(value) => [`₱${Number(value).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`, "Revenue"]}
                   contentStyle={{
-                    backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
-                    border: "1px solid",
-                    borderColor: theme === "dark" ? "#1e293b" : "#e2e8f0",
-                    color: theme === "dark" ? "#f8fafc" : "#0f172a",
-                    fontSize: "0.875rem",
+                    backgroundColor: isDarkMode ? '#0B2B26' : '#FFFFFF',
+                    border: `2px solid ${isDarkMode ? '#1C3F3A' : '#0B2B26'}`,
+                    color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                    fontSize: "0.8rem",
                     fontWeight: "500",
-                    borderRadius: "0.375rem",
-                    padding: "0.5rem 0.75rem",
+                    borderRadius: "0.5rem",
+                    padding: "0.6rem",
                   }}
                   itemStyle={{
                     color: "#0891B2",
@@ -281,18 +454,18 @@ export default function AdminDashboardPage() {
                 <XAxis
                   dataKey="name"
                   strokeWidth={0}
-                  stroke={theme === "light" ? "#475569" : "#94a3b8"}
+                  stroke={isDarkMode ? '#6B7280' : '#0B2B26'}
                   tickMargin={6}
-                  tick={{ fontSize: 16 }}
+                  tick={{ fontSize: 12 }}
                 />
                 <YAxis
                   dataKey="total"
                   strokeWidth={0}
-                  stroke={theme === "light" ? "#475569" : "#94a3b8"}
-                  tickFormatter={(value) => `₱${value.toLocaleString()}`}
+                  stroke={isDarkMode ? '#6B7280' : '#0B2B26'}
+                  tickFormatter={(value) => `₱${value > 1000 ? `${(value/1000).toFixed(0)}k` : value}`}
                   tickMargin={6}
-                  tick={{ fontSize: 14 }}
-                  width={60}
+                  tick={{ fontSize: 12 }}
+                  width={50}
                 />
                 <Area
                   type="monotone"
@@ -300,48 +473,109 @@ export default function AdminDashboardPage() {
                   stroke="#0891B2"
                   fillOpacity={1}
                   fill="url(#colorLoad)"
+                  strokeWidth={2}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Unclaimed List */}
-        <div className="card col-span-1 md:col-span-2 lg:col-span-3">
-          <div className="card-header">
-            <p className="card-title">Unclaimed</p>
-            <span className="text-sm text-slate-500 dark:text-slate-400">
-              {dashboardData.unclaimedList.length}  unclaimed laundry
-            </span>
+        {/* Unclaimed List Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+          whileHover={{ scale: 1.01 }}
+          className="rounded-xl border-2 p-5 col-span-1 md:col-span-2 lg:col-span-3 transition-all"
+          style={{
+            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                Unclaimed Laundry
+              </p>
+              <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                {dashboardData.unclaimedList.length} unclaimed loads
+              </span>
+            </div>
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              className="rounded-lg p-2"
+              style={{
+                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+              }}
+            >
+              <Users size={18} />
+            </motion.div>
           </div>
-          <div className="card-body h-[310px] overflow-auto px-4 py-2 flex flex-col">
+          
+          <div className="h-[260px] overflow-auto px-2">
             {dashboardData.unclaimedList.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">No unclaimed completed loads</p>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center h-full text-center py-8"
+              >
+                <PackageX size={36} style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} className="mb-3" />
+                <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  No Unclaimed Loads
+                </p>
+                <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                  All laundry has been picked up
+                </p>
+              </motion.div>
             ) : (
-              dashboardData.unclaimedList.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between border-b border-slate-200 py-2 last:border-none dark:border-slate-700"
-                >
-                  <div className="leading-tight">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                      {transaction.customerName}
-                    </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {transaction.serviceType} • {transaction.loadCount || 0} loads
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500">
-                      {transaction.date}
-                    </p>
-                  </div>
-                  <p className="text-xs font-semibold text-orange-600 dark:text-orange-400">
-                    Unclaimed
-                  </p>
-                </div>
-              ))
+              <div className="space-y-3">
+                {dashboardData.unclaimedList.map((transaction, index) => (
+                  <motion.div
+                    key={transaction.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ 
+                      scale: 1.02,
+                      backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                      transition: { duration: 0.2 }
+                    }}
+                    className="rounded-lg border p-3 transition-all cursor-pointer"
+                    style={{
+                      borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                      backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                          {transaction.customerName}
+                        </p>
+                        <p className="text-sm mb-1" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+                          {transaction.serviceType} • {transaction.loadCount || 0} loads
+                        </p>
+                        <p className="text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/60' }}>
+                          {transaction.date}
+                        </p>
+                      </div>
+                      <motion.span
+                        whileHover={{ scale: 1.05 }}
+                        className="rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap"
+                        style={{
+                          backgroundColor: '#FB923C20',
+                          color: '#FB923C',
+                        }}
+                      >
+                        Unclaimed
+                      </motion.span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

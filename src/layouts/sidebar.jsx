@@ -17,6 +17,9 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
     const profileRef = useRef(null);
     const logout = useLogout();
 
+    // Calculate isDarkMode based on theme - matching User side
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
     useClickOutside([profileRef], () => setShowProfileMenu(false));
 
     // Function to get initials from username
@@ -37,7 +40,7 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                 className={cn(
                     "fixed z-50 flex h-screen flex-col border-r transition-all duration-300 ease-in-out",
                     collapsed ? "max-md:-left-full md:w-[70px]" : "max-md:left-0 md:w-[240px]",
-                    theme === "dark" ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
+                    isDarkMode ? "border-[#1C3F3A] bg-[#0B2B26]" : "border-[#0B2B26] bg-[#E0EAE8]"
                 )}
             >
                 {/* Skeleton Logo */}
@@ -47,60 +50,14 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                 )}>
                     <div className={cn(
                         "rounded-full animate-pulse",
-                        collapsed ? "h-8 w-8" : "h-6 w-6"
+                        collapsed ? "h-8 w-8" : "h-6 w-6",
+                        isDarkMode ? "bg-[#1C3F3A]" : "bg-[#0B2B26]/20"
                     )} />
                     {!collapsed && (
-                        <div className="h-4 w-24 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
-                    )}
-                </div>
-
-                {/* Skeleton Navigation Links */}
-                <div className="flex flex-1 flex-col gap-y-4 p-3 min-h-0 overflow-y-auto">
-                    {[1, 2].map((group) => (
-                        <nav
-                            key={group}
-                            className={cn("flex flex-col gap-y-2", collapsed && "items-center")}
-                        >
-                            {!collapsed && (
-                                <div className="h-3 w-16 bg-slate-300 dark:bg-slate-700 rounded animate-pulse mb-1" />
-                            )}
-                            <div className="flex flex-col gap-y-1">
-                                {[1, 2, 3].map((link) => (
-                                    <div
-                                        key={link}
-                                        className={cn(
-                                            "flex items-center gap-x-3 rounded px-3 py-2",
-                                            collapsed ? "justify-center" : ""
-                                        )}
-                                    >
-                                        <div className="h-6 w-6 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
-                                        {!collapsed && (
-                                            <div className="h-4 w-24 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </nav>
-                    ))}
-                </div>
-
-                {/* Skeleton Profile Section */}
-                <div className={cn(
-                    "mt-auto border-t p-3 flex-shrink-0",
-                    theme === "dark" ? "border-slate-700" : "border-slate-200"
-                )}>
-                    {collapsed ? (
-                        <div className="flex justify-center">
-                            <div className="h-10 w-10 bg-slate-300 dark:bg-slate-700 rounded-full animate-pulse" />
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-slate-300 dark:bg-slate-700 rounded-full animate-pulse" />
-                            <div className="flex-1 space-y-2">
-                                <div className="h-3 w-20 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
-                                <div className="h-2 w-16 bg-slate-300 dark:bg-slate-700 rounded animate-pulse" />
-                            </div>
-                        </div>
+                        <div className={cn(
+                            "h-4 w-24 rounded animate-pulse",
+                            isDarkMode ? "bg-[#1C3F3A]" : "bg-[#0B2B26]/20"
+                        )} />
                     )}
                 </div>
             </aside>
@@ -113,7 +70,7 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
             className={cn(
                 "fixed z-50 flex h-screen flex-col border-r transition-all duration-300 ease-in-out",
                 collapsed ? "max-md:-left-full md:w-[70px]" : "max-md:left-0 md:w-[240px]",
-                theme === "dark" ? "border-slate-700 bg-slate-900 shadow-lg" : "border-slate-200 bg-gradient-to-b from-white to-slate-100 shadow-lg",
+                isDarkMode ? "border-[#1C3F3A] bg-[#0B2B26]" : "border-[#0B2B26] bg-[#E0EAE8]"
             )}
             style={{ overflow: 'hidden' }}
         >
@@ -138,9 +95,10 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                         animate={{ opacity: 1, width: "auto" }}
                         exit={{ opacity: 0, width: 0 }}
                         transition={{ duration: 0.2 }}
-                        className={cn("font-starjedi text-lg tracking-wide whitespace-nowrap", theme === "dark" ? "glow-text text-white" : "text-slate-800")}
+                        className={cn("font-starjedi text-lg tracking-wide whitespace-nowrap", 
+                            isDarkMode ? "text-[#F3EDE3]" : "text-[#0B2B26]")}
                         style={{
-                            textShadow: theme === "dark" ? "0 0 3px rgba(255, 255, 255, 0.4)" : "0 0 2px rgba(0, 0, 0, 0.2)",
+                            textShadow: isDarkMode ? "0 0 3px rgba(255, 255, 255, 0.4)" : "0 0 2px rgba(0, 0, 0, 0.2)",
                             letterSpacing: "1px",
                         }}
                     >
@@ -162,7 +120,8 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
                                 transition={{ duration: 0.2 }}
-                                className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1 overflow-hidden whitespace-nowrap"
+                                className="text-xs font-semibold uppercase tracking-wide mb-1 overflow-hidden whitespace-nowrap"
+                                style={{ color: isDarkMode ? '#F3EDE3/60' : '#0B2B26/60' }}
                             >
                                 {group.title}
                             </motion.p>
@@ -175,19 +134,26 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                                     className={({ isActive }) =>
                                         cn(
                                             "flex items-center gap-x-3 rounded px-3 py-2 text-sm font-medium transition-all group relative",
-                                            "hover:bg-[#0891B2]/10 hover:text-[#0891B2] dark:hover:bg-[#0891B2]/20 dark:hover:text-[#0891B2]",
+                                            "hover:opacity-80",
                                             isActive
-                                                ? "border-l-2 border-[#0891B2] bg-[#0891B2]/20 font-semibold text-[#0891B2] dark:bg-slate-700"
-                                                : "text-slate-800 dark:text-slate-200",
+                                                ? "border-l-2 font-semibold"
+                                                : "",
                                             collapsed && "justify-center"
                                         )
                                     }
+                                    style={({ isActive }) => ({
+                                        color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                                        borderLeftColor: isActive ? (isDarkMode ? '#F3EDE3' : '#0B2B26') : 'transparent',
+                                        backgroundColor: isActive ? 
+                                            (isDarkMode ? 'rgba(243, 237, 227, 0.1)' : 'rgba(11, 43, 38, 0.1)') : 'transparent'
+                                    })}
                                     onMouseEnter={() => setActiveGroup(group.title)}
                                     onMouseLeave={() => setActiveGroup(null)}
                                 >
                                     <link.icon
                                         size={22}
                                         className="flex-shrink-0"
+                                        style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
                                     />
                                     {!collapsed && (
                                         <motion.span
@@ -205,8 +171,7 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                                     {collapsed && (
                                         <div className={cn(
                                             "absolute left-full ml-3 px-2 py-1 text-xs font-medium rounded-md shadow-lg transition-opacity z-50 whitespace-nowrap",
-                                            theme === "dark" ? "bg-slate-800 text-white" : "bg-white text-slate-800",
-                                            activeGroup === group.title ? "opacity-100" : "opacity-0 pointer-events-none"
+                                            isDarkMode ? "bg-[#0B2B26] text-[#F3EDE3] border border-[#1C3F3A]" : "bg-[#E0EAE8] text-[#0B2B26] border border-[#0B2B26]"
                                         )}>
                                             {link.label}
                                         </div>
@@ -219,11 +184,19 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
             </div>
 
             {/* 👤 Profile Section */}
-            <div className={cn("mt-auto border-t p-3 transition-colors relative flex-shrink-0", theme === "dark" ? "border-slate-700" : "border-slate-200")}>
+            <div className={cn(
+                "mt-auto border-t p-3 transition-colors relative flex-shrink-0", 
+                isDarkMode ? "border-[#1C3F3A]" : "border-[#0B2B26]"
+            )}>
                 {collapsed ? (
                     <div className="relative flex justify-center" ref={profileRef}>
                         <button
-                            className="flex size-10 items-center justify-center rounded-full border border-slate-300 bg-cyan-600 text-white transition-all hover:ring-2 hover:ring-cyan-500 dark:border-slate-600"
+                            className={cn(
+                                "flex size-10 items-center justify-center rounded-full border transition-all hover:opacity-80",
+                                isDarkMode 
+                                    ? "border-[#F3EDE3] bg-[#1C3F3A] text-[#F3EDE3]" 
+                                    : "border-[#0B2B26] bg-[#F3EDE3] text-[#0B2B26]"
+                            )}
                             onClick={() => setShowProfileMenu((prev) => !prev)}
                             title="Profile"
                         >
@@ -239,15 +212,25 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                                     transition={{ duration: 0.15 }}
                                     className={cn(
                                         "fixed left-[70px] bottom-3 mb-2 w-48 rounded-lg border py-1 shadow-lg z-50",
-                                        theme === "dark" ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white",
+                                        isDarkMode ? "border-[#1C3F3A] bg-[#0B2B26]" : "border-[#0B2B26] bg-[#E0EAE8]",
                                     )}
                                 >
-                                    <div className="border-b border-slate-200 px-3 py-2 dark:border-slate-700">
-                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{user?.username || "Username"}</p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{role || "User Role"}</p>
+                                    <div className={cn(
+                                        "border-b px-3 py-2",
+                                        isDarkMode ? "border-[#1C3F3A]" : "border-[#0B2B26]"
+                                    )}>
+                                        <p className="text-sm font-medium truncate"
+                                           style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                                            {user?.username || "Username"}
+                                        </p>
+                                        <p className="text-xs truncate"
+                                           style={{ color: isDarkMode ? '#F3EDE3/60' : '#0B2B26/60' }}>
+                                            {role || "User Role"}
+                                        </p>
                                     </div>
                                     <button
-                                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900"
+                                        className="flex w-full items-center gap-2 px-4 py-2 text-sm transition-colors hover:opacity-80"
+                                        style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
                                         onClick={logout}
                                     >
                                         <LogOut size={16} />
@@ -263,10 +246,18 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                         ref={profileRef}
                     >
                         <button
-                            className="flex w-full items-center gap-3 rounded-lg p-2 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800"
+                            className={cn(
+                                "flex w-full items-center gap-3 rounded-lg p-2 transition-colors hover:opacity-80",
+                                isDarkMode ? "hover:bg-[#1C3F3A]" : "hover:bg-[#F3EDE3]"
+                            )}
                             onClick={() => setShowProfileMenu((prev) => !prev)}
                         >
-                            <div className="flex size-10 items-center justify-center rounded-full border border-slate-300 bg-cyan-600 text-white dark:border-slate-600">
+                            <div className={cn(
+                                "flex size-10 items-center justify-center rounded-full border",
+                                isDarkMode 
+                                    ? "border-[#F3EDE3] bg-[#1C3F3A] text-[#F3EDE3]" 
+                                    : "border-[#0B2B26] bg-[#F3EDE3] text-[#0B2B26]"
+                            )}>
                                 <span className="text-sm font-medium">{getInitials(user?.username)}</span>
                             </div>
                             <div className="flex-1 overflow-hidden text-left">
@@ -274,7 +265,8 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ duration: 0.2 }}
-                                    className="truncate text-sm font-medium text-slate-800 dark:text-slate-100"
+                                    className="truncate text-sm font-medium"
+                                    style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
                                 >
                                     {user?.username || "Username"}
                                 </motion.p>
@@ -282,14 +274,16 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ duration: 0.2, delay: 0.1 }}
-                                    className="truncate text-xs text-slate-500 dark:text-slate-400"
+                                    className="truncate text-xs"
+                                    style={{ color: isDarkMode ? '#F3EDE3/60' : '#0B2B26/60' }}
                                 >
                                     {role || "User Role"}
                                 </motion.p>
                             </div>
                             <ChevronDown
                                 size={16}
-                                className={`text-slate-500 transition-transform ${showProfileMenu ? "rotate-180" : ""}`}
+                                style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
+                                className={`transition-transform ${showProfileMenu ? "rotate-180" : ""}`}
                             />
                         </button>
 
@@ -302,11 +296,12 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                                     transition={{ duration: 0.2 }}
                                     className={cn(
                                         "absolute bottom-full left-0 right-0 mb-2 rounded-lg border py-1 shadow-lg z-50",
-                                        theme === "dark" ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white",
+                                        isDarkMode ? "border-[#1C3F3A] bg-[#0B2B26]" : "border-[#0B2B26] bg-[#E0EAE8]",
                                     )}
                                 >
                                     <button
-                                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900"
+                                        className="flex w-full items-center gap-2 px-4 py-2 text-sm transition-colors hover:opacity-80"
+                                        style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
                                         onClick={logout}
                                     >
                                         <LogOut size={16} />

@@ -21,6 +21,9 @@ const Layout = ({ children }) => {
   const { loading, isAuthenticated, role, user } = useAuth();
   const { theme } = useTheme();
 
+  // Calculate isDarkMode based on theme - matching User side
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   const isAuthRoute =
     location.pathname.startsWith("/login") ||
     location.pathname.startsWith("/unauthorized");
@@ -58,7 +61,11 @@ const Layout = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-slate-50 transition-colors">
+    <div className="min-h-screen transition-colors duration-300"
+         style={{ 
+           backgroundColor: isDarkMode ? '#0B2B26' : '#E0EAE8',
+           color: isDarkMode ? '#F3EDE3' : '#0B2B26'
+         }}>
       {/* Mobile overlay */}
       <div
         className={cn(
@@ -92,7 +99,7 @@ const Layout = ({ children }) => {
         />
 
         {/* Page content */}
-        <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 bg-slate-100 dark:bg-slate-950">
+        <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
           {children}
         </div>
       </div>

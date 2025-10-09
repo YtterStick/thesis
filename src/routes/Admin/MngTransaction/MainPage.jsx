@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
 import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, Calendar } from "lucide-react";
 
 const MainPage = () => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [timeFilter, setTimeFilter] = useState("all");
@@ -223,16 +228,39 @@ const MainPage = () => {
     ];
 
     return (
-        <main className="relative space-y-6 p-6">
+        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
             {/* Header */}
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Admin Laundry Records</h1>
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
+            >
+                <div className="flex items-center gap-3">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="rounded-lg p-2"
+                        style={{
+                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                            color: "#F3EDE3",
+                        }}
+                    >
+                        <Package size={22} />
+                    </motion.div>
+                    <div>
+                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                            Admin Laundry Records
+                        </p>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                            Manage and track all laundry transactions
+                        </p>
+                    </div>
+                </div>
 
                 {/* Time Filter */}
                 <div className="flex items-center gap-2">
                     <Calendar
                         size={18}
-                        className="text-slate-600 dark:text-slate-400"
+                        style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
                     />
                     <select
                         value={timeFilter}
@@ -241,7 +269,12 @@ const MainPage = () => {
                             setActiveFilter(null);
                             setSortOrder(null);
                         }}
-                        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="rounded-lg border-2 px-3 py-2 text-sm focus:outline-none transition-all"
+                        style={{
+                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                        }}
                     >
                         {timeFilters.map((filter) => (
                             <option
@@ -253,77 +286,116 @@ const MainPage = () => {
                         ))}
                     </select>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                {summaryCards.map(({ label, value, icon, color, tooltip, filterType, active, sortable }) => (
-                    <div
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {summaryCards.map(({ label, value, icon, color, tooltip, filterType, active, sortable }, index) => (
+                    <motion.div
                         key={label}
-                        className={`card cursor-pointer transition-all ${active ? "ring-2 ring-offset-2" : "hover:shadow-md"}`}
-                        title={tooltip}
-                        onClick={() => handleCardClick(filterType)}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ 
+                            scale: 1.03,
+                            y: -2,
+                            transition: { duration: 0.2 }
+                        }}
+                        className={`rounded-xl border-2 p-5 transition-all cursor-pointer ${
+                            active ? "ring-2 ring-offset-2" : ""
+                        }`}
                         style={{
-                            borderColor: active ? color : "",
+                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                             ringColor: active ? color : "",
                         }}
+                        title={tooltip}
+                        onClick={() => handleCardClick(filterType)}
                     >
-                        <div className="card-header flex items-center gap-x-3">
-                            <div
-                                className="w-fit rounded-lg p-2"
+                        <div className="flex items-center justify-between mb-4">
+                            <motion.div
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                className="rounded-lg p-2"
                                 style={{
-                                    backgroundColor: `${color}33`,
+                                    backgroundColor: `${color}20`,
                                     color: color,
                                 }}
                             >
                                 {icon}
-                            </div>
-                            <p className="card-title">{label}</p>
+                            </motion.div>
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: index * 0.2 }}
+                                className="text-right"
+                            >
+                                <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                    {loading ? (
+                                        <span className="inline-block h-6 w-20 animate-pulse rounded"
+                                              style={{ backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8" }} />
+                                    ) : (
+                                        <>{value}</>
+                                    )}
+                                </p>
+                            </motion.div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                {label}
+                            </h3>
                             {active && sortable && (
-                                <span className="text-xs text-slate-500">
+                                <span className="text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
                                     {sortOrder === "desc" ? "↓ High to Low" : "↑ Low to High"}
                                 </span>
                             )}
                         </div>
-                        <div className="card-body rounded-md bg-slate-100 p-4 transition-colors dark:bg-slate-950">
-                            <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">
-                                {loading ? (
-                                    <span className="inline-block h-6 w-20 animate-pulse rounded bg-slate-300 dark:bg-slate-700" />
-                                ) : (
-                                    <>{value}</>
-                                )}
-                            </p>
-                        </div>
-                    </div>
+                    </motion.div>
                 ))}
             </div>
 
             {/* Record Table */}
-            <div className="card">
-                <div className="card-header justify-between">
-                    <p className="card-title">Laundry Records</p>
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="rounded-xl border-2 p-5 transition-all"
+                style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                }}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                        Laundry Records
+                    </p>
                     <div className="flex items-center gap-2">
                         {activeFilter && (
-                            <span className="text-sm text-slate-500">
+                            <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
                                 Filtered by: {summaryCards.find(card => card.filterType === activeFilter)?.label}
                                 {(activeFilter === "income" || activeFilter === "loads") && ` (${sortOrder === "desc" ? "High to Low" : "Low to High"})`}
                             </span>
                         )}
-                        <span className="text-sm text-slate-500">{filteredRecords.length} records found</span>
+                        <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            {filteredRecords.length} records found
+                        </span>
                     </div>
                 </div>
                 {loading ? (
-                    <div className="p-6 text-center text-slate-500 dark:text-slate-400">Loading records...</div>
+                    <div className="p-6 text-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                        Loading records...
+                    </div>
                 ) : (
                     <AdminRecordTable
                         items={filteredRecords}
                         allItems={records}
                         activeFilter={activeFilter}
                         sortOrder={sortOrder}
+                        isDarkMode={isDarkMode}
                     />
                 )}
-            </div>
-        </main>
+            </motion.div>
+        </div>
     );
 };
 

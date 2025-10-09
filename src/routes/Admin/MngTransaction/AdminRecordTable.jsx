@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Search, AlertCircle, CheckCircle2, Printer, CalendarIcon, Download, Clock8, ChevronDown, ChevronUp } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -9,19 +10,19 @@ import PrintableReceipt from "@/components/PrintableReceipt";
 
 const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Price", "Date", "Payment", "Laundry Status", "Pickup Status", "Actions"];
 
-const renderStatusBadge = (status, type = "pickup") => {
+const renderStatusBadge = (status, type = "pickup", isDarkMode) => {
     const iconMap = {
-        Expired: <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />,
-        Disposed: <AlertCircle className="h-4 w-4 text-gray-500 dark:text-gray-400" />,
-        Unclaimed: <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400" />,
-        Washing: <CheckCircle2 className="h-4 w-4 text-blue-500 dark:text-blue-400" />,
-        Done: <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />,
-        Claimed: <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />,
-        Pending: <Clock8 className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />,
-        Paid: <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />,
-        Unpaid: <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />,
-        "Not Started": <Clock8 className="h-4 w-4 text-gray-500 dark:text-gray-400" />,
-        UNCLAIMED: <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400" />,
+        Expired: <AlertCircle className="h-4 w-4 text-red-500" />,
+        Disposed: <AlertCircle className="h-4 w-4 text-gray-500" />,
+        Unclaimed: <AlertCircle className="h-4 w-4 text-orange-500" />,
+        Washing: <CheckCircle2 className="h-4 w-4 text-blue-500" />,
+        Done: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+        Claimed: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+        Pending: <Clock8 className="h-4 w-4 text-yellow-500" />,
+        Paid: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+        Unpaid: <AlertCircle className="h-4 w-4 text-red-500" />,
+        "Not Started": <Clock8 className="h-4 w-4 text-gray-500" />,
+        UNCLAIMED: <AlertCircle className="h-4 w-4 text-orange-500" />,
     };
 
     const icon = iconMap[status] || null;
@@ -31,14 +32,21 @@ const renderStatusBadge = (status, type = "pickup") => {
             <TooltipTrigger asChild>
                 <span className="inline-flex items-center justify-center">{icon}</span>
             </TooltipTrigger>
-            <TooltipContent side="top">
+            <TooltipContent 
+                side="top"
+                style={{
+                    backgroundColor: isDarkMode ? '#0B2B26' : '#FFFFFF',
+                    color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                    borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26',
+                }}
+            >
                 <div className="font-medium">{status}</div>
             </TooltipContent>
         </Tooltip>
     ) : null;
 };
 
-const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }) => {
+const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, isDarkMode }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [showCalendar, setShowCalendar] = useState(false);
@@ -214,10 +222,6 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
         setPrintData(null);
     };
 
-    const handlePrintNow = () => {
-        window.print();
-    };
-
     return (
         <TooltipProvider>
             <div className="flex flex-col gap-6">
@@ -225,10 +229,14 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="w-full max-w-xs flex-1">
                         <div className="relative w-full max-w-xs">
-                            <div className="flex h-[38px] items-center rounded-md border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-cyan-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:focus-within:ring-cyan-400 dark:focus-within:ring-offset-slate-950">
+                            <div className="flex h-[38px] items-center rounded-lg border-2 px-3 transition-all"
+                                 style={{
+                                     backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                 }}>
                                 <Search
                                     size={16}
-                                    className="text-slate-400 dark:text-slate-500"
+                                    style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}
                                 />
                                 <input
                                     type="text"
@@ -238,7 +246,10 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                         setCurrentPage(1);
                                     }}
                                     placeholder="Search by name"
-                                    className="w-full bg-transparent px-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none dark:text-white dark:placeholder:text-slate-500"
+                                    className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
+                                    style={{
+                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    }}
                                 />
                             </div>
                         </div>
@@ -252,13 +263,21 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                         >
                             <Button
                                 onClick={() => setShowCalendar((p) => !p)}
-                                className="bg-[#0891B2] text-white hover:bg-[#0E7490]"
+                                className="transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                    color: "#F3EDE3",
+                                }}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {selectedRange.from || selectedRange.to ? "Filtered" : "Date Range"}
                             </Button>
                             {showCalendar && (
-                                <div className="absolute right-0 z-50 mt-2 rounded-md border bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                                <div className="absolute right-0 z-50 mt-2 rounded-lg border-2 p-2 shadow-lg"
+                                     style={{
+                                         backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                         borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                     }}>
                                     <Calendar
                                         mode="range"
                                         selected={selectedRange}
@@ -270,7 +289,11 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                             variant="outline"
                                             size="sm"
                                             onClick={clearDateFilter}
-                                            className="mt-2 w-full"
+                                            className="mt-2 w-full transition-all"
+                                            style={{
+                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            }}
                                         >
                                             Clear Filter
                                         </Button>
@@ -282,7 +305,11 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                         {/* Export Button */}
                         <Button
                             onClick={handleExport}
-                            className="bg-green-600 text-white hover:bg-green-700"
+                            className="transition-all"
+                            style={{
+                                backgroundColor: "#10B981",
+                                color: "#FFFFFF",
+                            }}
                             disabled={allItems.length === 0}
                         >
                             <Download className="mr-2 h-4 w-4" /> Export
@@ -291,9 +318,14 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                 </div>
 
                 {/* Table */}
-                <div className="overflow-x-auto rounded-md border border-slate-300 dark:border-slate-700">
+                <div className="overflow-x-auto rounded-lg border-2"
+                     style={{
+                         borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                     }}>
                     <table className="min-w-full table-auto text-sm">
-                        <thead className="bg-slate-100 dark:bg-slate-800">
+                        <thead style={{
+                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        }}>
                             <tr>
                                 <th className="w-10 px-2 py-2"></th>
                                 {tableHeaders.map((header) => {
@@ -315,15 +347,20 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                     return (
                                         <th
                                             key={header}
-                                            className={`px-3 py-2 text-left text-xs font-medium text-slate-600 dark:text-slate-300 ${
-                                                isSortable ? "cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700" : ""
+                                            className={`px-3 py-2 text-left text-xs font-medium ${
+                                                isSortable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""
                                             }`}
+                                            style={{
+                                                color: isDarkMode ? '#13151B' : '#0B2B26',
+                                            }}
                                             onClick={isSortable ? () => handleSort(field) : undefined}
                                         >
                                             <div className="flex items-center">
                                                 {header}
                                                 {isSortable && tableSortField === field && (
-                                                    <span className="ml-1">{tableSortOrder === "asc" ? "↑" : "↓"}</span>
+                                                    <span className="ml-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                        {tableSortOrder === "asc" ? "↑" : "↓"}
+                                                    </span>
                                                 )}
                                             </div>
                                         </th>
@@ -336,10 +373,13 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                 <tr>
                                     <td
                                         colSpan={tableHeaders.length + 1}
-                                        className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
+                                        className="px-4 py-6 text-center text-sm"
+                                        style={{
+                                            color: isDarkMode ? '#6B7280' : '#0B2B26/70',
+                                        }}
                                     >
                                         <div className="flex flex-col items-center gap-2">
-                                            <AlertCircle className="h-5 w-5 text-slate-400" />
+                                            <AlertCircle style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} className="h-5 w-5" />
                                             <span>No records found.</span>
                                             {(searchTerm || selectedRange.from || selectedRange.to) && (
                                                 <Button
@@ -347,6 +387,10 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                                     onClick={() => {
                                                         setSearchTerm("");
                                                         setSelectedRange({ from: null, to: null });
+                                                    }}
+                                                    className="transition-all"
+                                                    style={{
+                                                        color: isDarkMode ? '#13151B' : '#0B2B26',
                                                     }}
                                                 >
                                                     Clear filters
@@ -364,31 +408,54 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                         <>
                                             <tr
                                                 key={record.id}
-                                                className={`border-t border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50 ${
-                                                    shouldHighlightRow ? "bg-yellow-100 dark:bg-yellow-900/30" : ""
+                                                className={`border-t transition-all ${
+                                                    shouldHighlightRow ? "bg-yellow-100 dark:bg-yellow-900/30" : "hover:opacity-90"
                                                 }`}
+                                                style={{
+                                                    borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                                }}
                                             >
                                                 <td className="px-2 py-2">
                                                     <button
                                                         onClick={() => toggleRowExpansion(record.id)}
-                                                        className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                                        className="rounded p-1 transition-all hover:opacity-80"
+                                                        style={{
+                                                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                                        }}
                                                     >
-                                                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                        {isExpanded ? (
+                                                            <ChevronUp className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                                                        ) : (
+                                                            <ChevronDown className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                                                        )}
                                                     </button>
                                                 </td>
-                                                <td className="px-3 py-2 font-medium">{record.name}</td>
-                                                <td className="px-3 py-2">{record.service}</td>
-                                                <td className="px-3 py-2">{record.loads}</td>
-                                                <td className="px-3 py-2">{record.detergent}</td>
-                                                <td className="px-3 py-2">₱{record.price.toFixed(2)}</td>
-                                                <td className="px-3 py-2">
+                                                <td className="px-3 py-2 font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                    {record.name}
+                                                </td>
+                                                <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                    {record.service}
+                                                </td>
+                                                <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                    {record.loads}
+                                                </td>
+                                                <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                    {record.detergent}
+                                                </td>
+                                                <td className="px-3 py-2 font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                    ₱{record.price.toFixed(2)}
+                                                </td>
+                                                <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                                                     {record.createdAt && !isNaN(new Date(record.createdAt))
                                                         ? format(new Date(record.createdAt), "MMM dd, yyyy")
                                                         : "—"}
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span>{record.paymentMethod}</span>
+                                                        <span style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                            {record.paymentMethod}
+                                                        </span>
                                                         {renderStatusBadge(
                                                             record.paymentMethod === "GCash" && !record.gcashVerified
                                                                 ? "Pending"
@@ -396,21 +463,27 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                                                   ? "Paid"
                                                                   : "Unpaid",
                                                             "payment",
+                                                            isDarkMode
                                                         )}
                                                     </div>
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span>{record.laundryStatus}</span>
-                                                        {renderStatusBadge(record.laundryStatus, "laundry")}
+                                                        <span style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                            {record.laundryStatus}
+                                                        </span>
+                                                        {renderStatusBadge(record.laundryStatus, "laundry", isDarkMode)}
                                                     </div>
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span>{record.disposed ? "Disposed" : record.expired ? "Expired" : record.pickupStatus}</span>
+                                                        <span style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                            {record.disposed ? "Disposed" : record.expired ? "Expired" : record.pickupStatus}
+                                                        </span>
                                                         {renderStatusBadge(
                                                             record.disposed ? "Disposed" : record.expired ? "Expired" : record.pickupStatus,
                                                             "pickup",
+                                                            isDarkMode
                                                         )}
                                                     </div>
                                                 </td>
@@ -420,18 +493,33 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                                             <button
                                                                 onClick={() => handlePrint(record)}
                                                                 disabled={isPrinting}
-                                                                className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
+                                                                className="rounded-lg p-2 transition-all hover:opacity-80 disabled:opacity-50"
+                                                                style={{
+                                                                    backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                                                }}
                                                             >
-                                                                <Printer className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                                                                <Printer className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
                                                             </button>
                                                         </TooltipTrigger>
-                                                        <TooltipContent side="top">{isPrinting ? "Printing..." : "Print Receipt"}</TooltipContent>
+                                                        <TooltipContent 
+                                                            side="top"
+                                                            style={{
+                                                                backgroundColor: isDarkMode ? '#0B2B26' : '#FFFFFF',
+                                                                color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                                                                borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26',
+                                                            }}
+                                                        >
+                                                            {isPrinting ? "Printing..." : "Print Receipt"}
+                                                        </TooltipContent>
                                                     </Tooltip>
                                                 </td>
                                             </tr>
                                             {isExpanded && (
                                                 <tr
-                                                    className={`bg-slate-50 dark:bg-slate-800/30 ${shouldHighlightRow ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}`}
+                                                    className={`transition-all ${shouldHighlightRow ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}`}
+                                                    style={{
+                                                        backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                                    }}
                                                 >
                                                     <td
                                                         colSpan={tableHeaders.length + 1}
@@ -439,20 +527,28 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                                                     >
                                                         <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                                                             <div>
-                                                                <span className="font-medium text-slate-500 dark:text-slate-400">
+                                                                <span className="font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
                                                                     Laundry Processed By:
                                                                 </span>
-                                                                <p>{record.laundryProcessedBy || "—"}</p>
+                                                                <p style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                                    {record.laundryProcessedBy || "—"}
+                                                                </p>
                                                             </div>
                                                             <div>
-                                                                <span className="font-medium text-slate-500 dark:text-slate-400">
+                                                                <span className="font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
                                                                     Claim Processed By:
                                                                 </span>
-                                                                <p>{record.claimProcessedBy || "—"}</p>
+                                                                <p style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                                    {record.claimProcessedBy || "—"}
+                                                                </p>
                                                             </div>
                                                             <div>
-                                                                <span className="font-medium text-slate-500 dark:text-slate-400">Disposed By:</span>
-                                                                <p>{record.disposedBy || "—"}</p>
+                                                                <span className="font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                                                    Disposed By:
+                                                                </span>
+                                                                <p style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                                    {record.disposedBy || "—"}
+                                                                </p>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -475,15 +571,19 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                             className={`rounded px-3 py-1 transition-colors ${
                                 currentPage === 1
                                     ? "cursor-not-allowed opacity-50"
-                                    : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
+                                    : "hover:opacity-80"
                             }`}
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                color: "#F3EDE3",
+                            }}
                         >
                             Prev
                         </button>
 
-                        <span className="font-medium text-slate-600 dark:text-slate-300">
-                            Page <span className="text-cyan-600 dark:text-cyan-400">{currentPage}</span> of{" "}
-                            <span className="text-cyan-600 dark:text-cyan-400">{totalPages}</span>
+                        <span className="font-medium" style={{ color: isDarkMode ? '#0B2B26' : '#0B2B26' }}>
+                            Page <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{currentPage}</span> of{" "}
+                            <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{totalPages}</span>
                         </span>
 
                         <button
@@ -492,8 +592,12 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                             className={`rounded px-3 py-1 transition-colors ${
                                 currentPage === totalPages
                                     ? "cursor-not-allowed opacity-50"
-                                    : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
+                                    : "hover:opacity-80"
                             }`}
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                color: "#F3EDE3",
+                            }}
                         >
                             Next
                         </button>
@@ -504,8 +608,6 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder }
                 {showPrintModal && printData && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
                         <div className="mx-auto w-full max-w-sm">
-                            {" "}
-                            {/* Changed to max-w-sm */}
                             <PrintableReceipt
                                 invoiceData={printData}
                                 onClose={closePrintModal}
