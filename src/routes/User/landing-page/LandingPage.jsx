@@ -1,23 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
-// Components
 import Header from "@/routes/User/layouts/Header";
 import Footer from "@/routes/User/layouts/Footer";
 import Services from "./services";
 import ServiceTracking from "./ServiceTracking";
 import TermsCondition from "./TermsCondition";
-
-// Hooks
-import { useScrollSpy } from "./useScrollSpy"; // Adjust path as needed
-
-// Assets
+import { useScrollSpy } from "./useScrollSpy";
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
 
-// API base URL - adjust according to your backend
 const API_BASE_URL = "http://localhost:8080/api";
 
-// Animated Number Component with flip animation
 const AnimatedNumber = ({ value, isChanging }) => {
   if (!isChanging) {
     return <span>{value}</span>;
@@ -74,28 +66,22 @@ const LandingPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
-  // Define section IDs for scroll spy
   const sectionIds = ['home', 'services', 'service_tracking', 'terms'];
-  
-  // Use scroll spy hook
   const { activeSection, isScrolling } = useScrollSpy(sectionIds, {
-    throttle: 150 // Adjust throttle as needed for performance
+    throttle: 150
   });
 
   useEffect(() => {
     setIsVisible(true);
     
-    // Check if mobile on component mount
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
     
     checkMobile();
     
-    // Add resize listener
     window.addEventListener('resize', checkMobile);
     
-    // Check system preference for dark mode
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     setIsDarkMode(mediaQuery.matches);
     
@@ -111,20 +97,16 @@ const LandingPage = () => {
     };
   }, []);
 
-  // Separate useEffect for data fetching with dependency
   useEffect(() => {
     fetchLaundryStats();
   }, [refreshCounter]);
 
-  // Auto-refresh every 15 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      console.log("🔄 Auto-refreshing laundry stats...");
       setRefreshCounter(prev => prev + 1);
-    }, 15000); // 15 seconds
+    }, 15000);
 
     return () => {
-      console.log("🧹 Cleaning up auto-refresh interval");
       clearInterval(interval);
     };
   }, []);
@@ -134,13 +116,10 @@ const LandingPage = () => {
     
     try {
       setIsRefreshing(true);
-      console.log("🔄 Fetching laundry stats...");
       
-      // Create AbortController for timeout
       controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      // Fetch all laundry jobs using fetch API
       const response = await fetch(`${API_BASE_URL}/laundry-jobs`, {
         method: 'GET',
         headers: {
@@ -156,14 +135,11 @@ const LandingPage = () => {
       }
       
       const laundryJobs = await response.json();
-      console.log(`📦 Found ${laundryJobs.length} laundry jobs`);
 
-      // Calculate statistics
       let totalUnwashed = 0;
       let totalWashing = 0;
       let totalDrying = 0;
 
-      // Iterate through all laundry jobs and their load assignments
       laundryJobs.forEach(job => {
         if (job.loadAssignments && job.loadAssignments.length > 0) {
           job.loadAssignments.forEach(load => {
@@ -186,13 +162,6 @@ const LandingPage = () => {
         }
       });
 
-      console.log("📊 Calculated stats:", { 
-        totalUnwashed, 
-        totalWashing, 
-        totalDrying 
-      });
-
-      // Update stats state with change detection
       setStats(prevStats => {
         const newUnwashed = totalUnwashed.toString();
         const newWashing = totalWashing.toString();
@@ -216,17 +185,9 @@ const LandingPage = () => {
           }
         ];
         
-        // Check if any stats changed
         const hasChanged = newStats.some(stat => stat.changing);
         
         if (hasChanged) {
-          console.log("🔄 Stats updated with changes:", {
-            unwashed: { old: prevStats[0].number, new: newUnwashed, changing: newUnwashed !== prevStats[0].number },
-            washing: { old: prevStats[1].number, new: newWashing, changing: newWashing !== prevStats[1].number },
-            drying: { old: prevStats[2].number, new: newDrying, changing: newDrying !== prevStats[2].number }
-          });
-          
-          // Reset changing flags after animation completes
           setTimeout(() => {
             setStats(currentStats => 
               currentStats.map(stat => ({ ...stat, changing: false }))
@@ -235,19 +196,11 @@ const LandingPage = () => {
           
           return newStats;
         } else {
-          console.log("✅ Stats unchanged, skipping update");
           return prevStats;
         }
       });
 
     } catch (error) {
-      if (error.name === 'AbortError') {
-        console.error("⏰ Request timeout fetching laundry stats");
-      } else {
-        console.error("❌ Error fetching laundry stats:", error);
-      }
-      
-      // Only update if it's a real error (not abort)
       if (error.name !== 'AbortError') {
         setStats([
           { number: "0", label: "Total Laundry Load", changing: false },
@@ -265,9 +218,7 @@ const LandingPage = () => {
     setIsDarkMode(darkMode);
   };
 
-  // Function to handle Our Service button click
   const handleOurServiceClick = () => {
-    // Scroll to services section
     setTimeout(() => {
       const servicesElement = document.getElementById("services");
       if (servicesElement) {
@@ -276,9 +227,7 @@ const LandingPage = () => {
     }, 100);
   };
 
-  // Function to handle My Laundry button click
   const handleMyLaundryClick = () => {
-    // Scroll to service tracking section
     setTimeout(() => {
       const trackingElement = document.getElementById("service_tracking");
       if (trackingElement) {
@@ -291,7 +240,6 @@ const LandingPage = () => {
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode ? 'bg-[#0B2B26] text-white' : 'bg-[#E0EAE8] text-[#0B2B26]'
     } font-poppins`} id="home">
-      {/* Pass activeSection to Header */}
       <Header activeSection={activeSection} onThemeChange={handleThemeChange} />
 
       <div className="h-24" />
@@ -304,8 +252,6 @@ const LandingPage = () => {
           isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
         }`}
       >
-        {/* ... rest of your LandingPage JSX remains the same ... */}
-        
         <div className={`relative max-w-[90%] mx-auto overflow-hidden rounded-tl-2xl rounded-tr-2xl ${
           isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
         }`}>
@@ -363,7 +309,6 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Desktop Stats */}
           <div className="hidden md:block absolute bottom-0 right-0 w-[500px] h-[180px] overflow-hidden">
             <svg
               className="absolute bottom-0 right-0 w-full h-full"
@@ -398,7 +343,6 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Mobile Stats */}
         <div className={`md:hidden w-full py-8 ${
           isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
         }`}>
@@ -436,17 +380,14 @@ const LandingPage = () => {
         </div>
       </motion.section>
 
-      {/* Services Section */}
       <div id="services">
         <Services isVisible={isVisible} isMobile={isMobile} isDarkMode={isDarkMode} />
       </div>
 
-      {/* Service Tracking Section */}
       <div id="service_tracking">
         <ServiceTracking isVisible={isVisible} isDarkMode={isDarkMode} />
       </div>
 
-      {/* Terms & Conditions Section */}
       <div id="terms">
         <TermsCondition isVisible={isVisible} isMobile={isMobile} isDarkMode={isDarkMode} />
       </div>
