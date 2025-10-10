@@ -8,6 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 
 const ALLOWED_SKEW_MS = 5000;
 
+// Cache for services data
+let servicesCache = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 const isTokenExpired = (token) => {
     try {
         const payload = token.split(".")[1];
@@ -69,18 +74,35 @@ export default function MainPage() {
     const [error, setError] = useState(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [initialLoad, setInitialLoad] = useState(true);
 
     useEffect(() => {
         const fetchServices = async () => {
+            // Check cache first
+            const now = Date.now();
+            if (servicesCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+                console.log("📦 Using cached services data");
+                setServices(servicesCache);
+                setLoading(false);
+                setInitialLoad(false);
+                return;
+            }
+
             try {
                 setLoading(true);
+                setInitialLoad(true);
                 const data = await secureFetch("/services");
-                setServices(data || []);
+                // Update cache
+                servicesCache = data || [];
+                cacheTimestamp = Date.now();
+                
+                setServices(servicesCache);
             } catch (err) {
                 console.error("❌ Error fetching services:", err.message);
                 setError("Failed to load services. Make sure you're logged in.");
             } finally {
                 setLoading(false);
+                setTimeout(() => setInitialLoad(false), 100);
             }
         };
 
@@ -96,7 +118,13 @@ export default function MainPage() {
 
             setServices((prev) => {
                 const exists = prev.some((s) => s.id === saved.id);
-                return exists ? prev.map((s) => (s.id === saved.id ? saved : s)) : [...prev, saved];
+                const newServices = exists ? prev.map((s) => (s.id === saved.id ? saved : s)) : [...prev, saved];
+                
+                // Update cache
+                servicesCache = newServices;
+                cacheTimestamp = Date.now();
+                
+                return newServices;
             });
 
             toast({
@@ -119,7 +147,15 @@ export default function MainPage() {
     const handleDelete = async (id) => {
         try {
             await secureFetch(`/services/${id}`, "DELETE");
-            setServices((prev) => prev.filter((s) => s.id !== id));
+            setServices((prev) => {
+                const newServices = prev.filter((s) => s.id !== id);
+                
+                // Update cache
+                servicesCache = newServices;
+                cacheTimestamp = Date.now();
+                
+                return newServices;
+            });
             setConfirmDeleteId(null);
 
             toast({
@@ -149,27 +185,58 @@ export default function MainPage() {
                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
             }}
         >
-            <div className="flex items-center gap-x-3 mb-4">
+            <div className="flex items-center justify-between mb-4">
                 <div className="w-fit rounded-lg p-2 animate-pulse"
                      style={{
                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                      }}>
                     <div className="h-6 w-6"></div>
                 </div>
-                <div className="h-5 w-28 rounded animate-pulse"
+                <div className="h-8 w-24 rounded animate-pulse"
                      style={{
                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                      }}></div>
             </div>
-            <div className="rounded-lg p-3 animate-pulse"
+            
+            <div className="space-y-2">
+                <div className="h-5 w-32 rounded animate-pulse mb-2"
+                     style={{
+                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }}></div>
+                <div className="h-4 w-44 rounded animate-pulse"
+                     style={{
+                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }}></div>
+            </div>
+        </motion.div>
+    );
+
+    const SkeletonHeader = () => (
+        <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
+        >
+            <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg animate-pulse"
+                     style={{
+                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }}></div>
+                <div className="space-y-2">
+                    <div className="h-6 w-44 rounded-lg animate-pulse"
+                         style={{
+                           backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         }}></div>
+                    <div className="h-4 w-56 rounded animate-pulse"
+                         style={{
+                           backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         }}></div>
+                </div>
+            </div>
+            <div className="h-10 w-32 rounded-lg animate-pulse"
                  style={{
-                   backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
-                 }}>
-                <div className="h-8 w-32 rounded"
-                     style={{
-                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
-                     }}></div>
-            </div>
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
         </motion.div>
     );
 
@@ -242,6 +309,38 @@ export default function MainPage() {
         </motion.div>
     );
 
+    // Show skeleton loader only during initial load
+    if (initialLoad) {
+        return (
+            <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+                <SkeletonHeader />
+                
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="rounded-xl border-2 p-4 transition-all"
+                        style={{
+                            backgroundColor: isDarkMode ? "#FEF2F2" : "#FEF2F2",
+                            borderColor: isDarkMode ? "#F87171" : "#EF4444",
+                        }}
+                    >
+                        <div className="h-5 w-full rounded animate-pulse"
+                             style={{
+                               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                             }}></div>
+                    </motion.div>
+                )}
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                    {[...Array(6)].map((_, index) => (
+                        <SkeletonCard key={index} index={index} />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
             {/* 🧢 Section Header */}
@@ -271,21 +370,19 @@ export default function MainPage() {
                     </div>
                 </div>
                 
-                {!loading && (
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setEditTarget({})}
-                        className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
-                        style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                            color: "#F3EDE3",
-                        }}
-                    >
-                        <Plus size={18} />
-                        <span className="text-sm font-medium">Add Service</span>
-                    </motion.button>
-                )}
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setEditTarget({})}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
+                    style={{
+                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                        color: "#F3EDE3",
+                    }}
+                >
+                    <Plus size={18} />
+                    <span className="text-sm font-medium">Add Service</span>
+                </motion.button>
             </motion.div>
 
             {/* 🔥 Error Message */}
@@ -307,11 +404,7 @@ export default function MainPage() {
 
             {/* 🧼 Service Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {loading ? (
-                    [...Array(6)].map((_, index) => (
-                        <SkeletonCard key={index} index={index} />
-                    ))
-                ) : services.length > 0 ? (
+                {services.length > 0 ? (
                     services.map((service, index) => (
                         <ServiceCard key={service.id} service={service} index={index} />
                     ))

@@ -12,6 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 
 const ALLOWED_SKEW_MS = 5000;
 
+// Cache for receipt settings data
+let receiptSettingsCache = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 const isTokenExpired = (token) => {
   try {
     const payload = token.split(".")[1];
@@ -69,11 +74,33 @@ export default function ReceiptConfigPage() {
   const [activePreview, setActivePreview] = useState("invoice");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
     const fetchSettings = async () => {
+      // Check cache first
+      const now = Date.now();
+      if (receiptSettingsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+        console.log("📦 Using cached receipt settings");
+        setStoreName(receiptSettingsCache.storeName || "");
+        setAddress(receiptSettingsCache.address || "");
+        setPhone(receiptSettingsCache.phone || "");
+        setFooterNote(receiptSettingsCache.footerNote || "");
+        setTrackingUrl(receiptSettingsCache.trackingUrl || "");
+        setIsLoading(false);
+        setInitialLoad(false);
+        return;
+      }
+
       try {
+        setIsLoading(true);
+        setInitialLoad(true);
         const data = await secureFetch("/format-settings");
+        
+        // Update cache
+        receiptSettingsCache = data || {};
+        cacheTimestamp = Date.now();
+        
         setStoreName(data.storeName || "");
         setAddress(data.address || "");
         setPhone(data.phone || "");
@@ -88,6 +115,7 @@ export default function ReceiptConfigPage() {
         });
       } finally {
         setIsLoading(false);
+        setTimeout(() => setInitialLoad(false), 100);
       }
     };
     fetchSettings();
@@ -98,6 +126,11 @@ export default function ReceiptConfigPage() {
     try {
       const payload = { storeName, address, phone, footerNote, trackingUrl };
       await secureFetch("/format-settings", "POST", payload);
+      
+      // Update cache
+      receiptSettingsCache = payload;
+      cacheTimestamp = Date.now();
+      
       toast({ 
         title: "Success", 
         description: "Receipt configuration updated successfully.",
@@ -282,25 +315,25 @@ export default function ReceiptConfigPage() {
     </motion.div>
   );
 
-  // Skeleton loader
+  // Skeleton loader components
   const SkeletonCard = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border-2 p-5 transition-all"
+      className="rounded-xl border-2 p-5 transition-all h-[560px]"
       style={{
         backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
         borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
       }}
     >
-      <div className="flex items-center gap-x-3 mb-4">
+      <div className="flex items-center justify-between mb-4">
         <div className="w-fit rounded-lg p-2 animate-pulse"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}>
           <div className="h-6 w-6"></div>
         </div>
-        <div className="h-5 w-28 rounded animate-pulse"
+        <div className="h-6 w-32 rounded animate-pulse"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}></div>
@@ -319,28 +352,44 @@ export default function ReceiptConfigPage() {
           </div>
         ))}
       </div>
+      <div className="mt-6 flex justify-end">
+        <div className="h-10 w-40 rounded-lg animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
     </motion.div>
   );
 
-  if (isLoading) {
+  const SkeletonHeader = () => (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 mb-4"
+    >
+      <div className="h-10 w-10 rounded-lg animate-pulse"
+           style={{
+             backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+           }}></div>
+      <div className="space-y-2">
+        <div className="h-6 w-44 rounded-lg animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+        <div className="h-4 w-56 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+    </motion.div>
+  );
+
+  // Show skeleton loader only during initial load
+  if (initialLoad) {
     return (
       <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
-        {/* Header Skeleton */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 mb-4"
-        >
-          <div className="h-8 w-8 rounded-lg animate-pulse"
-               style={{
-                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
-               }}></div>
-          <div className="h-8 w-44 rounded-lg animate-pulse"
-               style={{
-                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
-               }}></div>
-        </motion.div>
-
+        <SkeletonHeader />
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <SkeletonCard />
           <SkeletonCard />

@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   AreaChart,
   ResponsiveContainer,
@@ -19,6 +19,57 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+// Cache for dashboard data
+let dashboardCache = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for dashboard data
+const POLLING_INTERVAL = 30000; // 30 seconds
+
+const ALLOWED_SKEW_MS = 5000;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type");
+  return contentType && contentType.includes("application/json")
+    ? response.json()
+    : response.text();
+};
 
 export default function AdminDashboardPage() {
   const { theme } = useTheme();
@@ -35,11 +86,42 @@ export default function AdminDashboardPage() {
     unclaimedList: [],
     loading: true,
     error: null,
-    lastUpdated: null
+    lastUpdated: null,
+    dataVersion: 0
   });
 
-  const fetchDashboardData = useCallback(async () => {
+  const [initialLoad, setInitialLoad] = useState(true);
+  const pollingIntervalRef = useRef(null);
+
+  // Function to check if data has actually changed
+  const hasDataChanged = (newData, oldData) => {
+    if (!oldData) return true;
+    
+    return (
+      newData.totalIncome !== oldData.totalIncome ||
+      newData.totalLoads !== oldData.totalLoads ||
+      newData.unwashedCount !== oldData.unwashedCount ||
+      newData.totalUnclaimed !== oldData.totalUnclaimed ||
+      JSON.stringify(newData.overviewData) !== JSON.stringify(oldData.overviewData) ||
+      JSON.stringify(newData.unclaimedList) !== JSON.stringify(oldData.unclaimedList)
+    );
+  };
+
+  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     try {
+      // Check cache first unless forced refresh
+      const now = Date.now();
+      if (!forceRefresh && dashboardCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+        console.log("📦 Using cached dashboard data");
+        setDashboardData(prev => ({
+          ...dashboardCache,
+          loading: false,
+          error: null
+        }));
+        setInitialLoad(false);
+        return;
+      }
+
       const token = localStorage.getItem('authToken');
       
       const response = await fetch('http://localhost:8080/api/dashboard/admin', {
@@ -55,7 +137,7 @@ export default function AdminDashboardPage() {
 
       const data = await response.json();
       
-      setDashboardData({
+      const newDashboardData = {
         totalIncome: data.totalIncome || 0,
         totalLoads: data.totalLoads || 0,
         unwashedCount: data.unwashedCount || 0,
@@ -64,8 +146,40 @@ export default function AdminDashboardPage() {
         unclaimedList: data.unclaimedList || [],
         loading: false,
         error: null,
-        lastUpdated: new Date()
-      });
+        lastUpdated: new Date(),
+        dataVersion: (dashboardData?.dataVersion || 0) + 1
+      };
+
+      // Only update state and cache if data has actually changed
+      if (hasDataChanged(newDashboardData, dashboardCache)) {
+        console.log("🔄 Dashboard data updated");
+        
+        // Update cache
+        dashboardCache = {
+          totalIncome: newDashboardData.totalIncome,
+          totalLoads: newDashboardData.totalLoads,
+          unwashedCount: newDashboardData.unwashedCount,
+          totalUnclaimed: newDashboardData.totalUnclaimed,
+          overviewData: newDashboardData.overviewData,
+          unclaimedList: newDashboardData.unclaimedList,
+          lastUpdated: newDashboardData.lastUpdated
+        };
+        cacheTimestamp = Date.now();
+        
+        setDashboardData(newDashboardData);
+      } else {
+        console.log("✅ No changes in dashboard data, skipping update");
+        // Just update the timestamp to extend cache life
+        cacheTimestamp = Date.now();
+        setDashboardData(prev => ({
+          ...prev,
+          loading: false,
+          error: null,
+          lastUpdated: new Date()
+        }));
+      }
+
+      setInitialLoad(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setDashboardData(prev => ({
@@ -73,14 +187,24 @@ export default function AdminDashboardPage() {
         loading: false,
         error: error.message
       }));
+      setInitialLoad(false);
     }
   }, []);
 
   useEffect(() => {
     fetchDashboardData();
     
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
+    // Set up polling with smart updates
+    pollingIntervalRef.current = setInterval(() => {
+      console.log("🔄 Auto-refreshing dashboard data...");
+      fetchDashboardData(false); // Don't force refresh, let the cache logic handle it
+    }, POLLING_INTERVAL);
+    
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, [fetchDashboardData]);
 
   const formatCurrency = (amount) => {
@@ -200,7 +324,8 @@ export default function AdminDashboardPage() {
     </motion.div>
   );
 
-  if (dashboardData.loading) {
+  // Show skeleton loader only during initial load
+  if (initialLoad) {
     return (
       <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
         {/* Header Skeleton */}

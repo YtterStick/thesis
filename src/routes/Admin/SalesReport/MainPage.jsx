@@ -7,8 +7,56 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
 import { Label } from "@/components/ui/label";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+
+let salesReportCache = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for sales report data
+
+const AnimatedNumber = ({ value, isChanging }) => {
+    if (!isChanging) {
+        return <span>{value}</span>;
+    }
+
+    return (
+        <span className="relative inline-block">
+            <AnimatePresence mode="popLayout">
+                <motion.span
+                    key={value}
+                    initial={{
+                        opacity: 0,
+                        y: 30,
+                        scale: 1.2,
+                        rotateX: 90,
+                    }}
+                    animate={{
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        rotateX: 0,
+                    }}
+                    exit={{
+                        opacity: 0,
+                        y: -30,
+                        scale: 0.8,
+                        rotateX: -90,
+                    }}
+                    transition={{
+                        duration: 0.6,
+                        ease: "easeOut",
+                    }}
+                    className="inline-block"
+                    style={{
+                        transformStyle: "preserve-3d",
+                    }}
+                >
+                    {value}
+                </motion.span>
+            </AnimatePresence>
+        </span>
+    );
+};
 
 const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
     const { theme } = useTheme();
@@ -122,6 +170,7 @@ const SalesReportPage = () => {
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     const [isLoading, setIsLoading] = useState(false);
+    const [initialLoad, setInitialLoad] = useState(true);
     const [dateRange, setDateRange] = useState("today");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
@@ -146,6 +195,16 @@ const SalesReportPage = () => {
         totalLoads: 0,
     });
 
+    // State for animated numbers
+    const [animatedSummary, setAnimatedSummary] = useState({
+        totalSales: "0",
+        totalTransactions: "0",
+        averageOrderValue: "0.00",
+        totalLoads: "0",
+        growthPercentage: "0",
+        isChanging: false,
+    });
+
     const services = [
         { id: "all", name: "All Services" },
         { id: "Wash & Dry", name: "Wash & Dry" },
@@ -161,8 +220,75 @@ const SalesReportPage = () => {
         fetchSalesReport();
     }, [dateRange, startDate, endDate, serviceTypeFilter]);
 
-    const fetchSalesReport = async () => {
+    // Update animated numbers when summary data changes
+    useEffect(() => {
+        if (!initialLoad) {
+            setAnimatedSummary((prev) => ({
+                totalSales: `₱${summaryData.totalSales.toLocaleString()}`,
+                totalTransactions: summaryData.totalTransactions.toLocaleString(),
+                averageOrderValue: `₱${summaryData.averageOrderValue.toFixed(2)}`,
+                totalLoads: (summaryData.totalLoads || 0).toLocaleString(),
+                growthPercentage: `${Math.round(summaryData.growthPercentage)}`,
+                isChanging: true,
+            }));
+
+            // Reset changing state after animation
+            setTimeout(() => {
+                setAnimatedSummary((prev) => ({ ...prev, isChanging: false }));
+            }, 1000);
+        }
+    }, [summaryData, initialLoad]);
+
+    // Function to check if data has actually changed
+    const hasDataChanged = (newData, oldData) => {
+        if (!oldData) return true;
+
+        return (
+            JSON.stringify(newData.salesData) !== JSON.stringify(oldData.salesData) ||
+            JSON.stringify(newData.serviceDistributionData) !== JSON.stringify(oldData.serviceDistributionData) ||
+            JSON.stringify(newData.recentTransactions) !== JSON.stringify(oldData.recentTransactions) ||
+            JSON.stringify(newData.summaryData) !== JSON.stringify(oldData.summaryData)
+        );
+    };
+
+    // Fix for percentage calculation - ensure it doesn't exceed 100%
+    const calculateSafeGrowthPercentage = (todaySales, yesterdaySales) => {
+        if (yesterdaySales === 0) {
+            return todaySales > 0 ? 100 : 0;
+        }
+
+        const percentage = ((todaySales - yesterdaySales) / yesterdaySales) * 100;
+
+        // Cap at 100% to prevent unrealistic numbers like 290%
+        if (percentage > 100) return 100;
+        if (percentage < -100) return -100;
+
+        return Math.round(percentage);
+    };
+
+    const fetchSalesReport = async (forceRefresh = false) => {
         try {
+            // Check cache first unless forced refresh
+            const now = Date.now();
+            const cacheKey = `${dateRange}-${startDate}-${endDate}-${serviceTypeFilter}`;
+
+            if (
+                !forceRefresh &&
+                salesReportCache &&
+                salesReportCache.cacheKey === cacheKey &&
+                cacheTimestamp &&
+                now - cacheTimestamp < CACHE_DURATION
+            ) {
+                console.log("📦 Using cached sales report data");
+                setSalesData(salesReportCache.salesData);
+                setServiceDistributionData(salesReportCache.serviceDistributionData);
+                setRecentTransactions(salesReportCache.recentTransactions);
+                setSummaryData(salesReportCache.summaryData);
+                setIsLoading(false);
+                setInitialLoad(false);
+                return;
+            }
+
             setIsLoading(true);
             const token = localStorage.getItem("authToken");
 
@@ -179,6 +305,7 @@ const SalesReportPage = () => {
                         variant: "destructive",
                     });
                     setIsLoading(false);
+                    setInitialLoad(false);
                     return;
                 }
 
@@ -290,24 +417,50 @@ const SalesReportPage = () => {
                 });
             }
 
-            setSalesData(processedSalesData);
-            setServiceDistributionData(data.serviceDistribution || []);
-            setRecentTransactions(data.recentTransactions || []);
-            setSummaryData(
-                data.summary || {
-                    totalSales: 0,
-                    totalTransactions: 0,
-                    totalCustomers: 0,
-                    averageOrderValue: 0,
-                    todaySales: 0,
-                    yesterdaySales: 0,
-                    growthPercentage: 0,
-                    totalLoads: 0,
+            // Apply safe growth percentage calculation
+            const safeGrowthPercentage = calculateSafeGrowthPercentage(data.summary?.todaySales || 0, data.summary?.yesterdaySales || 0);
+
+            const newData = {
+                salesData: processedSalesData,
+                serviceDistributionData: data.serviceDistribution || [],
+                recentTransactions: data.recentTransactions || [],
+                summaryData: {
+                    ...data.summary,
+                    growthPercentage: safeGrowthPercentage, // Use the safe calculation
+                    totalSales: data.summary?.totalSales || 0,
+                    totalTransactions: data.summary?.totalTransactions || 0,
+                    totalCustomers: data.summary?.totalCustomers || 0,
+                    averageOrderValue: data.summary?.averageOrderValue || 0,
+                    todaySales: data.summary?.todaySales || 0,
+                    yesterdaySales: data.summary?.yesterdaySales || 0,
+                    totalLoads: data.summary?.totalLoads || 0,
                 },
-            );
+            };
+
+            // Only update state and cache if data has actually changed
+            if (hasDataChanged(newData, salesReportCache)) {
+                console.log("🔄 Sales report data updated");
+
+                // Update cache
+                salesReportCache = {
+                    ...newData,
+                    cacheKey: cacheKey,
+                };
+                cacheTimestamp = Date.now();
+
+                setSalesData(newData.salesData);
+                setServiceDistributionData(newData.serviceDistributionData);
+                setRecentTransactions(newData.recentTransactions);
+                setSummaryData(newData.summaryData);
+            } else {
+                console.log("✅ No changes in sales report data, skipping update");
+                // Just update the timestamp to extend cache life
+                cacheTimestamp = Date.now();
+            }
 
             setCurrentPage(1);
             setIsLoading(false);
+            setInitialLoad(false);
         } catch (error) {
             console.error(error);
             toast({
@@ -316,6 +469,7 @@ const SalesReportPage = () => {
                 variant: "destructive",
             });
             setIsLoading(false);
+            setInitialLoad(false);
         }
     };
 
@@ -420,29 +574,29 @@ const SalesReportPage = () => {
     const summaryCards = [
         {
             label: "Total Income",
-            value: `₱${summaryData.totalSales.toLocaleString()}`,
+            value: animatedSummary.totalSales,
             icon: <DollarSign size={26} />,
             color: CHART_COLORS.accent,
-            description: `${summaryData.growthPercentage >= 0 ? "+" : ""}${Math.round(summaryData.growthPercentage)}% from previous period`,
+            description: `${summaryData.growthPercentage >= 0 ? "+" : ""}${animatedSummary.growthPercentage}% from previous period`,
             trend: summaryData.growthPercentage,
         },
         {
             label: "Transactions",
-            value: summaryData.totalTransactions.toLocaleString(),
+            value: animatedSummary.totalTransactions,
             icon: <TrendingUp size={26} />,
             color: CHART_COLORS.highlight,
             description: `${summaryData.totalCustomers} unique customers`,
         },
         {
             label: "Avg. Order Value",
-            value: `₱${summaryData.averageOrderValue.toFixed(2)}`,
+            value: animatedSummary.averageOrderValue,
             icon: <BarChart3 size={26} />,
             color: CHART_COLORS.complementary,
             description: "Per transaction",
         },
         {
             label: "Total Loads",
-            value: (summaryData.totalLoads || 0).toLocaleString(),
+            value: animatedSummary.totalLoads,
             icon: <Package size={26} />,
             color: CHART_COLORS.primary,
             description: "Total wash loads processed",
@@ -467,6 +621,200 @@ const SalesReportPage = () => {
             </g>
         );
     };
+
+    // Skeleton loader components (only for initial load)
+    const SkeletonCard = () => (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border-2 p-5 transition-all"
+            style={{
+                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            }}
+        >
+            <div className="mb-4 flex items-center justify-between">
+                <div
+                    className="w-fit animate-pulse rounded-lg p-2"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                    }}
+                >
+                    <div className="h-6 w-6"></div>
+                </div>
+                <div
+                    className="h-8 w-24 animate-pulse rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                    }}
+                ></div>
+            </div>
+
+            <div className="space-y-2">
+                <div
+                    className="mb-2 h-5 w-32 animate-pulse rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                    }}
+                ></div>
+                <div
+                    className="h-4 w-44 animate-pulse rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                    }}
+                ></div>
+            </div>
+        </motion.div>
+    );
+
+    const SkeletonChart = () => (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border-2 p-5 transition-all"
+            style={{
+                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            }}
+        >
+            <div className="mb-5">
+                <div
+                    className="mb-2 h-6 w-44 animate-pulse rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                    }}
+                ></div>
+                <div
+                    className="h-4 w-36 animate-pulse rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                    }}
+                ></div>
+            </div>
+            <div
+                className="h-[300px] w-full animate-pulse rounded-lg"
+                style={{
+                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                }}
+            ></div>
+        </motion.div>
+    );
+
+    const SkeletonHeader = () => (
+        <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+            <div className="flex items-center gap-3">
+                <div
+                    className="h-10 w-10 animate-pulse rounded-lg"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                    }}
+                ></div>
+                <div className="space-y-2">
+                    <div
+                        className="h-6 w-44 animate-pulse rounded-lg"
+                        style={{
+                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        }}
+                    ></div>
+                    <div
+                        className="h-4 w-56 animate-pulse rounded"
+                        style={{
+                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        }}
+                    ></div>
+                </div>
+            </div>
+        </motion.div>
+    );
+
+    // Show skeleton loader only during initial load
+    if (initialLoad) {
+        return (
+            <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
+                <SkeletonHeader />
+
+                {/* Filters Skeleton */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl border-2 p-5 transition-all"
+                    style={{
+                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    }}
+                >
+                    <div
+                        className="mb-4 h-6 w-32 animate-pulse rounded"
+                        style={{
+                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        }}
+                    ></div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        {[...Array(3)].map((_, i) => (
+                            <div
+                                key={i}
+                                className="space-y-2"
+                            >
+                                <div
+                                    className="h-4 w-20 animate-pulse rounded"
+                                    style={{
+                                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                    }}
+                                ></div>
+                                <div
+                                    className="h-10 w-full animate-pulse rounded"
+                                    style={{
+                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                    }}
+                                ></div>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+
+                {/* Summary Cards Skeleton */}
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+                    {[...Array(4)].map((_, index) => (
+                        <SkeletonCard key={index} />
+                    ))}
+                </div>
+
+                {/* Charts Skeleton */}
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                    <SkeletonChart />
+                    <SkeletonChart />
+                </div>
+
+                {/* Transactions Skeleton */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl border-2 p-5 transition-all"
+                    style={{
+                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    }}
+                >
+                    <div
+                        className="mb-4 h-6 w-44 animate-pulse rounded"
+                        style={{
+                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        }}
+                    ></div>
+                    <div
+                        className="h-[400px] w-full animate-pulse rounded-lg"
+                        style={{
+                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                        }}
+                    ></div>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
@@ -636,76 +984,74 @@ const SalesReportPage = () => {
             </motion.div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-                {summaryCards.map(({ label, value, icon, color, description, trend }, index) => (
-                    <motion.div
-                        key={label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{
-                            scale: 1.03,
-                            y: -2,
-                            transition: { duration: 0.2 },
-                        }}
-                        className="cursor-pointer rounded-xl border-2 p-5 transition-all"
-                        style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                        }}
-                    >
-                        <div className="mb-4 flex items-center justify-between">
-                            <motion.div
-                                whileHover={{ scale: 1.1, rotate: 5 }}
-                                className="rounded-lg p-2"
-                                style={{
-                                    backgroundColor: `${color}20`,
-                                    color: color,
-                                }}
-                            >
-                                {icon}
-                            </motion.div>
-                            <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: index * 0.2 }}
-                                className="text-right"
-                            >
-                                <p
-                                    className="text-2xl font-bold"
-                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
-                                >
-                                    {isLoading ? (
-                                        <span
-                                            className="inline-block h-6 w-20 animate-pulse rounded"
-                                            style={{ backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8" }}
-                                        />
-                                    ) : (
-                                        <>{value}</>
-                                    )}
-                                </p>
-                            </motion.div>
-                        </div>
+<div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+  {summaryCards.map(({ label, value, icon, color, description, trend }, index) => (
+    <motion.div
+      key={label}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+      whileHover={{
+        scale: 1.03,
+        y: -2,
+        transition: { duration: 0.2 },
+      }}
+      className="cursor-pointer rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <motion.div
+          whileHover={{ scale: 1.1, rotate: 5 }}
+          className="rounded-lg p-2"
+          style={{
+            backgroundColor: `${color}20`,
+            color: color,
+          }}
+        >
+          {icon}
+        </motion.div>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: index * 0.2 }}
+          className="text-right"
+        >
+          {/* Change the p tag to div since it contains block content */}
+          <div
+            className="text-2xl font-bold"
+            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+          >
+            {/* Use AnimatedNumber instead of skeleton loading */}
+            <AnimatedNumber 
+              value={value} 
+              isChanging={animatedSummary.isChanging} 
+            />
+          </div>
+        </motion.div>
+      </div>
 
-                        <div>
-                            <h3
-                                className="mb-2 text-lg font-semibold"
-                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
-                            >
-                                {label}
-                            </h3>
-                            <p
-                                className="text-sm"
-                                style={{
-                                    color: trend !== undefined ? (trend >= 0 ? "#10B981" : "#EF4444") : isDarkMode ? "#6B7280" : "#0B2B26/80",
-                                }}
-                            >
-                                {description}
-                            </p>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+      <div>
+        <h3
+          className="mb-2 text-lg font-semibold"
+          style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+        >
+          {label}
+        </h3>
+        <p
+          className="text-sm"
+          style={{
+            color: trend !== undefined ? (trend >= 0 ? "#10B981" : "#EF4444") : isDarkMode ? "#6B7280" : "#0B2B26/80",
+          }}
+        >
+          {description}
+        </p>
+      </div>
+    </motion.div>
+  ))}
+</div>
 
             {/* Charts */}
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
