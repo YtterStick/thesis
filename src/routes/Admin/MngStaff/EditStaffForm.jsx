@@ -1,14 +1,18 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 import PropTypes from "prop-types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { X, Eye, EyeOff, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Eye, EyeOff, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { secureFetch } from "@/lib/secureFetch";
 
 const EditStaffForm = ({ staff, onUpdate, onClose }) => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
     const [form, setForm] = useState({
         username: staff.username || "",
         password: "",
@@ -140,62 +144,116 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
     };
 
     return (
-        <Dialog
-            open={true}
-            onOpenChange={isSubmitting ? undefined : onClose}
-        >
-            <DialogContent className="rounded-lg border border-slate-300 bg-white p-6 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold">Edit Staff Account</DialogTitle>
-                    <DialogDescription className="sr-only">Update contact number, role, or password for this staff account.</DialogDescription>
-                    <DialogClose />
-                </DialogHeader>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Backdrop */}
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                onClick={onClose}
+            />
+            
+            {/* Modal */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="relative z-50 w-full max-w-md rounded-xl border-2 p-6 shadow-xl transition-all"
+                style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                }}
+            >
+                {/* Header */}
+                <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                        Edit Staff Account
+                    </h2>
+                    <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={onClose}
+                        className="rounded-lg p-1 transition-colors hover:opacity-80"
+                        style={{
+                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        }}
+                    >
+                        <X className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                    </motion.button>
+                </div>
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="mt-2 space-y-4"
-                >
-                    <Input
-                        placeholder="Username"
-                        value={form.username}
-                        disabled
-                        className="border border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    />
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            Username
+                        </label>
+                        <Input
+                            value={form.username}
+                            disabled
+                            className="rounded-lg border-2 transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                color: isDarkMode ? "#6B7280" : "#0B2B26/70",
+                            }}
+                        />
+                    </div>
 
                     {/* Password with toggle and info */}
                     <div className="space-y-2">
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            New Password (leave blank to keep current)
+                        </label>
                         <div className="relative">
                             <Input
                                 type={showPassword ? "text" : "password"}
-                                placeholder="New Password (leave blank to keep current)"
+                                placeholder="New Password"
                                 value={form.password}
                                 onChange={(e) => handleChange("password", e.target.value)}
-                                className="border border-slate-300 bg-white pr-10 text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+                                className="rounded-lg border-2 pr-20 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                }}
                             />
-                            <div className="absolute right-3 top-2 flex space-x-1">
-                                <button
+                            <div className="absolute right-3 top-2 flex space-x-2">
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                     type="button"
                                     onClick={() => setShowPasswordInfo(!showPasswordInfo)}
-                                    className="text-slate-500 hover:text-blue-500 dark:text-slate-400"
+                                    className="transition-colors hover:opacity-80"
+                                    style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
                                 >
                                     <Info size={16} />
-                                </button>
-                                <button
+                                </motion.button>
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                     type="button"
                                     onClick={() => setShowPassword((prev) => !prev)}
-                                    className="text-slate-500 hover:text-blue-500 dark:text-slate-400"
+                                    className="transition-colors hover:opacity-80"
+                                    style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
                                 >
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
+                                </motion.button>
                             </div>
                         </div>
 
-                        {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
+                        {passwordError && (
+                            <p className="text-xs" style={{ color: '#EF4444' }}>{passwordError}</p>
+                        )}
 
                         {showPasswordInfo && (
-                            <div className="rounded bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-                                <p>Password must contain:</p>
-                                <ul className="mt-1 list-disc pl-4">
+                            <div className="rounded-lg border-2 p-3 text-xs transition-all"
+                                 style={{
+                                     backgroundColor: isDarkMode ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                                     borderColor: isDarkMode ? "#3b82f6" : "#3b82f6",
+                                     color: isDarkMode ? "#3b82f6" : "#1d4ed8",
+                                 }}>
+                                <p className="font-medium">Password must contain:</p>
+                                <ul className="mt-1 list-disc pl-4 space-y-1">
                                     <li>At least 8 characters</li>
                                     <li>One uppercase letter (A-Z)</li>
                                     <li>One lowercase letter (a-z)</li>
@@ -206,72 +264,129 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                         )}
                     </div>
 
-                    {/* Confirm Password with toggle */}
-                    <div className="relative">
-                        <Input
-                            type={showConfirmPassword ? "text" : "password"}
-                            placeholder="Confirm New Password"
-                            value={form.confirmPassword}
-                            onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                            className="border border-slate-300 bg-white pr-10 text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword((prev) => !prev)}
-                            className="absolute right-3 top-2 text-slate-500 hover:text-blue-500 dark:text-slate-400"
-                        >
-                            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
+                    {/* Confirm Password */}
+                    <div>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            Confirm New Password
+                        </label>
+                        <div className="relative">
+                            <Input
+                                type={showConfirmPassword ? "text" : "password"}
+                                placeholder="Confirm New Password"
+                                value={form.confirmPassword}
+                                onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                                className="rounded-lg border-2 pr-10 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                }}
+                            />
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                type="button"
+                                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                className="absolute right-3 top-2 transition-colors hover:opacity-80"
+                                style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                            >
+                                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </motion.button>
+                        </div>
                     </div>
 
                     {/* Contact Input */}
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-center rounded-md border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:focus-within:ring-blue-400 dark:focus-within:ring-offset-slate-950">
+                    <div>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            Contact Number
+                        </label>
+                        <div className="flex items-center rounded-lg border-2 transition-all"
+                             style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                             }}>
+                            <span className="px-3" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>+63</span>
                             <Input
                                 type="tel"
                                 inputMode="numeric"
                                 maxLength={11}
-                                placeholder="09123456789"
+                                placeholder="9123456789"
                                 value={form.contact}
                                 onChange={(e) => handleChange("contact", e.target.value)}
                                 required
-                                className="flex-1 border-none bg-transparent text-slate-900 placeholder:text-slate-400 focus-visible:outline-none dark:text-white dark:placeholder:text-slate-500"
+                                className="flex-1 border-none bg-transparent transition-all focus-visible:ring-0 focus-visible:ring-offset-0"
+                                style={{
+                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                }}
                             />
                         </div>
-                        {contactError && <p className="text-xs text-red-500">{contactError}</p>}
+                        {contactError && (
+                            <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{contactError}</p>
+                        )}
                     </div>
 
                     {/* Role Select */}
-                    <Select
-                        value={form.role}
-                        onValueChange={(value) => handleChange("role", value)}
-                    >
-                        <SelectTrigger className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
-                            <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                            {roles.map((role) => (
-                                <SelectItem
-                                    key={role}
-                                    value={role}
-                                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                                >
-                                    {role}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <div>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            Role
+                        </label>
+                        <Select
+                            value={form.role}
+                            onValueChange={(value) => handleChange("role", value)}
+                        >
+                            <SelectTrigger
+                                className="rounded-lg border-2 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                }}
+                            >
+                                <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent 
+                                className="rounded-lg border-2 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                }}
+                            >
+                                {roles.map((role) => (
+                                    <SelectItem
+                                        key={role}
+                                        value={role}
+                                        className="cursor-pointer transition-colors hover:opacity-80"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                        }}
+                                    >
+                                        {role}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                    <Button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full rounded-md bg-[#60A5FA] px-4 py-2 text-white transition-colors hover:bg-[#3B82F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="pt-2"
                     >
-                        {isSubmitting ? "Updating..." : "Update Account"}
-                    </Button>
+                        <Button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="w-full rounded-lg px-4 py-2 text-white transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                            }}
+                        >
+                            {isSubmitting ? "Updating..." : "Update Account"}
+                        </Button>
+                    </motion.div>
                 </form>
-            </DialogContent>
-        </Dialog>
+            </motion.div>
+        </div>
     );
 };
 

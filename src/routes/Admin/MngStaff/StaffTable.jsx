@@ -1,4 +1,6 @@
 import PropTypes from "prop-types";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 import { Pencil, Trash2, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -6,35 +8,69 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/utils/cn";
 import EditStaffForm from "./EditStaffForm";
 
-const ITEMS_PER_PAGE = 7;
+const ITEMS_PER_PAGE = 4;
 
 const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingId, setLoadingId] = useState(null);
   const [editingStaff, setEditingStaff] = useState(null);
+  const [sortField, setSortField] = useState("username");
+  const [sortOrder, setSortOrder] = useState("asc");
   const { toast } = useToast();
 
   if (!staff || staff.length === 0) {
     return (
-      <div className="card flex items-start justify-start p-6">
-        <div className="flex flex-col gap-2">
-          <p className="card-title">Account List</p>
-          <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-          <div className="pt-6 text-sm text-slate-500 dark:text-slate-400">
-            Loading staff data...
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border-2 p-6 transition-all"
+        style={{
+          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        }}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+            Account List
+          </p>
+          <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} isDarkMode={isDarkMode} />
+          <div className="pt-6 text-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+            No accounts found
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
-  const filtered = staff.filter((acc) =>
-    [acc.username, acc.contact, acc.role]
-      .join(" ")
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  // Filter and sort staff
+  const filtered = staff
+    .filter((acc) =>
+      [acc.username, acc.contact, acc.role]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      if (sortField === "contact") {
+        aValue = aValue?.replace(/^\+63/, "0") || "";
+        bValue = bValue?.replace(/^\+63/, "0") || "";
+      }
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortOrder === "asc" 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+    });
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedStaff = filtered.slice(
@@ -44,6 +80,16 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1);
   };
 
   const handleDelete = async (id) => {
@@ -65,61 +111,108 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
     }
   };
 
+  const SortableHeader = ({ children, field }) => (
+    <th 
+      className="p-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors hover:opacity-80"
+      style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center">
+        {children}
+        {sortField === field && (
+          <span className="ml-1" style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>
+            {sortOrder === "asc" ? "↑" : "↓"}
+          </span>
+        )}
+      </div>
+    </th>
+  );
+
   return (
-    <div className="card">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
       {/* Header with Search */}
-      <div className="card-header flex flex-col items-start gap-2">
-        <p className="card-title">Account List</p>
-        <SearchBar
-          searchTerm={searchTerm}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+            Account List
+          </p>
+          <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+            {filtered.length} accounts found
+          </p>
+        </div>
+        <SearchBar 
+          searchTerm={searchTerm} 
           setSearchTerm={(term) => {
             setSearchTerm(term);
             setCurrentPage(1);
           }}
+          isDarkMode={isDarkMode}
         />
       </div>
 
       {/* Table */}
-      <div className="mt-4 w-full overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
+      <div className="overflow-x-auto rounded-lg border-2"
+           style={{
+             borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+           }}>
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <thead style={{
+            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+          }}>
             <tr>
-              <th className="p-2">Username</th>
-              <th className="p-2">Role</th>
-              <th className="p-2">Contact</th>
-              <th className="p-2">Status</th>
-              <th className="p-2 text-right">Actions</th>
+              <SortableHeader field="username">Username</SortableHeader>
+              <SortableHeader field="role">Role</SortableHeader>
+              <SortableHeader field="contact">Contact</SortableHeader>
+              <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                Status
+              </th>
+              <th className="p-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {paginatedStaff.length > 0 ? (
-              paginatedStaff.map((account) => (
-                <tr
+              paginatedStaff.map((account, index) => (
+                <motion.tr
                   key={account.id || `${account.contact}-${Math.random()}`}
-                  className="border-b border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/40"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="border-t transition-colors hover:opacity-90"
+                  style={{
+                    borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                  }}
                 >
-                  <td className="p-2 text-slate-800 dark:text-slate-100">
+                  <td className="p-3 font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                     {account.username}
                   </td>
-                  <td
-                    className={cn(
-                      "p-2 font-medium uppercase",
-                      account.role === "ADMIN"
-                        ? "text-blue-400 dark:text-blue-400"
-                        : account.role === "STAFF"
-                        ? "text-orange-400 dark:text-orange-400"
-                        : "text-slate-600 dark:text-slate-300"
-                    )}
-                  >
+                  <td className="p-3 font-medium uppercase"
+                      style={{ 
+                        color: account.role === "ADMIN" 
+                          ? (isDarkMode ? "#60A5FA" : "#2563EB")
+                          : account.role === "STAFF"
+                          ? (isDarkMode ? "#FB923C" : "#EA580C")
+                          : (isDarkMode ? '#13151B' : '#0B2B26')
+                      }}>
                     {account.role}
                   </td>
-                  <td className="p-2 text-slate-600 dark:text-slate-300">
+                  <td className="p-3" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                     {account.contact?.replace(/^\+63/, "0")}
                   </td>
-                  <td className="p-2">
+                  <td className="p-3">
                     <span
                       className={cn(
-                        "px-2 py-1 text-xs font-medium rounded-full",
+                        "px-3 py-1 text-xs font-medium rounded-full transition-colors",
                         account.status === "Active"
                           ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                           : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
@@ -128,38 +221,54 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
                       {account.status}
                     </span>
                   </td>
-                  <td className="p-2 text-right">
+                  <td className="p-3 text-right">
                     <div className="flex justify-end space-x-2">
                       {/* Edit Button */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => setEditingStaff(account)}
-                        className="h-8 w-8 p-0"
+                        className="rounded-lg p-2 transition-colors hover:opacity-80"
+                        style={{
+                          backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        }}
                       >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                        <Pencil className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                      </motion.button>
                       
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => handleDelete(account.id)}
                         disabled={loadingId === account.id}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
+                        className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50"
+                        style={{
+                          backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                          color: "#EF4444",
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </motion.button>
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
               ))
             ) : (
               <tr>
                 <td
                   colSpan={5}
-                  className="p-4 text-center text-slate-500 dark:text-slate-400"
+                  className="p-8 text-center"
+                  style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
                 >
-                  No matching accounts found.
+                  <div className="flex flex-col items-center gap-3">
+                    <Search className="h-12 w-12 opacity-50" />
+                    <div>
+                      <p className="font-medium">No matching accounts found</p>
+                      {searchTerm && (
+                        <p className="text-sm">Try adjusting your search terms</p>
+                      )}
+                    </div>
+                  </div>
                 </td>
               </tr>
             )}
@@ -167,43 +276,47 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
         </table>
       </div>
 
-      {/* Compact Pagination */}
+      {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 flex justify-center items-center gap-4 text-sm">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={`rounded px-3 py-1 transition-colors ${
-              currentPage === 1
-                ? "opacity-50 cursor-not-allowed"
-                : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
-            }`}
-          >
-            Prev
-          </button>
+        <div className="mt-6 flex items-center justify-between">
+          <div className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+            Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} accounts
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="rounded-lg px-3 py-1 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                color: isDarkMode ? '#13151B' : '#0B2B26',
+              }}
+            >
+              Previous
+            </motion.button>
 
-          <span className="text-slate-600 dark:text-slate-300 font-medium">
-            Page{" "}
-            <span className="text-cyan-600 dark:text-cyan-400">
-              {currentPage}
-            </span>{" "}
-            of{" "}
-            <span className="text-cyan-600 dark:text-cyan-400">
-              {totalPages}
+            <span className="text-sm font-medium px-3" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              Page <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{currentPage}</span> of{" "}
+              <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{totalPages}</span>
             </span>
-          </span>
 
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className={`rounded px-3 py-1 transition-colors ${
-              currentPage === totalPages
-                ? "opacity-50 cursor-not-allowed"
-                : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
-            }`}
-          >
-            Next
-          </button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="rounded-lg px-3 py-1 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                color: isDarkMode ? '#13151B' : '#0B2B26',
+              }}
+            >
+              Next
+            </motion.button>
+          </div>
         </div>
       )}
 
@@ -212,32 +325,39 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
         <EditStaffForm
           staff={editingStaff}
           onUpdate={(updatedStaff) => {
-            // Update the local state
-            const updated = staff.map(acc => 
-              acc.id === updatedStaff.id ? updatedStaff : acc
-            );
-            // Call the parent callback to update the main state
             onStaffUpdate(updatedStaff);
             setEditingStaff(null);
           }}
           onClose={() => setEditingStaff(null)}
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 
-const SearchBar = ({ searchTerm, setSearchTerm }) => (
-  <div className="relative w-full max-w-xs">
-    <div className="flex items-center rounded-md border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950 focus-within:ring-2 focus-within:ring-cyan-500 dark:focus-within:ring-cyan-400 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-slate-950 px-3 h-[38px]">
-      <Search size={16} className="text-slate-400 dark:text-slate-500" />
-      <input
-        type="text"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Search by username, contact, role..."
-        className="w-full bg-transparent px-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none"
-      />
+const SearchBar = ({ searchTerm, setSearchTerm, isDarkMode }) => (
+  <div className="w-full max-w-xs">
+    <div className="relative">
+      <div className="flex h-[38px] items-center rounded-lg border-2 px-3 transition-all"
+           style={{
+             backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+             borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+           }}>
+        <Search
+          size={16}
+          style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}
+        />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search by username, contact, role..."
+          className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
+          style={{
+            color: isDarkMode ? '#13151B' : '#0B2B26',
+          }}
+        />
+      </div>
     </div>
   </div>
 );
@@ -245,7 +365,7 @@ const SearchBar = ({ searchTerm, setSearchTerm }) => (
 StaffTable.propTypes = {
   staff: PropTypes.array.isRequired,
   onStatusChange: PropTypes.func.isRequired,
-  onStaffUpdate: PropTypes.func.isRequired, // Add this prop type
+  onStaffUpdate: PropTypes.func.isRequired,
 };
 
 export default StaffTable;

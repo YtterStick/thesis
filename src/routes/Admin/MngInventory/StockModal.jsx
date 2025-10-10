@@ -1,7 +1,12 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 
 const StockModal = ({ item, onClose, onSubmit }) => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
     const [amount, setAmount] = useState("");
 
     const handleSubmit = (e) => {
@@ -14,47 +19,74 @@ const StockModal = ({ item, onClose, onSubmit }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50">
-            <div className="card w-full max-w-sm">
-                <p className="card-title mb-2">Add Stock</p>
-                <form
-                    onSubmit={handleSubmit}
-                    className="flex flex-col gap-y-3"
-                >
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {item.name} stock: <strong className="text-slate-900 dark:text-white">{item.quantity}</strong>
-                    </p>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="rounded-xl border-2 p-6 w-full max-w-sm transition-all"
+                style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                }}
+            >
+                <p className="text-lg font-bold mb-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                    Add Stock
+                </p>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <p className="text-sm mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            {item.name} stock: <strong style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>{item.quantity}</strong>
+                        </p>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                            Unit price: <strong style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>₱{item.price?.toFixed(2) ?? "—"}</strong>
+                        </p>
+                    </div>
 
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                        Unit price: <strong className="text-slate-900 dark:text-white">₱{item.price?.toFixed(2) ?? "—"}</strong>
-                    </p>
+                    <div>
+                        <input
+                            type="number"
+                            min={1}
+                            placeholder="Enter amount to add"
+                            className="w-full rounded-lg border-2 px-3 py-2 text-sm transition-all [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                color: isDarkMode ? '#13151B' : '#0B2B26',
+                            }}
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            required
+                        />
+                    </div>
 
-                    <input
-                        type="number"
-                        min={1}
-                        placeholder="Enter amount to add"
-                        className="form-input border border-slate-300 bg-slate-100 text-slate-800 placeholder-slate-400 [appearance:textfield] focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:ring-cyan-400 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        required
-                    />
-
-                    <div className="mt-2 flex justify-end gap-x-2">
-                        <button
+                    <div className="flex justify-end gap-2 pt-2">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             type="button"
                             onClick={onClose}
-                            className="btn-ghost text-sm text-slate-500 hover:bg-transparent hover:text-red-600 dark:text-slate-400 dark:hover:bg-transparent dark:hover:text-red-400"
+                            className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                color: isDarkMode ? '#13151B' : '#0B2B26',
+                            }}
                         >
                             Cancel
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             type="submit"
-                            className="rounded-lg bg-[#0891B2] px-4 py-2 text-sm font-medium text-white hover:bg-[#0E7490] dark:bg-[#0891B2] dark:hover:bg-[#0E7490]"
+                            className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                            }}
                         >
                             Add Stock
-                        </button>
+                        </motion.button>
                     </div>
                 </form>
-            </div>
+            </motion.div>
         </div>
     );
 };

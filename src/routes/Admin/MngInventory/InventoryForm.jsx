@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 import PropTypes from "prop-types";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -7,6 +9,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { useToast } from "@/hooks/use-toast";
 
 const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
     const [form, setForm] = useState({
         name: "",
         quantity: "",
@@ -100,31 +105,48 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
-            <div 
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="absolute inset-0 bg-black/30 backdrop-blur-sm"
                 onClick={onClose}
             />
             
             {/* Modal */}
-            <div className="relative z-50 w-full max-w-md rounded-lg border border-slate-300 bg-white p-6 text-slate-900 shadow-xl dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="relative z-50 w-full max-w-md rounded-xl border-2 p-6 shadow-xl transition-all"
+                style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                }}
+            >
                 {/* Header */}
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">
+                <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                         {isEditMode ? "Edit Item" : "Add New Item"}
                     </h2>
-                    <button
+                    <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                         onClick={onClose}
-                        className="rounded-sm p-1 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300"
+                        className="rounded-lg p-1 transition-colors hover:opacity-80"
+                        style={{
+                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        }}
                     >
-                        <X className="h-4 w-4" />
-                    </button>
+                        <X className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                    </motion.button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label
                             htmlFor="name"
-                            className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                            className="text-sm font-medium mb-2 block"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
                         >
                             Item Name
                         </label>
@@ -134,14 +156,20 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             value={form.name}
                             onChange={(e) => handleChange("name", e.target.value)}
                             required
-                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
+                            className="rounded-lg border-2 transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                            }}
                         />
                     </div>
 
                     <div>
                         <label
                             htmlFor="quantity"
-                            className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                            className="text-sm font-medium mb-2 block"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
                         >
                             Quantity
                         </label>
@@ -154,19 +182,29 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             required
                             min="0"
                             step="1"
-                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
+                            className="rounded-lg border-2 transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                            }}
                         />
                     </div>
 
                     <div>
                         <label
                             htmlFor="price"
-                            className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                            className="text-sm font-medium mb-2 block"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
                         >
                             Price
                         </label>
-                        <div className="mt-1 flex items-center rounded-md border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
-                            <span className="px-3 text-slate-500 dark:text-slate-400">₱</span>
+                        <div className="flex items-center rounded-lg border-2 transition-all"
+                             style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                             }}>
+                            <span className="px-3" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>₱</span>
                             <Input
                                 id="price"
                                 type="number"
@@ -176,7 +214,10 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                                 required
                                 min="0"
                                 step="0.01"
-                                className="flex-1 border-none bg-transparent text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                                className="flex-1 border-none bg-transparent transition-all focus-visible:ring-0 focus-visible:ring-offset-0"
+                                style={{
+                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                }}
                             />
                         </div>
                     </div>
@@ -184,7 +225,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                     <div>
                         <label
                             htmlFor="unit"
-                            className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                            className="text-sm font-medium mb-2 block"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
                         >
                             Unit
                         </label>
@@ -194,16 +236,31 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                         >
                             <SelectTrigger
                                 id="unit"
-                                className="mt-1 border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                                className="rounded-lg border-2 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                }}
                             >
                                 <SelectValue placeholder="Select unit" />
                             </SelectTrigger>
-                            <SelectContent className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
+                            <SelectContent 
+                                className="rounded-lg border-2 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                }}
+                            >
                                 {units.map((u) => (
                                     <SelectItem
                                         key={u}
                                         value={u}
-                                        className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        className="cursor-pointer transition-colors hover:opacity-80"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                        }}
                                     >
                                         {u}
                                     </SelectItem>
@@ -215,7 +272,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                     <div>
                         <label
                             htmlFor="lowStockThreshold"
-                            className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                            className="text-sm font-medium mb-2 block"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
                         >
                             Low Stock Threshold
                         </label>
@@ -227,14 +285,20 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             onChange={(e) => handleChange("lowStockThreshold", e.target.value)}
                             min="1"
                             step="1"
-                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
+                            className="rounded-lg border-2 transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                            }}
                         />
                     </div>
 
                     <div>
                         <label
                             htmlFor="adequateStockThreshold"
-                            className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                            className="text-sm font-medium mb-2 block"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
                         >
                             Adequate Stock Threshold
                         </label>
@@ -246,18 +310,32 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             onChange={(e) => handleChange("adequateStockThreshold", e.target.value)}
                             min="1"
                             step="1"
-                            className="mt-1 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
+                            className="rounded-lg border-2 transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                            }}
                         />
                     </div>
 
-                    <Button
-                        type="submit"
-                        className="w-full rounded-md bg-[#0891B2] px-4 py-2 text-white transition-colors hover:bg-[#0E7490]"
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="pt-2"
                     >
-                        {isEditMode ? "Update Item" : "Save Item"}
-                    </Button>
+                        <Button
+                            type="submit"
+                            className="w-full rounded-lg px-4 py-2 text-white transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                            }}
+                        >
+                            {isEditMode ? "Update Item" : "Save Item"}
+                        </Button>
+                    </motion.div>
                 </form>
-            </div>
+            </motion.div>
         </div>
     );
 };

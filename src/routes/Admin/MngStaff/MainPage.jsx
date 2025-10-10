@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 import StaffTable from "./StaffTable";
 import StaffForm from "./StaffForm";
 import { ShieldCheck, Users, User, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { secureFetch } from "@/lib/secureFetch";
 
-
 const MainPage = () => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   const [accountList, setAccountList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -96,90 +100,209 @@ const MainPage = () => {
     });
   }, [toast]);
 
-  return (
-    <main className="relative p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-6 h-6 text-blue-400" />
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-            Manage Accounts
-          </h1>
+  // Skeleton Loader Components
+  const SkeletonCard = ({ index }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+      className="rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="flex items-center gap-x-3 mb-4">
+        <div className="w-fit rounded-lg p-2 animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}>
+          <div className="h-6 w-6"></div>
         </div>
-        {activeAccounts.length > 0 && (
-          <button
+        <div className="h-5 w-28 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+      <div className="rounded-lg p-3 animate-pulse"
+           style={{
+             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+           }}>
+        <div className="h-8 w-32 rounded"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+    </motion.div>
+  );
+
+  const summaryCards = [
+    {
+      title: "Active Accounts",
+      icon: <Users size={26} />,
+      value: activeAccounts.length,
+      color: "#3DD9B6",
+      description: "Total active accounts",
+    },
+    {
+      title: "Active Admins",
+      icon: <ShieldCheck size={26} />,
+      value: totalAdmins,
+      color: "#60A5FA",
+      description: "Administrator accounts",
+    },
+    {
+      title: "Active Staff",
+      icon: <User size={26} />,
+      value: totalStaff,
+      color: "#FB923C",
+      description: "Staff member accounts",
+    },
+  ];
+
+  return (
+    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            className="rounded-lg p-2"
+            style={{
+              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+              color: "#F3EDE3",
+            }}
+          >
+            <ShieldCheck size={22} />
+          </motion.div>
+          <div>
+            <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+              Manage Accounts
+            </p>
+            <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+              Manage staff and administrator accounts
+            </p>
+          </div>
+        </div>
+        
+        {!loading && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
+            style={{
+              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+              color: "#F3EDE3",
+            }}
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Add Account</span>
-          </button>
+          </motion.button>
+        )}
+      </motion.div>
+
+      {/* Error Message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border-2 p-4 transition-all"
+          style={{
+            backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.1)",
+            borderColor: isDarkMode ? "#EF4444" : "#EF4444",
+            color: isDarkMode ? "#EF4444" : "#DC2626",
+          }}
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+        {loading ? (
+          [...Array(3)].map((_, index) => (
+            <SkeletonCard key={index} index={index} />
+          ))
+        ) : (
+          summaryCards.map(({ title, icon, value, color, description }, index) => (
+            <motion.div
+              key={title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ 
+                scale: 1.03,
+                y: -2,
+                transition: { duration: 0.2 }
+              }}
+              className="rounded-xl border-2 p-5 transition-all cursor-pointer"
+              style={{
+                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+              }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className="rounded-lg p-2"
+                  style={{
+                    backgroundColor: `${color}20`,
+                    color: color,
+                  }}
+                >
+                  {icon}
+                </motion.div>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: index * 0.2 }}
+                  className="text-right"
+                >
+                  <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                    {value}
+                  </p>
+                </motion.div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  {title}
+                </h3>
+                <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+                  {description}
+                </p>
+              </div>
+            </motion.div>
+          ))
         )}
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 mb-6">
-        {[
-          {
-            title: "Active Accounts",
-            icon: <Users size={26} />,
-            value: activeAccounts.length,
-            color: "#3DD9B6",
-          },
-          {
-            title: "Active Admins",
-            icon: <ShieldCheck size={26} />,
-            value: totalAdmins,
-            color: "#60A5FA",
-          },
-          {
-            title: "Active Staff",
-            icon: <User size={26} />,
-            value: totalStaff,
-            color: "#FB923C",
-          },
-        ].map(({ title, icon, value, growth, color, growthColor }) => (
-          <div key={title} className="card">
-            <div className="card-header flex items-center gap-x-3">
-              <div
-                className="w-fit rounded-lg p-2"
-                style={{
-                  backgroundColor: `${color}33`,
-                  color: color,
-                }}
-              >
-                {icon}
-              </div>
-              <p className="card-title">{title}</p>
-            </div>
-            <div className="card-body bg-slate-100 dark:bg-slate-950 rounded-md p-4 transition-colors">
-              <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">
-                {value}
-              </p>
-              <p className={`text-xs font-medium ${growthColor}`}>{growth}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Error Message */}
-      {error && <div className="text-red-500 mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">{error}</div>}
-
-      {/* Staff Table or Skeleton Loader */}
+      {/* Staff Table */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-[160px] rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse"
-            />
-          ))}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border-2 p-5 transition-all"
+          style={{
+            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
+          <div className="h-64 animate-pulse rounded-lg"
+               style={{
+                 backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+               }}></div>
+        </motion.div>
       ) : (
         <StaffTable 
           staff={activeAccounts} 
           onStatusChange={handleStatusChange}
-          onStaffUpdate={handleStaffUpdate} // Add this prop
+          onStaffUpdate={handleStaffUpdate}
         />
       )}
 
@@ -190,8 +313,8 @@ const MainPage = () => {
           onClose={() => setShowForm(false)}
         />
       )}
-    </main>
+    </div>
   );
 };
 
-export default MainPage;
+export default MainPage;  
