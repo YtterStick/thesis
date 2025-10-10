@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,31 @@ import { ScrollText, Save, Eye, Receipt, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const ALLOWED_SKEW_MS = 5000;
-
-// Cache for receipt settings data
-let receiptSettingsCache = null;
-let cacheTimestamp = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Initialize cache properly
+const initializeCache = () => {
+  try {
+    const stored = localStorage.getItem('receiptSettingsCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Check if cache is still valid
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        console.log("📦 Initializing receipt settings from stored cache");
+        return parsed;
+      } else {
+        console.log("🗑️ Stored receipt settings cache expired");
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load receipt settings cache from storage:', error);
+  }
+  return null;
+};
+
+// Global cache instance
+let receiptSettingsCache = initializeCache();
+let cacheTimestamp = receiptSettingsCache?.timestamp || null;
 
 const isTokenExpired = (token) => {
   try {
@@ -35,6 +55,10 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
 
   if (!token || isTokenExpired(token)) {
     console.warn("⛔ Token expired. Redirecting to login.");
+    // Clear cache on token expiry
+    receiptSettingsCache = null;
+    cacheTimestamp = null;
+    localStorage.removeItem('receiptSettingsCache');
     window.location.href = "/login";
     return;
   }
@@ -60,76 +84,207 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
     : response.text();
 };
 
+// Save cache to localStorage for persistence
+const saveCacheToStorage = (data) => {
+  try {
+    localStorage.setItem('receiptSettingsCache', JSON.stringify({
+      data: data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save receipt settings cache to storage:', error);
+  }
+};
+
 export default function ReceiptConfigPage() {
   const { theme } = useTheme();
   const { toast } = useToast();
   
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-  const [storeName, setStoreName] = useState("");
-  const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
-  const [footerNote, setFooterNote] = useState("");
-  const [trackingUrl, setTrackingUrl] = useState("");
-  const [activePreview, setActivePreview] = useState("invoice");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
+  // Initialize state with cached data if available
+  const [settings, setSettings] = useState(() => {
+    if (receiptSettingsCache && receiptSettingsCache.data) {
+      console.log("🎯 Initializing receipt settings state with cached data");
+      return {
+        storeName: receiptSettingsCache.data.storeName || "",
+        address: receiptSettingsCache.data.address || "",
+        phone: receiptSettingsCache.data.phone || "",
+        footerNote: receiptSettingsCache.data.footerNote || "",
+        trackingUrl: receiptSettingsCache.data.trackingUrl || "",
+      };
+    }
+    
+    return {
+      storeName: "",
+      address: "",
+      phone: "",
+      footerNote: "",
+      trackingUrl: "",
+    };
+  });
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      // Check cache first
+  const [activePreview, setActivePreview] = useState("invoice");
+  const [isLoading, setIsLoading] = useState(!receiptSettingsCache); // Only loading if no cache
+  const [isSaving, setIsSaving] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(!receiptSettingsCache); // Only initial load if no cache
+  const isMountedRef = useRef(true);
+
+  // Function to check if data has actually changed
+  const hasDataChanged = (newData, oldData) => {
+    if (!oldData) return true;
+    
+    return (
+      newData.storeName !== oldData.storeName ||
+      newData.address !== oldData.address ||
+      newData.phone !== oldData.phone ||
+      newData.footerNote !== oldData.footerNote ||
+      newData.trackingUrl !== oldData.trackingUrl
+    );
+  };
+
+  const updateSetting = (key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const fetchSettings = useCallback(async (forceRefresh = false) => {
+    // Don't fetch if component is unmounted
+    if (!isMountedRef.current) return;
+
+    try {
       const now = Date.now();
-      if (receiptSettingsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+      
+      // Check cache first unless forced refresh
+      if (!forceRefresh && receiptSettingsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
         console.log("📦 Using cached receipt settings");
-        setStoreName(receiptSettingsCache.storeName || "");
-        setAddress(receiptSettingsCache.address || "");
-        setPhone(receiptSettingsCache.phone || "");
-        setFooterNote(receiptSettingsCache.footerNote || "");
-        setTrackingUrl(receiptSettingsCache.trackingUrl || "");
-        setIsLoading(false);
-        setInitialLoad(false);
+        
+        // Always update with cached data to ensure UI is populated
+        if (isMountedRef.current) {
+          setSettings(receiptSettingsCache.data);
+          setIsLoading(false);
+          setInitialLoad(false);
+        }
         return;
       }
 
-      try {
-        setIsLoading(true);
-        setInitialLoad(true);
-        const data = await secureFetch("/format-settings");
-        
-        // Update cache
-        receiptSettingsCache = data || {};
-        cacheTimestamp = Date.now();
-        
-        setStoreName(data.storeName || "");
-        setAddress(data.address || "");
-        setPhone(data.phone || "");
-        setFooterNote(data.footerNote || "");
-        setTrackingUrl(data.trackingUrl || "");
-      } catch (err) {
-        console.error("Failed to fetch format settings:", err);
+      await fetchFreshSettings();
+    } catch (err) {
+      console.error("Failed to fetch format settings:", err);
+      if (!isMountedRef.current) return;
+      
+      // On error, keep cached data if available
+      if (receiptSettingsCache) {
+        console.log("⚠️ Fetch failed, falling back to cached receipt settings");
+        setSettings(receiptSettingsCache.data);
+        toast({
+          title: "Warning",
+          description: "Failed to refresh settings. Showing cached data.",
+          variant: "default",
+        });
+      } else {
         toast({
           title: "Error",
           description: "Failed to load receipt configuration",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
-        setTimeout(() => setInitialLoad(false), 100);
       }
-    };
-    fetchSettings();
+      setIsLoading(false);
+      setInitialLoad(false);
+    }
   }, [toast]);
+
+  // Separate function for actual API call
+  const fetchFreshSettings = async () => {
+    console.log("🔄 Fetching fresh receipt settings");
+    if (isMountedRef.current) {
+      setIsLoading(true);
+    }
+
+    const data = await secureFetch("/format-settings");
+    
+    const newSettings = {
+      storeName: data?.storeName || "",
+      address: data?.address || "",
+      phone: data?.phone || "",
+      footerNote: data?.footerNote || "",
+      trackingUrl: data?.trackingUrl || "",
+    };
+
+    const currentTime = Date.now();
+
+    // Only update state and cache if data has actually changed
+    if (!receiptSettingsCache || hasDataChanged(newSettings, receiptSettingsCache.data)) {
+      console.log("🔄 Receipt settings updated with fresh data");
+      
+      // Update cache
+      receiptSettingsCache = {
+        data: newSettings,
+        timestamp: currentTime
+      };
+      cacheTimestamp = currentTime;
+      
+      // Persist to localStorage
+      saveCacheToStorage(newSettings);
+      
+      if (isMountedRef.current) {
+        setSettings(newSettings);
+      }
+    } else {
+      console.log("✅ No changes in receipt settings, updating timestamp only");
+      // Just update the timestamp to extend cache life
+      cacheTimestamp = currentTime;
+      receiptSettingsCache.timestamp = currentTime;
+      saveCacheToStorage(receiptSettingsCache.data);
+    }
+
+    if (isMountedRef.current) {
+      setIsLoading(false);
+      setInitialLoad(false);
+    }
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    // Always show cached data immediately if available
+    if (receiptSettingsCache) {
+      console.log("🚀 Showing cached receipt settings immediately");
+      setSettings(receiptSettingsCache.data);
+      setIsLoading(false);
+      setInitialLoad(false);
+    }
+    
+    // Then fetch fresh data
+    fetchSettings();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [fetchSettings]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const payload = { storeName, address, phone, footerNote, trackingUrl };
+      const payload = { 
+        storeName: settings.storeName, 
+        address: settings.address, 
+        phone: settings.phone, 
+        footerNote: settings.footerNote, 
+        trackingUrl: settings.trackingUrl 
+      };
+      
       await secureFetch("/format-settings", "POST", payload);
       
       // Update cache
-      receiptSettingsCache = payload;
+      receiptSettingsCache = {
+        data: payload,
+        timestamp: Date.now()
+      };
       cacheTimestamp = Date.now();
+      saveCacheToStorage(payload);
       
       toast({ 
         title: "Success", 
@@ -159,9 +314,9 @@ export default function ReceiptConfigPage() {
     paymentMethod: "Cash",
   };
 
-  const previewTrackingLink = trackingUrl.includes("{id}")
-    ? trackingUrl.replace("{id}", sampleData.id)
-    : trackingUrl;
+  const previewTrackingLink = settings.trackingUrl.includes("{id}")
+    ? settings.trackingUrl.replace("{id}", sampleData.id)
+    : settings.trackingUrl;
 
   const formattedDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-PH", {
     year: "numeric",
@@ -183,13 +338,13 @@ export default function ReceiptConfigPage() {
       <div className="p-4 space-y-2">
         {/* Header */}
         <div className="text-center font-bold text-lg" style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}>
-          {storeName || "Store Name"}
+          {settings.storeName || "Store Name"}
         </div>
         <div className="text-center text-sm" style={{ color: isDarkMode ? "#E0EAE8" : "#1E3A3A" }}>
-          {address || "Store Address"}
+          {settings.address || "Store Address"}
         </div>
         <div className="text-center text-sm" style={{ color: isDarkMode ? "#E0EAE8" : "#1E3A3A" }}>
-          {phone || "Phone Number"}
+          {settings.phone || "Phone Number"}
         </div>
 
         <hr style={{ 
@@ -309,7 +464,7 @@ export default function ReceiptConfigPage() {
 
         {/* Footer Note */}
         <div className="text-center mt-2 text-xs" style={{ color: isDarkMode ? "#CBD5E1" : "#6B7280" }}>
-          {footerNote || "Thank you for choosing our service!"}
+          {settings.footerNote || "Thank you for choosing our service!"}
         </div>
       </div>
     </motion.div>
@@ -384,8 +539,8 @@ export default function ReceiptConfigPage() {
     </motion.div>
   );
 
-  // Show skeleton loader only during initial load
-  if (initialLoad) {
+  // Show skeleton loader only during initial load AND when no cached data is available
+  if (initialLoad && !receiptSettingsCache) {
     return (
       <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
         <SkeletonHeader />
@@ -453,12 +608,12 @@ export default function ReceiptConfigPage() {
             </CardHeader>
             <CardContent className="space-y-4 text-sm px-6 flex-1">
               {[
-                { label: "Store Name", value: storeName, setter: setStoreName },
-                { label: "Address", value: address, setter: setAddress },
-                { label: "Phone Number", value: phone, setter: setPhone },
-                { label: "Footer Note", value: footerNote, setter: setFooterNote },
-                { label: "Tracking URL", value: trackingUrl, setter: setTrackingUrl },
-              ].map(({ label, value, setter }, i) => (
+                { label: "Store Name", key: "storeName" },
+                { label: "Address", key: "address" },
+                { label: "Phone Number", key: "phone" },
+                { label: "Footer Note", key: "footerNote" },
+                { label: "Tracking URL", key: "trackingUrl" },
+              ].map(({ label, key }, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 10 }}
@@ -471,8 +626,8 @@ export default function ReceiptConfigPage() {
                     {label}
                   </Label>
                   <Input
-                    value={value}
-                    onChange={(e) => setter(e.target.value)}
+                    value={settings[key]}
+                    onChange={(e) => updateSetting(key, e.target.value)}
                     placeholder={`Enter ${label.toLowerCase()}...`}
                     aria-label={label}
                     className="rounded-lg border-2 transition-all"

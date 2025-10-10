@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -22,6 +22,93 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+
+const ALLOWED_SKEW_MS = 5000;
+const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
+const POLLING_INTERVAL = 10000; // 10 seconds
+
+// Initialize cache properly
+const initializeCache = () => {
+  try {
+    const stored = localStorage.getItem('paymentManagementCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Check if cache is still valid
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        console.log("📦 Initializing payment management from stored cache");
+        return parsed;
+      } else {
+        console.log("🗑️ Stored payment management cache expired");
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load payment management cache from storage:', error);
+  }
+  return null;
+};
+
+// Global cache instances
+let paymentManagementCache = initializeCache();
+let cacheTimestamp = paymentManagementCache?.timestamp || null;
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    // Clear cache on token expiry
+    paymentManagementCache = null;
+    cacheTimestamp = null;
+    localStorage.removeItem('paymentManagementCache');
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+  if (!response.ok) {
+    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type");
+  return contentType && contentType.includes("application/json")
+    ? response.json()
+    : response.text();
+};
+
+// Save cache to localStorage for persistence
+const saveCacheToStorage = (data) => {
+  try {
+    localStorage.setItem('paymentManagementCache', JSON.stringify({
+      data: data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save payment management cache to storage:', error);
+  }
+};
 
 // Custom Toggle Switch Component
 const ToggleSwitch = ({ checked, onChange, disabled = false, id }) => {
@@ -157,81 +244,215 @@ const PaymentManagementPage = () => {
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   
   const [activeTab, setActiveTab] = useState("methods");
-  const [gcashEnabled, setGcashEnabled] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // Initialize state with cached data if available
+  const [paymentData, setPaymentData] = useState(() => {
+    if (paymentManagementCache && paymentManagementCache.data) {
+      console.log("🎯 Initializing payment state with cached data");
+      return {
+        gcashEnabled: paymentManagementCache.data.gcashEnabled ?? true,
+        pendingTransactions: paymentManagementCache.data.pendingTransactions ?? [],
+        loading: false,
+        error: null,
+        lastUpdated: new Date(paymentManagementCache.timestamp),
+        dataVersion: 0
+      };
+    }
+    
+    return {
+      gcashEnabled: true,
+      pendingTransactions: [], // Ensure this is always an array
+      loading: true,
+      error: null,
+      lastUpdated: null,
+      dataVersion: 0
+    };
+  });
+
   const [isUpdating, setIsUpdating] = useState(false);
-  const [pendingTransactions, setPendingTransactions] = useState([]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [transactionToVerify, setTransactionToVerify] = useState(null);
   const [showGcashConfirm, setShowGcashConfirm] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(!paymentManagementCache);
+  const pollingIntervalRef = useRef(null);
+  const isMountedRef = useRef(true);
+
+  // Function to check if data has actually changed
+  const hasDataChanged = (newData, oldData) => {
+    if (!oldData) return true;
+    
+    return (
+      newData.gcashEnabled !== oldData.gcashEnabled ||
+      JSON.stringify(newData.pendingTransactions) !== JSON.stringify(oldData.pendingTransactions)
+    );
+  };
+
+  const fetchPaymentData = useCallback(async (forceRefresh = false) => {
+    // Don't fetch if component is unmounted
+    if (!isMountedRef.current) return;
+
+    try {
+      const now = Date.now();
+      
+      // Check cache first unless forced refresh
+      if (!forceRefresh && paymentManagementCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+        console.log("📦 Using cached payment data");
+        
+        // Always update with cached data to ensure UI is populated
+        setPaymentData(prev => ({
+          ...paymentManagementCache.data,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(cacheTimestamp),
+          dataVersion: prev.dataVersion + 1
+        }));
+        
+        setInitialLoad(false);
+        
+        // Still fetch fresh data in background but don't wait for it
+        if (now - cacheTimestamp > 30000) { // If cache is older than 30 seconds, refresh in background
+          console.log("🔄 Fetching fresh data in background");
+          fetchFreshData();
+        }
+        return;
+      }
+
+      await fetchFreshData();
+    } catch (error) {
+      console.error('Error in fetchPaymentData:', error);
+      if (!isMountedRef.current) return;
+      
+      // On error, keep cached data if available
+      if (paymentManagementCache) {
+        console.log("⚠️ Fetch failed, falling back to cached data");
+        setPaymentData(prev => ({
+          ...paymentManagementCache.data,
+          loading: false,
+          error: error.message,
+          lastUpdated: new Date(cacheTimestamp),
+          dataVersion: prev.dataVersion + 1
+        }));
+      } else {
+        setPaymentData(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message
+        }));
+      }
+      setInitialLoad(false);
+    }
+  }, []);
+
+  // Separate function for actual API calls
+  const fetchFreshData = async () => {
+    console.log("🔄 Fetching fresh payment data");
+    
+    if (isMountedRef.current) {
+      setPaymentData(prev => ({ ...prev, loading: true }));
+    }
+
+    try {
+      // Fetch both payment settings and pending transactions
+      const [settingsData, transactionsData] = await Promise.all([
+        secureFetch("/payment-settings"),
+        secureFetch("/transactions/pending-gcash")
+      ]);
+      
+      const newPaymentData = {
+        gcashEnabled: settingsData?.gcashEnabled ?? true,
+        pendingTransactions: transactionsData || [], // Ensure this is always an array
+      };
+
+      const currentTime = Date.now();
+
+      // Only update state and cache if data has actually changed
+      if (!paymentManagementCache || hasDataChanged(newPaymentData, paymentManagementCache.data)) {
+        console.log("🔄 Payment data updated with fresh data");
+        
+        // Update cache
+        paymentManagementCache = {
+          data: newPaymentData,
+          timestamp: currentTime
+        };
+        cacheTimestamp = currentTime;
+        
+        // Persist to localStorage
+        saveCacheToStorage(paymentManagementCache);
+        
+        if (isMountedRef.current) {
+          setPaymentData({
+            ...newPaymentData,
+            loading: false,
+            error: null,
+            lastUpdated: new Date(),
+            dataVersion: (paymentData.dataVersion || 0) + 1
+          });
+        }
+      } else {
+        console.log("✅ No changes in payment data, updating timestamp only");
+        // Just update the timestamp to extend cache life
+        cacheTimestamp = currentTime;
+        paymentManagementCache.timestamp = currentTime;
+        saveCacheToStorage(paymentManagementCache);
+        
+        if (isMountedRef.current) {
+          setPaymentData(prev => ({
+            ...prev,
+            loading: false,
+            error: null,
+            lastUpdated: new Date()
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching fresh payment data:', error);
+      if (isMountedRef.current) {
+        setPaymentData(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message
+        }));
+      }
+    }
+
+    if (isMountedRef.current) {
+      setInitialLoad(false);
+    }
+  };
 
   useEffect(() => {
-    if (activeTab === "methods") {
-      fetchPaymentSettings();
-    } else if (activeTab === "pending") {
-      fetchPendingTransactions();
+    isMountedRef.current = true;
+    
+    // Always show cached data immediately if available
+    if (paymentManagementCache) {
+      console.log("🚀 Showing cached payment data immediately");
+      setPaymentData(prev => ({
+        ...paymentManagementCache.data,
+        loading: false,
+        error: null,
+        lastUpdated: new Date(cacheTimestamp),
+        dataVersion: prev.dataVersion + 1
+      }));
+      setInitialLoad(false);
     }
-  }, [activeTab]);
-
-  const fetchPaymentSettings = async () => {
-    try {
-      setIsLoading(true);
-      const token = localStorage.getItem("authToken");
-      const response = await fetch("http://localhost:8080/api/payment-settings", {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setGcashEnabled(data.gcashEnabled);
-      } else {
-        setGcashEnabled(true);
+    
+    // Then fetch fresh data
+    fetchPaymentData();
+    
+    // Set up polling with smart updates
+    pollingIntervalRef.current = setInterval(() => {
+      console.log("🔄 Auto-refreshing payment data...");
+      fetchPaymentData(false);
+    }, POLLING_INTERVAL);
+    
+    return () => {
+      isMountedRef.current = false;
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
-    } catch (error) {
-      console.error("Error fetching payment settings:", error);
-      setGcashEnabled(true);
-      toast({
-        title: "Error",
-        description: "Failed to load payment settings",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchPendingTransactions = async () => {
-    try {
-      setIsLoading(true);
-      const token = localStorage.getItem("authToken");
-      const response = await fetch("http://localhost:8080/api/transactions/pending-gcash", {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setPendingTransactions(data);
-      } else {
-        throw new Error("Failed to fetch pending transactions");
-      }
-    } catch (error) {
-      console.error("Error fetching pending transactions:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load pending GCash payments",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+  }, [fetchPaymentData]);
 
   const handleToggleGcash = () => {
     setShowGcashConfirm(true);
@@ -240,27 +461,30 @@ const PaymentManagementPage = () => {
   const confirmToggleGcash = async () => {
     try {
       setIsUpdating(true);
-      const token = localStorage.getItem("authToken");
-      const newStatus = !gcashEnabled;
+      const newStatus = !paymentData.gcashEnabled;
 
-      const response = await fetch("http://localhost:8080/api/payment-settings", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ gcashEnabled: newStatus }),
+      await secureFetch("/payment-settings", "PUT", { gcashEnabled: newStatus });
+
+      // Update local state and cache
+      const updatedData = {
+        ...paymentData,
+        gcashEnabled: newStatus
+      };
+      
+      setPaymentData(updatedData);
+      
+      // Update cache
+      paymentManagementCache = {
+        data: updatedData,
+        timestamp: Date.now()
+      };
+      cacheTimestamp = Date.now();
+      saveCacheToStorage(paymentManagementCache);
+      
+      toast({
+        title: "Success",
+        description: `GCash has been ${newStatus ? "enabled" : "disabled"}`,
       });
-
-      if (response.ok) {
-        setGcashEnabled(newStatus);
-        toast({
-          title: "Success",
-          description: `GCash has been ${newStatus ? "enabled" : "disabled"}`,
-        });
-      } else {
-        throw new Error("Failed to update payment settings");
-      }
     } catch (error) {
       console.error("Error updating payment settings:", error);
       toast({
@@ -284,25 +508,30 @@ const PaymentManagementPage = () => {
 
     try {
       setIsVerifying(true);
-      const token = localStorage.getItem("authToken");
-      const response = await fetch(`http://localhost:8080/api/transactions/${transactionToVerify.id}/verify-gcash`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+      await secureFetch(`/transactions/${transactionToVerify.id}/verify-gcash`, "POST");
+      
+      toast({
+        title: "Success",
+        description: "GCash payment verified successfully",
       });
       
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "GCash payment verified successfully",
-        });
-        setPendingTransactions(pendingTransactions.filter(t => t.id !== transactionToVerify.id));
-      } else {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to verify payment");
-      }
+      // Update local state and cache
+      const updatedTransactions = (paymentData.pendingTransactions || []).filter(t => t.id !== transactionToVerify.id);
+      const updatedData = {
+        ...paymentData,
+        pendingTransactions: updatedTransactions
+      };
+      
+      setPaymentData(updatedData);
+      
+      // Update cache
+      paymentManagementCache = {
+        data: updatedData,
+        timestamp: Date.now()
+      };
+      cacheTimestamp = Date.now();
+      saveCacheToStorage(paymentManagementCache);
+      
     } catch (error) {
       console.error("Error verifying payment:", error);
       toast({
@@ -317,7 +546,157 @@ const PaymentManagementPage = () => {
     }
   };
 
-  const totalPendingAmount = pendingTransactions.reduce((sum, transaction) => sum + transaction.totalPrice, 0);
+  // Safe calculation of total pending amount
+  const totalPendingAmount = (paymentData.pendingTransactions || []).reduce((sum, transaction) => {
+    return sum + (transaction.totalPrice || 0);
+  }, 0);
+
+  // Skeleton loader components
+  const SkeletonCard = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="w-fit rounded-lg p-2 animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}>
+          <div className="h-6 w-6"></div>
+        </div>
+        <div className="h-6 w-32 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+      <div className="space-y-4">
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-fit rounded-lg p-2 animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}>
+                <div className="h-5 w-5"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-24 rounded animate-pulse"
+                     style={{
+                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }}></div>
+                <div className="h-3 w-32 rounded animate-pulse"
+                     style={{
+                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }}></div>
+              </div>
+            </div>
+            <div className="h-6 w-20 rounded animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+
+  const SkeletonTable = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="space-y-2">
+          <div className="h-6 w-44 rounded-lg animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+          <div className="h-4 w-56 rounded animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex items-center justify-between p-3 rounded-lg animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+               }}>
+            <div className="flex space-x-4">
+              {[...Array(7)].map((_, j) => (
+                <div key={j} className="h-4 w-16 rounded"
+                     style={{
+                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }}></div>
+              ))}
+            </div>
+            <div className="h-8 w-20 rounded-lg animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+
+  const SkeletonHeader = () => (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 mb-4"
+    >
+      <div className="h-10 w-10 rounded-lg animate-pulse"
+           style={{
+             backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+           }}></div>
+      <div className="space-y-2">
+        <div className="h-6 w-44 rounded-lg animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+        <div className="h-4 w-56 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+    </motion.div>
+  );
+
+  // Show skeleton loader only during initial load AND when no cached data is available
+  if (initialLoad && !paymentManagementCache) {
+    return (
+      <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible">
+        <SkeletonHeader />
+        
+        <div className="space-y-4">
+          {/* Tabs Skeleton */}
+          <div className="h-12 w-full rounded-lg animate-pulse mb-4"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+          
+          {/* Content Skeleton */}
+          {activeTab === "methods" ? <SkeletonCard /> : <SkeletonTable />}
+        </div>
+      </div>
+    );
+  }
+
+  // Safe access to pending transactions
+  const pendingTransactions = paymentData.pendingTransactions || [];
+  const pendingTransactionsCount = pendingTransactions.length;
 
   return (
     <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible">
@@ -396,31 +775,26 @@ const PaymentManagementPage = () => {
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <Card className="rounded-xl border-2 transition-all"
-                  style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                  }}>
-              <CardHeader className="rounded-t-xl pb-4"
-                         style={{
-                           backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                         }}>
-                <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                  Available Payment Methods
-                </CardTitle>
-                <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
-                  Cash is always available. GCash can be enabled or disabled.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="p-8 text-center">
-                    <div className="flex items-center justify-center" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
-                      <Loader2 className="mr-3 h-8 w-8 animate-spin" />
-                      <span>Loading settings...</span>
-                    </div>
-                  </div>
-                ) : (
+            {paymentData.loading ? (
+              <SkeletonCard />
+            ) : (
+              <Card className="rounded-xl border-2 transition-all"
+                    style={{
+                      backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    }}>
+                <CardHeader className="rounded-t-xl pb-4"
+                           style={{
+                             backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                           }}>
+                  <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                    Available Payment Methods
+                  </CardTitle>
+                  <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
+                    Cash is always available. GCash can be enabled or disabled.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
                   <div className="divide-y" style={{ borderColor: isDarkMode ? "#2A524C" : "#E0EAE8" }}>
                     {/* Cash (always enabled, no toggle) */}
                     <div className="flex items-center justify-between p-4">
@@ -475,7 +849,7 @@ const PaymentManagementPage = () => {
                           <div className="flex items-center space-x-2">
                             <ToggleSwitch
                               id="gcash-toggle"
-                              checked={gcashEnabled}
+                              checked={paymentData.gcashEnabled}
                               onChange={handleToggleGcash}
                               disabled={isUpdating}
                             />
@@ -484,16 +858,16 @@ const PaymentManagementPage = () => {
                               className="text-sm font-medium"
                               style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
                             >
-                              {gcashEnabled ? "Enabled" : "Disabled"}
+                              {paymentData.gcashEnabled ? "Enabled" : "Disabled"}
                             </Label>
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </motion.div>
         </TabsContent>
 
@@ -502,132 +876,129 @@ const PaymentManagementPage = () => {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <Card className="rounded-xl border-2 transition-all"
-                  style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                  }}>
-              <CardHeader className="rounded-t-xl pb-4"
-                         style={{
-                           backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                         }}>
-                <div>
-                  <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                    Pending GCash Payments
-                  </CardTitle>
-                  <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
-                    {pendingTransactions.length} pending GCash payments • Total: ₱{totalPendingAmount.toFixed(2)}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="p-8 text-center">
-                    <div className="flex items-center justify-center" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
-                      <Loader2 className="mr-3 h-8 w-8 animate-spin" />
-                      <span>Loading pending payments...</span>
-                    </div>
+            {paymentData.loading ? (
+              <SkeletonTable />
+            ) : (
+              <Card className="rounded-xl border-2 transition-all"
+                    style={{
+                      backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    }}>
+                <CardHeader className="rounded-t-xl pb-4"
+                           style={{
+                             backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                           }}>
+                  <div>
+                    <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                      Pending GCash Payments
+                    </CardTitle>
+                    <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
+                      {pendingTransactionsCount} pending GCash payments • Total: ₱{totalPendingAmount.toFixed(2)}
+                    </CardDescription>
                   </div>
-                ) : pendingTransactions.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <Smartphone className="h-12 w-12 mb-3 opacity-50" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/50" }} />
-                      <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                        No Pending GCash Payments
-                      </p>
-                      <p className="text-sm" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
-                        All GCash payments have been verified
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="p-4 border-b" style={{ borderColor: isDarkMode ? "#2A524C" : "#E0EAE8" }}>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                          Total Pending Amount:
-                        </span>
-                        <span className="text-lg font-bold" style={{ color: "#F59E0B" }}>
-                          ₱{totalPendingAmount.toFixed(2)}
-                        </span>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {pendingTransactionsCount === 0 ? (
+                    <div className="p-8 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <Smartphone className="h-12 w-12 mb-3 opacity-50" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/50" }} />
+                        <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                          No Pending GCash Payments
+                        </p>
+                        <p className="text-sm" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
+                          All GCash payments have been verified
+                        </p>
                       </div>
                     </div>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow style={{ 
-                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)" 
-                          }}>
-                            <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Invoice #</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Reference #</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Customer</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Contact</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Amount</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Date</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Status</TableHead>
-                            <TableHead className="text-right" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {pendingTransactions.map((transaction) => (
-                            <TableRow key={transaction.id} style={{ 
-                              borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                              backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                  ) : (
+                    <>
+                      <div className="p-4 border-b" style={{ borderColor: isDarkMode ? "#2A524C" : "#E0EAE8" }}>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                            Total Pending Amount:
+                          </span>
+                          <span className="text-lg font-bold" style={{ color: "#F59E0B" }}>
+                            ₱{totalPendingAmount.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow style={{ 
+                              backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)" 
                             }}>
-                              <TableCell className="font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                                {transaction.invoiceNumber}
-                              </TableCell>
-                              <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                                {transaction.gcashReference || "N/A"}
-                              </TableCell>
-                              <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                                {transaction.customerName}
-                              </TableCell>
-                              <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                                {transaction.contact}
-                              </TableCell>
-                              <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                                ₱{transaction.totalPrice.toFixed(2)}
-                              </TableCell>
-                              <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                                {new Date(transaction.createdAt).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell>
-                                <Badge style={{ 
-                                  backgroundColor: isDarkMode ? "rgba(245, 158, 11, 0.2)" : "#FEF3C7",
-                                  color: isDarkMode ? "#F59E0B" : "#92400E"
-                                }}>
-                                  Pending
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <motion.div
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                >
-                                  <Button
-                                    onClick={() => handleVerifyPayment(transaction)}
-                                    disabled={isVerifying}
-                                    size="sm"
-                                    className="rounded-lg text-white transition-all"
-                                    style={{
-                                      backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                    }}
-                                  >
-                                    <CheckCircle className="mr-1 h-4 w-4" />
-                                    Verify
-                                  </Button>
-                                </motion.div>
-                              </TableCell>
+                              <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Invoice #</TableHead>
+                              <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Reference #</TableHead>
+                              <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Customer</TableHead>
+                              <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Contact</TableHead>
+                              <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Amount</TableHead>
+                              <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Date</TableHead>
+                              <TableHead style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Status</TableHead>
+                              <TableHead className="text-right" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Actions</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                          </TableHeader>
+                          <TableBody>
+                            {pendingTransactions.map((transaction) => (
+                              <TableRow key={transaction.id} style={{ 
+                                borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                              }}>
+                                <TableCell className="font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                  {transaction.invoiceNumber}
+                                </TableCell>
+                                <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                  {transaction.gcashReference || "N/A"}
+                                </TableCell>
+                                <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                  {transaction.customerName}
+                                </TableCell>
+                                <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                  {transaction.contact}
+                                </TableCell>
+                                <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                  ₱{(transaction.totalPrice || 0).toFixed(2)}
+                                </TableCell>
+                                <TableCell style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                  {transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : 'N/A'}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge style={{ 
+                                    backgroundColor: isDarkMode ? "rgba(245, 158, 11, 0.2)" : "#FEF3C7",
+                                    color: isDarkMode ? "#F59E0B" : "#92400E"
+                                  }}>
+                                    Pending
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <motion.div
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                  >
+                                    <Button
+                                      onClick={() => handleVerifyPayment(transaction)}
+                                      disabled={isVerifying}
+                                      size="sm"
+                                      className="rounded-lg text-white transition-all"
+                                      style={{
+                                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                      }}
+                                    >
+                                      <CheckCircle className="mr-1 h-4 w-4" />
+                                      Verify
+                                    </Button>
+                                  </motion.div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </motion.div>
         </TabsContent>
       </Tabs>
@@ -640,9 +1011,9 @@ const PaymentManagementPage = () => {
             isOpen={showGcashConfirm}
             onClose={() => setShowGcashConfirm(false)}
             onConfirm={confirmToggleGcash}
-            title={`${gcashEnabled ? 'Disable' : 'Enable'} GCash`}
-            description={`Are you sure you want to ${gcashEnabled ? 'disable' : 'enable'} GCash payments? ${gcashEnabled ? 'Customers will no longer be able to pay via GCash.' : 'Customers will be able to pay via GCash.'}`}
-            confirmText={gcashEnabled ? 'Disable GCash' : 'Enable GCash'}
+            title={`${paymentData.gcashEnabled ? 'Disable' : 'Enable'} GCash`}
+            description={`Are you sure you want to ${paymentData.gcashEnabled ? 'disable' : 'enable'} GCash payments? ${paymentData.gcashEnabled ? 'Customers will no longer be able to pay via GCash.' : 'Customers will be able to pay via GCash.'}`}
+            confirmText={paymentData.gcashEnabled ? 'Disable GCash' : 'Enable GCash'}
             type="warning"
           />
         )}
@@ -657,7 +1028,7 @@ const PaymentManagementPage = () => {
             }}
             onConfirm={confirmVerifyPayment}
             title="Verify GCash Payment"
-            description={`Are you sure you want to verify this GCash payment from ${transactionToVerify.customerName} for ₱${transactionToVerify.totalPrice.toFixed(2)}? This action cannot be undone.`}
+            description={`Are you sure you want to verify this GCash payment from ${transactionToVerify.customerName} for ₱${(transactionToVerify.totalPrice || 0).toFixed(2)}? This action cannot be undone.`}
             confirmText={isVerifying ? "Verifying..." : "Verify Payment"}
             type="default"
           />

@@ -20,13 +20,33 @@ import {
   YAxis,
 } from "recharts";
 
-// Cache for dashboard data
-let dashboardCache = null;
-let cacheTimestamp = null;
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for dashboard data
-const POLLING_INTERVAL = 30000; // 30 seconds
-
+const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours (or even longer!)
+const POLLING_INTERVAL = 10000; // 10 seconds
 const ALLOWED_SKEW_MS = 5000;
+
+// Initialize cache properly - make it globally available
+const initializeCache = () => {
+  try {
+    const stored = localStorage.getItem('dashboardCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Check if cache is still valid
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        console.log("📦 Initializing from stored cache");
+        return parsed;
+      } else {
+        console.log("🗑️ Stored cache expired");
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load cache from storage:', error);
+  }
+  return null;
+};
+
+// Global cache instance
+let dashboardCache = initializeCache();
+let cacheTimestamp = dashboardCache?.timestamp || null;
 
 const isTokenExpired = (token) => {
   try {
@@ -46,6 +66,10 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
 
   if (!token || isTokenExpired(token)) {
     console.warn("⛔ Token expired. Redirecting to login.");
+    // Clear cache on token expiry
+    dashboardCache = null;
+    cacheTimestamp = null;
+    localStorage.removeItem('dashboardCache');
     window.location.href = "/login";
     return;
   }
@@ -58,17 +82,34 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
   const options = { method, headers };
   if (body) options.body = JSON.stringify(body);
 
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+  try {
+    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
 
-  if (!response.ok) {
-    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
-    throw new Error(`Request failed: ${response.status}`);
+    if (!response.ok) {
+      console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    return contentType && contentType.includes("application/json")
+      ? response.json()
+      : response.text();
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
   }
+};
 
-  const contentType = response.headers.get("content-type");
-  return contentType && contentType.includes("application/json")
-    ? response.json()
-    : response.text();
+// Save cache to localStorage for persistence
+const saveCacheToStorage = (data) => {
+  try {
+    localStorage.setItem('dashboardCache', JSON.stringify({
+      ...data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save cache to storage:', error);
+  }
 };
 
 export default function AdminDashboardPage() {
@@ -77,21 +118,36 @@ export default function AdminDashboardPage() {
   // Calculate isDarkMode based on theme - matching User side
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-  const [dashboardData, setDashboardData] = useState({
-    totalIncome: 0,
-    totalLoads: 0,
-    unwashedCount: 0,
-    totalUnclaimed: 0,
-    overviewData: [],
-    unclaimedList: [],
-    loading: true,
-    error: null,
-    lastUpdated: null,
-    dataVersion: 0
+  // Initialize state with cached data if available
+  const [dashboardData, setDashboardData] = useState(() => {
+    if (dashboardCache && dashboardCache.data) {
+      console.log("🎯 Initializing state with cached data");
+      return {
+        ...dashboardCache.data,
+        loading: false, // Don't show loading if we have cached data
+        error: null,
+        lastUpdated: new Date(dashboardCache.timestamp),
+        dataVersion: 0
+      };
+    }
+    
+    return {
+      totalIncome: 0,
+      totalLoads: 0,
+      unwashedCount: 0,
+      totalUnclaimed: 0,
+      overviewData: [],
+      unclaimedList: [],
+      loading: true,
+      error: null,
+      lastUpdated: null,
+      dataVersion: 0
+    };
   });
 
-  const [initialLoad, setInitialLoad] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(!dashboardCache); // Only initial load if no cache
   const pollingIntervalRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   // Function to check if data has actually changed
   const hasDataChanged = (newData, oldData) => {
@@ -108,69 +164,125 @@ export default function AdminDashboardPage() {
   };
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
+    // Don't fetch if component is unmounted
+    if (!isMountedRef.current) return;
+
     try {
-      // Check cache first unless forced refresh
       const now = Date.now();
+      
+      // Check cache first unless forced refresh - use longer cache duration
       if (!forceRefresh && dashboardCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
         console.log("📦 Using cached dashboard data");
+        
+        // Always update with cached data to ensure UI is populated
         setDashboardData(prev => ({
-          ...dashboardCache,
+          ...dashboardCache.data,
           loading: false,
-          error: null
+          error: null,
+          lastUpdated: new Date(cacheTimestamp),
+          dataVersion: prev.dataVersion + 1
         }));
+        
         setInitialLoad(false);
+        
+        // Still fetch fresh data in background but don't wait for it
+        if (now - cacheTimestamp > 30000) { // If cache is older than 30 seconds, refresh in background
+          console.log("🔄 Fetching fresh data in background");
+          fetchFreshData();
+        }
         return;
       }
 
-      const token = localStorage.getItem('authToken');
+      await fetchFreshData();
+    } catch (error) {
+      console.error('Error in fetchDashboardData:', error);
+      if (!isMountedRef.current) return;
       
-      const response = await fetch('http://localhost:8080/api/dashboard/admin', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data');
-      }
-
-      const data = await response.json();
-      
-      const newDashboardData = {
-        totalIncome: data.totalIncome || 0,
-        totalLoads: data.totalLoads || 0,
-        unwashedCount: data.unwashedCount || 0,
-        totalUnclaimed: data.totalUnclaimed || 0,
-        overviewData: data.overviewData || [],
-        unclaimedList: data.unclaimedList || [],
-        loading: false,
-        error: null,
-        lastUpdated: new Date(),
-        dataVersion: (dashboardData?.dataVersion || 0) + 1
-      };
-
-      // Only update state and cache if data has actually changed
-      if (hasDataChanged(newDashboardData, dashboardCache)) {
-        console.log("🔄 Dashboard data updated");
-        
-        // Update cache
-        dashboardCache = {
-          totalIncome: newDashboardData.totalIncome,
-          totalLoads: newDashboardData.totalLoads,
-          unwashedCount: newDashboardData.unwashedCount,
-          totalUnclaimed: newDashboardData.totalUnclaimed,
-          overviewData: newDashboardData.overviewData,
-          unclaimedList: newDashboardData.unclaimedList,
-          lastUpdated: newDashboardData.lastUpdated
-        };
-        cacheTimestamp = Date.now();
-        
-        setDashboardData(newDashboardData);
+      // On error, keep cached data if available
+      if (dashboardCache) {
+        console.log("⚠️ Fetch failed, falling back to cached data");
+        setDashboardData(prev => ({
+          ...dashboardCache.data,
+          loading: false,
+          error: error.message,
+          lastUpdated: new Date(cacheTimestamp),
+          dataVersion: prev.dataVersion + 1
+        }));
       } else {
-        console.log("✅ No changes in dashboard data, skipping update");
-        // Just update the timestamp to extend cache life
-        cacheTimestamp = Date.now();
+        setDashboardData(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message
+        }));
+      }
+      setInitialLoad(false);
+    }
+  }, []);
+
+  // Separate function for actual API call
+  const fetchFreshData = async () => {
+    console.log("🔄 Fetching fresh dashboard data");
+    const token = localStorage.getItem('authToken');
+    
+    if (!token || isTokenExpired(token)) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch('http://localhost:8080/api/dashboard/admin', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch dashboard data: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    const newDashboardData = {
+      totalIncome: data.totalIncome || 0,
+      totalLoads: data.totalLoads || 0,
+      unwashedCount: data.unwashedCount || 0,
+      totalUnclaimed: data.totalUnclaimed || 0,
+      overviewData: data.overviewData || [],
+      unclaimedList: data.unclaimedList || [],
+    };
+
+    const currentTime = Date.now();
+
+    // Only update state and cache if data has actually changed
+    if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
+      console.log("🔄 Dashboard data updated with fresh data");
+      
+      // Update cache
+      dashboardCache = {
+        data: newDashboardData,
+        timestamp: currentTime
+      };
+      cacheTimestamp = currentTime;
+      
+      // Persist to localStorage
+      saveCacheToStorage(dashboardCache);
+      
+      if (isMountedRef.current) {
+        setDashboardData({
+          ...newDashboardData,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(),
+          dataVersion: (dashboardData.dataVersion || 0) + 1
+        });
+      }
+    } else {
+      console.log("✅ No changes in dashboard data, updating timestamp only");
+      // Just update the timestamp to extend cache life
+      cacheTimestamp = currentTime;
+      dashboardCache.timestamp = currentTime;
+      saveCacheToStorage(dashboardCache);
+      
+      if (isMountedRef.current) {
         setDashboardData(prev => ({
           ...prev,
           loading: false,
@@ -178,29 +290,40 @@ export default function AdminDashboardPage() {
           lastUpdated: new Date()
         }));
       }
+    }
 
+    if (isMountedRef.current) {
       setInitialLoad(false);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+    }
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    // Always show cached data immediately if available
+    if (dashboardCache) {
+      console.log("🚀 Showing cached data immediately");
       setDashboardData(prev => ({
-        ...prev,
+        ...dashboardCache.data,
         loading: false,
-        error: error.message
+        error: null,
+        lastUpdated: new Date(cacheTimestamp),
+        dataVersion: prev.dataVersion + 1
       }));
       setInitialLoad(false);
     }
-  }, []);
-
-  useEffect(() => {
+    
+    // Then fetch fresh data
     fetchDashboardData();
     
     // Set up polling with smart updates
     pollingIntervalRef.current = setInterval(() => {
       console.log("🔄 Auto-refreshing dashboard data...");
-      fetchDashboardData(false); // Don't force refresh, let the cache logic handle it
+      fetchDashboardData(false);
     }, POLLING_INTERVAL);
     
     return () => {
+      isMountedRef.current = false;
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
@@ -324,8 +447,8 @@ export default function AdminDashboardPage() {
     </motion.div>
   );
 
-  // Show skeleton loader only during initial load
-  if (initialLoad) {
+  // Show skeleton loader only during initial load AND when no cached data is available
+  if (initialLoad && !dashboardCache) {
     return (
       <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
         {/* Header Skeleton */}
@@ -361,7 +484,10 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (dashboardData.error) {
+  // If we have cached data, show it immediately even if loading fresh data
+  const displayData = dashboardCache ? dashboardCache.data : dashboardData;
+
+  if (dashboardData.error && !dashboardCache) {
     return (
       <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
         <motion.div
@@ -404,28 +530,28 @@ export default function AdminDashboardPage() {
     {
       title: "Total Income",
       icon: <PhilippinePeso size={26} />,
-      value: formatCurrency(dashboardData.totalIncome),
+      value: formatCurrency(displayData.totalIncome),
       color: "#3DD9B6",
       description: "Total revenue generated",
     },
     {
       title: "Total Loads",
       icon: <Package size={26} />,
-      value: dashboardData.totalLoads.toLocaleString(),
+      value: displayData.totalLoads.toLocaleString(),
       color: "#60A5FA",
       description: "Laundry loads processed",
     },
     {
       title: "Unwashed",
       icon: <Clock8 size={26} />,
-      value: dashboardData.unwashedCount.toLocaleString(),
+      value: displayData.unwashedCount.toLocaleString(),
       color: "#FB923C",
       description: "Waiting to be washed",
     },
     {
       title: "Unclaimed",
       icon: <PackageX size={26} />,
-      value: dashboardData.totalUnclaimed.toLocaleString(),
+      value: displayData.totalUnclaimed.toLocaleString(),
       color: "#F87171",
       description: "Not picked up",
     },
@@ -551,7 +677,7 @@ export default function AdminDashboardPage() {
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart 
-                data={dashboardData.overviewData} 
+                data={displayData.overviewData} 
                 margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
               >
                 <defs>
@@ -623,7 +749,7 @@ export default function AdminDashboardPage() {
                 Unclaimed Laundry
               </p>
               <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                {dashboardData.unclaimedList.length} unclaimed loads
+                {displayData.unclaimedList.length} unclaimed loads
               </span>
             </div>
             <motion.div
@@ -639,7 +765,7 @@ export default function AdminDashboardPage() {
           </div>
           
           <div className="h-[260px] overflow-auto px-2">
-            {dashboardData.unclaimedList.length === 0 ? (
+            {displayData.unclaimedList.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -655,7 +781,7 @@ export default function AdminDashboardPage() {
               </motion.div>
             ) : (
               <div className="space-y-3">
-                {dashboardData.unclaimedList.map((transaction, index) => (
+                {displayData.unclaimedList.map((transaction, index) => (
                   <motion.div
                     key={transaction.id}
                     initial={{ opacity: 0, x: 20 }}

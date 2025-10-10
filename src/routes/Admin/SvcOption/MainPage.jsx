@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Trash2, Plus, Settings, WashingMachine, X, Package } from "lucide-react";
@@ -8,10 +8,34 @@ import { useToast } from "@/hooks/use-toast";
 
 const ALLOWED_SKEW_MS = 5000;
 
-// Cache for services data
+// Cache for services data - use object structure like AdminDashboard
 let servicesCache = null;
 let cacheTimestamp = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Initialize cache properly
+const initializeCache = () => {
+  try {
+    const stored = localStorage.getItem('servicesCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Check if cache is still valid
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        console.log("📦 Initializing services from stored cache");
+        return parsed;
+      } else {
+        console.log("🗑️ Stored services cache expired");
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load services cache from storage:', error);
+  }
+  return null;
+};
+
+// Initialize global cache
+servicesCache = initializeCache();
+cacheTimestamp = servicesCache?.timestamp || null;
 
 const isTokenExpired = (token) => {
     try {
@@ -31,6 +55,10 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
 
     if (!token || isTokenExpired(token)) {
         console.warn("⛔ Token expired. Redirecting to login.");
+        // Clear cache on token expiry
+        servicesCache = null;
+        cacheTimestamp = null;
+        localStorage.removeItem('servicesCache');
         window.location.href = "/login";
         return;
     }
@@ -64,50 +92,139 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
     return null;
 };
 
+// Save cache to localStorage for persistence
+const saveCacheToStorage = (data) => {
+  try {
+    localStorage.setItem('servicesCache', JSON.stringify({
+      data: data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save services cache to storage:', error);
+  }
+};
+
 export default function MainPage() {
     const { theme } = useTheme();
     const { toast } = useToast();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     
-    const [services, setServices] = useState([]);
+    const [services, setServices] = useState(() => {
+      if (servicesCache && servicesCache.data) {
+        console.log("🎯 Initializing services state with cached data");
+        return servicesCache.data;
+      }
+      return [];
+    });
     const [editTarget, setEditTarget] = useState(null);
     const [error, setError] = useState(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [initialLoad, setInitialLoad] = useState(true);
+    const [loading, setLoading] = useState(!servicesCache); // Only loading if no cache
+    const [initialLoad, setInitialLoad] = useState(!servicesCache); // Only initial load if no cache
+    const isMountedRef = useRef(true);
+
+    // Function to check if data has actually changed
+    const hasDataChanged = (newData, oldData) => {
+      if (!oldData) return true;
+      return JSON.stringify(newData) !== JSON.stringify(oldData);
+    };
+
+    const fetchServices = useCallback(async (forceRefresh = false) => {
+      // Don't fetch if component is unmounted
+      if (!isMountedRef.current) return;
+
+      try {
+        const now = Date.now();
+        
+        // Check cache first unless forced refresh
+        if (!forceRefresh && servicesCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+          console.log("📦 Using cached services data");
+          
+          // Always update with cached data to ensure UI is populated
+          setServices(servicesCache.data);
+          setLoading(false);
+          setInitialLoad(false);
+          return;
+        }
+
+        await fetchFreshServices();
+      } catch (err) {
+        console.error("❌ Error fetching services:", err.message);
+        if (!isMountedRef.current) return;
+        
+        // On error, keep cached data if available
+        if (servicesCache) {
+          console.log("⚠️ Fetch failed, falling back to cached services data");
+          setServices(servicesCache.data);
+          setError("Failed to refresh services. Showing cached data.");
+        } else {
+          setError("Failed to load services. Make sure you're logged in.");
+        }
+        setLoading(false);
+        setInitialLoad(false);
+      }
+    }, []);
+
+    // Separate function for actual API call
+    const fetchFreshServices = async () => {
+      console.log("🔄 Fetching fresh services data");
+      setLoading(true);
+
+      const data = await secureFetch("/services");
+      const newServices = data || [];
+      
+      const currentTime = Date.now();
+
+      // Only update state and cache if data has actually changed
+      if (!servicesCache || hasDataChanged(newServices, servicesCache.data)) {
+        console.log("🔄 Services data updated with fresh data");
+        
+        // Update cache
+        servicesCache = {
+          data: newServices,
+          timestamp: currentTime
+        };
+        cacheTimestamp = currentTime;
+        
+        // Persist to localStorage
+        saveCacheToStorage(newServices);
+        
+        if (isMountedRef.current) {
+          setServices(newServices);
+          setError(null);
+        }
+      } else {
+        console.log("✅ No changes in services data, updating timestamp only");
+        // Just update the timestamp to extend cache life
+        cacheTimestamp = currentTime;
+        servicesCache.timestamp = currentTime;
+        saveCacheToStorage(servicesCache.data);
+      }
+
+      if (isMountedRef.current) {
+        setLoading(false);
+        setInitialLoad(false);
+      }
+    };
 
     useEffect(() => {
-        const fetchServices = async () => {
-            // Check cache first
-            const now = Date.now();
-            if (servicesCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
-                console.log("📦 Using cached services data");
-                setServices(servicesCache);
-                setLoading(false);
-                setInitialLoad(false);
-                return;
-            }
-
-            try {
-                setLoading(true);
-                setInitialLoad(true);
-                const data = await secureFetch("/services");
-                // Update cache
-                servicesCache = data || [];
-                cacheTimestamp = Date.now();
-                
-                setServices(servicesCache);
-            } catch (err) {
-                console.error("❌ Error fetching services:", err.message);
-                setError("Failed to load services. Make sure you're logged in.");
-            } finally {
-                setLoading(false);
-                setTimeout(() => setInitialLoad(false), 100);
-            }
-        };
-
-        fetchServices();
-    }, []);
+      isMountedRef.current = true;
+      
+      // Always show cached data immediately if available
+      if (servicesCache) {
+        console.log("🚀 Showing cached services data immediately");
+        setServices(servicesCache.data);
+        setLoading(false);
+        setInitialLoad(false);
+      }
+      
+      // Then fetch fresh data
+      fetchServices();
+      
+      return () => {
+        isMountedRef.current = false;
+      };
+    }, [fetchServices]);
 
     const handleSave = async (updated) => {
         const method = updated.id ? "PUT" : "POST";
@@ -121,8 +238,12 @@ export default function MainPage() {
                 const newServices = exists ? prev.map((s) => (s.id === saved.id ? saved : s)) : [...prev, saved];
                 
                 // Update cache
-                servicesCache = newServices;
+                servicesCache = {
+                  data: newServices,
+                  timestamp: Date.now()
+                };
                 cacheTimestamp = Date.now();
+                saveCacheToStorage(newServices);
                 
                 return newServices;
             });
@@ -151,8 +272,12 @@ export default function MainPage() {
                 const newServices = prev.filter((s) => s.id !== id);
                 
                 // Update cache
-                servicesCache = newServices;
+                servicesCache = {
+                  data: newServices,
+                  timestamp: Date.now()
+                };
                 cacheTimestamp = Date.now();
+                saveCacheToStorage(newServices);
                 
                 return newServices;
             });
@@ -173,7 +298,7 @@ export default function MainPage() {
         }
     };
 
-    // Skeleton Loader Components
+    // Skeleton Loader Components - Updated to match AdminDashboard pattern
     const SkeletonCard = ({ index }) => (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -309,8 +434,8 @@ export default function MainPage() {
         </motion.div>
     );
 
-    // Show skeleton loader only during initial load
-    if (initialLoad) {
+    // Show skeleton loader only during initial load AND when no cached data is available
+    if (initialLoad && !servicesCache) {
         return (
             <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
                 <SkeletonHeader />

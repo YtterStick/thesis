@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import { useTheme } from "@/hooks/use-theme";
 
 let salesReportCache = null;
 let cacheTimestamp = null;
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for sales report data
+const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
+const POLLING_INTERVAL = 10000; // 10 seconds auto-refresh
 
 const AnimatedNumber = ({ value, isChanging }) => {
     if (!isChanging) {
@@ -212,33 +213,6 @@ const SalesReportPage = () => {
         { id: "Dry", name: "Dry Only" },
     ];
 
-    useEffect(() => {
-        handleDateRangeChange("today");
-    }, []);
-
-    useEffect(() => {
-        fetchSalesReport();
-    }, [dateRange, startDate, endDate, serviceTypeFilter]);
-
-    // Update animated numbers when summary data changes
-    useEffect(() => {
-        if (!initialLoad) {
-            setAnimatedSummary((prev) => ({
-                totalSales: `₱${summaryData.totalSales.toLocaleString()}`,
-                totalTransactions: summaryData.totalTransactions.toLocaleString(),
-                averageOrderValue: `₱${summaryData.averageOrderValue.toFixed(2)}`,
-                totalLoads: (summaryData.totalLoads || 0).toLocaleString(),
-                growthPercentage: `${Math.round(summaryData.growthPercentage)}`,
-                isChanging: true,
-            }));
-
-            // Reset changing state after animation
-            setTimeout(() => {
-                setAnimatedSummary((prev) => ({ ...prev, isChanging: false }));
-            }, 1000);
-        }
-    }, [summaryData, initialLoad]);
-
     // Function to check if data has actually changed
     const hasDataChanged = (newData, oldData) => {
         if (!oldData) return true;
@@ -266,7 +240,7 @@ const SalesReportPage = () => {
         return Math.round(percentage);
     };
 
-    const fetchSalesReport = async (forceRefresh = false) => {
+    const fetchSalesReport = useCallback(async (forceRefresh = false) => {
         try {
             // Check cache first unless forced refresh
             const now = Date.now();
@@ -471,7 +445,44 @@ const SalesReportPage = () => {
             setIsLoading(false);
             setInitialLoad(false);
         }
-    };
+    }, [dateRange, startDate, endDate, serviceTypeFilter, toast]);
+
+    useEffect(() => {
+        handleDateRangeChange("today");
+    }, []);
+
+    useEffect(() => {
+        fetchSalesReport();
+    }, [fetchSalesReport]);
+
+    // Auto-refresh every 10 seconds
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            console.log("🔄 Auto-refreshing sales report data...");
+            fetchSalesReport(false);
+        }, POLLING_INTERVAL);
+        
+        return () => clearInterval(intervalId);
+    }, [fetchSalesReport]);
+
+    // Update animated numbers when summary data changes
+    useEffect(() => {
+        if (!initialLoad) {
+            setAnimatedSummary((prev) => ({
+                totalSales: `₱${summaryData.totalSales.toLocaleString()}`,
+                totalTransactions: summaryData.totalTransactions.toLocaleString(),
+                averageOrderValue: `₱${summaryData.averageOrderValue.toFixed(2)}`,
+                totalLoads: (summaryData.totalLoads || 0).toLocaleString(),
+                growthPercentage: `${Math.round(summaryData.growthPercentage)}`,
+                isChanging: true,
+            }));
+
+            // Reset changing state after animation
+            setTimeout(() => {
+                setAnimatedSummary((prev) => ({ ...prev, isChanging: false }));
+            }, 1000);
+        }
+    }, [summaryData, initialLoad]);
 
     const handleDateRangeChange = (value) => {
         setDateRange(value);
@@ -984,74 +995,74 @@ const SalesReportPage = () => {
             </motion.div>
 
             {/* Summary Cards */}
-<div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-  {summaryCards.map(({ label, value, icon, color, description, trend }, index) => (
-    <motion.div
-      key={label}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{
-        scale: 1.03,
-        y: -2,
-        transition: { duration: 0.2 },
-      }}
-      className="cursor-pointer rounded-xl border-2 p-5 transition-all"
-      style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-      }}
-    >
-      <div className="mb-4 flex items-center justify-between">
-        <motion.div
-          whileHover={{ scale: 1.1, rotate: 5 }}
-          className="rounded-lg p-2"
-          style={{
-            backgroundColor: `${color}20`,
-            color: color,
-          }}
-        >
-          {icon}
-        </motion.div>
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: index * 0.2 }}
-          className="text-right"
-        >
-          {/* Change the p tag to div since it contains block content */}
-          <div
-            className="text-2xl font-bold"
-            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
-          >
-            {/* Use AnimatedNumber instead of skeleton loading */}
-            <AnimatedNumber 
-              value={value} 
-              isChanging={animatedSummary.isChanging} 
-            />
-          </div>
-        </motion.div>
-      </div>
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+                {summaryCards.map(({ label, value, icon, color, description, trend }, index) => (
+                    <motion.div
+                        key={label}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{
+                            scale: 1.03,
+                            y: -2,
+                            transition: { duration: 0.2 },
+                        }}
+                        className="cursor-pointer rounded-xl border-2 p-5 transition-all"
+                        style={{
+                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        }}
+                    >
+                        <div className="mb-4 flex items-center justify-between">
+                            <motion.div
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                className="rounded-lg p-2"
+                                style={{
+                                    backgroundColor: `${color}20`,
+                                    color: color,
+                                }}
+                            >
+                                {icon}
+                            </motion.div>
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: index * 0.2 }}
+                                className="text-right"
+                            >
+                                {/* Change the p tag to div since it contains block content */}
+                                <div
+                                    className="text-2xl font-bold"
+                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                >
+                                    {/* Use AnimatedNumber instead of skeleton loading */}
+                                    <AnimatedNumber
+                                        value={value}
+                                        isChanging={animatedSummary.isChanging}
+                                    />
+                                </div>
+                            </motion.div>
+                        </div>
 
-      <div>
-        <h3
-          className="mb-2 text-lg font-semibold"
-          style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
-        >
-          {label}
-        </h3>
-        <p
-          className="text-sm"
-          style={{
-            color: trend !== undefined ? (trend >= 0 ? "#10B981" : "#EF4444") : isDarkMode ? "#6B7280" : "#0B2B26/80",
-          }}
-        >
-          {description}
-        </p>
-      </div>
-    </motion.div>
-  ))}
-</div>
+                        <div>
+                            <h3
+                                className="mb-2 text-lg font-semibold"
+                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                            >
+                                {label}
+                            </h3>
+                            <p
+                                className="text-sm"
+                                style={{
+                                    color: trend !== undefined ? (trend >= 0 ? "#10B981" : "#EF4444") : isDarkMode ? "#6B7280" : "#0B2B26/80",
+                                }}
+                            >
+                                {description}
+                            </p>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
 
             {/* Charts */}
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
