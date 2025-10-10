@@ -8,66 +8,111 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Save } from "lucide-react";
+import { PlusCircle, Save, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 
 export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit }) {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const statusColorMap = {
-    Available: "text-green-600 dark:text-green-400",
-    "In Use": "text-yellow-600 dark:text-yellow-400",
-    Maintenance: "text-red-600 dark:text-red-400",
+    Available: isDarkMode ? "text-green-400" : "text-green-600",
+    "In Use": isDarkMode ? "text-yellow-400" : "text-yellow-600",
+    Maintenance: isDarkMode ? "text-red-400" : "text-red-600",
   };
 
   const isEdit = form.name || form.type || form.capacityKg;
 
-  const inputClass =
-    "bg-white dark:bg-slate-950 text-slate-700 dark:text-muted-foreground placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950";
+  const inputClass = `rounded-lg border-2 transition-all ${
+    isDarkMode 
+      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B] placeholder-[#6B7280]" 
+      : "bg-white border-[#0B2B26] text-[#0B2B26] placeholder-gray-500"
+  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
 
-  const selectTriggerClass =
-    "bg-white dark:bg-slate-950 text-slate-700 dark:text-muted-foreground placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950";
+  const selectTriggerClass = `rounded-lg border-2 transition-all ${
+    isDarkMode 
+      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+      : "bg-white border-[#0B2B26] text-[#0B2B26]"
+  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
 
-  const buttonClass =
-    "bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950";
+  const buttonClass = `rounded-lg px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2 ${
+    isDarkMode 
+      ? "bg-[#18442AF5] hover:bg-[#1E524A] text-white" 
+      : "bg-[#0B2B26] hover:bg-[#18442A] text-white"
+  }`;
+
+  // Fix: Handle modal close properly
+  const handleClose = () => {
+    setOpen(false);
+  };
 
   return (
     <>
       {!isEdit && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors focus:outline-none"
+          className="flex items-center gap-2 text-sm font-medium transition-colors focus:outline-none rounded-lg px-4 py-2"
+          style={{
+            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+            color: "#F3EDE3",
+          }}
         >
           <PlusCircle className="w-4 h-4" />
           Add Machine
-        </button>
+        </motion.button>
       )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="max-w-lg w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 shadow-md text-slate-900 dark:text-white p-6 rounded-md">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-lg w-full rounded-xl border-2 p-6 shadow-xl"
+            style={{
+              backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+              borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+              color: isDarkMode ? "#13151B" : "#0B2B26",
+            }}
+          >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">
                 {isEdit ? "Edit Machine" : "Add New Machine"}
               </h2>
-              <button
-                onClick={() => setOpen(false)}
-                className="text-slate-500 hover:text-slate-700 dark:hover:text-white"
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleClose}
+                className="rounded-lg p-1 transition-colors hover:opacity-80"
+                style={{
+                  backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                }}
               >
-                ✕
-              </button>
+                <X className="h-4 w-4" />
+              </motion.button>
             </div>
 
             <div className="space-y-4">
               {/* Machine Type */}
               <div>
-                <Label className="text-slate-700 dark:text-muted-foreground">Machine Type</Label>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                  Machine Type
+                </Label>
                 <Select value={form.type} onValueChange={(val) => handleChange("type", val)}>
                   <SelectTrigger className={selectTriggerClass}>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white">
+                  <SelectContent className={`rounded-lg border-2 ${
+                    isDarkMode 
+                      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+                      : "bg-white border-[#0B2B26] text-[#0B2B26]"
+                  }`}>
                     <SelectItem value="Washer">Washer</SelectItem>
                     <SelectItem value="Dryer">Dryer</SelectItem>
                   </SelectContent>
@@ -76,7 +121,9 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Machine Name */}
               <div>
-                <Label className="text-slate-700 dark:text-muted-foreground">Machine Name</Label>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                  Machine Name
+                </Label>
                 <Input
                   className={inputClass}
                   value={form.name}
@@ -87,7 +134,9 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Capacity */}
               <div>
-                <Label className="text-slate-700 dark:text-muted-foreground">Capacity (kg)</Label>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                  Capacity (kg)
+                </Label>
                 <Input
                   type="number"
                   className={inputClass}
@@ -99,12 +148,18 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Status */}
               <div>
-                <Label className="text-slate-700 dark:text-muted-foreground">Status</Label>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                  Status
+                </Label>
                 <Select value={form.status} onValueChange={(val) => handleChange("status", val)}>
                   <SelectTrigger className={selectTriggerClass}>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white">
+                  <SelectContent className={`rounded-lg border-2 ${
+                    isDarkMode 
+                      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+                      : "bg-white border-[#0B2B26] text-[#0B2B26]"
+                  }`}>
                     <SelectItem value="Available" className={statusColorMap["Available"]}>
                       Available
                     </SelectItem>
@@ -119,14 +174,19 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
               </div>
 
               {/* Save Button */}
-              <div className="flex justify-end">
-                <Button onClick={onSubmit} className={buttonClass}>
-                  <Save className="w-4 h-4" />
-                  {isEdit ? "Update Machine" : "Save Machine"}
-                </Button>
+              <div className="flex justify-end pt-2">
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button onClick={onSubmit} className={buttonClass}>
+                    <Save className="w-4 h-4" />
+                    {isEdit ? "Update Machine" : "Save Machine"}
+                  </Button>
+                </motion.div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </>

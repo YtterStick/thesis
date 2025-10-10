@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Save, X } from "lucide-react";
 
 const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  
   const [form, setForm] = useState({
     title: "",
     content: "",
@@ -19,8 +24,10 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
         title: initialData.title || "",
         content: initialData.content || "",
       });
+    } else {
+      setForm({ title: "", content: "" });
     }
-  }, [initialData]);
+  }, [initialData, open]);
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -36,68 +43,124 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
     };
     onSubmit(payload);
     setForm({ title: "", content: "" });
-    onClose();
   };
 
   if (!open) return null;
 
-  const inputClass =
-    "bg-white dark:bg-slate-950 text-slate-700 dark:text-muted-foreground placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950";
-
-  const buttonClass =
-    "bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950";
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="max-w-lg w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 shadow-md text-slate-900 dark:text-white p-6 rounded-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">
-            {initialData?.id ? "Edit Clause" : "Add New Clause"}
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative z-50 w-full max-w-2xl rounded-xl border-2 p-6 shadow-xl transition-all"
+        style={{
+          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          color: isDarkMode ? "#13151B" : "#0B2B26",
+        }}
+      >
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+            {initialData?.id ? "Edit Terms" : "Add New Terms"}
           </h2>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-700 dark:hover:text-white"
+            className="rounded-lg p-1 transition-colors hover:opacity-80"
+            style={{
+              backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+            }}
           >
-            <X className="w-5 h-5" />
-          </button>
+            <X className="h-5 w-5" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+          </motion.button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label className="text-slate-700 dark:text-muted-foreground mb-1 block">
+            <Label 
+              className="text-sm font-medium mb-2 block"
+              style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+            >
               Title
             </Label>
             <Input
-              placeholder="Clause title"
+              placeholder="Enter terms title"
               value={form.title}
               onChange={(e) => handleChange("title", e.target.value)}
               required
-              className={inputClass}
+              className="rounded-lg border-2 transition-all"
+              style={{
+                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                color: isDarkMode ? "#13151B" : "#0B2B26",
+              }}
             />
           </div>
 
           <div>
-            <Label className="text-slate-700 dark:text-muted-foreground mb-1 block">
+            <Label 
+              className="text-sm font-medium mb-2 block"
+              style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+            >
               Content
             </Label>
             <Textarea
-              placeholder="Write the clause content here..."
+              placeholder="Write your terms and conditions here..."
               value={form.content}
               onChange={(e) => handleChange("content", e.target.value)}
-              rows={6}
+              rows={8}
               required
-              className={inputClass}
+              className="rounded-lg border-2 transition-all resize-none"
+              style={{
+                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                color: isDarkMode ? "#13151B" : "#0B2B26",
+              }}
             />
           </div>
 
-          <div className="flex justify-end">
-            <Button type="submit" className={buttonClass}>
-              <Save className="w-4 h-4" />
-              {initialData?.id ? "Update Clause" : "Save Clause"}
-            </Button>
+          <div className="flex justify-end gap-3 pt-4">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
+              style={{
+                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                color: isDarkMode ? '#13151B' : '#0B2B26',
+              }}
+            >
+              Cancel
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              type="submit"
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all"
+              style={{
+                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+              }}
+            >
+              <Save className="h-4 w-4" />
+              {initialData?.id ? "Update Terms" : "Save Terms"}
+            </motion.button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };
