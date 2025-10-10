@@ -2,38 +2,64 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight, Info, Calendar } from "lucide-react";
+import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight, Info, Calendar, LineChart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
 import { Label } from "@/components/ui/label";
+import { motion } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 
 const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
-  return (
-    <div className="space-y-2">
-      <Label className="mb-1 block">Service Type</Label>
-      <Select
-        value={serviceId}
-        onValueChange={(value) => onChange("serviceId", value)}
-        disabled={isLocked}
-      >
-        <SelectTrigger className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
-          <SelectValue placeholder="Select service" />
-        </SelectTrigger>
-        <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
-          {services.map((service) => (
-            <SelectItem
-              key={service.id}
-              value={service.id}
-              className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    return (
+        <div className="space-y-2">
+            <Label
+                className="mb-1 block"
+                style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
             >
-              {service.name}
-            </SelectItem>
-          ))} 
-        </SelectContent>
-      </Select>
-    </div>
-  );
+                Service Type
+            </Label>
+            <Select
+                value={serviceId}
+                onValueChange={(value) => onChange("serviceId", value)}
+                disabled={isLocked}
+            >
+                <SelectTrigger
+                    className="transition-all"
+                    style={{
+                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        color: isDarkMode ? "#13151B" : "#0B2B26",
+                    }}
+                >
+                    <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent
+                    style={{
+                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        color: isDarkMode ? "#13151B" : "#0B2B26",
+                    }}
+                >
+                    {services.map((service) => (
+                        <SelectItem
+                            key={service.id}
+                            value={service.id}
+                            className="cursor-pointer transition-colors"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            }}
+                        >
+                            {service.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
 };
 
 const formatDateForBackend = (dateString) => {
@@ -44,15 +70,16 @@ const formatDateForBackend = (dateString) => {
     return `${month}/${day}/${year}`;
 };
 
-const CustomBarTooltip = ({ active, payload, label }) => {
+const CustomBarTooltip = ({ active, payload, label, isDarkMode }) => {
     if (active && payload && payload.length) {
-        const isDarkMode = document.documentElement.classList.contains("dark");
-
         return (
             <div
-                className={`rounded-lg border p-3 shadow-lg ${
-                    isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-slate-200 bg-white text-slate-900"
-                }`}
+                className="rounded-lg border-2 p-3 shadow-lg"
+                style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                }}
             >
                 <p className="font-medium">{label}</p>
                 <p className="text-sm">
@@ -64,16 +91,18 @@ const CustomBarTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-const CustomPieTooltip = ({ active, payload }) => {
+const CustomPieTooltip = ({ active, payload, isDarkMode }) => {
     if (active && payload && payload.length) {
-        const isDarkMode = document.documentElement.classList.contains("dark");
         const data = payload[0].payload;
 
         return (
             <div
-                className={`rounded-lg border p-3 shadow-lg ${
-                    isDarkMode ? "border-slate-600 bg-slate-800 text-slate-100" : "border-slate-200 bg-white text-slate-900"
-                }`}
+                className="rounded-lg border-2 p-3 shadow-lg"
+                style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                }}
             >
                 <p className="font-medium">{data.name}</p>
                 <p className="text-sm">
@@ -89,6 +118,9 @@ const CustomPieTooltip = ({ active, payload }) => {
 };
 
 const SalesReportPage = () => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
     const [isLoading, setIsLoading] = useState(false);
     const [dateRange, setDateRange] = useState("today");
     const [startDate, setStartDate] = useState("");
@@ -111,6 +143,7 @@ const SalesReportPage = () => {
         todaySales: 0,
         yesterdaySales: 0,
         growthPercentage: 0,
+        totalLoads: 0,
     });
 
     const services = [
@@ -197,39 +230,67 @@ const SalesReportPage = () => {
 
             const data = await response.json();
 
-            // If the date range is for the full year, ensure we have data for all months
+            // Process sales data to ensure all dates are properly formatted and visible
+            let processedSalesData = data.salesTrend || [];
+
             if (dateRange === "year") {
-                // Create an array with all months of the year (abbreviated)
-                const allMonths = [
-                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-                ];
-                
-                // Create a map of existing sales data by period
+                const allMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
                 const salesMap = {};
-                (data.salesTrend || []).forEach(item => {
-                    // Convert full month names to abbreviated format
-                    const monthNames = ["January", "February", "March", "April", "May", "June", 
-                                       "July", "August", "September", "October", "November", "December"];
-                    const monthIndex = monthNames.findIndex(name => name === item.period);
+                processedSalesData.forEach((item) => {
+                    const monthNames = [
+                        "January",
+                        "February",
+                        "March",
+                        "April",
+                        "May",
+                        "June",
+                        "July",
+                        "August",
+                        "September",
+                        "October",
+                        "November",
+                        "December",
+                    ];
+                    const monthIndex = monthNames.findIndex((name) => name === item.period);
                     if (monthIndex !== -1) {
                         salesMap[allMonths[monthIndex]] = item.sales;
                     } else {
+                        // If period is already in abbreviated format, use it directly
                         salesMap[item.period] = item.sales;
                     }
                 });
-                
+
                 // Create a complete dataset with all months
-                const completeSalesData = allMonths.map(month => ({
+                processedSalesData = allMonths.map((month) => ({
                     period: month,
-                    sales: salesMap[month] || 0
+                    sales: salesMap[month] || 0,
                 }));
-                
-                setSalesData(completeSalesData);
-            } else {
-                setSalesData(data.salesTrend || []);
+            } else if (dateRange === "week" || dateRange === "month") {
+                // Ensure proper date formatting for shorter time periods
+                processedSalesData = processedSalesData.map((item) => {
+                    // If the period is a date string, format it properly
+                    if (item.period && item.period.includes("-")) {
+                        try {
+                            const date = new Date(item.period);
+                            if (!isNaN(date.getTime())) {
+                                return {
+                                    ...item,
+                                    period: date.toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                    }),
+                                };
+                            }
+                        } catch (e) {
+                            console.warn("Failed to parse date:", item.period);
+                        }
+                    }
+                    return item;
+                });
             }
 
+            setSalesData(processedSalesData);
             setServiceDistributionData(data.serviceDistribution || []);
             setRecentTransactions(data.recentTransactions || []);
             setSummaryData(
@@ -241,11 +302,11 @@ const SalesReportPage = () => {
                     todaySales: 0,
                     yesterdaySales: 0,
                     growthPercentage: 0,
+                    totalLoads: 0,
                 },
             );
 
             setCurrentPage(1);
-
             setIsLoading(false);
         } catch (error) {
             console.error(error);
@@ -287,8 +348,8 @@ const SalesReportPage = () => {
                 setEndDate(today.toISOString().split("T")[0]);
                 break;
             case "year":
-                const yearStart = new Date(today.getFullYear(), 0, 1); // January 1st of current year
-                const yearEnd = new Date(today.getFullYear(), 11, 31); // December 31st of current year
+                const yearStart = new Date(today.getFullYear(), 0, 1);
+                const yearEnd = new Date(today.getFullYear(), 11, 31);
                 setStartDate(yearStart.toISOString().split("T")[0]);
                 setEndDate(yearEnd.toISOString().split("T")[0]);
                 break;
@@ -338,349 +399,654 @@ const SalesReportPage = () => {
     const currentItems = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
-    const SERVICE_COLORS = ["#f59e0b", "#ef4444", "#8b5cf6", "#10b981", "#3b82f6"];
-
-    const getChartColors = () => {
-        const isDarkMode = document.documentElement.classList.contains("dark");
-        return {
-            text: isDarkMode ? "#d1d5db" : "#374151",
-            grid: isDarkMode ? "#4b5563" : "#e5e7eb",
-            tooltipBg: isDarkMode ? "#1f2937" : "#fff",
-            tooltipText: isDarkMode ? "#f3f4f6" : "#111827",
-        };
+    // Updated color scheme with #1C3F3A as primary
+    const CHART_COLORS = {
+        primary: "#1C3F3A",
+        secondary: "#2A524C",
+        accent: "#3DD9B6",
+        highlight: "#60A5FA",
+        complementary: "#FB923C",
+        light: "#18442AF5",
     };
 
-    const chartColors = getChartColors();
+    const SERVICE_COLORS = [
+        CHART_COLORS.primary, // #1C3F3A - Dark Teal
+        CHART_COLORS.secondary, // #2A524C - Medium Teal
+        CHART_COLORS.accent, // #3DD9B6 - Bright Teal
+        CHART_COLORS.highlight, // #60A5FA - Blue
+        CHART_COLORS.complementary, // #FB923C - Orange
+    ];
+
+    const summaryCards = [
+        {
+            label: "Total Income",
+            value: `₱${summaryData.totalSales.toLocaleString()}`,
+            icon: <DollarSign size={26} />,
+            color: CHART_COLORS.accent,
+            description: `${summaryData.growthPercentage >= 0 ? "+" : ""}${Math.round(summaryData.growthPercentage)}% from previous period`,
+            trend: summaryData.growthPercentage,
+        },
+        {
+            label: "Transactions",
+            value: summaryData.totalTransactions.toLocaleString(),
+            icon: <TrendingUp size={26} />,
+            color: CHART_COLORS.highlight,
+            description: `${summaryData.totalCustomers} unique customers`,
+        },
+        {
+            label: "Avg. Order Value",
+            value: `₱${summaryData.averageOrderValue.toFixed(2)}`,
+            icon: <BarChart3 size={26} />,
+            color: CHART_COLORS.complementary,
+            description: "Per transaction",
+        },
+        {
+            label: "Total Loads",
+            value: (summaryData.totalLoads || 0).toLocaleString(),
+            icon: <Package size={26} />,
+            color: CHART_COLORS.primary,
+            description: "Total wash loads processed",
+        },
+    ];
+
+    // Custom XAxis tick component to ensure all labels are visible
+    const renderCustomXAxisTick = ({ x, y, payload }) => {
+        return (
+            <g transform={`translate(${x},${y})`}>
+                <text
+                    x={0}
+                    y={0}
+                    dy={16}
+                    textAnchor="middle"
+                    fill={isDarkMode ? "#13151B" : "#0B2B26"}
+                    fontSize="12"
+                    fontWeight="500"
+                >
+                    {payload.value}
+                </text>
+            </g>
+        );
+    };
 
     return (
-        <div className="space-y-6 p-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Sales Reports</h1>
-                    <p className="mt-1 text-slate-600 dark:text-slate-400">Analyze and track your business performance</p>
+        <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
+            {/* Header */}
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div className="flex items-center gap-3">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="rounded-lg p-2"
+                        style={{
+                            backgroundColor: isDarkMode ? CHART_COLORS.light : CHART_COLORS.primary,
+                            color: "#F3EDE3",
+                        }}
+                    >
+                        <LineChart size={22} />
+                    </motion.div>
+                    <div>
+                        <p
+                            className="text-xl font-bold"
+                            style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                        >
+                            Sales Reports
+                        </p>
+                        <p
+                            className="text-sm"
+                            style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
+                        >
+                            Analyze and track your business performance
+                        </p>
+                    </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Filters */}
-            <Card className="border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
-                <CardHeader className="rounded-t-lg bg-slate-100 dark:bg-slate-800">
-                    <CardTitle className="text-slate-900 dark:text-slate-50">Report Filters</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                    {datesSwapped && (
-                        <div className="mb-4 flex items-center rounded-md bg-blue-50 p-3 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                            <Info className="mr-2 h-4 w-4" />
-                            <span>Start date was after end date. Dates have been auto-swapped.</span>
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div className="space-y-2">
-                            <Label className="mb-1 block">Date Range</Label>
-                            <Select
-                                value={dateRange}
-                                onValueChange={handleDateRangeChange}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+            >
+                <Card
+                    className="rounded-xl border-2 transition-all"
+                    style={{
+                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    }}
+                >
+                    <CardHeader
+                        className="rounded-t-xl pb-4"
+                        style={{
+                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        }}
+                    >
+                        <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Report Filters</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-5">
+                        {datesSwapped && (
+                            <div
+                                className="mb-4 flex items-center rounded-lg p-3 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                                    color: isDarkMode ? "#3b82f6" : "#1d4ed8",
+                                    border: `1px solid ${isDarkMode ? "#3b82f6" : "#3b82f6"}`,
+                                }}
                             >
-                                <SelectTrigger className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
-                                    <SelectValue placeholder="Select date range" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
-                                    <SelectItem value="today">Today</SelectItem>
-                                    <SelectItem value="yesterday">Yesterday</SelectItem>
-                                    <SelectItem value="week">Last 7 Days</SelectItem>
-                                    <SelectItem value="month">This Month</SelectItem>
-                                    <SelectItem value="year">This Year</SelectItem>
-                                    <SelectItem value="custom">Custom Range</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {dateRange === "custom" && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label className="mb-1 block">Start Date</Label>
-                                    <Input
-                                        type="date"
-                                        value={startDate}
-                                        max={endDate || undefined}
-                                        onChange={(e) => handleStartDateChange(e.target.value)}
-                                        className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="mb-1 block">End Date</Label>
-                                    <Input
-                                        type="date"
-                                        value={endDate}
-                                        min={startDate || undefined}
-                                        onChange={(e) => handleEndDateChange(e.target.value)}
-                                        className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
-                                    />
-                                </div>
-                            </>
+                                <Info className="mr-2 h-4 w-4" />
+                                <span>Start date was after end date. Dates have been auto-swapped.</span>
+                            </div>
                         )}
 
-                        <ServiceSelector
-                            services={services}
-                            serviceId={serviceTypeFilter}
-                            onChange={handleServiceChange}
-                            isLocked={false}
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div className="space-y-2">
+                                <Label
+                                    className="mb-1 block"
+                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                >
+                                    Date Range
+                                </Label>
+                                <Select
+                                    value={dateRange}
+                                    onValueChange={handleDateRangeChange}
+                                >
+                                    <SelectTrigger
+                                        className="transition-all"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        }}
+                                    >
+                                        <SelectValue placeholder="Select date range" />
+                                    </SelectTrigger>
+                                    <SelectContent
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        }}
+                                    >
+                                        <SelectItem value="today">Today</SelectItem>
+                                        <SelectItem value="yesterday">Yesterday</SelectItem>
+                                        <SelectItem value="week">Last 7 Days</SelectItem>
+                                        <SelectItem value="month">This Month</SelectItem>
+                                        <SelectItem value="year">This Year</SelectItem>
+                                        <SelectItem value="custom">Custom Range</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {dateRange === "custom" && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label
+                                            className="mb-1 block"
+                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        >
+                                            Start Date
+                                        </Label>
+                                        <Input
+                                            type="date"
+                                            value={startDate}
+                                            max={endDate || undefined}
+                                            onChange={(e) => handleStartDateChange(e.target.value)}
+                                            className="transition-all"
+                                            style={{
+                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label
+                                            className="mb-1 block"
+                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        >
+                                            End Date
+                                        </Label>
+                                        <Input
+                                            type="date"
+                                            value={endDate}
+                                            min={startDate || undefined}
+                                            onChange={(e) => handleEndDateChange(e.target.value)}
+                                            className="transition-all"
+                                            style={{
+                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            }}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <ServiceSelector
+                                services={services}
+                                serviceId={serviceTypeFilter}
+                                onChange={handleServiceChange}
+                                isLocked={false}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+            </motion.div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                {/* Total Income Card */}
-                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Income</p>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">₱{summaryData.totalSales.toLocaleString()}</p>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">
-                                    <span className={summaryData.growthPercentage >= 0 ? "text-green-600" : "text-red-600"}>
-                                        {summaryData.growthPercentage >= 0 ? "+" : ""}
-                                        {Math.round(summaryData.growthPercentage)}%
-                                    </span>{" "}
-                                    from previous period
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+                {summaryCards.map(({ label, value, icon, color, description, trend }, index) => (
+                    <motion.div
+                        key={label}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{
+                            scale: 1.03,
+                            y: -2,
+                            transition: { duration: 0.2 },
+                        }}
+                        className="cursor-pointer rounded-xl border-2 p-5 transition-all"
+                        style={{
+                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        }}
+                    >
+                        <div className="mb-4 flex items-center justify-between">
+                            <motion.div
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                className="rounded-lg p-2"
+                                style={{
+                                    backgroundColor: `${color}20`,
+                                    color: color,
+                                }}
+                            >
+                                {icon}
+                            </motion.div>
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: index * 0.2 }}
+                                className="text-right"
+                            >
+                                <p
+                                    className="text-2xl font-bold"
+                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                >
+                                    {isLoading ? (
+                                        <span
+                                            className="inline-block h-6 w-20 animate-pulse rounded"
+                                            style={{ backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8" }}
+                                        />
+                                    ) : (
+                                        <>{value}</>
+                                    )}
                                 </p>
-                            </div>
-                            <div className="rounded-lg bg-cyan-100 p-3 dark:bg-cyan-900/20">
-                                <DollarSign className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
-                            </div>
+                            </motion.div>
                         </div>
-                    </CardContent>
-                </Card>
 
-                {/* Transactions Card */}
-                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Transactions</p>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">{summaryData.totalTransactions}</p>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">{summaryData.totalCustomers} unique customers</p>
-                            </div>
-                            <div className="rounded-lg bg-green-100 p-3 dark:bg-green-900/20">
-                                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
+                        <div>
+                            <h3
+                                className="mb-2 text-lg font-semibold"
+                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                            >
+                                {label}
+                            </h3>
+                            <p
+                                className="text-sm"
+                                style={{
+                                    color: trend !== undefined ? (trend >= 0 ? "#10B981" : "#EF4444") : isDarkMode ? "#6B7280" : "#0B2B26/80",
+                                }}
+                            >
+                                {description}
+                            </p>
                         </div>
-                    </CardContent>
-                </Card>
-
-                {/* Average Order Value Card */}
-                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Avg. Order Value</p>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">₱{summaryData.averageOrderValue.toFixed(2)}</p>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">Per transaction</p>
-                            </div>
-                            <div className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900/20">
-                                <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Total Loads Card */}
-                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Loads</p>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">{summaryData.totalLoads}</p>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">Total wash loads processed</p>
-                            </div>
-                            <div className="rounded-lg bg-purple-100 p-3 dark:bg-purple-900/20">
-                                <Package className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                    </motion.div>
+                ))}
             </div>
 
             {/* Charts */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 {/* Sales Trend Chart */}
-                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-                    <CardHeader>
-                        <CardTitle className="text-slate-900 dark:text-slate-50">Income Trend</CardTitle>
-                        <CardDescription className="text-slate-600 dark:text-slate-400">Income performance overview</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer
-                            width="100%"
-                            height={300}
-                        >
-                            <BarChart data={salesData}>
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    stroke={chartColors.grid}
-                                />
-                                <XAxis
-                                    dataKey="period"
-                                    stroke={chartColors.text}
-                                    tick={{ fill: chartColors.text }}
-                                />
-                                <YAxis
-                                    stroke={chartColors.text}
-                                    tick={{ fill: chartColors.text }}
-                                />
-                                <Tooltip content={<CustomBarTooltip />} />
-                                <Legend />
-                                <Bar
-                                    dataKey="sales"
-                                    name="Income"
-                                    fill="#0891b2"
-                                    radius={[4, 4, 0, 0]}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                <motion.div
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    <Card
+                        className="rounded-xl border-2 transition-all"
+                        style={{
+                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        }}
+                    >
+                        <CardHeader>
+                            <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Income Trend</CardTitle>
+                            <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>Income performance overview</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ResponsiveContainer
+                                width="100%"
+                                height={300}
+                            >
+                                <BarChart
+                                    data={salesData}
+                                    margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+                                >
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        stroke={isDarkMode ? "#2A524C" : "#E0EAE8"}
+                                    />
+                                    <XAxis
+                                        dataKey="period"
+                                        stroke={isDarkMode ? "#13151B" : "#0B2B26"}
+                                        tickLine={{ stroke: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        interval={0} // Force show all labels
+                                        tick={renderCustomXAxisTick}
+                                        height={50} // Increase height to accommodate all labels
+                                    />
+                                    <YAxis
+                                        stroke={isDarkMode ? "#13151B" : "#0B2B26"}
+                                        tick={{ fill: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        tickLine={{ stroke: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        tickFormatter={(value) => `₱${value > 1000 ? `${(value / 1000).toFixed(0)}k` : value}`}
+                                    />
+                                    <Tooltip
+                                        content={<CustomBarTooltip isDarkMode={isDarkMode} />}
+                                        cursor={{ fill: "transparent" }}
+                                    />
+                                    <Legend />
+                                    <Bar
+                                        dataKey="sales"
+                                        name="Income"
+                                        fill={CHART_COLORS.primary}
+                                        stroke={CHART_COLORS.secondary}
+                                        strokeWidth={1}
+                                        radius={[4, 4, 0, 0]}
+                                        className="transition-all duration-300 hover:opacity-80"
+                                        activeBar={{
+                                            fill: CHART_COLORS.accent,
+                                            stroke: CHART_COLORS.primary,
+                                            strokeWidth: 2,
+                                            radius: [4, 4, 0, 0],
+                                        }}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                </motion.div>
 
                 {/* Service Distribution Chart */}
-                <Card className="border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-                    <CardHeader>
-                        <CardTitle className="text-slate-900 dark:text-slate-50">Service Distribution</CardTitle>
-                        <CardDescription className="text-slate-600 dark:text-slate-400">Distribution of services used</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer
-                            width="100%"
-                            height={300}
-                        >
-                            <RechartsPieChart>
-                                <Pie
-                                    data={serviceDistributionData}
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius={100}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
-                                    labelStyle={{ fill: chartColors.text }}
-                                >
-                                    {serviceDistributionData.map((entry, index) => (
-                                        <Cell
-                                            key={`cell-${index}`}
-                                            fill={SERVICE_COLORS[index % SERVICE_COLORS.length]}
-                                        />
-                                    ))}
-                                </Pie>
-                                <Tooltip content={<CustomPieTooltip />} />
-                            </RechartsPieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                <motion.div
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                >
+                    <Card
+                        className="rounded-xl border-2 transition-all"
+                        style={{
+                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        }}
+                    >
+                        <CardHeader>
+                            <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Service Distribution</CardTitle>
+                            <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>Distribution of services used</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ResponsiveContainer
+                                width="100%"
+                                height={300}
+                            >
+                                <RechartsPieChart>
+                                    <Pie
+                                        data={serviceDistributionData}
+                                        cx="50%"
+                                        cy="50%"
+                                        outerRadius={100}
+                                        innerRadius={60}
+                                        paddingAngle={2}
+                                        dataKey="value"
+                                        label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
+                                        labelStyle={{
+                                            fill: isDarkMode ? "#13151B" : "#0B2B26",
+                                            fontSize: "12px",
+                                            fontWeight: "500",
+                                        }}
+                                    >
+                                        {serviceDistributionData.map((entry, index) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill={SERVICE_COLORS[index % SERVICE_COLORS.length]}
+                                                stroke={isDarkMode ? "#F3EDE3" : "#FFFFFF"} // Fixed: Use appropriate stroke for dark mode
+                                                strokeWidth={2}
+                                                className="cursor-pointer transition-all duration-300 hover:opacity-80"
+                                            />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip content={<CustomPieTooltip isDarkMode={isDarkMode} />} />
+                                </RechartsPieChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                </motion.div>
             </div>
 
             {/* Recent Transactions */}
-            <Card className="border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
-                <CardHeader className="rounded-t-lg bg-slate-100 dark:bg-slate-800">
-                    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-                        <div>
-                            <CardTitle className="text-slate-900 dark:text-slate-50">Customer Transactions</CardTitle>
-                            <CardDescription className="text-slate-600 dark:text-slate-400">
-                                Latest transaction per customer ({filteredTransactions.length} unique customers)
-                            </CardDescription>
-                        </div>
-                        <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
-                            <Input
-                                placeholder="Search customers..."
-                                className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 pl-8"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="rounded-md border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
-                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Customer</th>
-                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Service</th>
-                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Amount</th>
-                                    <th className="p-4 text-left text-slate-900 dark:text-slate-100">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {currentItems.map((transaction) => (
-                                    <tr
-                                        key={transaction.id}
-                                        className="border-t border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
-                                    >
-                                        <td className="p-4 font-medium text-slate-900 dark:text-slate-100">{transaction.customerName}</td>
-                                        <td className="p-4 text-slate-600 dark:text-slate-300">{transaction.serviceType}</td>
-                                        <td className="p-4 font-medium text-slate-900 dark:text-slate-100">₱{transaction.totalPrice}</td>
-                                        <td className="p-4 text-slate-600 dark:text-slate-300">
-                                            {new Date(transaction.createdAt).toLocaleDateString("en-US", {
-                                                month: "2-digit",
-                                                day: "2-digit",
-                                                year: "numeric",
-                                            })}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-
-                        {/* Pagination Controls */}
-                        <div className="flex items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700">
-                            <div className="text-sm text-slate-600 dark:text-slate-400">
-                                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredTransactions.length)} of{" "}
-                                {filteredTransactions.length} customers
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+            >
+                <Card
+                    className="rounded-xl border-2 transition-all"
+                    style={{
+                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    }}
+                >
+                    <CardHeader
+                        className="rounded-t-xl pb-4"
+                        style={{
+                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        }}
+                    >
+                        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                            <div>
+                                <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Customer Transactions</CardTitle>
+                                <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
+                                    Latest transaction per customer ({filteredTransactions.length} unique customers)
+                                </CardDescription>
                             </div>
-                            <div className="flex items-center space-x-2">
-                                <Select
-                                    value={itemsPerPage.toString()}
-                                    onValueChange={(value) => {
-                                        setItemsPerPage(parseInt(value));
-                                        setCurrentPage(1);
+                            <div className="relative w-full sm:w-64">
+                                <Search
+                                    className="absolute left-2 top-2.5 h-4 w-4"
+                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                />
+                                <Input
+                                    placeholder="Search customers..."
+                                    className="w-full pl-8 transition-all"
+                                    style={{
+                                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                        color: isDarkMode ? "#13151B" : "#0B2B26",
                                     }}
-                                >
-                                    <SelectTrigger className="w-20 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
-                                        <SelectValue placeholder="10" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
-                                        <SelectItem value="10">10</SelectItem>
-                                        <SelectItem value="25">25</SelectItem>
-                                        <SelectItem value="50">50</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    className="border-slate-300 dark:border-slate-700"
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <span className="text-sm text-slate-600 dark:text-slate-400">
-                                    Page {currentPage} of {totalPages}
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages || totalPages === 0}
-                                    className="border-slate-300 dark:border-slate-700"
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div
+                            className="rounded-b-xl border-2 border-t-0"
+                            style={{
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            }}
+                        >
+                            <table className="w-full">
+                                <thead>
+                                    <tr
+                                        style={{
+                                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                        }}
+                                    >
+                                        <th
+                                            className="p-4 text-left font-medium"
+                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        >
+                                            Customer
+                                        </th>
+                                        <th
+                                            className="p-4 text-left font-medium"
+                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        >
+                                            Service
+                                        </th>
+                                        <th
+                                            className="p-4 text-left font-medium"
+                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        >
+                                            Amount
+                                        </th>
+                                        <th
+                                            className="p-4 text-left font-medium"
+                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        >
+                                            Date
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {currentItems.map((transaction) => (
+                                        <tr
+                                            key={transaction.id}
+                                            className="border-t transition-all hover:opacity-90"
+                                            style={{
+                                                borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                            }}
+                                        >
+                                            <td
+                                                className="p-4 font-medium"
+                                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            >
+                                                {transaction.customerName}
+                                            </td>
+                                            <td
+                                                className="p-4"
+                                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            >
+                                                {transaction.serviceType}
+                                            </td>
+                                            <td
+                                                className="p-4 font-medium"
+                                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            >
+                                                ₱{transaction.totalPrice}
+                                            </td>
+                                            <td
+                                                className="p-4"
+                                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            >
+                                                {new Date(transaction.createdAt).toLocaleDateString("en-US", {
+                                                    month: "2-digit",
+                                                    day: "2-digit",
+                                                    year: "numeric",
+                                                })}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* Pagination Controls */}
+                            <div
+                                className="flex items-center justify-between border-t p-4"
+                                style={{
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                }}
+                            >
+                                <div
+                                    className="text-sm"
+                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                >
+                                    Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredTransactions.length)} of{" "}
+                                    {filteredTransactions.length} customers
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Select
+                                        value={itemsPerPage.toString()}
+                                        onValueChange={(value) => {
+                                            setItemsPerPage(parseInt(value));
+                                            setCurrentPage(1);
+                                        }}
+                                    >
+                                        <SelectTrigger
+                                            className="w-20 transition-all"
+                                            style={{
+                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            }}
+                                        >
+                                            <SelectValue placeholder="10" />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            style={{
+                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            }}
+                                        >
+                                            <SelectItem value="10">10</SelectItem>
+                                            <SelectItem value="25">25</SelectItem>
+                                            <SelectItem value="50">50</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="transition-all"
+                                        style={{
+                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        }}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <span
+                                        className="text-sm font-medium"
+                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                    >
+                                        Page <span style={{ color: CHART_COLORS.accent }}>{currentPage}</span> of{" "}
+                                        <span style={{ color: CHART_COLORS.accent }}>{totalPages}</span>
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        className="transition-all"
+                                        style={{
+                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        }}
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </motion.div>
         </div>
     );
 };
