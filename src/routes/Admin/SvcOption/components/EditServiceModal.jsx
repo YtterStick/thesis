@@ -4,7 +4,10 @@ import { useTheme } from "@/hooks/use-theme";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, X } from "lucide-react";
+import { Save, X, AlertCircle } from "lucide-react";
+
+// Permanent services that cannot be modified
+const PERMANENT_SERVICES = ["Wash & Dry", "Wash", "Dry"];
 
 export default function EditServiceModal({ service, onClose, onSave }) {
   const { theme } = useTheme();
@@ -15,6 +18,11 @@ export default function EditServiceModal({ service, onClose, onSave }) {
     description: "",
     price: "",
   });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isPermanentService = PERMANENT_SERVICES.includes(service?.name);
+  const isEditing = !!service?.id;
 
   useEffect(() => {
     if (service) {
@@ -24,22 +32,77 @@ export default function EditServiceModal({ service, onClose, onSave }) {
         price: service.price?.toString() || "",
       });
     }
+    setErrors({});
   }, [service]);
 
   if (!service) return null;
 
-  const handleChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const validateForm = () => {
+    const newErrors = {};
+    
+    // Name validation
+    if (!form.name.trim()) {
+      newErrors.name = "Service name is required";
+    } else {
+      const name = form.name.trim();
+      const normalized = name.toLowerCase();
+      
+      // Prevent variations of Wash and Dry
+      if (normalized === "washes" || normalized === "washs") {
+        newErrors.name = "Service name must be exactly 'Wash'";
+      } else if (normalized === "drys" || normalized === "dries") {
+        newErrors.name = "Service name must be exactly 'Dry'";
+      } else if (normalized === "wash" && name !== "Wash") {
+        newErrors.name = "Service name must be exactly 'Wash'";
+      } else if (normalized === "dry" && name !== "Dry") {
+        newErrors.name = "Service name must be exactly 'Dry'";
+      }
+      
+      // Prevent any variations containing wash/dry
+      if ((normalized.includes("wash") || normalized.includes("dry")) && 
+          !PERMANENT_SERVICES.map(s => s.toLowerCase()).includes(normalized)) {
+        newErrors.name = "Service name cannot contain variations of 'Wash' or 'Dry'";
+      }
+    }
+
+    // Price validation
+    if (!form.price || parseFloat(form.price) <= 0) {
+      newErrors.price = "Valid price is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    const payload = {
-      ...service,
-      name: form.name.trim(),
-      description: form.description.trim(),
-      price: parseFloat(form.price),
-    };
-    onSave(payload);
+  const handleChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        ...service,
+        name: form.name.trim(),
+        description: form.description.trim(),
+        price: parseFloat(form.price),
+      };
+      await onSave(payload);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSubmit();
+    }
   };
 
   return (
@@ -62,9 +125,18 @@ export default function EditServiceModal({ service, onClose, onSave }) {
         >
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-              {service.id ? "Edit Service" : "Add New Service"}
-            </h2>
+            <div>
+              <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                {isEditing ? "Edit Service" : "Add New Service"}
+              </h2>
+              {isPermanentService && (
+                <p className="text-xs mt-1 flex items-center gap-1" 
+                   style={{ color: isDarkMode ? '#0891B2' : '#0E7490' }}>
+                  <AlertCircle size={12} />
+                  Permanent service - name cannot be changed
+                </p>
+              )}
+            </div>
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -78,7 +150,7 @@ export default function EditServiceModal({ service, onClose, onSave }) {
             </motion.button>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-5" onKeyPress={handleKeyPress}>
             {/* Service Name */}
             <div>
               <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
@@ -88,13 +160,27 @@ export default function EditServiceModal({ service, onClose, onSave }) {
                 className="rounded-lg border-2 transition-all"
                 style={{
                   backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                  borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                  borderColor: errors.name 
+                    ? (isDarkMode ? "#F87171" : "#EF4444")
+                    : (isDarkMode ? "#2A524C" : "#0B2B26"),
                   color: isDarkMode ? "#13151B" : "#0B2B26",
                 }}
                 value={form.name}
                 onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="e.g. Wash & Fold"
+                placeholder="e.g. Express Service, Premium Care"
+                disabled={isPermanentService}
               />
+              {errors.name && (
+                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: isDarkMode ? '#F87171' : '#EF4444' }}>
+                  <AlertCircle size={12} />
+                  {errors.name}
+                </p>
+              )}
+              {!isEditing && (
+                <p className="text-xs mt-1" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                  Note: Cannot use names containing "Wash", "Dry", or their variations
+                </p>
+              )}
             </div>
 
             {/* Description */}
@@ -124,25 +210,31 @@ export default function EditServiceModal({ service, onClose, onSave }) {
                 className="flex items-center rounded-lg border-2 transition-all focus-within:ring-2 focus-within:ring-offset-2"
                 style={{
                   backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                  borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                  focusWithin: {
-                    ringColor: '#0891B2',
-                    ringOffsetColor: isDarkMode ? '#F3EDE3' : '#FFFFFF'
-                  }
+                  borderColor: errors.price 
+                    ? (isDarkMode ? "#F87171" : "#EF4444")
+                    : (isDarkMode ? "#2A524C" : "#0B2B26"),
                 }}
               >
                 <span className="px-3" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>₱</span>
                 <Input
                   type="number"
+                  step="0.01"
+                  min="0"
                   className="flex-1 border-none bg-transparent transition-all focus-visible:outline-none focus-visible:ring-0"
                   style={{
                     color: isDarkMode ? "#13151B" : "#0B2B26",
                   }}
                   value={form.price}
                   onChange={(e) => handleChange("price", e.target.value)}
-                  placeholder="Price"
+                  placeholder="0.00"
                 />
               </div>
+              {errors.price && (
+                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: isDarkMode ? '#F87171' : '#EF4444' }}>
+                  <AlertCircle size={12} />
+                  {errors.price}
+                </p>
+              )}
             </div>
 
             {/* Save Button */}
@@ -153,14 +245,17 @@ export default function EditServiceModal({ service, onClose, onSave }) {
             >
               <Button 
                 onClick={handleSubmit}
+                disabled={isSubmitting}
                 className="rounded-lg px-4 py-2 transition-all flex items-center gap-2"
                 style={{
-                  backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                  backgroundColor: isSubmitting 
+                    ? (isDarkMode ? "#6B7280" : "#9CA3AF") 
+                    : (isDarkMode ? "#18442AF5" : "#0B2B26"),
                   color: "#F3EDE3",
                 }}
               >
                 <Save className="w-4 h-4" />
-                {service.id ? "Update Service" : "Save Service"}
+                {isSubmitting ? "Saving..." : (isEditing ? "Update Service" : "Save Service")}
               </Button>
             </motion.div>
           </div>

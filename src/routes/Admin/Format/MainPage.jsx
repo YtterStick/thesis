@@ -302,7 +302,7 @@ export default function ReceiptConfigPage() {
   };
 
   const sampleData = {
-    id: "TXN-00123",
+    id: "INV-00123",
     createdAt: "Aug 21, 2025 10:45 AM",
     customerName: "Andrei",
     staffName: "Sheena",
