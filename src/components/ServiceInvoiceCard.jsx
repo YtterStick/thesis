@@ -71,18 +71,18 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
 
   return (
     <div className="printable-area">
-      <div className="mx-auto max-w-md space-y-2 rounded-md border border-dashed bg-white p-4 font-mono text-sm shadow-md dark:border-gray-600 dark:bg-slate-950">
+      <div className="mx-auto max-w-md space-y-2 rounded-md border border-dashed bg-white p-4 font-mono text-sm shadow-md">
         {/* 🏪 Store Info */}
-        <div className="text-center text-lg font-bold dark:text-white">
+        <div className="text-center text-lg font-bold text-gray-900">
           {settings.storeName}
         </div>
-        <div className="text-center dark:text-gray-300">{settings.address}</div>
-        <div className="text-center dark:text-gray-300">{settings.phone}</div>
+        <div className="text-center text-gray-700">{settings.address}</div>
+        <div className="text-center text-gray-700">{settings.phone}</div>
 
-        <hr className="my-2 border-gray-300 dark:border-gray-600" />
+        <hr className="my-2 border-gray-300" />
 
         {/* 📄 Invoice Meta */}
-        <div className="grid grid-cols-2 gap-1 text-xs dark:text-gray-300">
+        <div className="grid grid-cols-2 gap-1 text-xs text-gray-700">
           <div>
             Service Invoice #:{" "}
             <span className="font-bold">{invoiceNumber || transactionId}</span>
@@ -113,7 +113,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
 
           <div className="col-span-2 flex justify-between">
             <span>Due Date to Claim:</span>
-            <span className="font-bold text-red-600 dark:text-red-400">
+            <span className="font-bold text-red-600">
               {formatDate(dueDate)}
             </span>
           </div>
@@ -126,14 +126,14 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
           </div>
         </div>
 
-        <hr className="my-2 border-gray-300 dark:border-gray-600" />
+        <hr className="my-2 border-gray-300" />
 
         {/* 📋 Itemized Breakdown */}
-        <div className="space-y-1 dark:text-white">
+        <div className="space-y-1 text-gray-900">
           {consumables.map((item) => (
             <div key={item.name} className="flex justify-between">
               <span>
-                {item.name} × {item.quantity}
+                {item.name}: {item.quantity}
               </span>
               <span>
                 {formatCurrency((item.price || 0) * (item.quantity || 0))}
@@ -141,34 +141,34 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
             </div>
           ))}
           <div className="flex justify-between">
-            <span>Loads × {loads}</span>
+            <span>Loads: {loads}</span>
             <span>{formatCurrency(loadsTotal)}</span>
           </div>
         </div>
 
-        <hr className="my-2 border-gray-300 dark:border-gray-600" />
+        <hr className="my-2 border-gray-300" />
 
         {/* 💰 Total */}
-        <div className="flex justify-between font-bold dark:text-white">
+        <div className="flex justify-between font-bold text-gray-900">
           <span>Total</span>
           <span>{formatCurrency(finalTotal)}</span>
         </div>
 
         {/* 💳 Payment Summary */}
-        <hr className="my-2 border-gray-300 dark:border-gray-600" />
-        <div className="flex justify-between dark:text-white">
+        <hr className="my-2 border-gray-300" />
+        <div className="flex justify-between text-gray-900">
           <span>Amount Given</span>
           <span>{formatCurrency(amountGiven)}</span>
         </div>
-        <div className="flex justify-between dark:text-white">
+        <div className="flex justify-between text-gray-900">
           <span>Change</span>
           <span>{formatCurrency(change)}</span>
         </div>
 
         {/* 📜 Terms & Conditions */}
-        <hr className="my-2 border-gray-300 dark:border-gray-600" />
-        <div className="mt-2 text-xs text-slate-600 dark:text-gray-300">
-          <strong className="mb-1 block text-sm text-slate-700 dark:text-slate-200">
+        <hr className="my-2 border-gray-300" />
+        <div className="mt-2 text-xs text-gray-600">
+          <strong className="mb-1 block text-sm text-gray-700">
             Terms & Conditions
           </strong>
           <p>
@@ -201,13 +201,13 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
               </div>
             )}
 
-            <div className="mt-1 text-center text-xs dark:text-gray-300 print:hidden">
+            <div className="mt-1 text-center text-xs text-gray-600 print:hidden">
               Scan to track your laundry status
             </div>
           </>
         )}
 
-        <div className="mt-2 text-center text-xs dark:text-gray-300">
+        <div className="mt-2 text-center text-xs text-gray-600">
           {settings.footerNote}
         </div>
 
@@ -216,7 +216,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
           <button
             aria-label="Print invoice"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded bg-blue-500 px-4 py-2 text-white shadow-md transition-transform hover:scale-105 hover:bg-blue-600 dark:bg-blue-700 dark:hover:bg-blue-600"
+            className="inline-flex items-center gap-2 rounded bg-blue-500 px-4 py-2 text-white shadow-md transition-transform hover:scale-105 hover:bg-blue-600"
           >
             <Printer size={16} />
             Print Invoice

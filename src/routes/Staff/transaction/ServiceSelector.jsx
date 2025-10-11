@@ -12,21 +12,30 @@ import {
 const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
   return (
     <div className="space-y-2 pt-4">
-      <Label className="mb-1 block">Service Type</Label>
+      <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>Service Type</Label>
       <Select
         value={serviceId}
         onValueChange={(value) => onChange("serviceId", value)}
         disabled={isLocked}
       >
-        <SelectTrigger className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950">
+        <SelectTrigger className="rounded-lg border-2 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      style={{
+                        borderColor: 'rgb(11, 43, 38)',
+                        backgroundColor: 'rgb(255, 255, 255)',
+                        color: 'rgb(11, 43, 38)'
+                      }}>
           <SelectValue placeholder="Select service" />
         </SelectTrigger>
-        <SelectContent className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
+        <SelectContent className="rounded-lg border-2 bg-white text-slate-900"
+                      style={{
+                        borderColor: 'rgb(11, 43, 38)',
+                        backgroundColor: 'rgb(255, 255, 255)'
+                      }}>
           {services.map((service) => (
             <SelectItem
               key={service.id}
               value={service.id}
-              className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="cursor-pointer hover:bg-slate-100"
             >
               {service.name}
             </SelectItem>

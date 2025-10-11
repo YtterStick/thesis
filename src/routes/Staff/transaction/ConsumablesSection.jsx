@@ -12,7 +12,7 @@ const ConsumablesSection = ({
   plasticOverrides,
   setPlasticOverrides,
   supplySource,
-  isLocked, // ✅ added
+  isLocked,
 }) => {
   const plasticItems = stockItems.filter((item) =>
     item.name.toLowerCase().includes("plastic")
@@ -63,7 +63,7 @@ const ConsumablesSection = ({
 
   const renderInput = (item, isPlastic = false) => (
     <div key={item.id}>
-      <Label className="mb-1 block">{item.name}</Label>
+      <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>{item.name}</Label>
       <Input
         type="number"
         inputMode="numeric"
@@ -80,8 +80,13 @@ const ConsumablesSection = ({
             onConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
           }
         }}
-        disabled={isLocked} // ✅ lock input
-        className="input"
+        disabled={isLocked}
+        className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
+        style={{
+          borderColor: 'rgb(11, 43, 38)',
+          backgroundColor: 'rgb(255, 255, 255)',
+          color: 'rgb(11, 43, 38)'
+        }}
       />
     </div>
   );
@@ -91,7 +96,7 @@ const ConsumablesSection = ({
       {/* 🔁 Loads + Plastic Items */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="mb-1 block">Loads</Label>
+          <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>Loads</Label>
           <Input
             type="number"
             inputMode="numeric"
@@ -107,8 +112,13 @@ const ConsumablesSection = ({
               onLoadsChange(isNaN(numeric) || numeric < 1 ? 1 : numeric);
             }}
             required
-            disabled={isLocked} // ✅ lock input
-            className="input"
+            disabled={isLocked}
+            className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
+            style={{
+              borderColor: 'rgb(11, 43, 38)',
+              backgroundColor: 'rgb(255, 255, 255)',
+              color: 'rgb(11, 43, 38)'
+            }}
           />
         </div>
 

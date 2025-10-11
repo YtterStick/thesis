@@ -148,7 +148,7 @@ const MainPage = () => {
     };
 
     return (
-        <main className="bg-white p-6 text-slate-900 dark:bg-slate-950 dark:text-white">
+        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
             <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
                 <TransactionForm
                     ref={formRef}
@@ -180,18 +180,28 @@ const MainPage = () => {
                 )}
             </div>
 
-            {errorMessage && <div className="mt-6 text-sm text-red-600 dark:text-red-400">❌ {errorMessage}</div>}
+            {errorMessage && (
+                <div className="mt-6 text-sm text-red-600 dark:text-red-400">
+                    ❌ {errorMessage}
+                </div>
+            )}
 
             {showActions && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm print:hidden">
-                    <div className="w-full max-w-sm space-y-4 rounded-lg border border-slate-300 bg-white p-6 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                    <div className="w-full max-w-sm space-y-4 rounded-xl border-2 p-6 transition-all"
+                         style={{
+                             borderColor: 'rgb(11, 43, 38)',
+                             backgroundColor: 'rgb(243, 237, 227)',
+                             color: 'rgb(11, 43, 38)'
+                         }}>
                         <div className="text-center text-base font-semibold">Transaction Complete</div>
-                        <Separator className="bg-slate-200 dark:bg-slate-700" />
+                        <Separator style={{ backgroundColor: 'rgb(11, 43, 38)' }} />
                         <div className="flex justify-center gap-3">
                             <Button
                                 variant="ghost"
                                 onClick={handleStartNew}
-                                className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                                className="flex items-center gap-2 text-sm font-medium hover:text-blue-600"
+                                style={{ color: 'rgb(11, 43, 38)' }}
                             >
                                 <RotateCcw className="h-4 w-4" />
                                 Start New
@@ -199,7 +209,8 @@ const MainPage = () => {
                             <Button
                                 variant="ghost"
                                 onClick={handleCancel}
-                                className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-red-600 dark:text-slate-300 dark:hover:text-red-400"
+                                className="flex items-center gap-2 text-sm font-medium hover:text-red-600"
+                                style={{ color: 'rgb(11, 43, 38)' }}
                             >
                                 <XCircle className="h-4 w-4" />
                                 Cancel
@@ -208,7 +219,7 @@ const MainPage = () => {
                     </div>
                 </div>
             )}
-        </main>
+        </div>
     );
 };
 

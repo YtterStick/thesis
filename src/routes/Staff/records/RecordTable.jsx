@@ -8,7 +8,7 @@ import PrintableReceipt from "@/components/PrintableReceipt";
 
 const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Fabric", "Price", "Date", "Pickup", "Actions"];
 
-const renderStatusBadge = (status, isExpired) => {
+const renderStatusBadge = (status, isExpired, isDarkMode) => {
     // If expired, override the status to show as expired
     if (isExpired) {
         return (
@@ -18,7 +18,16 @@ const renderStatusBadge = (status, isExpired) => {
                         <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
                     </span>
                 </TooltipTrigger>
-                <TooltipContent side="top">Past Due</TooltipContent>
+                <TooltipContent 
+                    side="top"
+                    style={{
+                        backgroundColor: isDarkMode ? '#0B2B26' : '#FFFFFF',
+                        color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                        borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26',
+                    }}
+                >
+                    Past Due
+                </TooltipContent>
             </Tooltip>
         );
     }
@@ -35,12 +44,21 @@ const renderStatusBadge = (status, isExpired) => {
             <TooltipTrigger asChild>
                 <span className="inline-flex items-center justify-center">{icon}</span>
             </TooltipTrigger>
-            <TooltipContent side="top">{status.charAt(0) + status.slice(1).toLowerCase()}</TooltipContent>
+            <TooltipContent 
+                side="top"
+                style={{
+                    backgroundColor: isDarkMode ? '#0B2B26' : '#FFFFFF',
+                    color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                    borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26',
+                }}
+            >
+                {status.charAt(0) + status.slice(1).toLowerCase()}
+            </TooltipContent>
         </Tooltip>
     ) : null;
 };
 
-const RecordTable = ({ items = [] }) => {
+const RecordTable = ({ items = [], isDarkMode }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [showCalendar, setShowCalendar] = useState(false);
@@ -67,12 +85,27 @@ const RecordTable = ({ items = [] }) => {
     }, []);
 
     const isInRange = (dateStr) => {
+        if (!dateStr) return false;
+        
         const created = new Date(dateStr);
+        created.setHours(0, 0, 0, 0);
+        
+        // Add null checks for selectedRange
         const from = selectedRange?.from ? new Date(selectedRange.from) : null;
         const to = selectedRange?.to ? new Date(selectedRange.to) : null;
-        if (from && to) return created >= from && created <= to;
-        if (from) return created >= from;
-        if (to) return created <= to;
+        
+        if (from) from.setHours(0, 0, 0, 0);
+        if (to) to.setHours(23, 59, 59, 999);
+
+        if (from && to) {
+            return created >= from && created <= to;
+        }
+        if (from) {
+            return created >= from;
+        }
+        if (to) {
+            return created <= to;
+        }
         return true;
     };
 
@@ -134,6 +167,22 @@ const RecordTable = ({ items = [] }) => {
         setSelectedRange({ from: null, to: null });
     };
 
+    const formatDateRange = () => {
+        // Add null check for selectedRange
+        if (!selectedRange) return "Date Range";
+        
+        if (selectedRange.from && selectedRange.to) {
+            return `${format(selectedRange.from, "MMM dd, yyyy")} - ${format(selectedRange.to, "MMM dd, yyyy")}`;
+        }
+        if (selectedRange.from) {
+            return `From ${format(selectedRange.from, "MMM dd, yyyy")}`;
+        }
+        if (selectedRange.to) {
+            return `Until ${format(selectedRange.to, "MMM dd, yyyy")}`;
+        }
+        return "Date Range";
+    };
+
     return (
         <TooltipProvider>
             <div className="flex flex-col gap-6">
@@ -141,10 +190,14 @@ const RecordTable = ({ items = [] }) => {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="w-full max-w-xs flex-1">
                         <div className="relative w-full max-w-xs">
-                            <div className="flex h-[38px] items-center rounded-md border border-slate-300 bg-white px-3 focus-within:ring-2 focus-within:ring-cyan-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:focus-within:ring-cyan-400 dark:focus-within:ring-offset-slate-950">
+                            <div className="flex h-[38px] items-center rounded-lg border-2 px-3 transition-all"
+                                 style={{
+                                     backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                 }}>
                                 <Search
                                     size={16}
-                                    className="text-slate-400 dark:text-slate-500"
+                                    style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}
                                 />
                                 <input
                                     type="text"
@@ -154,7 +207,10 @@ const RecordTable = ({ items = [] }) => {
                                         setCurrentPage(1);
                                     }}
                                     placeholder="Search by name"
-                                    className="w-full bg-transparent px-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none dark:text-white dark:placeholder:text-slate-500"
+                                    className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
+                                    style={{
+                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    }}
                                 />
                             </div>
                         </div>
@@ -167,17 +223,29 @@ const RecordTable = ({ items = [] }) => {
                     >
                         <Button
                             onClick={() => setShowCalendar((p) => !p)}
-                            className="bg-[#0891B2] text-white hover:bg-[#0E7490]"
+                            className="transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                color: "#F3EDE3",
+                            }}
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" /> 
-                            {selectedRange.from || selectedRange.to ? "Filtered" : "Date Range"}
+                            {formatDateRange()}
                         </Button>
                         {showCalendar && (
-                            <div className="absolute right-0 z-50 mt-2 rounded-md border bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                            <div className="absolute right-0 z-50 mt-2 rounded-lg border-2 p-2 shadow-lg"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                }}>
                                 <Calendar
                                     mode="range"
                                     selected={selectedRange}
-                                    onSelect={setSelectedRange}
+                                    onSelect={(range) => {
+                                        // Ensure range is always an object with from and to properties
+                                        setSelectedRange(range || { from: null, to: null });
+                                    }}
+                                    isDarkMode={isDarkMode}
                                     className="max-w-[350px] text-xs [&_button]:h-7 [&_button]:w-7 [&_button]:text-[11px] [&_td]:p-1 [&_thead_th]:text-[11px]"
                                 />
                                 {(selectedRange.from || selectedRange.to) && (
@@ -185,7 +253,11 @@ const RecordTable = ({ items = [] }) => {
                                         variant="outline"
                                         size="sm"
                                         onClick={clearDateFilter}
-                                        className="mt-2 w-full"
+                                        className="mt-2 w-full transition-all"
+                                        style={{
+                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        }}
                                     >
                                         Clear Filter
                                     </Button>
@@ -196,20 +268,34 @@ const RecordTable = ({ items = [] }) => {
                 </div>
 
                 {/* 📊 Table */}
-                <div className="overflow-x-auto rounded-md border border-slate-300 dark:border-slate-700">
+                <div className="overflow-x-auto rounded-lg border-2"
+                     style={{
+                         borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                     }}>
                     <table className="min-w-full table-auto text-sm">
-                        <thead className="bg-slate-100 dark:bg-slate-800">
+                        <thead style={{
+                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        }}>
                             <tr>
                                 {tableHeaders.map((header) => (
                                     <th
                                         key={header}
-                                        className={`px-3 py-2 text-left text-xs font-medium text-slate-600 dark:text-slate-300 ${
-                                            header === "Date" ? "cursor-pointer" : ""
+                                        className={`px-3 py-2 text-left text-xs font-medium ${
+                                            header === "Date" ? "cursor-pointer hover:opacity-80 transition-opacity" : ""
                                         }`}
+                                        style={{
+                                            color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        }}
                                         onClick={header === "Date" ? () => setSortOrder((prev) => (prev === "asc" ? "desc" : "asc")) : undefined}
                                     >
-                                        {header}
-                                        {header === "Date" && <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>}
+                                        <div className="flex items-center">
+                                            {header}
+                                            {header === "Date" && (
+                                                <span className="ml-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                    {sortOrder === "asc" ? "↑" : "↓"}
+                                                </span>
+                                            )}
+                                        </div>
                                     </th>
                                 ))}
                             </tr>
@@ -219,17 +305,24 @@ const RecordTable = ({ items = [] }) => {
                                 <tr>
                                     <td
                                         colSpan={tableHeaders.length}
-                                        className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
+                                        className="px-4 py-6 text-center text-sm"
+                                        style={{
+                                            color: isDarkMode ? '#6B7280' : '#0B2B26/70',
+                                        }}
                                     >
                                         <div className="flex flex-col items-center gap-2">
-                                            <AlertCircle className="h-5 w-5 text-slate-400" />
+                                            <AlertCircle style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} className="h-5 w-5" />
                                             <span>No records found.</span>
-                                            {(searchTerm || selectedRange.from || selectedRange.to) && (
+                                            {(searchTerm || selectedRange?.from || selectedRange?.to) && (
                                                 <Button
                                                     variant="ghost"
                                                     onClick={() => {
                                                         setSearchTerm("");
                                                         setSelectedRange({ from: null, to: null });
+                                                    }}
+                                                    className="transition-all"
+                                                    style={{
+                                                        color: isDarkMode ? '#13151B' : '#0B2B26',
                                                     }}
                                                 >
                                                     Clear filters
@@ -242,23 +335,41 @@ const RecordTable = ({ items = [] }) => {
                                 paginated.map((record, idx) => (
                                     <tr
                                         key={idx}
-                                        className="border-t border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                                        className="border-t transition-all hover:opacity-90"
+                                        style={{
+                                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                        }}
                                     >
-                                        <td className="px-3 py-2">{record.name}</td>
-                                        <td className="px-3 py-2">{record.service}</td>
-                                        <td className="px-3 py-2">{record.loads}</td>
-                                        <td className="px-3 py-2">{record.detergent}</td>
-                                        <td className="px-3 py-2">{record.fabric}</td>
-                                        <td className="px-3 py-2">₱{record.price}</td>
-                                        <td className="px-3 py-2">
+                                        <td className="px-3 py-2 font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            {record.name}
+                                        </td>
+                                        <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            {record.service}
+                                        </td>
+                                        <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            {record.loads}
+                                        </td>
+                                        <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            {record.detergent}
+                                        </td>
+                                        <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            {record.fabric}
+                                        </td>
+                                        <td className="px-3 py-2 font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            ₱{record.price.toFixed(2)}
+                                        </td>
+                                        <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                                             {record.createdAt && !isNaN(new Date(record.createdAt))
                                                 ? format(new Date(record.createdAt), "MMM dd, yyyy")
                                                 : "—"}
                                         </td>
-                                        <td className="p-2 text-slate-600 dark:text-slate-300">
+                                        <td className="p-2">
                                             <div className="flex items-center gap-2">
-                                                <span>{record.expired ? "Past Due" : record.pickupStatus}</span>
-                                                {renderStatusBadge(record.pickupStatus, record.expired)}
+                                                <span style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                    {record.expired ? "Past Due" : record.pickupStatus}
+                                                </span>
+                                                {renderStatusBadge(record.pickupStatus, record.expired, isDarkMode)}
                                             </div>
                                         </td>
                                         <td className="p-2">
@@ -267,12 +378,22 @@ const RecordTable = ({ items = [] }) => {
                                                     <button
                                                         onClick={() => handlePrint(record)}
                                                         disabled={isPrinting}
-                                                        className="rounded-md bg-slate-100 p-2 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
+                                                        className="rounded-lg p-2 transition-all hover:opacity-80 disabled:opacity-50"
+                                                        style={{
+                                                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                                        }}
                                                     >
-                                                        <Printer className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                                                        <Printer className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
                                                     </button>
                                                 </TooltipTrigger>
-                                                <TooltipContent side="top">
+                                                <TooltipContent 
+                                                    side="top"
+                                                    style={{
+                                                        backgroundColor: isDarkMode ? '#0B2B26' : '#FFFFFF',
+                                                        color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                                                        borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26',
+                                                    }}
+                                                >
                                                     {isPrinting ? "Printing..." : "Print Receipt"}
                                                 </TooltipContent>
                                             </Tooltip>
@@ -293,15 +414,19 @@ const RecordTable = ({ items = [] }) => {
                             className={`rounded px-3 py-1 transition-colors ${
                                 currentPage === 1
                                     ? "cursor-not-allowed opacity-50"
-                                    : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
+                                    : "hover:opacity-80"
                             }`}
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                color: "#F3EDE3",
+                            }}
                         >
                             Prev
                         </button>
 
-                        <span className="font-medium text-slate-600 dark:text-slate-300">
-                            Page <span className="text-cyan-600 dark:text-cyan-400">{currentPage}</span> of{" "}
-                            <span className="text-cyan-600 dark:text-cyan-400">{totalPages}</span>
+                        <span className="font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            Page <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{currentPage}</span> of{" "}
+                            <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{totalPages}</span>
                         </span>
 
                         <button
@@ -310,8 +435,12 @@ const RecordTable = ({ items = [] }) => {
                             className={`rounded px-3 py-1 transition-colors ${
                                 currentPage === totalPages
                                     ? "cursor-not-allowed opacity-50"
-                                    : "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900 dark:text-cyan-300 dark:hover:bg-cyan-800"
+                                    : "hover:opacity-80"
                             }`}
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                color: "#F3EDE3",
+                            }}
                         >
                             Next
                         </button>

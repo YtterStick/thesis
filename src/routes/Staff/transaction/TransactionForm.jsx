@@ -1,4 +1,4 @@
-import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,43 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import PaymentSection from "./PaymentSection";
 import ServiceSelector from "./ServiceSelector";
 import ConsumablesSection from "./ConsumablesSection";
+
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
+const POLLING_INTERVAL = 60000; // 1 minute polling
+
+// Cache initialization
+const initializeCache = () => {
+  try {
+    const stored = localStorage.getItem('transactionFormCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        console.log("📦 Initializing transaction form from stored cache");
+        return parsed;
+      } else {
+        console.log("🗑️ Stored transaction form cache expired");
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load transaction form cache from storage:', error);
+  }
+  return null;
+};
+
+// Global cache instance
+let transactionFormCache = initializeCache();
+let cacheTimestamp = transactionFormCache?.timestamp || null;
+
+const saveCacheToStorage = (data) => {
+  try {
+    localStorage.setItem('transactionFormCache', JSON.stringify({
+      ...data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save transaction form cache to storage:', error);
+  }
+};
 
 const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, isLocked }, ref) => {
     const [form, setForm] = useState({
@@ -28,7 +65,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const [services, setServices] = useState([]);
     const [stockItems, setStockItems] = useState([]);
     const [paymentMethods, setPaymentMethods] = useState(["Cash"]);
+    const [initialLoad, setInitialLoad] = useState(!transactionFormCache);
     const { toast } = useToast();
+    const pollingIntervalRef = useRef(null);
+    const isMountedRef = useRef(true);
 
     const handleChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -38,9 +78,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     };
 
-    // Function to validate and handle name input
     const handleNameChange = (value) => {
-        // Remove any numbers from the input
         const cleanedValue = value.replace(/[0-9]/g, '');
         handleChange("name", cleanedValue);
     };
@@ -68,7 +106,59 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         },
     }));
 
-    useEffect(() => {
+    const hasDataChanged = (newData, oldData) => {
+        if (!oldData) return true;
+        
+        return (
+            JSON.stringify(newData.services) !== JSON.stringify(oldData.services) ||
+            JSON.stringify(newData.stockItems) !== JSON.stringify(oldData.stockItems) ||
+            JSON.stringify(newData.paymentMethods) !== JSON.stringify(oldData.paymentMethods)
+        );
+    };
+
+    const fetchData = useCallback(async (forceRefresh = false) => {
+        if (!isMountedRef.current) return;
+
+        try {
+            const now = Date.now();
+            
+            if (!forceRefresh && transactionFormCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+                console.log("📦 Using cached transaction form data");
+                
+                const cachedData = transactionFormCache.data;
+                setServices(cachedData.services || []);
+                setStockItems(cachedData.stockItems || []);
+                setPaymentMethods(cachedData.paymentMethods || ["Cash"]);
+                
+                if (cachedData.services.length > 0) {
+                    setForm((prev) => ({ 
+                        ...prev, 
+                        serviceId: prev.serviceId || cachedData.services[0]?.id || "" 
+                    }));
+                }
+                
+                setInitialLoad(false);
+                return;
+            }
+
+            await fetchFreshData();
+        } catch (error) {
+            console.error('Error in fetchData:', error);
+            if (!isMountedRef.current) return;
+            
+            if (transactionFormCache) {
+                console.log("⚠️ Fetch failed, falling back to cached data");
+                const cachedData = transactionFormCache.data;
+                setServices(cachedData.services || []);
+                setStockItems(cachedData.stockItems || []);
+                setPaymentMethods(cachedData.paymentMethods || ["Cash"]);
+            }
+            setInitialLoad(false);
+        }
+    }, []);
+
+    const fetchFreshData = async () => {
+        console.log("🔄 Fetching fresh transaction form data");
         const token = localStorage.getItem("authToken");
         if (!token || typeof token !== "string" || !token.includes(".")) {
             toast({
@@ -80,83 +170,139 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             return;
         }
 
-        const fetchServices = async () => {
-            try {
-                const res = await fetch("http://localhost:8080/api/services", {
+        try {
+            const [servicesRes, stockRes, paymentRes] = await Promise.all([
+                fetch("http://localhost:8080/api/services", {
                     headers: {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${token}`,
                     },
-                });
-                const data = await res.json();
-                setServices(data);
-                if (data.length > 0) {
-                    setForm((prev) => ({ ...prev, serviceId: data[0].id }));
+                }),
+                fetch("http://localhost:8080/api/stock", {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                }),
+                fetch("http://localhost:8080/api/payment-settings", {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                })
+            ]);
+
+            if (!servicesRes.ok || !stockRes.ok) {
+                throw new Error("Failed to fetch data");
+            }
+
+            const servicesData = await servicesRes.json();
+            const stockData = await stockRes.json();
+            const safeStockItems = Array.isArray(stockData) ? stockData : (stockData.items ?? []);
+
+            let paymentMethodsData = ["Cash"];
+            if (paymentRes.ok) {
+                const paymentData = await paymentRes.json();
+                if (paymentData.gcashEnabled) {
+                    paymentMethodsData.push("GCash");
                 }
-            } catch {
-                toast({
-                    title: "Service Fetch Error",
-                    description: "Unable to load service list.",
-                    variant: "destructive",
-                });
             }
-        };
 
-        const fetchStockItems = async () => {
-            try {
-                const res = await fetch("http://localhost:8080/api/stock", {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-                const data = await res.json();
-                const safeItems = Array.isArray(data) ? data : (data.items ?? []);
-                setStockItems(safeItems);
-                const initial = {};
-                safeItems.forEach((item) => {
-                    initial[item.name] = item.name.toLowerCase().includes("plastic") ? loads : 0;
-                });
-                setConsumables(initial);
-            } catch {
-                toast({
-                    title: "Inventory Fetch Error",
-                    description: "Unable to load consumables.",
-                    variant: "destructive",
-                });
+            const newData = {
+                services: servicesData,
+                stockItems: safeStockItems,
+                paymentMethods: paymentMethodsData,
+            };
+
+            const currentTime = Date.now();
+
+            if (!transactionFormCache || hasDataChanged(newData, transactionFormCache.data)) {
+                console.log("🔄 Transaction form data updated with fresh data");
+                
+                transactionFormCache = {
+                    data: newData,
+                    timestamp: currentTime
+                };
+                cacheTimestamp = currentTime;
+                saveCacheToStorage(transactionFormCache);
+            } else {
+                console.log("✅ No changes in transaction form data, updating timestamp only");
+                cacheTimestamp = currentTime;
+                transactionFormCache.timestamp = currentTime;
+                saveCacheToStorage(transactionFormCache);
             }
-        };
 
-        const fetchPaymentSettings = async () => {
-            try {
-                const res = await fetch("http://localhost:8080/api/payment-settings", {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const methods = ["Cash"];
-                    if (data.gcashEnabled) {
-                        methods.push("GCash");
-                    }
-                    setPaymentMethods(methods);
-
-                    if (form.paymentMethod === "GCash" && !data.gcashEnabled) {
-                        setForm((prev) => ({ ...prev, paymentMethod: "Cash" }));
-                    }
+            if (isMountedRef.current) {
+                setServices(servicesData);
+                setStockItems(safeStockItems);
+                setPaymentMethods(paymentMethodsData);
+                
+                if (servicesData.length > 0) {
+                    setForm((prev) => ({ 
+                        ...prev, 
+                        serviceId: prev.serviceId || servicesData[0]?.id || "" 
+                    }));
                 }
-            } catch (error) {
-                console.error("Failed to fetch payment settings:", error);
+                
+                const initialConsumables = {};
+                safeStockItems.forEach((item) => {
+                    initialConsumables[item.name] = item.name.toLowerCase().includes("plastic") ? loads : 0;
+                });
+                setConsumables(initialConsumables);
+                
+                setInitialLoad(false);
+            }
+
+        } catch (error) {
+            console.error("Failed to fetch data:", error);
+            toast({
+                title: "Data Fetch Error",
+                description: "Unable to load required data.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        
+        if (transactionFormCache) {
+            console.log("🚀 Showing cached transaction form data immediately");
+            const cachedData = transactionFormCache.data;
+            setServices(cachedData.services || []);
+            setStockItems(cachedData.stockItems || []);
+            setPaymentMethods(cachedData.paymentMethods || ["Cash"]);
+            
+            if (cachedData.services.length > 0) {
+                setForm((prev) => ({ 
+                    ...prev, 
+                    serviceId: prev.serviceId || cachedData.services[0]?.id || "" 
+                }));
+            }
+            
+            const initialConsumables = {};
+            cachedData.stockItems.forEach((item) => {
+                initialConsumables[item.name] = item.name.toLowerCase().includes("plastic") ? loads : 0;
+            });
+            setConsumables(initialConsumables);
+            
+            setInitialLoad(false);
+        }
+        
+        fetchData();
+        
+        pollingIntervalRef.current = setInterval(() => {
+            console.log("🔄 Auto-refreshing transaction form data...");
+            fetchData(false);
+        }, POLLING_INTERVAL);
+        
+        return () => {
+            isMountedRef.current = false;
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
             }
         };
-
-        fetchServices();
-        fetchStockItems();
-        fetchPaymentSettings();
-    }, []);
+    }, [fetchData]);
 
     useEffect(() => {
         if (!stockItems.length) return;
@@ -229,7 +375,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             return;
         }
 
-        // Validate name doesn't contain numbers
         const nameHasNumbers = /[0-9]/.test(form.name);
         if (nameHasNumbers) {
             toast({
@@ -250,7 +395,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             return;
         }
 
-        // Add validation for GCash reference
         if (form.paymentMethod === "GCash") {
             if (!form.gcashReference) {
                 toast({
@@ -261,7 +405,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 return;
             }
 
-            // Validate that reference is numeric
             if (!/^\d+$/.test(form.gcashReference)) {
                 toast({
                     title: "Invalid GCash Reference",
@@ -271,7 +414,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 return;
             }
 
-            // Validate exact amount for GCash
             if (parseFloat(form.amountGiven || 0) !== totalAmount) {
                 toast({
                     title: "Invalid Amount for GCash",
@@ -328,9 +470,14 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     };
 
     return (
-        <Card className="card max-h-[620px] overflow-y-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
+        <Card className="rounded-xl border-2 transition-all"
+              style={{
+                  borderColor: 'rgb(11, 43, 38)',
+                  backgroundColor: 'rgb(243, 237, 227)'
+              }}>
             <CardHeader className="pb-1">
-                <CardTitle className="flex items-center gap-2 text-base text-slate-800 dark:text-slate-100">
+                <CardTitle className="flex items-center gap-2 text-base"
+                          style={{ color: 'rgb(11, 43, 38)' }}>
                     <Receipt size={18} />
                     New Transaction
                 </CardTitle>
@@ -343,19 +490,24 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 >
                     {/* 👤 Customer Info */}
                     <div>
-                        <Label className="mb-1 block">Name</Label>
+                        <Label className="mb-1 mt-4 block" style={{ color: 'rgb(11, 43, 38)' }}>Name</Label>
                         <Input
                             placeholder="Customer Name"
                             value={form.name}
                             onChange={(e) => handleNameChange(e.target.value)}
                             required
                             disabled={isLocked}
-                            className="input"
+                            className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
+                            style={{
+                                borderColor: 'rgb(11, 43, 38)',
+                                backgroundColor: 'rgb(255, 255, 255)',
+                                color: 'rgb(11, 43, 38)'
+                            }}
                         />
                     </div>
 
                     <div>
-                        <Label className="mb-1 block">Contact Number</Label>
+                        <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>Contact Number</Label>
                         <Input
                             type="tel"
                             inputMode="numeric"
@@ -371,7 +523,12 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                             }}
                             required
                             disabled={isLocked}
-                            className="input"
+                            className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
+                            style={{
+                                borderColor: 'rgb(11, 43, 38)',
+                                backgroundColor: 'rgb(255, 255, 255)',
+                                color: 'rgb(11, 43, 38)'
+                            }}
                         />
                     </div>
 
@@ -385,25 +542,34 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
                     {/* 🧺 Supply Source Selector */}
                     <div className="space-y-2 pt-4">
-                        <Label className="mb-1 block">Supply Source</Label>
+                        <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>Supply Source</Label>
                         <Select
                             value={supplySource}
                             onValueChange={setSupplySource}
                             disabled={isLocked}
                         >
-                            <SelectTrigger className="border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
+                            <SelectTrigger className="rounded-lg border-2 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                          style={{
+                                              borderColor: 'rgb(11, 43, 38)',
+                                              backgroundColor: 'rgb(255, 255, 255)',
+                                              color: 'rgb(11, 43, 38)'
+                                          }}>
                                 <SelectValue placeholder="Select source" />
                             </SelectTrigger>
-                            <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            <SelectContent className="rounded-lg border-2 bg-white text-slate-900"
+                                          style={{
+                                              borderColor: 'rgb(11, 43, 38)',
+                                              backgroundColor: 'rgb(255, 255, 255)'
+                                          }}>
                                 <SelectItem
                                     value="in-store"
-                                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    className="cursor-pointer hover:bg-slate-100"
                                 >
                                     In-store
                                 </SelectItem>
                                 <SelectItem
                                     value="customer"
-                                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    className="cursor-pointer hover:bg-slate-100"
                                 >
                                     Customer-provided
                                 </SelectItem>
@@ -440,7 +606,11 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                     <Button
                         type="submit"
                         disabled={isSubmitting || isLocked}
-                        className="mt-2 w-full rounded-md bg-[#60A5FA] px-4 py-2 text-white transition-colors hover:bg-[#3B82F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+                        className="mt-2 w-full rounded-lg px-4 py-2 text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 hover:scale-105 transition-transform"
+                        style={{
+                            backgroundColor: 'rgb(11, 43, 38)',
+                            color: 'rgb(243, 237, 227)'
+                        }}
                     >
                         {isSubmitting ? "Processing..." : "Save Transaction"}
                     </Button>

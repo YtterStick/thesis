@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 import RecordTable from "./RecordTable.jsx";
-import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle } from "lucide-react";
+import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, Calendar } from "lucide-react";
 
 const MainPage = () => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
     const [records, setRecords] = useState([]);
     const [summaryData, setSummaryData] = useState({
         todayIncome: 0,
@@ -12,23 +17,35 @@ const MainPage = () => {
         expiredCount: 0,
     });
     const [loading, setLoading] = useState(true);
-    const [summaryLoading, setSummaryLoading] = useState(true);
+    const [dataLoaded, setDataLoaded] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const token = localStorage.getItem("authToken");
 
-                const recordsRes = await fetch("http://localhost:8080/api/records/staff", {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                });
+                const [recordsRes, summaryRes] = await Promise.all([
+                    fetch("http://localhost:8080/api/records/staff", {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                        },
+                    }),
+                    fetch("http://localhost:8080/api/records/staff/summary", {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                        },
+                    })
+                ]);
 
                 if (!recordsRes.ok) throw new Error("Failed to fetch records");
+                if (!summaryRes.ok) throw new Error("Failed to fetch summary data");
 
-                const recordsData = await recordsRes.json();
+                const [recordsData, summaryData] = await Promise.all([
+                    recordsRes.json(),
+                    summaryRes.json()
+                ]);
 
                 // Make sure to include the id field for the print functionality
                 const mapped = recordsData.map((r) => ({
@@ -46,28 +63,117 @@ const MainPage = () => {
                 }));
 
                 setRecords(mapped);
-
-                const summaryRes = await fetch("http://localhost:8080/api/records/staff/summary", {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                });
-
-                if (!summaryRes.ok) throw new Error("Failed to fetch summary data");
-
-                const summaryData = await summaryRes.json();
                 setSummaryData(summaryData);
+                setDataLoaded(true);
             } catch (error) {
                 console.error("❌ Data fetch error:", error);
             } finally {
-                setLoading(false);
-                setSummaryLoading(false);
+                // Small delay to ensure smooth transition
+                setTimeout(() => {
+                    setLoading(false);
+                }, 300);
             }
         };
 
         fetchData();
     }, []);
+
+    // Stable Skeleton Loader Components
+    const SkeletonCard = () => (
+        <div
+            className="rounded-xl border-2 p-5"
+            style={{
+                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            }}
+        >
+            <div className="flex items-center justify-between mb-4">
+                <div
+                    className="rounded-lg p-2"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    }}
+                >
+                    <div className="h-6 w-6"></div>
+                </div>
+                <div className="text-right">
+                    <div className="h-6 w-20 rounded"
+                         style={{
+                             backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         }} />
+                </div>
+            </div>
+            
+            <div className="flex items-center justify-between">
+                <div className="h-5 w-28 rounded"
+                     style={{
+                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }} />
+            </div>
+        </div>
+    );
+
+    const SkeletonTable = () => (
+        <div
+            className="rounded-xl border-2 p-5"
+            style={{
+                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            }}
+        >
+            <div className="flex items-center justify-between mb-4">
+                <div className="h-6 w-32 rounded"
+                     style={{
+                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }} />
+                <div className="h-4 w-24 rounded"
+                     style={{
+                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     }} />
+            </div>
+
+            {/* Table Header Skeleton */}
+            <div className="overflow-x-auto rounded-lg border-2 mb-4"
+                 style={{
+                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                 }}>
+                <div className="min-w-full">
+                    <div className="grid grid-cols-9 gap-4 p-4"
+                         style={{
+                             backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                         }}>
+                        {[...Array(9)].map((_, i) => (
+                            <div key={i} className="h-4 rounded"
+                                 style={{
+                                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                                 }} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Table Rows Skeleton */}
+            <div className="space-y-3">
+                {[...Array(5)].map((_, rowIndex) => (
+                    <div key={rowIndex} className="grid grid-cols-9 gap-4 p-4 rounded-lg border-2"
+                         style={{
+                             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                             borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                         }}>
+                        {[...Array(9)].map((_, colIndex) => (
+                            <div key={colIndex} 
+                                 className={`h-4 rounded ${
+                                     colIndex === 0 ? "w-4" : colIndex === 4 ? "w-16" : "w-full"
+                                 }`}
+                                 style={{
+                                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                 }} />
+                        ))}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 
     const summaryCards = [
         {
@@ -108,57 +214,143 @@ const MainPage = () => {
     ];
 
     return (
-        <main className="relative space-y-6 p-6">
-            {/* 🧢 Header */}
-            <div className="mb-4 flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">Staff Laundry Records</h1>
-            </div>
-
-            {/* 🎨 Summary Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                {summaryCards.map(({ label, value, icon, color, tooltip }) => (
-                    <div
-                        key={label}
-                        className="card"
-                        title={tooltip}
+        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+            {/* Header */}
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
+            >
+                <div className="flex items-center gap-3">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="rounded-lg p-2"
+                        style={{
+                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                            color: "#F3EDE3",
+                        }}
                     >
-                        <div className="card-header flex items-center gap-x-3">
-                            <div
-                                className="w-fit rounded-lg p-2"
-                                style={{
-                                    backgroundColor: `${color}33`,
-                                    color: color,
-                                }}
-                            >
-                                {icon}
-                            </div>
-                            <p className="card-title">{label}</p>
-                        </div>
-                        <div className="card-body rounded-md bg-slate-100 p-4 transition-colors dark:bg-slate-950">
-                            <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">
-                                {summaryLoading ? (
-                                    <span className="inline-block h-6 w-20 animate-pulse rounded bg-slate-300 dark:bg-slate-700" />
-                                ) : (
-                                    <>{value}</>
-                                )}
-                            </p>
-                        </div>
+                        <Package size={22} />
+                    </motion.div>
+                    <div>
+                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                            Staff Laundry Records
+                        </p>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                            Manage and track all laundry transactions
+                        </p>
                     </div>
-                ))}
+                </div>
+            </motion.div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <AnimatePresence mode="wait">
+                    {loading ? (
+                        [...Array(5)].map((_, index) => (
+                            <motion.div
+                                key={`skeleton-${index}`}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <SkeletonCard />
+                            </motion.div>
+                        ))
+                    ) : (
+                        summaryCards.map(({ label, value, icon, color, tooltip }, index) => (
+                            <motion.div
+                                key={label}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1, duration: 0.3 }}
+                                whileHover={{ 
+                                    scale: 1.03,
+                                    y: -2,
+                                    transition: { duration: 0.2 }
+                                }}
+                                className="rounded-xl border-2 p-5 transition-all cursor-pointer"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                }}
+                                title={tooltip}
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <motion.div
+                                        whileHover={{ scale: 1.1, rotate: 5 }}
+                                        className="rounded-lg p-2"
+                                        style={{
+                                            backgroundColor: `${color}20`,
+                                            color: color,
+                                        }}
+                                    >
+                                        {icon}
+                                    </motion.div>
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ delay: index * 0.2 }}
+                                        className="text-right"
+                                    >
+                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            {value}
+                                        </p>
+                                    </motion.div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        {label}
+                                    </h3>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
+                </AnimatePresence>
             </div>
 
-            {/* 📋 Record Table */}
-            <div className="card">
-                <div className="card-header justify-between">
-                    <p className="card-title">Laundry Records</p>
-                </div>
+            {/* Record Table */}
+            <AnimatePresence mode="wait">
                 {loading ? (
-                    <div className="p-6 text-center text-slate-500 dark:text-slate-400">Loading records...</div>
+                    <motion.div
+                        key="skeleton-table"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <SkeletonTable />
+                    </motion.div>
                 ) : (
-                    <RecordTable items={records} />
+                    <motion.div
+                        key="data-table"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="rounded-xl border-2 p-5 transition-all"
+                        style={{
+                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        }}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                Laundry Records
+                            </p>
+                            <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                {records.length} records found
+                            </span>
+                        </div>
+                        <RecordTable
+                            items={records}
+                            isDarkMode={isDarkMode}
+                        />
+                    </motion.div>
                 )}
-            </div>
-        </main>
+            </AnimatePresence>
+        </div>
     );
 };
 

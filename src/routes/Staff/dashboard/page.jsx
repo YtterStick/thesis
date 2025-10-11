@@ -1,362 +1,926 @@
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { PackageX, PhilippinePeso, Package, Clock8, Timer, AlertCircle } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { PackageX, PhilippinePeso, Package, Clock8, Timer, AlertCircle, LineChart } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-const StaffDashboardPage = () => {
-    const { theme } = useTheme();
-    const [dashboardData, setDashboardData] = useState({
-        todayIncome: 0,
-        todayLoads: 0,
-        unwashedCount: 0,
-        unclaimedCount: 0,
-        allMachines: [],
-        completedUnclaimedTransactions: [],
-        loading: true,
-        error: null,
-        lastUpdated: null,
-    });
+const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
+const POLLING_INTERVAL = 15000; // 15 seconds
+const ALLOWED_SKEW_MS = 5000;
 
-    const [currentTime, setCurrentTime] = useState(new Date());
+// Initialize cache properly
+const initializeCache = () => {
+  try {
+    const stored = localStorage.getItem('staffDashboardCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        console.log("📦 Initializing staff dashboard from stored cache");
+        return parsed;
+      } else {
+        console.log("🗑️ Stored staff cache expired");
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load staff cache from storage:', error);
+  }
+  return null;
+};
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
+// Global cache instance
+let staffDashboardCache = initializeCache();
+let cacheTimestamp = staffDashboardCache?.timestamp || null;
 
-        return () => clearInterval(timer);
-    }, []);
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
 
-    const fetchDashboardData = useCallback(async () => {
-        try {
-            const token = localStorage.getItem("authToken");
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
 
-            const response = await fetch("http://localhost:8080/api/dashboard/staff", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            });
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    staffDashboardCache = null;
+    cacheTimestamp = null;
+    localStorage.removeItem('staffDashboardCache');
+    window.location.href = "/login";
+    return;
+  }
 
-            if (!response.ok) {
-                throw new Error("Failed to fetch dashboard data");
-            }
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
 
-            const data = await response.json();
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
 
-            setDashboardData({
-                todayIncome: data.todayIncome || 0,
-                todayLoads: data.todayLoads || 0,
-                unwashedCount: data.unwashedCount || 0,
-                unclaimedCount: data.unclaimedCount || 0,
-                allMachines: data.allMachines || [],
-                completedUnclaimedTransactions: data.completedUnclaimedTransactions || [],
-                loading: false,
-                error: null,
-                lastUpdated: new Date(),
-            });
-        } catch (error) {
-            console.error("Error fetching dashboard data:", error);
-            setDashboardData((prev) => ({
-                ...prev,
-                loading: false,
-                error: error.message,
-            }));
-        }
-    }, []);
+  try {
+    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
 
-    useEffect(() => {
-        fetchDashboardData();
-
-        const interval = setInterval(fetchDashboardData, 15000);
-        return () => clearInterval(interval);
-    }, [fetchDashboardData]);
-
-    const formatCurrency = (amount) => {
-        return `₱${amount.toFixed(2)}`;
-    };
-
-    const getRemainingTime = (endTime) => {
-        if (!endTime) return null;
-
-        try {
-            const end = new Date(endTime);
-            const remainingMs = end.getTime() - currentTime.getTime();
-
-            if (remainingMs <= 0) return "Done";
-
-            const remainingMinutes = Math.floor(remainingMs / 60000);
-            const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
-
-            if (remainingMinutes > 0) {
-                return `${remainingMinutes}m ${remainingSeconds}s`;
-            }
-            return `${remainingSeconds}s`;
-        } catch (error) {
-            console.error("Error calculating remaining time:", error);
-            return "In Use";
-        }
-    };
-
-    const getMachineStatus = (machine) => {
-        if (machine.status === "In Use" && machine.endTime) {
-            const remaining = getRemainingTime(machine.endTime);
-            if (remaining === "Done") {
-                return "Done";
-            }
-            return remaining || "In Use";
-        }
-        return machine.status || "Available";
-    };
-
-    const getStatusColor = (status) => {
-        if (status.includes("m") || status.includes("s")) return "text-blue-600 dark:text-blue-400";
-        if (status === "In Use") return "text-orange-600 dark:text-orange-400";
-        if (status === "Available") return "text-green-600 dark:text-green-400";
-        if (status === "Maintenance") return "text-red-600 dark:text-red-400";
-        if (status === "Done") return "text-purple-600 dark:text-purple-400";
-        return "text-slate-600 dark:text-slate-400";
-    };
-
-    // Skeleton loader components
-    const SummaryCardSkeleton = () => (
-        <div className="card animate-pulse">
-            <div className="card-header flex items-center gap-x-3">
-                <div className="w-10 h-10 bg-slate-300 dark:bg-slate-700 rounded-lg"></div>
-                <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-24"></div>
-            </div>
-            <div className="card-body rounded-md bg-slate-100 p-4 dark:bg-slate-950">
-                <div className="h-8 bg-slate-300 dark:bg-slate-700 rounded"></div>
-            </div>
-        </div>
-    );
-
-    const MachineListSkeleton = () => (
-        <div className="space-y-2">
-            <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-20 mb-2"></div>
-            {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-x-2">
-                        <div className="w-5 h-5 bg-slate-300 dark:bg-slate-700 rounded"></div>
-                        <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-32"></div>
-                    </div>
-                    <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-12"></div>
-                </div>
-            ))}
-        </div>
-    );
-
-    const UnclaimedListSkeleton = () => (
-        <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between py-2">
-                    <div className="space-y-1">
-                        <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-28"></div>
-                        <div className="h-3 bg-slate-300 dark:bg-slate-700 rounded w-36"></div>
-                    </div>
-                    <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-16"></div>
-                </div>
-            ))}
-        </div>
-    );
-
-    if (dashboardData.error) {
-        return (
-            <div className="flex flex-col gap-y-4">
-                <h1 className="title">Staff Dashboard</h1>
-                <div className="flex h-64 items-center justify-center">
-                    <div className="text-center">
-                        <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-                        <p className="text-slate-600 dark:text-slate-400">Failed to load dashboard data</p>
-                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-500">Auto-retrying in 30 seconds...</p>
-                    </div>
-                </div>
-            </div>
-        );
+    if (!response.ok) {
+      console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+      throw new Error(`Request failed: ${response.status}`);
     }
 
-    const summaryCards = [
-        {
-            title: "Today's Income",
-            icon: <PhilippinePeso size={26} />,
-            value: formatCurrency(dashboardData.todayIncome),
-            color: "#3DD9B6",
-        },
-        {
-            title: "Today's Loads",
-            icon: <Package size={26} />,
-            value: dashboardData.todayLoads.toString(),
-            color: "#60A5FA",
-        },
-        {
-            title: "Unwashed",
-            icon: <Clock8 size={26} />,
-            value: dashboardData.unwashedCount.toString(),
-            color: "#FB923C",
-        },
-        {
-            title: "Unclaimed",
-            icon: <PackageX size={26} />,
-            value: dashboardData.completedUnclaimedTransactions.length.toString(),
-            color: "#F87171",
-        },
-    ];
+    const contentType = response.headers.get("content-type");
+    return contentType && contentType.includes("application/json")
+      ? response.json()
+      : response.text();
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
+  }
+};
 
-    const washers = dashboardData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "WASHER");
-    const dryers = dashboardData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "DRYER");
+// Save cache to localStorage for persistence
+const saveCacheToStorage = (data) => {
+  try {
+    localStorage.setItem('staffDashboardCache', JSON.stringify({
+      ...data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save staff cache to storage:', error);
+  }
+};
 
+const StaffDashboardPage = () => {
+  const { theme } = useTheme();
+  
+  // Calculate isDarkMode based on theme
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  // Initialize state with cached data if available
+  const [dashboardData, setDashboardData] = useState(() => {
+    if (staffDashboardCache && staffDashboardCache.data) {
+      console.log("🎯 Initializing staff state with cached data");
+      return {
+        ...staffDashboardCache.data,
+        loading: false,
+        error: null,
+        lastUpdated: new Date(staffDashboardCache.timestamp),
+        dataVersion: 0
+      };
+    }
+    
+    return {
+      todayIncome: 0,
+      todayLoads: 0,
+      unwashedCount: 0,
+      unclaimedCount: 0,
+      allMachines: [],
+      completedUnclaimedTransactions: [],
+      loading: true,
+      error: null,
+      lastUpdated: null,
+      dataVersion: 0
+    };
+  });
+
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [initialLoad, setInitialLoad] = useState(!staffDashboardCache);
+  const pollingIntervalRef = useRef(null);
+  const isMountedRef = useRef(true);
+
+  // Function to check if data has actually changed
+  const hasDataChanged = (newData, oldData) => {
+    if (!oldData) return true;
+    
     return (
-        <div className="flex flex-col gap-y-4">
-            <div className="flex items-center justify-between">
-                <h1 className="title">Staff Dashboard</h1>
-            </div>
-
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {dashboardData.loading ? (
-                    Array.from({ length: 4 }).map((_, index) => <SummaryCardSkeleton key={index} />)
-                ) : (
-                    summaryCards.map(({ title, icon, value, growth, color, growthColor }) => (
-                        <div
-                            key={title}
-                            className="card"
-                        >
-                            <div className="card-header flex items-center gap-x-3">
-                                <div
-                                    className="w-fit rounded-lg p-2"
-                                    style={{
-                                        backgroundColor: `${color}33`,
-                                        color: color,
-                                    }}
-                                >
-                                    {icon}
-                                </div>
-                                <p className="card-title">{title}</p>
-                            </div>
-                            <div className="card-body rounded-md bg-slate-100 p-4 dark:bg-slate-950">
-                                <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
-                                <p className={`text-xs font-medium ${growthColor}`}>{growth}</p>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* Machine Status + Unclaimed Transactions */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
-                {/* All Machines */}
-                <div className="card col-span-1 md:col-span-2 lg:col-span-4">
-                    <div className="card-header">
-                        <p className="card-title">All Machines Status</p>
-                        
-                    </div>
-                    <div className="card-body flex h-[360px] flex-col overflow-auto px-4 py-2">
-                        {dashboardData.loading ? (
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <MachineListSkeleton />
-                                <MachineListSkeleton />
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Washers with right border */}
-                                <div className="space-y-2 border-r border-slate-200 pr-4 dark:border-slate-700">
-                                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Washers ({washers.length})</p>
-                                    {washers.length === 0 ? (
-                                        <p className="text-sm text-slate-400 dark:text-slate-500">No washers found</p>
-                                    ) : (
-                                        washers.map((machine) => {
-                                            const status = getMachineStatus(machine);
-                                            return (
-                                                <div
-                                                    key={machine.id}
-                                                    className="flex items-center justify-between border-b border-slate-200 py-2 last:border-none dark:border-slate-700"
-                                                >
-                                                    <div className="flex items-center gap-x-2 leading-tight">
-                                                        <Timer
-                                                            size={20}
-                                                            className="text-blue-500 dark:text-blue-400"
-                                                        />
-                                                        <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                                                            {machine.name || "Unnamed Washer"}
-                                                        </p>
-                                                    </div>
-                                                    <p className={`text-sm font-medium ${getStatusColor(status)}`}>{status}</p>
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-
-                                {/* Dryers */}
-                                <div className="space-y-2 pl-4">
-                                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Dryers ({dryers.length})</p>
-                                    {dryers.length === 0 ? (
-                                        <p className="text-sm text-slate-400 dark:text-slate-500">No dryers found</p>
-                                    ) : (
-                                        dryers.map((machine) => {
-                                            const status = getMachineStatus(machine);
-                                            return (
-                                                <div
-                                                    key={machine.id}
-                                                    className="flex items-center justify-between border-b border-slate-200 py-2 last:border-none dark:border-slate-700"
-                                                >
-                                                    <div className="flex items-center gap-x-2 leading-tight">
-                                                        <Timer
-                                                            size={20}
-                                                            className="text-orange-500 dark:text-orange-400"
-                                                        />
-                                                        <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                                                            {machine.name || "Unnamed Dryer"}
-                                                        </p>
-                                                    </div>
-                                                    <p className={`text-sm font-medium ${getStatusColor(status)}`}>{status}</p>
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Unclaimed Transactions */}
-                <div className="card col-span-1 md:col-span-2 lg:col-span-3">
-                    <div className="card-header">
-                        <p className="card-title">Unclaimed</p>
-                        <span className="text-sm text-slate-500 dark:text-slate-400">
-                            {dashboardData.loading ? (
-                                <span className="inline-block h-3 bg-slate-300 dark:bg-slate-700 rounded w-28"></span>
-                            ) : (
-                                `${dashboardData.completedUnclaimedTransactions.length} unclaimed laundry`
-                            )}
-                        </span>
-                    </div>
-                    <div className="card-body flex h-[360px] flex-col overflow-auto px-4 py-2">
-                        {dashboardData.loading ? (
-                            <UnclaimedListSkeleton />
-                        ) : dashboardData.completedUnclaimedTransactions.length === 0 ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400">No unclaimed completed loads</p>
-                        ) : (
-                            dashboardData.completedUnclaimedTransactions.map((transaction) => (
-                                <div
-                                    key={transaction.id}
-                                    className="flex items-center justify-between border-b border-slate-200 py-2 last:border-none dark:border-slate-700"
-                                >
-                                    <div className="leading-tight">
-                                        <p className="text-sm font-medium text-slate-900 dark:text-slate-50">{transaction.customerName}</p>
-                                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                                            {transaction.serviceType} • {transaction.loadAssignments?.length || 0} loads
-                                        </p>
-                                    </div>
-                                    <p className="text-xs font-semibold text-orange-600 dark:text-orange-400">Unclaimed</p>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+      newData.todayIncome !== oldData.todayIncome ||
+      newData.todayLoads !== oldData.todayLoads ||
+      newData.unwashedCount !== oldData.unwashedCount ||
+      newData.unclaimedCount !== oldData.unclaimedCount ||
+      JSON.stringify(newData.allMachines) !== JSON.stringify(oldData.allMachines) ||
+      JSON.stringify(newData.completedUnclaimedTransactions) !== JSON.stringify(oldData.completedUnclaimedTransactions)
     );
+  };
+
+  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
+    if (!isMountedRef.current) return;
+
+    try {
+      const now = Date.now();
+      
+      // Check cache first unless forced refresh
+      if (!forceRefresh && staffDashboardCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+        console.log("📦 Using cached staff dashboard data");
+        
+        setDashboardData(prev => ({
+          ...staffDashboardCache.data,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(cacheTimestamp),
+          dataVersion: prev.dataVersion + 1
+        }));
+        
+        setInitialLoad(false);
+        
+        // Fetch fresh data in background if cache is older than 30 seconds
+        if (now - cacheTimestamp > 30000) {
+          console.log("🔄 Fetching fresh staff data in background");
+          fetchFreshData();
+        }
+        return;
+      }
+
+      await fetchFreshData();
+    } catch (error) {
+      console.error('Error in fetchDashboardData:', error);
+      if (!isMountedRef.current) return;
+      
+      // On error, keep cached data if available
+      if (staffDashboardCache) {
+        console.log("⚠️ Fetch failed, falling back to cached data");
+        setDashboardData(prev => ({
+          ...staffDashboardCache.data,
+          loading: false,
+          error: error.message,
+          lastUpdated: new Date(cacheTimestamp),
+          dataVersion: prev.dataVersion + 1
+        }));
+      } else {
+        setDashboardData(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message
+        }));
+      }
+      setInitialLoad(false);
+    }
+  }, []);
+
+  // Separate function for actual API call
+  const fetchFreshData = async () => {
+    console.log("🔄 Fetching fresh staff dashboard data");
+    const token = localStorage.getItem('authToken');
+    
+    if (!token || isTokenExpired(token)) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch('http://localhost:8080/api/dashboard/staff', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch dashboard data: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    const newDashboardData = {
+      todayIncome: data.todayIncome || 0,
+      todayLoads: data.todayLoads || 0,
+      unwashedCount: data.unwashedCount || 0,
+      unclaimedCount: data.unclaimedCount || 0,
+      allMachines: data.allMachines || [],
+      completedUnclaimedTransactions: data.completedUnclaimedTransactions || [],
+    };
+
+    const currentTime = Date.now();
+
+    // Only update state and cache if data has actually changed
+    if (!staffDashboardCache || hasDataChanged(newDashboardData, staffDashboardCache.data)) {
+      console.log("🔄 Staff dashboard data updated with fresh data");
+      
+      // Update cache
+      staffDashboardCache = {
+        data: newDashboardData,
+        timestamp: currentTime
+      };
+      cacheTimestamp = currentTime;
+      
+      // Persist to localStorage
+      saveCacheToStorage(staffDashboardCache);
+      
+      if (isMountedRef.current) {
+        setDashboardData({
+          ...newDashboardData,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(),
+          dataVersion: (dashboardData.dataVersion || 0) + 1
+        });
+      }
+    } else {
+      console.log("✅ No changes in staff dashboard data, updating timestamp only");
+      // Just update the timestamp to extend cache life
+      cacheTimestamp = currentTime;
+      staffDashboardCache.timestamp = currentTime;
+      saveCacheToStorage(staffDashboardCache);
+      
+      if (isMountedRef.current) {
+        setDashboardData(prev => ({
+          ...prev,
+          loading: false,
+          error: null,
+          lastUpdated: new Date()
+        }));
+      }
+    }
+
+    if (isMountedRef.current) {
+      setInitialLoad(false);
+    }
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    // Always show cached data immediately if available
+    if (staffDashboardCache) {
+      console.log("🚀 Showing cached staff data immediately");
+      setDashboardData(prev => ({
+        ...staffDashboardCache.data,
+        loading: false,
+        error: null,
+        lastUpdated: new Date(cacheTimestamp),
+        dataVersion: prev.dataVersion + 1
+      }));
+      setInitialLoad(false);
+    }
+    
+    // Then fetch fresh data
+    fetchDashboardData();
+    
+    // Set up polling with smart updates
+    pollingIntervalRef.current = setInterval(() => {
+      console.log("🔄 Auto-refreshing staff dashboard data...");
+      fetchDashboardData(false);
+    }, POLLING_INTERVAL);
+
+    // Time updater for machine countdowns
+    const timeTimer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    return () => {
+      isMountedRef.current = false;
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      clearInterval(timeTimer);
+    };
+  }, [fetchDashboardData]);
+
+  const formatCurrency = (amount) => {
+    return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+  };
+
+  const getRemainingTime = (endTime) => {
+    if (!endTime) return null;
+
+    try {
+      const end = new Date(endTime);
+      const remainingMs = end.getTime() - currentTime.getTime();
+
+      if (remainingMs <= 0) return "Done";
+
+      const remainingMinutes = Math.floor(remainingMs / 60000);
+      const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+
+      if (remainingMinutes > 0) {
+        return `${remainingMinutes}m ${remainingSeconds}s`;
+      }
+      return `${remainingSeconds}s`;
+    } catch (error) {
+      console.error("Error calculating remaining time:", error);
+      return "In Use";
+    }
+  };
+
+  const getMachineStatus = (machine) => {
+    if (machine.status === "In Use" && machine.endTime) {
+      const remaining = getRemainingTime(machine.endTime);
+      if (remaining === "Done") {
+        return "Done";
+      }
+      return remaining || "In Use";
+    }
+    return machine.status || "Available";
+  };
+
+  const getStatusColor = (status) => {
+    if (status.includes("m") || status.includes("s")) return "#3B82F6"; // blue
+    if (status === "In Use") return "#F59E0B"; // orange
+    if (status === "Available") return "#10B981"; // green
+    if (status === "Maintenance") return "#EF4444"; // red
+    if (status === "Done") return "#8B5CF6"; // purple
+    return isDarkMode ? "#9CA3AF" : "#6B7280"; // slate
+  };
+
+  // Skeleton loader components with updated colors
+  const SkeletonCard = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="flex items-center gap-x-3 mb-4">
+        <div className="w-fit rounded-lg p-2 animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}>
+          <div className="h-6 w-6"></div>
+        </div>
+        <div className="h-5 w-28 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+      <div className="rounded-lg p-3 animate-pulse"
+           style={{
+             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+           }}>
+        <div className="h-8 w-32 rounded"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+    </motion.div>
+  );
+
+  const SkeletonMachineList = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="mb-5">
+        <div className="h-6 w-44 rounded animate-pulse mb-2"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+      <div className="space-y-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-x-2">
+              <div className="w-5 h-5 bg-slate-300 dark:bg-slate-700 rounded animate-pulse"></div>
+              <div className="h-4 w-32 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+            </div>
+            <div className="h-4 w-12 rounded animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+
+  const SkeletonUnclaimedList = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border-2 p-5 transition-all"
+      style={{
+        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      }}
+    >
+      <div className="mb-5">
+        <div className="h-6 w-36 rounded animate-pulse mb-2"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+        <div className="h-4 w-44 rounded animate-pulse"
+             style={{
+               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             }}></div>
+      </div>
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center justify-between py-2">
+            <div className="space-y-1">
+              <div className="h-4 w-28 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+              <div className="h-3 w-36 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+            </div>
+            <div className="h-4 w-16 rounded animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+
+  // Show skeleton loader only during initial load AND when no cached data is available
+  if (initialLoad && !staffDashboardCache) {
+    return (
+      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        {/* Header Skeleton */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 mb-4"
+        >
+          <div className="h-8 w-8 rounded-lg animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+          <div className="h-8 w-44 rounded-lg animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+        </motion.div>
+
+        {/* Summary Cards Skeleton */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+
+        {/* Machine Status & Unclaimed List Skeleton */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
+          <SkeletonMachineList />
+          <SkeletonUnclaimedList />
+        </div>
+      </div>
+    );
+  }
+
+  // If we have cached data, show it immediately even if loading fresh data
+  const displayData = staffDashboardCache ? staffDashboardCache.data : dashboardData;
+
+  if (dashboardData.error && !staffDashboardCache) {
+    return (
+      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 mb-4"
+        >
+          <LineChart size={22} style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }} />
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+            Staff Dashboard
+          </p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex items-center justify-center h-52 rounded-xl border-2 p-6"
+          style={{
+            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
+          <div className="text-center">
+            <AlertCircle className="h-14 w-14 mx-auto mb-3" 
+                         style={{ color: '#F87171' }} />
+            <p className="text-base font-semibold mb-1"
+               style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              Failed to load dashboard data
+            </p>
+            <p className="text-sm"
+               style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+              Auto-retrying in 30 seconds...
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  const summaryCards = [
+    {
+      title: "Today's Income",
+      icon: <PhilippinePeso size={26} />,
+      value: formatCurrency(displayData.todayIncome),
+      color: "#3DD9B6",
+      description: "Revenue generated today",
+    },
+    {
+      title: "Today's Loads",
+      icon: <Package size={26} />,
+      value: displayData.todayLoads.toLocaleString(),
+      color: "#60A5FA",
+      description: "Loads processed today",
+    },
+    {
+      title: "Unwashed",
+      icon: <Clock8 size={26} />,
+      value: displayData.unwashedCount.toLocaleString(),
+      color: "#FB923C",
+      description: "Waiting to be washed",
+    },
+    {
+      title: "Unclaimed",
+      icon: <PackageX size={26} />,
+      value: displayData.completedUnclaimedTransactions.length.toLocaleString(),
+      color: "#F87171",
+      description: "Completed but not claimed",
+    },
+  ];
+
+  const washers = displayData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "WASHER");
+  const dryers = displayData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "DRYER");
+
+  return (
+    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+      {/* 🧢 Section Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3 mb-3"
+      >
+        <motion.div
+          whileHover={{ scale: 1.1, rotate: 5 }}
+          className="rounded-lg p-2"
+          style={{
+            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+            color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+          }}
+        >
+          <LineChart size={22} />
+        </motion.div>
+        <div>
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+            Staff Dashboard
+          </p>
+        </div>
+      </motion.div>
+
+      {/* 📊 Summary Cards */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {summaryCards.map(({ title, icon, value, color, description }, index) => (
+          <motion.div
+            key={title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            whileHover={{ 
+              scale: 1.03,
+              y: -2,
+              transition: { duration: 0.2 }
+            }}
+            className="rounded-xl border-2 p-5 transition-all cursor-pointer"
+            style={{
+              backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+              borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className="rounded-lg p-2"
+                style={{
+                  backgroundColor: `${color}20`,
+                  color: color,
+                }}
+              >
+                {icon}
+              </motion.div>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: index * 0.2 }}
+                className="text-right"
+              >
+                <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  {value}
+                </p>
+              </motion.div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                {title}
+              </h3>
+              <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+                {description}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* 🎰 Machine Status & Unclaimed Transactions */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
+        {/* All Machines Card */}
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          whileHover={{ scale: 1.01 }}
+          className="rounded-xl border-2 p-5 col-span-1 md:col-span-2 lg:col-span-4 transition-all"
+          style={{
+            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                All Machines Status
+              </p>
+            </div>
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              className="rounded-lg p-2"
+              style={{
+                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+              }}
+            >
+              <Timer size={18} />
+            </motion.div>
+          </div>
+          
+          <div className="h-[280px] overflow-auto px-2">
+            {displayData.allMachines.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center h-full text-center py-8"
+              >
+                <Timer size={36} style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} className="mb-3" />
+                <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  No Machines Found
+                </p>
+                <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                  No machines are currently registered
+                </p>
+              </motion.div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Washers */}
+                <div className="space-y-3 border-r border-slate-200 pr-4 dark:border-slate-700">
+                  <p className="text-sm font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                    Washers ({washers.length})
+                  </p>
+                  {washers.length === 0 ? (
+                    <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }}>
+                      No washers found
+                    </p>
+                  ) : (
+                    washers.map((machine, index) => {
+                      const status = getMachineStatus(machine);
+                      const statusColor = getStatusColor(status);
+                      return (
+                        <motion.div
+                          key={machine.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          whileHover={{ 
+                            scale: 1.02,
+                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                            transition: { duration: 0.2 }
+                          }}
+                          className="flex items-center justify-between rounded-lg border p-3 transition-all cursor-pointer"
+                          style={{
+                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                          }}
+                        >
+                          <div className="flex items-center gap-x-2 leading-tight">
+                            <Timer
+                              size={20}
+                              style={{ color: '#3B82F6' }}
+                            />
+                            <p className="text-sm font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                              {machine.name || "Unnamed Washer"}
+                            </p>
+                          </div>
+                          <motion.span
+                            whileHover={{ scale: 1.05 }}
+                            className="text-sm font-medium whitespace-nowrap"
+                            style={{ color: statusColor }}
+                          >
+                            {status}
+                          </motion.span>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Dryers */}
+                <div className="space-y-3 pl-4">
+                  <p className="text-sm font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                    Dryers ({dryers.length})
+                  </p>
+                  {dryers.length === 0 ? (
+                    <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }}>
+                      No dryers found
+                    </p>
+                  ) : (
+                    dryers.map((machine, index) => {
+                      const status = getMachineStatus(machine);
+                      const statusColor = getStatusColor(status);
+                      return (
+                        <motion.div
+                          key={machine.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          whileHover={{ 
+                            scale: 1.02,
+                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                            transition: { duration: 0.2 }
+                          }}
+                          className="flex items-center justify-between rounded-lg border p-3 transition-all cursor-pointer"
+                          style={{
+                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                          }}
+                        >
+                          <div className="flex items-center gap-x-2 leading-tight">
+                            <Timer
+                              size={20}
+                              style={{ color: '#F59E0B' }}
+                            />
+                            <p className="text-sm font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                              {machine.name || "Unnamed Dryer"}
+                            </p>
+                          </div>
+                          <motion.span
+                            whileHover={{ scale: 1.05 }}
+                            className="text-sm font-medium whitespace-nowrap"
+                            style={{ color: statusColor }}
+                          >
+                            {status}
+                          </motion.span>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Unclaimed Transactions Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+          whileHover={{ scale: 1.01 }}
+          className="rounded-xl border-2 p-5 col-span-1 md:col-span-2 lg:col-span-3 transition-all"
+          style={{
+            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                Unclaimed Laundry
+              </p>
+              <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                {displayData.completedUnclaimedTransactions.length} completed but not claimed
+              </span>
+            </div>
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              className="rounded-lg p-2"
+              style={{
+                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+              }}
+            >
+              <PackageX size={18} />
+            </motion.div>
+          </div>
+          
+          <div className="h-[280px] overflow-auto px-2">
+            {displayData.completedUnclaimedTransactions.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center h-full text-center py-8"
+              >
+                <PackageX size={36} style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} className="mb-3" />
+                <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  No Unclaimed Loads
+                </p>
+                <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                  All completed laundry has been claimed
+                </p>
+              </motion.div>
+            ) : (
+              <div className="space-y-3">
+                {displayData.completedUnclaimedTransactions.map((transaction, index) => (
+                  <motion.div
+                    key={transaction.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ 
+                      scale: 1.02,
+                      backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                      transition: { duration: 0.2 }
+                    }}
+                    className="rounded-lg border p-3 transition-all cursor-pointer"
+                    style={{
+                      borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                      backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                          {transaction.customerName}
+                        </p>
+                        <p className="text-sm mb-1" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+                          {transaction.serviceType} • {transaction.loadAssignments?.length || 0} loads
+                        </p>
+                      </div>
+                      <motion.span
+                        whileHover={{ scale: 1.05 }}
+                        className="rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap"
+                        style={{
+                          backgroundColor: '#FB923C20',
+                          color: '#FB923C',
+                        }}
+                      >
+                        Unclaimed
+                      </motion.span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
 };
 
 export default StaffDashboardPage;
