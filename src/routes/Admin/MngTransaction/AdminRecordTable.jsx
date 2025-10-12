@@ -104,11 +104,18 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
                 const sortedByLoads = [...items].sort((a, b) => (sortOrder === "asc" ? a.loads - b.loads : b.loads - a.loads));
                 return sortedByLoads.indexOf(item) < 10;
             case "expired":
-                return item.expired;
+                // FIX: Only highlight expired records that are not disposed
+                return item.expired && !item.disposed;
             case "unwashed":
-                return item.laundryStatus === "Not Started";
+                // FIX: Highlight records that have at least one unwashed load and not disposed
+                return item.unwashedLoadsCount > 0 && 
+                       !item.disposed;
             case "unclaimed":
-                return item.pickupStatus === "UNCLAIMED";
+                // FIX: Only highlight unclaimed records where laundry is completed, not expired, and not disposed
+                return item.pickupStatus === "UNCLAIMED" && 
+                       item.laundryStatus === "Completed" &&
+                       !item.expired && 
+                       !item.disposed;
             default:
                 return false;
         }
@@ -191,6 +198,7 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
             "GCash Verified": item.paymentMethod === "GCash" ? (item.gcashVerified ? "Yes" : "No") : "N/A",
             Expired: item.expired ? "Yes" : "No",
             Disposed: item.disposed ? "Yes" : "No",
+            "Unwashed Loads Count": item.unwashedLoadsCount || 0,
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -548,6 +556,14 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
                                                                 </span>
                                                                 <p style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                                                                     {record.disposedBy || "—"}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                                                    Unwashed Loads:
+                                                                </span>
+                                                                <p style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                                    {record.unwashedLoadsCount || 0} of {record.loads} loads
                                                                 </p>
                                                             </div>
                                                         </div>

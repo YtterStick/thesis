@@ -23,6 +23,7 @@ public class AdminRecordResponseDto {
     private String claimProcessedBy;
     private boolean disposed;
     private String disposedBy;
+    private int unwashedLoadsCount; // NEW: Track unwashed loads count
 
     public AdminRecordResponseDto() {}
     
@@ -32,7 +33,7 @@ public class AdminRecordResponseDto {
                                  String processedByStaff, boolean paid, boolean expired, 
                                  LocalDateTime createdAt, Boolean gcashVerified,
                                  String laundryProcessedBy, String claimProcessedBy,
-                                 boolean disposed, String disposedBy) { 
+                                 boolean disposed, String disposedBy, int unwashedLoadsCount) { 
         this.id = id;
         this.customerName = customerName;
         this.contact = contact;
@@ -53,6 +54,7 @@ public class AdminRecordResponseDto {
         this.claimProcessedBy = claimProcessedBy;
         this.disposed = disposed;
         this.disposedBy = disposedBy;
+        this.unwashedLoadsCount = unwashedLoadsCount;
     }
 
     public String getId() { return id; }
@@ -114,4 +116,7 @@ public class AdminRecordResponseDto {
     
     public String getDisposedBy() { return disposedBy; }
     public void setDisposedBy(String disposedBy) { this.disposedBy = disposedBy; }
+    
+    public int getUnwashedLoadsCount() { return unwashedLoadsCount; }
+    public void setUnwashedLoadsCount(int unwashedLoadsCount) { this.unwashedLoadsCount = unwashedLoadsCount; }
 }

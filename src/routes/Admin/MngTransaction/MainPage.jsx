@@ -48,6 +48,7 @@ const MainPage = () => {
                     disposed: r.disposed || false,
                     disposedBy: r.disposedBy || "—",
                     gcashVerified: r.gcashVerified || false,
+                    unwashedLoadsCount: r.unwashedLoadsCount || 0, // NEW: Get unwashed loads count
                 }));
                 setRecords(mapped);
             } catch (error) {
@@ -221,13 +222,24 @@ const MainPage = () => {
                 });
                 break;
             case "expired":
-                filtered = filtered.filter((r) => r.expired);
+                // FIX: Only show expired records that are not disposed
+                filtered = filtered.filter((r) => r.expired && !r.disposed);
                 break;
             case "unwashed":
-                filtered = filtered.filter((r) => r.laundryStatus === "Not Started");
+                // FIX: Show records that have at least one unwashed load and not disposed
+                filtered = filtered.filter((r) => 
+                    r.unwashedLoadsCount > 0 && 
+                    !r.disposed
+                );
                 break;
             case "unclaimed":
-                filtered = filtered.filter((r) => r.pickupStatus === "UNCLAIMED");
+                // FIX: Only show unclaimed records where laundry is completed, not expired, and not disposed
+                filtered = filtered.filter((r) => 
+                    r.pickupStatus === "UNCLAIMED" && 
+                    r.laundryStatus === "Completed" &&
+                    !r.expired && 
+                    !r.disposed
+                );
                 break;
             default:
                 // No additional filter
@@ -268,12 +280,26 @@ const MainPage = () => {
         }
     };
 
-    // Update the metrics calculation
+    // Update the metrics calculation - FIXED VERSION
     const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
     const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
-    const unwashed = filteredRecords.filter((r) => r.laundryStatus === "Not Started").length;
-    const expired = filteredRecords.filter((r) => r.expired).length;
-    const unclaimed = filteredRecords.filter((r) => r.pickupStatus === "UNCLAIMED").length;
+
+    // FIX: Unwashed loads should sum the individual unwashed loads count from each transaction
+    const unwashed = filteredRecords.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
+
+    // FIX: Expired loads should only count if NOT disposed
+    const expired = filteredRecords.filter((r) => 
+        r.expired && 
+        !r.disposed
+    ).length;
+
+    // FIX: Unclaimed loads should only count if laundry is completed, not expired, and not disposed
+    const unclaimed = filteredRecords.filter((r) => 
+        r.pickupStatus === "UNCLAIMED" && 
+        r.laundryStatus === "Completed" &&
+        !r.expired && 
+        !r.disposed
+    ).length;
 
     const summaryCards = [
         {
@@ -301,7 +327,7 @@ const MainPage = () => {
             value: unwashed,
             icon: <Clock8 size={26} />,
             color: "#FB923C",
-            tooltip: "Loads that haven't been washed yet",
+            tooltip: "Individual loads that are not yet completed (excluding disposed loads)",
             filterType: "unwashed",
             active: activeFilter === "unwashed",
             sortable: false,
@@ -311,7 +337,7 @@ const MainPage = () => {
             value: expired,
             icon: <TimerOff size={26} />,
             color: "#A78BFA",
-            tooltip: "Loads that exceeded their pickup window",
+            tooltip: "Loads that exceeded their pickup window (excluding disposed loads)",
             filterType: "expired",
             active: activeFilter === "expired",
             sortable: false,
@@ -321,7 +347,7 @@ const MainPage = () => {
             value: unclaimed,
             icon: <AlertCircle size={26} />,
             color: "#FACC15",
-            tooltip: "Loads that haven't been picked up yet",
+            tooltip: "Completed loads that haven't been picked up yet (excluding expired and disposed loads)",
             filterType: "unclaimed",
             active: activeFilter === "unclaimed",
             sortable: false,

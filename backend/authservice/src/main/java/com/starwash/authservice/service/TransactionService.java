@@ -386,26 +386,41 @@ public class TransactionService {
             if (job != null) {
                 dto.setPickupStatus(
                         job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
+                
+                // FIX: Calculate laundry status based on individual load statuses
                 if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
-                    boolean allCompleted = job.getLoadAssignments().stream()
-                            .allMatch(load -> "COMPLETED"
-                                    .equalsIgnoreCase(load.getStatus()));
-
-                    boolean anyInProgress = job.getLoadAssignments().stream()
-                            .anyMatch(load -> !"NOT_STARTED"
-                                    .equalsIgnoreCase(load.getStatus()) &&
-                                    !"COMPLETED".equalsIgnoreCase(
-                                            load.getStatus()));
-
-                    if (allCompleted) {
+                    long completedLoads = job.getLoadAssignments().stream()
+                            .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
+                            .count();
+                    
+                    long totalLoads = job.getLoadAssignments().size();
+                    
+                    if (completedLoads == totalLoads) {
                         dto.setLaundryStatus("Completed");
-                    } else if (anyInProgress) {
+                    } else if (completedLoads > 0) {
                         dto.setLaundryStatus("In Progress");
                     } else {
-                        dto.setLaundryStatus("Not Started");
+                        // Check if any load is in progress (not NOT_STARTED and not COMPLETED)
+                        boolean anyInProgress = job.getLoadAssignments().stream()
+                                .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) && 
+                                                  !"COMPLETED".equalsIgnoreCase(load.getStatus()));
+                        
+                        if (anyInProgress) {
+                            dto.setLaundryStatus("In Progress");
+                        } else {
+                            dto.setLaundryStatus("Not Started");
+                        }
                     }
+                    
+                    // ADD: Calculate unwashed loads count for this transaction
+                    long unwashedLoadsCount = job.getLoadAssignments().stream()
+                            .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                            .count();
+                    dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
+                    
                 } else {
                     dto.setLaundryStatus("Not Started");
+                    dto.setUnwashedLoadsCount(tx.getServiceQuantity()); // All loads are unwashed if no assignments
                 }
 
                 dto.setExpired(job.isExpired());
@@ -418,6 +433,7 @@ public class TransactionService {
             } else {
                 dto.setPickupStatus("UNCLAIMED");
                 dto.setLaundryStatus("Not Started");
+                dto.setUnwashedLoadsCount(tx.getServiceQuantity()); // All loads are unwashed if no job exists
                 dto.setExpired(tx.getDueDate() != null
                         && tx.getDueDate().isBefore(LocalDateTime.now()));
                 dto.setLaundryProcessedBy(null);
