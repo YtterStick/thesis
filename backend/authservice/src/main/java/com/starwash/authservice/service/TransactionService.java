@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class TransactionService {
@@ -22,6 +23,7 @@ public class TransactionService {
     private final LaundryJobRepository laundryJobRepository;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final AuditService auditService;
 
     public TransactionService(ServiceRepository serviceRepository,
             StockRepository stockRepository,
@@ -29,7 +31,8 @@ public class TransactionService {
             FormatSettingsRepository formatSettingsRepository,
             LaundryJobRepository laundryJobRepository,
             NotificationService notificationService,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            AuditService auditService) {
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
         this.transactionRepository = transactionRepository;
@@ -37,6 +40,7 @@ public class TransactionService {
         this.laundryJobRepository = laundryJobRepository;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request, String staffId) {
@@ -438,5 +442,17 @@ public class TransactionService {
 
     public void saveTransaction(Transaction transaction) {
         transactionRepository.save(transaction);
+    }
+
+    // Additional method to log transaction updates
+    public void logTransactionUpdate(String staffId, String transactionId, String description, HttpServletRequest request) {
+        auditService.logActivity(
+            staffId,
+            "UPDATE",
+            "TRANSACTION",
+            transactionId,
+            description,
+            request
+        );
     }
 }

@@ -9,6 +9,7 @@ import com.starwash.authservice.model.LaundryJob.LoadAssignment;
 import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.service.TransactionService;
 import com.starwash.authservice.service.LaundryJobService;
+import com.starwash.authservice.service.AuditService;
 import com.starwash.authservice.repository.LaundryJobRepository;
 import com.starwash.authservice.repository.TransactionRepository;
 import com.starwash.authservice.security.JwtUtil;
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -37,17 +39,20 @@ public class TransactionController {
     private final LaundryJobRepository laundryJobRepository;
     private final TransactionRepository transactionRepository;
     private final JwtUtil jwtUtil;
+    private final AuditService auditService;
 
     public TransactionController(TransactionService transactionService,
                                  LaundryJobService laundryJobService,
                                  LaundryJobRepository laundryJobRepository,
                                  TransactionRepository transactionRepository,
-                                 JwtUtil jwtUtil) {
+                                 JwtUtil jwtUtil,
+                                 AuditService auditService) {
         this.transactionService = transactionService;
         this.laundryJobService = laundryJobService;
         this.laundryJobRepository = laundryJobRepository;
         this.transactionRepository = transactionRepository;
         this.jwtUtil = jwtUtil;
+        this.auditService = auditService;
     }
 
     /**
@@ -55,7 +60,8 @@ public class TransactionController {
      */
     @PostMapping
     public ResponseEntity<ServiceInvoiceDto> createTransaction(@RequestBody TransactionRequestDto request,
-                                                               @RequestHeader("Authorization") String authHeader) {
+                                                               @RequestHeader("Authorization") String authHeader,
+                                                               HttpServletRequest httpRequest) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -64,7 +70,12 @@ public class TransactionController {
             // Extract staffId from JWT token
             String token = authHeader.replace("Bearer ", "");
             String staffId = jwtUtil.getUsername(token);
+            String staffRole = jwtUtil.getRole(token);
             
+            System.out.println("🔄 Starting transaction creation for: " + request.getCustomerName());
+            System.out.println("👤 Staff ID: " + staffId);
+            System.out.println("🏪 Staff Role: " + staffRole);
+
             // ✅ Create the service invoice with staffId
             ServiceInvoiceDto invoice = transactionService.createServiceInvoiceTransaction(request, staffId);
             log.info("🧾 Service invoice created | invoiceNumber={} | customer={} | staffId={}",
@@ -97,6 +108,29 @@ public class TransactionController {
             // ✅ Save the job
             laundryJobService.createJob(jobDto);
             log.info("🧺 Laundry job initialized for transaction {}", invoice.getInvoiceNumber());
+
+            // ✅ LOG TRANSACTION ACTIVITY TO AUDIT TRAIL
+            String transactionDescription = String.format(
+                "Created transaction for customer: %s | Invoice: %s | Amount: ₱%.2f | Payment: %s | Loads: %d",
+                invoice.getCustomerName(),
+                invoice.getInvoiceNumber(),
+                invoice.getTotal(),
+                invoice.getPaymentMethod(),
+                request.getLoads()
+            );
+            
+            // Log the transaction activity with staff role as entity type
+            auditService.logActivity(
+                staffId,
+                "TRANSACTION",
+                staffRole, // Use staff role instead of "TRANSACTION"
+                invoice.getInvoiceNumber(),
+                transactionDescription,
+                httpRequest
+            );
+
+            System.out.println("✅ Audit log created for transaction: " + invoice.getInvoiceNumber());
+            log.info("📝 Transaction logged to audit trail | staff={} | role={} | invoice={}", staffId, staffRole, invoice.getInvoiceNumber());
 
             return ResponseEntity.ok(invoice);
         } catch (RuntimeException e) {
@@ -160,22 +194,49 @@ public class TransactionController {
      */
     @PostMapping("/{id}/verify-gcash")
     public ResponseEntity<?> verifyGcashPayment(@PathVariable String id, 
-                                               @RequestHeader("Authorization") String authHeader) {
+                                               @RequestHeader("Authorization") String authHeader,
+                                               HttpServletRequest httpRequest) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
 
         try {
+            String token = authHeader.replace("Bearer ", "");
+            String staffId = jwtUtil.getUsername(token);
+            String staffRole = jwtUtil.getRole(token);
+            
             Transaction transaction = transactionService.findTransactionById(id);
             
             if (!"GCash".equals(transaction.getPaymentMethod())) {
                 return ResponseEntity.badRequest().body("Transaction is not a GCash payment");
             }
             
+            boolean wasVerified = Boolean.TRUE.equals(transaction.getGcashVerified());
             transaction.setGcashVerified(true); 
             transactionService.saveTransaction(transaction);
             
-            log.info("✅ GCash payment verified | transactionId={}", id);
+            // Log GCash verification activity
+            if (!wasVerified) {
+                String description = String.format(
+                    "Verified GCash payment | Invoice: %s | Customer: %s | Amount: ₱%.2f | Reference: %s",
+                    transaction.getInvoiceNumber(),
+                    transaction.getCustomerName(),
+                    transaction.getTotalPrice(),
+                    transaction.getGcashReference()
+                );
+                
+                auditService.logActivity(
+                    staffId,
+                    "UPDATE",
+                    staffRole, // Use staff role instead of "TRANSACTION"
+                    transaction.getInvoiceNumber(),
+                    description,
+                    httpRequest
+                );
+                
+                log.info("✅ GCash payment verified and logged | transactionId={} | staff={} | role={}", id, staffId, staffRole);
+            }
+            
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             log.error("❌ Failed to verify GCash payment for id={}: {}", id, e.getMessage());

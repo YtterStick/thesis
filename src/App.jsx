@@ -20,6 +20,7 @@ import MachineMainPage from "@/routes/Admin/Machine/MainPage";
 import TermsSettingsPage from "@/routes/Admin/TermsSettings/MainPage";
 import DocumentSettingsPage from "@/routes/Admin/Format/MainPage";
 import PaymentMethodsPage from "./routes/Admin/Payment/MainPage";
+import AuditTrailPage from "@/routes/Admin/AuditTrail/MainPage";
 
 // 👕 Staff Pages
 import StaffDashboardPage from "@/routes/Staff/dashboard/page";
@@ -84,6 +85,7 @@ function App() {
     { path: "/documentsettings", element: <AdminRoute element={<DocumentSettingsPage />} /> },
     { path: "/machines", element: <AdminRoute element={<MachineMainPage />} /> },
     { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
+    { path: "/audittrail", element: <AdminRoute element={<AuditTrailPage />} /> },
 
     // 👕 Staff Routes
     { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },

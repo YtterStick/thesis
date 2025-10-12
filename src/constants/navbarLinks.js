@@ -12,6 +12,8 @@ import {
   ScrollText,
   BookText,
   WashingMachine,
+  Shield,
+  History,
 } from "lucide-react";
 
 export const navbarLinks = [
@@ -33,6 +35,7 @@ export const navbarLinks = [
     title: "User Management",
     Links: [
       { label: "User Accounts", icon: UserCog, path: "/managestaff" },
+      { label: "Audit Trail", icon: History, path: "/audittrail" }, // NEW
     ],
   },
   {
