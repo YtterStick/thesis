@@ -1,5 +1,5 @@
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 
 const SkeletonLoader = () => {
@@ -131,33 +131,29 @@ const SkeletonLoader = () => {
 
       {/* Summary Cards Skeleton */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-        <AnimatePresence mode="wait">
-          {[...Array(4)].map((_, index) => (
-            <motion.div
-              key={`skeleton-${index}`}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-            >
-              <SkeletonCard />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {[...Array(4)].map((_, index) => (
+          <motion.div
+            key={`skeleton-${index}`}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+          >
+            <SkeletonCard />
+          </motion.div>
+        ))}
       </div>
 
       {/* Table Skeleton */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="skeleton-table"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <SkeletonTable />
-        </motion.div>
-      </AnimatePresence>
+      <motion.div
+        key="skeleton-table"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <SkeletonTable />
+      </motion.div>
     </div>
   );
 };

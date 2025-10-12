@@ -88,11 +88,14 @@ const RecordTable = ({ items = [], isDarkMode }) => {
         if (!dateStr) return false;
         
         const created = new Date(dateStr);
+        if (isNaN(created.getTime())) return false; // Handle invalid dates
+        
         created.setHours(0, 0, 0, 0);
         
-        // Add null checks for selectedRange
-        const from = selectedRange?.from ? new Date(selectedRange.from) : null;
-        const to = selectedRange?.to ? new Date(selectedRange.to) : null;
+        // Ensure selectedRange exists and handle null values
+        const range = selectedRange || {};
+        const from = range.from ? new Date(range.from) : null;
+        const to = range.to ? new Date(range.to) : null;
         
         if (from) from.setHours(0, 0, 0, 0);
         if (to) to.setHours(23, 59, 59, 999);

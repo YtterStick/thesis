@@ -20,74 +20,115 @@ import {
     Search,
 } from "lucide-react";
 import ServiceReceiptCard from "@/components/ServiceReceiptCard";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Skeleton Loader Components
-const SkeletonRow = ({ isExpiredTab }) => (
-    <TableRow className="border-t border-slate-300 dark:border-slate-700">
+const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
+    <TableRow 
+        className="border-t transition-all"
+        style={{
+            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+        }}
+    >
         <TableCell className="py-4">
             <div className="flex items-center">
-                <div className="skeleton h-4 w-4 rounded mr-2"></div>
-                <div className="skeleton h-4 w-32 rounded"></div>
+                <div 
+                    className="skeleton h-4 w-4 rounded mr-2"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    }}
+                ></div>
+                <div 
+                    className="skeleton h-4 w-32 rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    }}
+                ></div>
             </div>
         </TableCell>
         <TableCell>
-            <div className="skeleton h-4 w-24 rounded"></div>
+            <div 
+                className="skeleton h-4 w-24 rounded"
+                style={{
+                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                }}
+            ></div>
         </TableCell>
         <TableCell>
-            <div className="skeleton h-6 w-20 rounded-full"></div>
+            <div 
+                className="skeleton h-6 w-20 rounded-full"
+                style={{
+                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                }}
+            ></div>
         </TableCell>
         <TableCell>
             <div className="flex justify-center">
-                <div className="skeleton h-6 w-8 rounded-full"></div>
+                <div 
+                    className="skeleton h-6 w-8 rounded-full"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    }}
+                ></div>
             </div>
         </TableCell>
         <TableCell>
             <div className="flex items-center">
-                <div className="skeleton h-4 w-4 rounded mr-1"></div>
-                <div className="skeleton h-4 w-28 rounded"></div>
+                <div 
+                    className="skeleton h-4 w-4 rounded mr-1"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    }}
+                ></div>
+                <div 
+                    className="skeleton h-4 w-28 rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    }}
+                ></div>
             </div>
         </TableCell>
         {!isExpiredTab && (
             <TableCell>
-                <div className="skeleton h-4 w-28 rounded"></div>
+                <div 
+                    className="skeleton h-4 w-28 rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    }}
+                ></div>
             </TableCell>
         )}
         {isExpiredTab && (
             <TableCell>
-                <div className="skeleton h-4 w-28 rounded"></div>
+                <div 
+                    className="skeleton h-4 w-28 rounded"
+                    style={{
+                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    }}
+                ></div>
             </TableCell>
         )}
         <TableCell>
-            <div className="skeleton h-6 w-24 rounded-full"></div>
+            <div 
+                className="skeleton h-6 w-24 rounded-full"
+                style={{
+                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                }}
+            ></div>
         </TableCell>
         <TableCell>
-            <div className="skeleton h-8 w-full rounded"></div>
+            <div 
+                className="skeleton h-8 w-full rounded"
+                style={{
+                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                }}
+            ></div>
         </TableCell>
     </TableRow>
 );
 
-SkeletonRow.propTypes = {
-    isExpiredTab: PropTypes.bool,
-};
-
-const SkeletonPagination = () => (
-    <div className="flex flex-col items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700 sm:flex-row">
-        <div className="mb-4 flex items-center space-x-2 sm:mb-0">
-            <div className="skeleton h-4 w-16 rounded"></div>
-            <div className="skeleton h-8 w-16 rounded-md"></div>
-        </div>
-        <div className="flex items-center space-x-2">
-            <div className="skeleton h-4 w-24 rounded"></div>
-            <div className="flex space-x-1">
-                {[1, 2, 3, 4].map((item) => (
-                    <div key={item} className="skeleton h-8 w-8 rounded-md"></div>
-                ))}
-            </div>
-        </div>
-    </div>
-);
-
-const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose, isExpiredTab, hasUnfilteredData }) => {
+const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose, isExpiredTab, hasUnfilteredData, isDarkMode }) => {
     const [selectedTransaction, setSelectedTransaction] = useState(null);
     const [showReceipt, setShowReceipt] = useState(false);
     const [loadingTransactionId, setLoadingTransactionId] = useState(null);
@@ -119,13 +160,6 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
             hour: "2-digit",
             minute: "2-digit",
         });
-    };
-
-    const formatDateOnly = (dateString) => {
-        if (!dateString) return "N/A";
-
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
     };
 
     const fetchFormatSettings = async () => {
@@ -164,33 +198,41 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
         }
     };
 
-    // Show skeleton loader while loading
     if (isLoading) {
         return (
-            <div className="rounded-md border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+            <div 
+                className="rounded-lg border-2 shadow-sm"
+                style={{
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                }}
+            >
                 <Table>
                     <TableHeader>
-                        <TableRow className="border-b border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Service</TableHead>
-                            <TableHead>Loads</TableHead>
-                            <TableHead>Date Completed</TableHead>
-                            {!isExpiredTab && <TableHead>Due Date</TableHead>}
-                            {isExpiredTab && <TableHead>Past Due On</TableHead>}
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                        <TableRow 
+                            className="border-b"
+                            style={{
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                            }}
+                        >
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Customer</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Contact</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Service</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Loads</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Date Completed</TableHead>
+                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Due Date</TableHead>}
+                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Past Due On</TableHead>}
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Status</TableHead>
+                            <TableHead className="text-right" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {Array.from({ length: itemsPerPage }).map((_, index) => (
-                            <SkeletonRow key={index} isExpiredTab={isExpiredTab} />
+                            <SkeletonRow key={index} isExpiredTab={isExpiredTab} isDarkMode={isDarkMode} />
                         ))}
                     </TableBody>
                 </Table>
-                <SkeletonPagination />
                 
-                {/* Add CSS for skeleton animation */}
                 <style jsx>{`
                     .skeleton {
                         background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
@@ -248,10 +290,6 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
     const confirmDispose = async () => {
         if (!transactionToDispose) return;
 
-        console.log("Disposing transaction:", transactionToDispose);
-        console.log("Transaction ID:", transactionToDispose.id);
-        console.log("Transaction transactionId:", transactionToDispose.transactionId);
-
         setDisposingTransactionId(transactionToDispose.id);
         try {
             await onDispose(transactionToDispose.id);
@@ -285,19 +323,30 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
 
     return (
         <>
-            <div className="rounded-md border border-slate-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
+            <div 
+                className="rounded-lg border-2 shadow-sm"
+                style={{
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                }}
+            >
                 <Table>
                     <TableHeader>
-                        <TableRow className="border-b border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Service</TableHead>
-                            <TableHead>Loads</TableHead>
-                            <TableHead>Date Completed</TableHead>
-                            {!isExpiredTab && <TableHead>Due Date</TableHead>}
-                            {isExpiredTab && <TableHead>Past Due On</TableHead>}
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                        <TableRow 
+                            className="border-b"
+                            style={{
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                            }}
+                        >
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Customer</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Contact</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Service</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Loads</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Date Completed</TableHead>
+                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Due Date</TableHead>}
+                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Past Due On</TableHead>}
+                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Status</TableHead>
+                            <TableHead className="text-right" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -307,8 +356,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     colSpan={isExpiredTab ? 8 : 8}
                                     className="py-16 text-center"
                                 >
-                                    <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
-                                        <CheckCircle2 className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-500" />
+                                    <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                        <CheckCircle2 className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
                                         <p className="text-lg font-medium">
                                             {isExpiredTab ? "No past due laundry!" : "All laundry has been claimed!"}
                                         </p>
@@ -324,8 +373,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     colSpan={isExpiredTab ? 8 : 8}
                                     className="py-16 text-center"
                                 >
-                                    <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
-                                        <Search className="mb-4 h-12 w-12 text-slate-400 dark:text-slate-500" />
+                                    <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                        <Search className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
                                         <p className="text-lg font-medium">No matching transactions found</p>
                                         <p className="text-sm">Try adjusting your search or filter criteria</p>
                                     </div>
@@ -344,67 +393,104 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                 return (
                                     <TableRow
                                         key={transaction.id || transaction.transactionId}
-                                        className={`border-t border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800/50 ${
+                                        className={`border-t transition-all hover:opacity-90 ${
                                             isExpired ? "bg-rose-50 dark:bg-rose-950/30" : ""
                                         }`}
+                                        style={{
+                                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                        }}
                                     >
-                                        <TableCell className="flex items-center font-medium text-slate-900 dark:text-slate-100">
-                                            <Shirt className="mr-2 h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                                        <TableCell className="flex items-center font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            <Shirt className="mr-2 h-4 w-4" style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }} />
                                             {transaction.customerName}
                                         </TableCell>
-                                        <TableCell className="text-slate-700 dark:text-slate-300">{transaction.contact || "N/A"}</TableCell>
+                                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>{transaction.contact || "N/A"}</TableCell>
                                         <TableCell>
                                             <Badge
                                                 variant="outline"
-                                                className="border-slate-300 capitalize text-slate-700 dark:border-slate-600 dark:text-slate-300"
+                                                className="border-2 capitalize transition-all"
+                                                style={{
+                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                    color: isDarkMode ? '#13151B' : '#0B2B26',
+                                                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                                }}
                                             >
                                                 {transaction.serviceType?.toLowerCase() || "N/A"}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex justify-center">
-                                                <Badge className="bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                                <Badge 
+                                                    className="transition-all"
+                                                    style={{
+                                                        backgroundColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                        color: "#F3EDE3",
+                                                    }}
+                                                >
                                                     {transaction.loadAssignments?.length || 0}
                                                 </Badge>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="flex items-center text-slate-600 dark:text-slate-300">
-                                            <Calendar className="mr-1 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                                        <TableCell className="flex items-center" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            <Calendar className="mr-1 h-4 w-4" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} />
                                             {completionDate ? formatDateTime(completionDate) : "N/A"}
                                         </TableCell>
                                         {!isExpiredTab && (
-                                            <TableCell className="text-slate-600 dark:text-slate-300">
+                                            <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                                                 {dueDate ? formatDateTime(dueDate) : "N/A"}
                                             </TableCell>
                                         )}
                                         {isExpiredTab && (
-                                            <TableCell className="text-slate-600 dark:text-slate-300">
+                                            <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                                                 {dueDate ? formatDateTime(dueDate) : "N/A"}
                                             </TableCell>
                                         )}
                                         <TableCell>
                                             {isExpired ? (
-                                                <Badge className="flex w-24 items-center justify-center gap-1 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+                                                <Badge 
+                                                    className="flex w-24 items-center justify-center gap-1 transition-all"
+                                                    style={{
+                                                        backgroundColor: '#FEF2F2',
+                                                        color: '#DC2626',
+                                                    }}
+                                                >
                                                     <AlertTriangle className="h-3 w-3" /> Past Due
                                                 </Badge>
                                             ) : transaction.pickupStatus === "UNCLAIMED" ? (
-                                                <Badge className="flex w-24 items-center justify-center gap-1 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                                                <Badge 
+                                                    className="flex w-24 items-center justify-center gap-1 transition-all"
+                                                    style={{
+                                                        backgroundColor: '#FFFBEB',
+                                                        color: '#D97706',
+                                                    }}
+                                                >
                                                     <Clock className="h-3 w-3" /> Unclaimed
                                                 </Badge>
                                             ) : (
-                                                <Badge className="flex w-24 items-center justify-center gap-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                                <Badge 
+                                                    className="flex w-24 items-center justify-center gap-1 transition-all"
+                                                    style={{
+                                                        backgroundColor: '#F0FDF4',
+                                                        color: '#059669',
+                                                    }}
+                                                >
                                                     <CheckCircle2 className="h-3 w-3" /> Claimed
                                                 </Badge>
                                             )}
                                         </TableCell>
                                         <TableCell className="flex flex-col gap-2 text-right">
                                             {isExpired ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive"
+                                                <motion.button
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleDisposeClick(transaction)}
                                                     disabled={disposingTransactionId === transaction.id}
-                                                    className="flex items-center gap-1"
+                                                    className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-all"
+                                                    style={{
+                                                        backgroundColor: '#EF4444',
+                                                        color: '#FFFFFF',
+                                                    }}
                                                 >
                                                     {disposingTransactionId === transaction.id ? (
                                                         <>
@@ -417,13 +503,18 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                                             Dispose
                                                         </>
                                                     )}
-                                                </Button>
+                                                </motion.button>
                                             ) : transaction.pickupStatus === "UNCLAIMED" ? (
-                                                <Button
-                                                    size="sm"
+                                                <motion.button
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleClaimClick(transaction)}
                                                     disabled={loadingTransactionId === transaction.id}
-                                                    className="bg-cyan-600 text-white hover:bg-cyan-700 dark:bg-cyan-700 dark:hover:bg-cyan-600"
+                                                    className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-all"
+                                                    style={{
+                                                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                                        color: "#F3EDE3",
+                                                    }}
                                                 >
                                                     {loadingTransactionId === transaction.id ? (
                                                         <>
@@ -433,17 +524,22 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                                     ) : (
                                                         "Mark as Claimed"
                                                     )}
-                                                </Button>
+                                                </motion.button>
                                             ) : (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
+                                                <motion.button
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
                                                     onClick={() => handleViewReceipt(transaction)}
-                                                    className="flex items-center gap-1"
+                                                    className="flex items-center gap-1 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-all"
+                                                    style={{
+                                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                                        backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                                    }}
                                                 >
                                                     <Printer className="h-3 w-3" />
                                                     Receipt
-                                                </Button>
+                                                </motion.button>
                                             )}
                                         </TableCell>
                                     </TableRow>
@@ -455,11 +551,21 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
 
                 {/* Pagination Controls */}
                 {!isLoading && transactions.length > 0 && (
-                    <div className="flex flex-col items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700 sm:flex-row">
+                    <div 
+                        className="flex flex-col items-center justify-between border-t p-4 sm:flex-row"
+                        style={{
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        }}
+                    >
                         <div className="mb-4 flex items-center space-x-2 sm:mb-0">
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Rows per page</p>
+                            <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>Rows per page</p>
                             <select
-                                className="h-8 w-16 rounded-md border border-slate-300 bg-white text-sm dark:border-slate-600 dark:bg-slate-800"
+                                className="h-8 w-16 rounded-lg border-2 text-sm transition-all"
+                                style={{
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                    color: isDarkMode ? '#13151B' : '#0B2B26',
+                                }}
                                 value={itemsPerPage}
                                 onChange={(e) => handleItemsPerPageChange(e.target.value)}
                             >
@@ -471,50 +577,70 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                         </div>
 
                         <div className="flex items-center space-x-2">
-                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                            <div className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
                                 {startIndex + 1}-{endIndex} of {totalItems}
                             </div>
 
                             <div className="flex space-x-1">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                     onClick={() => handlePageChange(1)}
                                     disabled={currentPage === 1}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all"
+                                    style={{
+                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    }}
                                 >
                                     <ChevronsLeft className="h-4 w-4" />
-                                </Button>
+                                </motion.button>
 
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all"
+                                    style={{
+                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    }}
                                 >
                                     <ChevronLeft className="h-4 w-4" />
-                                </Button>
+                                </motion.button>
 
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all"
+                                    style={{
+                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    }}
                                 >
                                     <ChevronRight className="h-4 w-4" />
-                                </Button>
+                                </motion.button>
 
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                     onClick={() => handlePageChange(totalPages)}
                                     disabled={currentPage === totalPages}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all"
+                                    style={{
+                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    }}
                                 >
                                     <ChevronsRight className="h-4 w-4" />
-                                </Button>
+                                </motion.button>
                             </div>
                         </div>
                     </div>
@@ -522,64 +648,102 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
             </div>
 
             {/* Dispose Confirmation Modal */}
-            {showDisposeConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-800">
-                        <div className="mb-4 flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                                <AlertTriangle className="h-6 w-6 text-red-500 dark:text-red-400" />
+            <AnimatePresence>
+                {showDisposeConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="w-full max-w-md rounded-xl border-2 p-6 shadow-2xl"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            }}
+                        >
+                            <div className="mb-4 flex items-center gap-3">
+                                <div 
+                                    className="flex h-12 w-12 items-center justify-center rounded-full"
+                                    style={{
+                                        backgroundColor: '#FEF2F2',
+                                    }}
+                                >
+                                    <AlertTriangle className="h-6 w-6" style={{ color: '#EF4444' }} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Confirm Disposal</h3>
+                                    <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>This action cannot be undone</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Confirm Disposal</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">This action cannot be undone</p>
+
+                            <p className="mb-6" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                This laundry item was not claimed by the customer. Are you sure you want to dispose it?
+                            </p>
+
+                            <div className="flex justify-end gap-3">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={cancelDispose}
+                                    className="rounded-lg border-2 px-5 py-2 transition-all"
+                                    style={{
+                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                    }}
+                                >
+                                    Cancel
+                                </motion.button>
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={confirmDispose}
+                                    disabled={disposingTransactionId === transactionToDispose?.id}
+                                    className="rounded-lg px-5 py-2 text-white transition-all"
+                                    style={{
+                                        backgroundColor: '#EF4444',
+                                    }}
+                                >
+                                    {disposingTransactionId === transactionToDispose?.id ? (
+                                        <>
+                                            <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                            Disposing...
+                                        </>
+                                    ) : (
+                                        "Yes, Dispose"
+                                    )}
+                                </motion.button>
                             </div>
-                        </div>
-
-                        <p className="mb-6 text-slate-600 dark:text-slate-300">
-                            This laundry item was not claimed by the customer. Are you sure you want to dispose it?
-                        </p>
-
-                        <div className="flex justify-end gap-3">
-                            <Button
-                                variant="ghost"
-                                onClick={cancelDispose}
-                                className="rounded-lg px-5 py-2 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={confirmDispose}
-                                disabled={disposingTransactionId === transactionToDispose?.id}
-                                className="rounded-lg px-5 py-2 transition-colors hover:bg-red-700 dark:hover:bg-red-600"
-                            >
-                                {disposingTransactionId === transactionToDispose?.id ? (
-                                    <>
-                                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                        Disposing...
-                                    </>
-                                ) : (
-                                    "Yes, Dispose"
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {showReceipt && selectedTransaction && formatSettings && (
                 <ServiceReceiptCard
                     transaction={selectedTransaction}
                     settings={formatSettings}
                     onClose={() => setShowReceipt(false)}
+                    isDarkMode={isDarkMode}
                 />
             )}
 
             {loadingSettings && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="rounded-lg bg-white p-6 shadow-lg dark:bg-slate-800">
-                        <Loader className="mx-auto mb-4 h-8 w-8 animate-spin" />
-                        <p className="text-center">Loading receipt settings...</p>
+                    <div 
+                        className="rounded-xl border-2 p-6 shadow-lg"
+                        style={{
+                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        }}
+                    >
+                        <Loader className="mx-auto mb-4 h-8 w-8 animate-spin" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                        <p className="text-center" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Loading receipt settings...</p>
                     </div>
                 </div>
             )}
@@ -595,11 +759,13 @@ ClaimingTable.propTypes = {
     onDispose: PropTypes.func.isRequired,
     isExpiredTab: PropTypes.bool,
     hasUnfilteredData: PropTypes.bool,
+    isDarkMode: PropTypes.bool,
 };
 
 ClaimingTable.defaultProps = {
     isExpiredTab: false,
     hasUnfilteredData: false,
+    isDarkMode: false,
 };
 
 export default ClaimingTable;

@@ -1,10 +1,23 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { Plus, Boxes, PackageX, Package, Clock8 } from "lucide-react";
+import { Plus, Boxes, PackageX, Package, Clock8, Calendar, TrendingUp } from "lucide-react";
 import InventoryForm from "./InventoryForm";
 import InventoryTable from "./InventoryTable";
 import StockModal from "./StockModal";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 const ALLOWED_SKEW_MS = 5000;
 
@@ -161,71 +174,52 @@ const MainPage = () => {
   };
 
   const { out, low, adequate } = getStockStatusCounts(items);
+  const totalItems = items.length;
 
   // Skeleton Loader Components
-  const SkeletonCard = ({ index }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className="rounded-xl border-2 p-5 transition-all"
-      style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-      }}
-    >
-      <div className="flex items-center gap-x-3 mb-4">
-        <div className="w-fit rounded-lg p-2 animate-pulse"
-             style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
-             }}>
-          <div className="h-6 w-6"></div>
+  const SkeletonCard = () => (
+    <Card className="rounded-xl border-2 animate-pulse" style={{
+      backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+    }}>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
+            <div className="h-6 w-12 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          </div>
+          <div className="rounded-lg p-2 bg-slate-200 dark:bg-slate-700">
+            <div className="h-5 w-5"></div>
+          </div>
         </div>
-        <div className="h-5 w-28 rounded animate-pulse"
-             style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
-             }}></div>
-      </div>
-      <div className="rounded-lg p-3 animate-pulse"
-           style={{
-             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
-           }}>
-        <div className="h-8 w-32 rounded"
-             style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
-             }}></div>
-      </div>
-    </motion.div>
+      </CardContent>
+    </Card>
   );
 
   const summaryCards = [
     {
       title: "Total Items",
-      icon: <Boxes size={26} />,
-      value: items.length,
-      color: "#3DD9B6",
-      description: "Total inventory items",
+      icon: <Package size={20} />,
+      value: totalItems,
+      color: isDarkMode ? "#18442AF5" : "#0B2B26",
     },
     {
-      title: "Out of Stock",
-      icon: <PackageX size={26} />,
-      value: out,
-      color: "#F87171",
-      description: "Items that need restocking",
+      title: "Well Stocked",
+      icon: <Boxes size={20} />,
+      value: adequate,
+      color: "#059669",
     },
     {
       title: "Low Stock",
-      icon: <Package size={26} />,
+      icon: <PackageX size={20} />,
       value: low,
-      color: "#FB923C",
-      description: "Items below threshold",
+      color: "#D97706",
     },
     {
-      title: "Adequate Stock",
-      icon: <Clock8 size={26} />,
-      value: adequate,
-      color: "#60A5FA",
-      description: "Items well stocked",
+      title: "Out of Stock",
+      icon: <Clock8 size={20} />,
+      value: out,
+      color: "#DC2626",
     },
   ];
 
@@ -235,163 +229,298 @@ const MainPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
+        className="flex items-center gap-3 mb-3"
       >
-        <div className="flex items-center gap-3">
-          <motion.div
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            className="rounded-lg p-2"
-            style={{
-              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-              color: "#F3EDE3",
-            }}
-          >
-            <Boxes size={22} />
-          </motion.div>
-          <div>
-            <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
-              Manage Inventory
-            </p>
-            <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
-              Track and manage your inventory items
-            </p>
-          </div>
+        <motion.div
+          whileHover={{ scale: 1.1, rotate: 5 }}
+          className="rounded-lg p-2"
+          style={{
+            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+            color: "#F3EDE3",
+          }}
+        >
+          <Boxes size={22} />
+        </motion.div>
+        <div>
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+            Supply Monitoring
+          </p>
+          <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+            Track and manage inventory supplies
+          </p>
         </div>
-        
-        {!loading && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={openAddForm}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
-            style={{
-              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-              color: "#F3EDE3",
-            }}
-          >
-            <Plus size={18} />
-            <span className="text-sm font-medium">Add Item</span>
-          </motion.button>
-        )}
       </motion.div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="grid grid-cols-1 md:grid-cols-4 gap-4"
+      >
         {loading ? (
           [...Array(4)].map((_, index) => (
-            <SkeletonCard key={index} index={index} />
+            <SkeletonCard key={index} />
           ))
         ) : (
-          summaryCards.map(({ title, icon, value, color, description }, index) => (
+          summaryCards.map(({ title, icon, value, color }, index) => (
             <motion.div
               key={title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ 
-                scale: 1.03,
-                y: -2,
-                transition: { duration: 0.2 }
-              }}
-              className="rounded-xl border-2 p-5 transition-all cursor-pointer"
-              style={{
+              whileHover={{ scale: 1.02, y: -2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card className="rounded-xl border-2 transition-all hover:shadow-lg" style={{
                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-              }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="rounded-lg p-2"
-                  style={{
-                    backgroundColor: `${color}20`,
-                    color: color,
-                  }}
-                >
-                  {icon}
-                </motion.div>
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: index * 0.2 }}
-                  className="text-right"
-                >
-                  <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                    {value}
-                  </p>
-                </motion.div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                  {title}
-                </h3>
-                <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
-                  {description}
-                </p>
-              </div>
+              }}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                        {title}
+                      </p>
+                      <p className="text-2xl font-bold mt-1" style={{ color }}>
+                        {value}
+                      </p>
+                    </div>
+                    <div 
+                      className="rounded-lg p-2"
+                      style={{
+                        backgroundColor: title === "Total Items" 
+                          ? (isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)")
+                          : `${color}20`,
+                        color: title === "Total Items" 
+                          ? (isDarkMode ? "#18442AF5" : "#0B2B26")
+                          : color,
+                      }}
+                    >
+                      {icon}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           ))
         )}
-      </div>
+      </motion.div>
 
       {/* Inventory Table */}
-      {loading ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border-2 p-5 transition-all"
-          style={{
-            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-          }}
-        >
-          <div className="h-64 animate-pulse rounded-lg"
-               style={{
-                 backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
-               }}></div>
-        </motion.div>
-      ) : items.length > 0 ? (
-        <InventoryTable
-          items={items}
-          onAddStock={openStockModal}
-          onEditItem={handleEdit}
-          onDeleteRequest={handleDelete}
-        />
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border-2 p-8 text-center transition-all"
-          style={{
-            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-          }}
-        >
-          <div className="flex flex-col items-center justify-center">
-            <Boxes className="mb-4 h-16 w-16 opacity-50" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
-            <p className="mb-2 text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-              No inventory items yet.
-            </p>
-            <p className="mb-4 text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-              Start by adding your first inventory item.
-            </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={openAddForm}
-              className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
-              style={{
-                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                color: "#F3EDE3",
-              }}
-            >
-              <Plus size={18} />
-              <span className="text-sm font-medium">Add Your First Item</span>
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
+        <Card className="rounded-xl border-2 transition-all" style={{
+          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        }}>
+          <CardHeader className="rounded-t-xl p-6" style={{
+            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+          }}>
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <CardTitle className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  Inventory Items
+                </CardTitle>
+                <CardDescription className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                  {totalItems} supply item{totalItems !== 1 ? 's' : ''} in inventory
+                </CardDescription>
+              </div>
+              
+              {!loading && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={openAddForm}
+                  className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
+                  style={{
+                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                    color: "#F3EDE3",
+                  }}
+                >
+                  <Plus size={18} />
+                  <span className="text-sm font-medium">Add Item</span>
+                </motion.button>
+              )}
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="animate-pulse p-6">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-10 w-10 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+                      <div>
+                        <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
+                        <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="h-6 w-16 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                  </div>
+                ))}
+              </div>
+            ) : items.length > 0 ? (
+              <TooltipProvider>
+                <div className="rounded-lg border-2 shadow-sm" style={{
+                  borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                }}>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b" style={{
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                      }}>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Supply Item</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Quantity</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Price</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Last Restock</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Restock Qty</th>
+                        <th className="p-4 text-right font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, index) => {
+                        const formatDate = (dateString) => {
+                          if (!dateString) return "Never restocked";
+                          return new Date(dateString).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
+                        };
+
+                        return (
+                          <tr
+                            key={item._id || item.id}
+                            className="border-t transition-all hover:opacity-90"
+                            style={{
+                              borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                              backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                            }}
+                          >
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <div className="rounded-lg p-2" style={{
+                                  backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                }}>
+                                  <Package className="h-4 w-4" style={{ color: isDarkMode ? '#18442AF5' : '#0B2B26' }} />
+                                </div>
+                                <div>
+                                  <p className="font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                    {item.name}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                  {item.quantity}
+                                </span>
+                                <span style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                  {item.unit}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                              ₱{item.price?.toFixed(2) ?? "—"}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} />
+                                <span style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                  {formatDate(item.lastRestock)}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              {item.lastRestockAmount != null ? (
+                                <div className="flex items-center gap-2">
+                                  <TrendingUp className="h-4 w-4 text-green-600" />
+                                  <span className="font-semibold text-green-600">
+                                    +{item.lastRestockAmount}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>—</span>
+                              )}
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex justify-end gap-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <motion.button
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => openStockModal(item)}
+                                      className="rounded-lg p-2 transition-colors hover:opacity-80"
+                                      style={{
+                                        backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                                    </motion.button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Add Stock</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <motion.button
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => handleEdit(item)}
+                                      className="rounded-lg p-2 transition-colors hover:opacity-80"
+                                      style={{
+                                        backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                      }}
+                                    >
+                                      <Package className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                                    </motion.button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit Item</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </TooltipProvider>
+            ) : (
+              <div className="p-8 text-center">
+                <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                  <PackageX className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
+                  <p className="text-lg font-medium">No supplies found</p>
+                  <p className="text-sm mb-4">Inventory items will appear here once added</p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={openAddForm}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
+                    style={{
+                      backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                      color: "#F3EDE3",
+                    }}
+                  >
+                    <Plus size={18} />
+                    <span className="text-sm font-medium">Add Your First Item</span>
+                  </motion.button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Inventory Form Modal */}
       {showForm && (

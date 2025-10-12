@@ -245,7 +245,7 @@ const MainPage = () => {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     {loading ? (
                         [...Array(5)].map((_, index) => (
                             <motion.div
@@ -312,7 +312,7 @@ const MainPage = () => {
             </div>
 
             {/* Record Table */}
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
                 {loading ? (
                     <motion.div
                         key="skeleton-table"

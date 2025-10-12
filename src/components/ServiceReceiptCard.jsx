@@ -1,7 +1,8 @@
 import React, { useState, useRef } from "react";
 import { Printer, X } from "lucide-react";
+import { motion } from "framer-motion";
 
-const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
+const ServiceReceiptCard = ({ transaction, settings, onClose, isDarkMode }) => {
     const [isPrinting, setIsPrinting] = useState(false);
     const receiptRef = useRef();
 
@@ -56,33 +57,88 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 dark:bg-black dark:bg-opacity-80">
-            <div className="relative mx-auto max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-slate-900">
-                <button
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70"
+        >
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative mx-auto max-w-md rounded-xl border-2 p-6 shadow-xl"
+                style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                }}
+            >
+                <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={onClose}
-                    className="absolute -right-3 -top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-red-500 transition-all duration-200 print:hidden"
+                    className="absolute -right-3 -top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 shadow-lg transition-all duration-200 print:hidden"
+                    style={{
+                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                    }}
                     aria-label="Close receipt"
                 >
-                    <X size={20} className="transition-transform duration-200 hover:scale-110" />
-                </button>
+                    <X size={20} />
+                </motion.button>
 
                 <div
                     ref={receiptRef}
                     className="printable-area"
                 >
-                    <div className="mx-auto max-w-md space-y-2 rounded-md border border-dashed bg-white p-4 font-mono text-sm shadow-md dark:border-gray-600 dark:bg-slate-950">
+                    <div 
+                        className="mx-auto max-w-md space-y-2 rounded-lg border-2 p-4 font-mono text-sm shadow-md"
+                        style={{
+                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        }}
+                    >
                         {/* Store Info */}
-                        <div className="text-center text-lg font-bold dark:text-white">{settings.storeName}</div>
-                        <div className="text-center dark:text-gray-300">{settings.address}</div>
-                        <div className="text-center dark:text-gray-300">{settings.phone}</div>
+                        <div 
+                            className="text-center text-lg font-bold"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        >
+                            {settings.storeName}
+                        </div>
+                        <div 
+                            className="text-center"
+                            style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                        >
+                            {settings.address}
+                        </div>
+                        <div 
+                            className="text-center"
+                            style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                        >
+                            {settings.phone}
+                        </div>
 
-                        <hr className="my-2 border-gray-300 dark:border-gray-600" />
+                        <hr 
+                            className="my-2"
+                            style={{
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            }}
+                        />
 
                         {/* Receipt Header */}
-                        <div className="text-md text-center font-bold dark:text-white">LAUNDRY CLAIM RECEIPT</div>
+                        <div 
+                            className="text-md text-center font-bold"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        >
+                            LAUNDRY CLAIM RECEIPT
+                        </div>
 
                         {/* Receipt Meta*/}
-                        <div className="grid grid-cols-2 gap-1 text-xs dark:text-gray-300">
+                        <div 
+                            className="grid grid-cols-2 gap-1 text-xs"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        >
                             <div>
                                 Transaction #: <span className="font-bold">{transactionNumber}</span>
                             </div>
@@ -100,9 +156,17 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
                             </div>
                         </div>
 
-                        <hr className="my-2 border-gray-300 dark:border-gray-600" />
+                        <hr 
+                            className="my-2"
+                            style={{
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            }}
+                        />
 
-                        <div className="space-y-1 dark:text-white">
+                        <div 
+                            className="space-y-1"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        >
                             <div className="flex justify-between">
                                 <span>Service Type:</span>
                                 <span className="font-bold">{transaction.serviceType}</span>
@@ -113,13 +177,26 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
                             </div>
                             <div className="flex justify-between">
                                 <span>Status:</span>
-                                <span className="font-bold text-green-600">CLAIMED</span>
+                                <span 
+                                    className="font-bold"
+                                    style={{ color: '#059669' }}
+                                >
+                                    CLAIMED
+                                </span>
                             </div>
                         </div>
 
-                        <hr className="my-2 border-gray-300 dark:border-gray-600" />
+                        <hr 
+                            className="my-2"
+                            style={{
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            }}
+                        />
 
-                        <div className="space-y-1 text-xs dark:text-gray-300">
+                        <div 
+                            className="space-y-1 text-xs"
+                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        >
                             <div className="flex justify-between">
                                 <span>Laundry Completed:</span>
                                 <span className="font-bold">{formatDateTime(completionDate)}</span>
@@ -130,11 +207,24 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
                             </div>
                         </div>
 
-                        <hr className="my-2 border-gray-300 dark:border-gray-600" />
+                        <hr 
+                            className="my-2"
+                            style={{
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            }}
+                        />
 
                         {/* Claim Confirmation */}
-                        <div className="mt-2 text-xs text-slate-600 dark:text-gray-300">
-                            <strong className="mb-1 block text-sm text-slate-700 dark:text-slate-200">Claim Confirmation</strong>
+                        <div 
+                            className="mt-2 text-xs"
+                            style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                        >
+                            <strong 
+                                className="mb-1 block text-sm"
+                                style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                            >
+                                Claim Confirmation
+                            </strong>
                             <p>
                                 This receipt confirms that {transaction.customerName} has claimed their laundry on {formatDate(claimDate)}. All items
                                 have been verified and released to the customer. Laundry was completed on {formatDate(completionDate)}.
@@ -142,21 +232,31 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
                         </div>
 
                         {/* Footer */}
-                        <div className="mt-2 text-center text-xs dark:text-gray-300">{settings.footerNote || "Thank you for your business!"}</div>
+                        <div 
+                            className="mt-2 text-center text-xs"
+                            style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                        >
+                            {settings.footerNote || "Thank you for your business!"}
+                        </div>
                     </div>
                 </div>
 
                 <div className="mt-4 flex justify-center print:hidden">
-                    <button
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={handlePrint}
-                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-white shadow-md transition-all hover:shadow-lg focus:outline-none"
+                        style={{
+                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                        }}
                         disabled={isPrinting}
                     >
                         <Printer size={18} />
                         {isPrinting ? "Printing..." : "Print Receipt"}
-                    </button>
+                    </motion.button>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Print styles */}
             <style>
@@ -177,7 +277,7 @@ const ServiceReceiptCard = ({ transaction, settings, onClose }) => {
           }
         `}
             </style>
-        </div>
+        </motion.div>
     );
 };
 

@@ -58,6 +58,18 @@ public class MachineController {
         return ResponseEntity.ok().build();
     }
 
+    // Add machine release endpoint
+    @PatchMapping("/{id}/release")
+    public ResponseEntity<MachineItemDto> releaseMachine(@PathVariable String id) {
+        return machineRepository.findById(id)
+                .map(machine -> {
+                    machine.setStatus("Available");
+                    MachineItem updated = machineRepository.save(machine);
+                    return ResponseEntity.ok(toDto(updated));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     private MachineItemDto toDto(MachineItem item) {
         return new MachineItemDto(
                 item.getId(),

@@ -5,13 +5,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { motion } from "framer-motion";
 
-const MissingForm = ({ showReportDialog, setShowReportDialog, newItem, setNewItem, machines, isLoadingMachines, handleReportItem }) => {
-    const inputClass =
-        "bg-white dark:bg-slate-950 text-slate-700 dark:text-muted-foreground placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950";
-    const selectTriggerClass =
-        "bg-white dark:bg-slate-950 text-slate-700 dark:text-muted-foreground placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-300 dark:border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950";
-    const buttonClass = "bg-cyan-600 hover:bg-cyan-700 dark:bg-cyan-700 dark:hover:bg-cyan-600 text-white";
+const MissingForm = ({ 
+    showReportDialog, 
+    setShowReportDialog, 
+    newItem, 
+    setNewItem, 
+    machines, 
+    isLoadingMachines, 
+    handleReportItem,
+    isDarkMode 
+}) => {
+    const inputClass = `rounded-lg border-2 transition-all ${
+        isDarkMode 
+            ? "bg-white text-slate-900 border-slate-300 focus:border-cyan-500" 
+            : "bg-white text-slate-900 border-slate-300 focus:border-cyan-500"
+    }`;
+    
+    const selectTriggerClass = `rounded-lg border-2 transition-all ${
+        isDarkMode 
+            ? "bg-white text-slate-900 border-slate-300 focus:border-cyan-500" 
+            : "bg-white text-slate-900 border-slate-300 focus:border-cyan-500"
+    }`;
 
     const sortedMachines = [...machines].sort((a, b) => {
         if (a.type !== b.type) {
@@ -28,26 +44,44 @@ const MissingForm = ({ showReportDialog, setShowReportDialog, newItem, setNewIte
     };
 
     return (
-        <Dialog
-            open={showReportDialog}
-            onOpenChange={setShowReportDialog}
-        >
+        <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
             <DialogTrigger asChild>
-                <Button className={buttonClass}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Report Missing Item
-                </Button>
+                <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    <Button 
+                        className="rounded-lg transition-all flex items-center gap-2"
+                        style={{
+                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                            color: "#F3EDE3",
+                        }}
+                    >
+                        <Plus className="h-4 w-4" />
+                        Report Missing Item
+                    </Button>
+                </motion.div>
             </DialogTrigger>
-            <DialogContent className="border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-950">
+            <DialogContent 
+                className="rounded-xl border-2 p-6"
+                style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                }}
+            >
                 <DialogHeader>
-                    <DialogTitle className="text-slate-900 dark:text-slate-50">Report Missing Item</DialogTitle>
-                    <DialogDescription className="text-slate-600 dark:text-slate-400">
+                    <DialogTitle className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                        Report Missing Item
+                    </DialogTitle>
+                    <DialogDescription className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
                         Enter details about the item found in the machine.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                     <div>
-                        <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground">Item Description *</label>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            Item Description *
+                        </label>
                         <Input
                             className={inputClass}
                             placeholder="e.g., Blue shirt, Black socks, etc."
@@ -57,7 +91,9 @@ const MissingForm = ({ showReportDialog, setShowReportDialog, newItem, setNewIte
                         />
                     </div>
                     <div>
-                        <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground">Machine Found In (Optional)</label>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            Machine Found In (Optional)
+                        </label>
                         <Select
                             value={newItem.machineId}
                             onValueChange={(value) => setNewItem({ ...newItem, machineId: value === "none" ? "" : value })}
@@ -65,29 +101,25 @@ const MissingForm = ({ showReportDialog, setShowReportDialog, newItem, setNewIte
                             <SelectTrigger className={selectTriggerClass}>
                                 <SelectValue placeholder="Select machine (optional)" />
                             </SelectTrigger>
-                            <SelectContent className="border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-950">
-                                {/* Fixed: Changed value from "" to "none" */}
+                            <SelectContent 
+                                className="rounded-lg border-2"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                }}
+                            >
                                 <SelectItem value="none">Not associated with a machine</SelectItem>
                                 {isLoadingMachines ? (
-                                    <SelectItem
-                                        value="loading"
-                                        disabled
-                                    >
+                                    <SelectItem value="loading" disabled>
                                         Loading machines...
                                     </SelectItem>
                                 ) : machines.length === 0 ? (
-                                    <SelectItem
-                                        value="no-machines"
-                                        disabled
-                                    >
+                                    <SelectItem value="no-machines" disabled>
                                         No machines available
                                     </SelectItem>
                                 ) : (
                                     sortedMachines.map((machine) => (
-                                        <SelectItem
-                                            key={machine.id}
-                                            value={machine.id}
-                                        >
+                                        <SelectItem key={machine.id} value={machine.id}>
                                             {machine.name} ({machine.type}) {machine.status !== "Available" && `- ${machine.status}`}
                                         </SelectItem>
                                     ))
@@ -96,9 +128,13 @@ const MissingForm = ({ showReportDialog, setShowReportDialog, newItem, setNewIte
                         </Select>
                     </div>
                     <div>
-                        <div className="flex items-center justify-between">
-                            <label className="text-sm font-medium text-slate-700 dark:text-muted-foreground">Notes (Optional)</label>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{newItem.notes?.length || 0}/30 characters</span>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                Notes (Optional)
+                            </label>
+                            <span className="text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                {newItem.notes?.length || 0}/30 characters
+                            </span>
                         </div>
                         <Textarea
                             className={inputClass}
@@ -108,12 +144,21 @@ const MissingForm = ({ showReportDialog, setShowReportDialog, newItem, setNewIte
                             maxLength={30}
                         />
                     </div>
-                    <Button
-                        onClick={handleReportItem}
-                        className={`w-full ${buttonClass}`}
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                     >
-                        Report Item
-                    </Button>
+                        <Button
+                            onClick={handleReportItem}
+                            className="w-full rounded-lg transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                color: "#F3EDE3",
+                            }}
+                        >
+                            Report Item
+                        </Button>
+                    </motion.div>
                 </div>
             </DialogContent>
         </Dialog>

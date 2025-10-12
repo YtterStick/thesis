@@ -171,9 +171,6 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
               <SortableHeader field="username">Username</SortableHeader>
               <SortableHeader field="role">Role</SortableHeader>
               <SortableHeader field="contact">Contact</SortableHeader>
-              <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                Status
-              </th>
               <th className="p-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                 Actions
               </th>
@@ -208,18 +205,6 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
                   </td>
                   <td className="p-3" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                     {account.contact?.replace(/^\+63/, "0")}
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={cn(
-                        "px-3 py-1 text-xs font-medium rounded-full transition-colors",
-                        account.status === "Active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                      )}
-                    >
-                      {account.status}
-                    </span>
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex justify-end space-x-2">
@@ -256,7 +241,7 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
             ) : (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={4}
                   className="p-8 text-center"
                   style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
                 >

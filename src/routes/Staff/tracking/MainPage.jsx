@@ -471,22 +471,25 @@ export default function ServiceTrackingPage() {
                 ),
             );
 
-            if (nextStatus === "FOLDING" && load.machineId) {
-                try {
-                    await fetchWithTimeout(`http://localhost:8080/api/machines/${load.machineId}/release`, {
-                        method: "PATCH",
-                    });
-                } catch (err) {
-                    console.error("Failed to release machine:", err);
-                }
-            }
-
             // Send SMS notification when job is completed
             if (nextStatus === "COMPLETED") {
                 sendSmsNotification(job, normalizedServiceType);
             }
         } catch (err) {
             console.error("Failed to advance load status:", err);
+            // Revert the local state on error
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
+            );
             fetchData(true);
         }
     };
@@ -792,7 +795,7 @@ export default function ServiceTrackingPage() {
                         assignMachine={assignMachine}
                         updateDuration={updateDuration}
                         startAction={startAction}
-                        advanceStatus={advanceStatus} // Make sure this is passed correctly
+                        advanceStatus={advanceStatus}
                         startDryingAgain={startDryingAgain}
                         getJobKey={getJobKey}
                         getRemainingTime={getRemainingTime}

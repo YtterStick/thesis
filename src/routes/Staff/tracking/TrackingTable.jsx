@@ -99,47 +99,48 @@ const TrackingTable = ({
             </tr>
           </thead>
           <tbody>
-            {jobs.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={10}
-                  className="px-4 py-16 text-center text-sm"
-                  style={{
-                    color: isDarkMode ? '#6B7280' : '#0B2B26/70',
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <CheckCircle style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} className="h-12 w-12" />
-                    <span>No laundry jobs found</span>
-                    <p className="text-sm">All jobs have been completed or no jobs are scheduled.</p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              jobs.map((job) => {
-                const jobKey = getJobKey(job);
-                const expanded = expandedJobs[jobKey] || false;
-                const visibleLoads = getVisibleLoads(job, expanded);
+            <AnimatePresence>
+              {jobs.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-16 text-center text-sm"
+                    style={{
+                      color: isDarkMode ? '#6B7280' : '#0B2B26/70',
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <CheckCircle style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} className="h-12 w-12" />
+                      <span>No laundry jobs found</span>
+                      <p className="text-sm">All jobs have been completed or no jobs are scheduled.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                jobs.map((job) => {
+                  const jobKey = getJobKey(job);
+                  const expanded = expandedJobs[jobKey] || false;
+                  const visibleLoads = getVisibleLoads(job, expanded);
 
-                if (visibleLoads.length === 0) return null;
+                  if (visibleLoads.length === 0) return null;
 
-                return (
-                  <React.Fragment key={jobKey}>
-                    {visibleLoads.map((load, i) => {
-                      const originalIndex = job.loads.findIndex(
-                        (l) => l.loadNumber === load.loadNumber && l.status === load.status,
-                      );
+                  return (
+                    <React.Fragment key={jobKey}>
+                      {visibleLoads.map((load, i) => {
+                        const originalIndex = job.loads.findIndex(
+                          (l) => l.loadNumber === load.loadNumber && l.status === load.status,
+                        );
 
-                      const isCompleting = isLoadCompleting(jobKey, originalIndex);
+                        const isCompleting = isLoadCompleting(jobKey, originalIndex);
 
-                      // Normalize service type for machine selection
-                      const normalizedServiceType = job.serviceType?.replace(' Only', '') || job.serviceType;
-                      const machineType = getMachineTypeForStep(load.status, normalizedServiceType);
-                      const options = machineType === "WASHER" ? machines.WASHER : machineType === "DRYER" ? machines.DRYER : [];
+                        // Normalize service type for machine selection
+                        const normalizedServiceType = job.serviceType?.replace(' Only', '') || job.serviceType;
+                        const machineType = getMachineTypeForStep(load.status, normalizedServiceType);
+                        const options = machineType === "WASHER" ? machines.WASHER : machineType === "DRYER" ? machines.DRYER : [];
 
-                      return (
-                        <AnimatePresence key={`${jobKey}-load${load.loadNumber}`}>
+                        return (
                           <motion.tr
+                            key={`${jobKey}-load${load.loadNumber}`}
                             initial={false}
                             animate={{ 
                               scale: 1,
@@ -285,50 +286,50 @@ const TrackingTable = ({
                               />
                             </td>
                           </motion.tr>
-                        </AnimatePresence>
-                      );
-                    })}
+                        );
+                      })}
 
-                    {job.loads.length > 1 && (
-                      <tr>
-                        <td
-                          colSpan={10}
-                          className="p-2"
-                        >
-                          <div className="flex justify-center">
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() =>
-                                setExpandedJobs((prev) => ({
-                                  ...prev,
-                                  [jobKey]: !expanded,
-                                }))
-                              }
-                              className="flex items-center gap-1 px-3 py-1 rounded-lg transition-all"
-                              style={{
-                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                                color: isDarkMode ? '#13151B' : '#0B2B26',
-                              }}
-                            >
-                              {expanded ? (
-                                <>
-                                  See less <ArrowUp className="h-4 w-4" />
-                                </>
-                              ) : (
-                                <>
-                                  See more <ArrowDown className="h-4 w-4" />
-                                </>
-                              )}
-                            </motion.button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })
-            )}
+                      {job.loads.length > 1 && (
+                        <tr>
+                          <td
+                            colSpan={10}
+                            className="p-2"
+                          >
+                            <div className="flex justify-center">
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() =>
+                                  setExpandedJobs((prev) => ({
+                                    ...prev,
+                                    [jobKey]: !expanded,
+                                  }))
+                                }
+                                className="flex items-center gap-1 px-3 py-1 rounded-lg transition-all"
+                                style={{
+                                  backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                  color: isDarkMode ? '#13151B' : '#0B2B26',
+                                }}
+                              >
+                                {expanded ? (
+                                  <>
+                                    See less <ArrowUp className="h-4 w-4" />
+                                  </>
+                                ) : (
+                                  <>
+                                    See more <ArrowDown className="h-4 w-4" />
+                                  </>
+                                )}
+                              </motion.button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              )}
+            </AnimatePresence>
           </tbody>
         </table>
       </div>

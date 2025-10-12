@@ -2,17 +2,21 @@ import React, { useState, useEffect } from "react";
 import ClaimingTable from "./ClaimingTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Filter } from "lucide-react";
+import { Search, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "@/hooks/use-theme";
 
 const MainPage = () => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
     const [transactions, setTransactions] = useState([]);
     const [expiredTransactions, setExpiredTransactions] = useState([]);
     const [filteredTransactions, setFilteredTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingExpired, setIsLoadingExpired] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [dateFilter, setDateFilter] = useState("all");
     const [activeTab, setActiveTab] = useState("unclaimed");
     const [hasFetched, setHasFetched] = useState(false);
     const { toast } = useToast();
@@ -26,7 +30,7 @@ const MainPage = () => {
 
     useEffect(() => {
         filterTransactions();
-    }, [transactions, expiredTransactions, searchTerm, dateFilter, activeTab]);
+    }, [transactions, expiredTransactions, searchTerm, activeTab]);
 
     const fetchCompletedTransactions = async () => {
         try {
@@ -50,7 +54,6 @@ const MainPage = () => {
 
             // Sort by completion date (newest first)
             const sortedData = filteredData.sort((a, b) => {
-                // Get the latest completion date from load assignments
                 const getLatestCompletionDate = (transaction) => {
                     return transaction.loadAssignments?.reduce(
                         (latest, load) => (load.endTime ? Math.max(latest, new Date(load.endTime).getTime()) : latest),
@@ -61,14 +64,18 @@ const MainPage = () => {
                 const aDate = getLatestCompletionDate(a);
                 const bDate = getLatestCompletionDate(b);
 
-                return bDate - aDate; // Descending order (newest first)
+                return bDate - aDate;
             });
 
             setTransactions(sortedData);
             setHasFetched(true);
         } catch (error) {
             console.error(error);
-            toast({ title: "Error", description: "Failed to load completed transactions", variant: "destructive" });
+            toast({ 
+                title: "Error", 
+                description: "Failed to load completed transactions", 
+                variant: "destructive" 
+            });
         } finally {
             setIsLoading(false);
         }
@@ -87,17 +94,20 @@ const MainPage = () => {
             if (!response.ok) throw new Error("Failed to fetch expired transactions");
             const data = await response.json();
 
-            // Sort expired transactions by due date (newest first)
             const sortedData = data.sort((a, b) => {
                 const aDate = a.dueDate ? new Date(a.dueDate).getTime() : 0;
                 const bDate = b.dueDate ? new Date(b.dueDate).getTime() : 0;
-                return bDate - aDate; // Descending order (newest first)
+                return bDate - aDate;
             });
 
             setExpiredTransactions(sortedData);
         } catch (error) {
             console.error(error);
-            toast({ title: "Error", description: "Failed to load expired transactions", variant: "destructive" });
+            toast({ 
+                title: "Error", 
+                description: "Failed to load expired transactions", 
+                variant: "destructive" 
+            });
         } finally {
             setIsLoadingExpired(false);
         }
@@ -114,31 +124,6 @@ const MainPage = () => {
                     t.contact?.toLowerCase().includes(term) ||
                     t.transactionId?.toLowerCase().includes(term),
             );
-        }
-
-        if (dateFilter !== "all") {
-            const today = new Date();
-            filtered = filtered.filter((t) => {
-                const completionDate = t.loadAssignments?.reduce((latest, load) => {
-                    if (load.endTime) {
-                        const loadDate = new Date(load.endTime);
-                        return !latest || loadDate > latest ? loadDate : latest;
-                    }
-                    return latest;
-                }, null);
-                if (!completionDate) return false;
-
-                switch (dateFilter) {
-                    case "today":
-                        return completionDate.toDateString() === today.toDateString();
-                    case "week":
-                        const oneWeekAgo = new Date();
-                        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                        return completionDate >= oneWeekAgo;
-                    default:
-                        return true;
-                }
-            });
         }
 
         setFilteredTransactions(filtered);
@@ -172,7 +157,6 @@ const MainPage = () => {
                 description: "Laundry marked as claimed. You can now view/print the receipt.",
             });
 
-            // Remove from both lists
             setTransactions((prev) => prev.filter((t) => t.id !== transactionId));
             setExpiredTransactions((prev) => prev.filter((t) => t.id !== transactionId));
 
@@ -187,7 +171,11 @@ const MainPage = () => {
             } else {
                 errorMessage = "Failed to claim laundry";
             }
-            toast({ title: "Error", description: errorMessage, variant: "destructive" });
+            toast({ 
+                title: "Error", 
+                description: errorMessage, 
+                variant: "destructive" 
+            });
             return null;
         }
     };
@@ -210,7 +198,6 @@ const MainPage = () => {
                 description: "Past due laundry has been disposed.",
             });
 
-            // Remove from expired list
             setExpiredTransactions((prev) => prev.filter((t) => t.id !== transactionId));
         } catch (error) {
             console.error(error);
@@ -229,86 +216,139 @@ const MainPage = () => {
     };
 
     return (
-        <div className="space-y-6 p-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+            {/* Header */}
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 mb-3"
+            >
+                <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="rounded-lg p-2"
+                    style={{
+                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                        color: "#F3EDE3",
+                    }}
+                >
+                    <Package size={22} />
+                </motion.div>
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Laundry Claiming & Disposing </h1>
-                    <p className="mt-1 text-slate-600 dark:text-slate-400">Manage completed and past due laundry</p>
+                    <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                        Laundry Claiming & Disposing
+                    </p>
+                    <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                        Manage completed and past due laundry
+                    </p>
                 </div>
-            </div>
+            </motion.div>
 
-            <Card className="border border-slate-200 bg-white shadow-md dark:border-slate-700 dark:bg-slate-900">
-                <CardHeader className="rounded-t-lg bg-slate-100 dark:bg-slate-800">
-                    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-                        <div>
-                            <CardTitle className="text-slate-900 dark:text-slate-50">
-                                {activeTab === "unclaimed" ? "Completed & Unclaimed Laundry" : "Past Due Laundry"}
-                            </CardTitle>
-                            <CardDescription className="text-slate-600 dark:text-slate-400">
-                                {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""}{" "}
-                                {activeTab === "unclaimed" ? "ready for pickup" : "past due and need disposal"}
-                            </CardDescription>
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+            >
+                <Card 
+                    className="rounded-xl border-2 transition-all"
+                    style={{
+                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    }}
+                >
+                    <CardHeader 
+                        className="rounded-t-xl p-6"
+                        style={{
+                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        }}
+                    >
+                        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                            <div>
+                                <CardTitle 
+                                    className="text-lg font-bold"
+                                    style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                                >
+                                    {activeTab === "unclaimed" ? "Completed & Unclaimed Laundry" : "Past Due Laundry"}
+                                </CardTitle>
+                                <CardDescription 
+                                    className="text-sm"
+                                    style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                                >
+                                    {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""}{" "}
+                                    {activeTab === "unclaimed" ? "ready for pickup" : "past due and need disposal"}
+                                </CardDescription>
+                            </div>
+                            <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
+                                <div className="flex space-x-2">
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                            activeTab === "unclaimed"
+                                                ? "text-white"
+                                                : isDarkMode ? "text-slate-100" : "text-slate-700"
+                                        }`}
+                                        style={{
+                                            backgroundColor: activeTab === "unclaimed" 
+                                                ? (isDarkMode ? "#18442AF5" : "#0B2B26")
+                                                : (isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)"),
+                                        }}
+                                        onClick={() => setActiveTab("unclaimed")}
+                                    >
+                                        Unclaimed ({transactions.length})
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                            activeTab === "expired"
+                                                ? "text-white"
+                                                : isDarkMode ? "text-slate-100" : "text-slate-700"
+                                        }`}
+                                        style={{
+                                            backgroundColor: activeTab === "expired" 
+                                                ? "#EF4444"
+                                                : (isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)"),
+                                        }}
+                                        onClick={() => setActiveTab("expired")}
+                                    >
+                                        Past Due ({expiredTransactions.length})
+                                    </motion.button>
+                                </div>
+                                <div className="relative">
+                                    <Search 
+                                        className="absolute left-2 top-2.5 h-4 w-4" 
+                                        style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                                    />
+                                    <Input
+                                        placeholder="Search customers..."
+                                        className="w-full border-2 pl-8 transition-all sm:w-64"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                            color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        }}
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row">
-                            <div className="flex space-x-1">
-                                <button
-                                    className={`rounded-md px-4 py-2 text-sm font-medium ${
-                                        activeTab === "unclaimed"
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
-                                    }`}
-                                    onClick={() => setActiveTab("unclaimed")}
-                                >
-                                    Unclaimed ({transactions.length})
-                                </button>
-                                <button
-                                    className={`rounded-md px-4 py-2 text-sm font-medium ${
-                                        activeTab === "expired"
-                                            ? "bg-red-600 text-white"
-                                            : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
-                                    }`}
-                                    onClick={() => setActiveTab("expired")}
-                                >
-                                    Past Due ({expiredTransactions.length})
-                                </button>
-                            </div>
-                            <div className="relative">
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
-                                <Input
-                                    placeholder="Search customers..."
-                                    className="w-full border-slate-300 pl-8 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50 sm:w-64"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Filter className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                                <select
-                                    className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-50"
-                                    value={dateFilter}
-                                    onChange={(e) => setDateFilter(e.target.value)}
-                                >
-                                    <option value="all">All Dates</option>
-                                    <option value="today">Today</option>
-                                    <option value="week">This Week</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </CardHeader>
+                    </CardHeader>
 
-                <CardContent className="p-0">
-                    <ClaimingTable
-                        transactions={filteredTransactions}
-                        isLoading={activeTab === "unclaimed" ? isLoading : isLoadingExpired}
-                        hasFetched={hasFetched}
-                        onClaim={handleClaim}
-                        onDispose={handleDispose}
-                        isExpiredTab={activeTab === "expired"}
-                        hasUnfilteredData={activeTab === "unclaimed" ? transactions.length > 0 : expiredTransactions.length > 0}
-                    />
-                </CardContent>
-            </Card>
+                    <CardContent className="p-0">
+                        <ClaimingTable
+                            transactions={filteredTransactions}
+                            isLoading={activeTab === "unclaimed" ? isLoading : isLoadingExpired}
+                            hasFetched={hasFetched}
+                            onClaim={handleClaim}
+                            onDispose={handleDispose}
+                            isExpiredTab={activeTab === "expired"}
+                            hasUnfilteredData={activeTab === "unclaimed" ? transactions.length > 0 : expiredTransactions.length > 0}
+                            isDarkMode={isDarkMode}
+                        />
+                    </CardContent>
+                </Card>
+            </motion.div>
         </div>
     );
 };
