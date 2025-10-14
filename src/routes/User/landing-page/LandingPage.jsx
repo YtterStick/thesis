@@ -9,7 +9,7 @@ import { useScrollSpy } from "./useScrollSpy";
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
 import { useTheme } from "@/hooks/use-theme";
 
-const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
+const API_BASE_URL = "http://localhost:8080/api";
 
 const AnimatedNumber = ({ value, isChanging }) => {
   if (!isChanging) {

@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch('https://thesis-g0pr.onrender.com/api/dashboard/admin', {
+    const response = await fetch('http://localhost:8080/api/dashboard/admin', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

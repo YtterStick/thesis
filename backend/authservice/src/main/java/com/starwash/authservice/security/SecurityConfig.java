@@ -36,27 +36,23 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                     // Public endpoints - no authentication required
                     .requestMatchers(
-                        "/api/auth/login", 
-                        "/api/auth/register", 
-                        "/api/auth/logout",
-                        "/api/health",
-                        "/",
-                        
-                        // All these are now under /api prefix
+                        "/login", 
+                        "/register", 
+                        "/logout",
                         "/api/services/**",
                         "/api/stock/**",
                         "/api/track/**",
-                        "/api/terms/**",
-                        "/api/laundry-jobs/**", 
-                        "/api/machines/**"
+                        "/api/terms/**"  // ✅ ADD THIS LINE - Make terms endpoints public for users
                     ).permitAll()
                     
                     // Authenticated endpoints
-                    .requestMatchers("/api/auth/me").authenticated()
+                    .requestMatchers("/me").authenticated()
                     
                     // Role-based endpoints
                     .requestMatchers("/api/accounts/**").hasRole("ADMIN")
-                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                    
+                    // Other public endpoints
+                    .requestMatchers("/api/laundry-jobs/**", "/api/machines/**").permitAll()
                     
                     .anyRequest().authenticated()
                 )
@@ -69,8 +65,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }

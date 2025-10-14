@@ -80,7 +80,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
 
         try {
             console.log(`🔍 Fetching tracking data for: ${invoiceNumber}`);
-            const response = await fetch(`https://thesis-g0pr.onrender.com/api/track/${invoiceNumber}`);
+            const response = await fetch(`http://localhost:8080/api/track/${invoiceNumber}`);
 
             if (!response.ok) {
                 if (response.status === 404) {

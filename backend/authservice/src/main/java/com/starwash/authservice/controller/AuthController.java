@@ -18,8 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("/api/auth") // ✅ ADDED - Match the API prefix
-@CrossOrigin(origins = {"https://starwashph.com", "https://www.starwashph.com", "http://localhost:3000", "http://127.0.0.1:3000"})
+@CrossOrigin(origins = "http://localhost:3000")
 public class AuthController {
 
     @Autowired

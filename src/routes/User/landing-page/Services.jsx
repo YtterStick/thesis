@@ -4,84 +4,6 @@ import { useState, useEffect } from "react";
 // Assets
 import assetClothing from "@/assets/USER_ASSET/asset_clothing.png";
 
-// Simple fetch function for public endpoints
-const publicFetch = async (endpoint) => {
-  try {
-    const API_BASE = "https://thesis-g0pr.onrender.com/api";
-    console.log(`🔄 Fetching from: ${API_BASE}${endpoint}`);
-    
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    console.log(`📡 Response status: ${response.status}`);
-    
-    if (!response.ok) {
-      // If endpoint returns 404, use fallback data
-      if (response.status === 404) {
-        console.log('⚠️ Endpoint not found, using fallback data');
-        return getFallbackData(endpoint);
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log('✅ Successfully fetched data:', data);
-    return data;
-  } catch (err) {
-    console.error('❌ Fetch error:', err);
-    // Return fallback data on any error
-    return getFallbackData(endpoint);
-  }
-};
-
-// Fallback data when backend is not available
-const getFallbackData = (endpoint) => {
-  if (endpoint === '/services') {
-    return [
-      {
-        id: "1",
-        name: "Wash & Fold",
-        description: "Complete washing and folding service for your everyday laundry needs",
-        price: 150
-      },
-      {
-        id: "2", 
-        name: "Dry Cleaning",
-        description: "Professional dry cleaning for delicate and special fabrics",
-        price: 200
-      },
-      {
-        id: "3",
-        name: "Ironing Service", 
-        description: "Professional ironing to keep your clothes crisp and neat",
-        price: 100
-      }
-    ];
-  }
-  
-  if (endpoint === '/stock') {
-    return [
-      { id: "1", name: "plastic", price: 3 },
-      { id: "2", name: "detergent", price: 5 },
-      { id: "3", name: "fabric conditioner", price: 7 }
-    ];
-  }
-  
-  if (endpoint === '/machines') {
-    return [
-      { id: "1", capacityKg: 8 },
-      { id: "2", capacityKg: 10 },
-      { id: "3", capacityKg: 12 }
-    ];
-  }
-  
-  return [];
-};
-
 const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -89,19 +11,32 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const [stockItems, setStockItems] = useState([]);
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // Fetch services from backend
   const fetchServices = async () => {
     try {
+      setLoading(true);
       console.log("🔄 Starting to fetch services from backend...");
-      const servicesData = await publicFetch('/services');
+      
+      const response = await fetch('http://localhost:8080/api/services');
+      
+      console.log("📡 Response status:", response.status);
+      console.log("📡 Response ok:", response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Response not OK. Response text:", errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const servicesData = await response.json();
+      console.log('✅ Successfully fetched services:', servicesData);
       setServices(servicesData);
-      setError(null);
+      
     } catch (err) {
       console.error('❌ Error fetching services:', err);
-      setServices(getFallbackData('/services'));
-      setError('Using demo data - Backend temporarily unavailable');
+      console.error('❌ Error message:', err.message);
+      setServices([]);
     }
   };
 
@@ -109,11 +44,18 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchStockItems = async () => {
     try {
       console.log("🔄 Fetching stock items...");
-      const stockData = await publicFetch('/stock');
+      const response = await fetch('http://localhost:8080/api/stock');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const stockData = await response.json();
+      console.log('✅ Successfully fetched stock items:', stockData);
       setStockItems(stockData);
     } catch (err) {
       console.error('❌ Error fetching stock items:', err);
-      setStockItems(getFallbackData('/stock'));
+      setStockItems([]);
     }
   };
 
@@ -121,18 +63,25 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchMachines = async () => {
     try {
       console.log("🔄 Fetching machines...");
-      const machinesData = await publicFetch('/machines');
+      const response = await fetch('http://localhost:8080/api/machines');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const machinesData = await response.json();
+      console.log('✅ Successfully fetched machines:', machinesData);
       setMachines(machinesData);
     } catch (err) {
       console.error('❌ Error fetching machines:', err);
-      setMachines(getFallbackData('/machines'));
+      setMachines([]);
     }
   };
 
   // Get plastic price from inventory
   const getPlasticPrice = () => {
     const plasticItem = stockItems.find(item => 
-      item.name && item.name.toLowerCase().includes('plastic')
+      item.name.toLowerCase().includes('plastic')
     );
     return plasticItem ? plasticItem.price : 3; // Default to 3 PHP if not found
   };
@@ -140,7 +89,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   // Get customer provided items (excluding plastic)
   const getCustomerProvidedItems = () => {
     return stockItems.filter(item => 
-      item.name && !item.name.toLowerCase().includes('plastic')
+      !item.name.toLowerCase().includes('plastic')
     );
   };
 
@@ -161,7 +110,6 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
-      setError(null);
       try {
         await Promise.all([
           fetchServices(),
@@ -170,7 +118,6 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
         ]);
       } catch (error) {
         console.error('Error fetching data:', error);
-        setError('Failed to load some data. Showing available information.');
       } finally {
         setLoading(false);
       }
@@ -253,35 +200,24 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
                 </motion.h2>
               )}
               
-              {/* Error Message */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-6 p-4 rounded-lg text-center"
-                  style={{
-                    backgroundColor: isDarkMode ? '#FEF2F2' : '#FEF2F2',
-                    border: '1px solid #FECACA'
-                  }}
-                >
-                  <p className={isDarkMode ? 'text-red-800' : 'text-red-600'}>
-                    {error}
-                  </p>
-                </motion.div>
-              )}
-              
               {/* Loading State */}
               {loading && (
                 <div className="flex justify-center items-center py-12">
                   <div className="text-center">
-                    <div 
-                      className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
-                      style={{ borderColor: isDarkMode ? 'white' : '#183D3D' }}
-                    ></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#183D3D] mx-auto mb-4"></div>
                     <p className={isDarkMode ? 'text-white' : 'text-[#183D3D]'}>
                       Loading services...
                     </p>
                   </div>
+                </div>
+              )}
+              
+              {/* Empty State - No services loaded */}
+              {!loading && services.length === 0 && (
+                <div className="text-center py-12">
+                  <p className={isDarkMode ? 'text-white' : 'text-[#183D3D]'}>
+                    No services available at the moment.
+                  </p>
                 </div>
               )}
               

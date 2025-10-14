@@ -64,7 +64,7 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
   if (body) options.body = JSON.stringify(body);
 
   try {
-    const response = await fetch(`https://thesis-g0pr.onrender.com/api${endpoint}`, options);
+    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
 
     if (!response.ok) {
       console.error(`❌ ${method} ${endpoint} failed:`, response.status);
@@ -208,7 +208,7 @@ const StaffDashboardPage = () => {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch('https://thesis-g0pr.onrender.com/api/dashboard/staff', {
+    const response = await fetch('http://localhost:8080/api/dashboard/staff', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
