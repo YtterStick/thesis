@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,56 +39,77 @@ public class JwtFilter extends OncePerRequestFilter {
             @NonNull FilterChain chain)
             throws ServletException, IOException {
 
-        String path = request.getRequestURI();
-        System.out.println("🛡️ JwtFilter processing: " + path);
-
-        // Public endpoints - FIXED: Include API paths
-        if (path.equals("/api/login") || path.equals("/api/register") || 
-            path.equals("/login") || path.equals("/register") ||
-            path.equals("/health") || path.equals("/api/health") ||
-            path.equals("/")) {
-            System.out.println("✅ Public endpoint, skipping auth: " + path);
+        final String requestPath = request.getServletPath();
+        final String method = request.getMethod();
+        
+        System.out.println("🔐 JwtFilter: " + method + " " + requestPath);
+        
+        // Skip filter for public endpoints
+        if (requestPath.equals("/api/login") || 
+            requestPath.equals("/api/register") || 
+            requestPath.equals("/health") || 
+            requestPath.equals("/api/health") ||
+            requestPath.startsWith("/api/debug/") ||
+            requestPath.startsWith("/api/test/")) {
+            System.out.println("✅ Public endpoint, skipping JWT: " + requestPath);
             chain.doFilter(request, response);
             return;
         }
 
-        String authHeader = request.getHeader("Authorization");
+        final String authHeader = request.getHeader("Authorization");
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("❌ No Bearer token for: " + requestPath);
+            chain.doFilter(request, response);
+            return;
+        }
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            System.out.println("🔐 Token found for: " + path);
+        try {
+            final String jwt = authHeader.substring(7);
+            final String username = jwtUtil.getUsername(jwt);
 
-            if (jwtUtil.validateToken(token)) {
-                String username = jwtUtil.getUsername(token);
-                String role = jwtUtil.getRole(token);
-                System.out.println("✅ Token valid for user: " + username + " with role: " + role);
+            System.out.println("🔍 Token found, username: " + username);
 
-                Optional<User> userOpt = userRepository.findByUsername(username);
-                if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
-                    // Create authority with ROLE_ prefix
-                    String authority = "ROLE_" + role.toUpperCase();
-                    List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(authority));
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                if (jwtUtil.validateToken(jwt)) {
+                    System.out.println("✅ Token validated for: " + username);
                     
-                    System.out.println("🎯 Setting authentication with authority: " + authority);
+                    // Get user from database
+                    Optional<User> userDetails = userRepository.findByUsername(username);
+                    
+                    if (userDetails.isPresent() && "Active".equals(userDetails.get().getStatus())) {
+                        String role = jwtUtil.getRole(jwt);
+                        System.out.println("🎯 User role: " + role);
+                        
+                        List<SimpleGrantedAuthority> authorities = Collections.singletonList(
+                            new SimpleGrantedAuthority("ROLE_" + role)
+                        );
 
-                    UsernamePasswordAuthenticationToken authentication =
+                        UsernamePasswordAuthenticationToken authToken = 
                             new UsernamePasswordAuthenticationToken(username, null, authorities);
-
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                    System.out.println("✅ Authenticated: " + username + " [" + authority + "] for " + path);
+                        
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        
+                        System.out.println("✅ Authentication set for: " + username + " with role: ROLE_" + role);
+                        
+                        // Verify authentication was set
+                        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                            System.out.println("🔍 SecurityContext contains: " + 
+                                SecurityContextHolder.getContext().getAuthentication().getName());
+                        }
+                    } else {
+                        System.out.println("❌ User not found or inactive: " + username);
+                    }
                 } else {
-                    System.out.println("❌ User not found or inactive: " + username);
-                    response.setStatus(HttpStatus.FORBIDDEN.value());
-                    response.getWriter().write("Account is deactivated");
-                    return;
+                    System.out.println("❌ Token validation failed for: " + username);
                 }
             } else {
-                System.out.println("❌ Invalid token for: " + path);
+                System.out.println("❌ Username null or already authenticated: " + username);
             }
-        } else {
-            System.out.println("❌ No Authorization header for protected endpoint: " + path);
+        } catch (Exception e) {
+            System.out.println("❌ JWT filter error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         chain.doFilter(request, response);

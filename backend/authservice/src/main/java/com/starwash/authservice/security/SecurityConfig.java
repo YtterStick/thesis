@@ -38,25 +38,26 @@ public class SecurityConfig {
                         // Allow OPTIONS requests for CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Public endpoints - FIXED: Include API paths
+                        // Public endpoints - match exactly what's in JwtFilter
                         .requestMatchers(
-                                "/",
+                                "/api/login",
+                                "/api/register", 
                                 "/health",
                                 "/api/health",
-                                "/api/login",      // Added /api/ prefix
-                                "/api/register",   // Added /api/ prefix
-                                "/login",
-                                "/register")
-                        .permitAll()
+                                "/api/debug/**",  // All debug endpoints
+                                "/api/test/**"    // All test endpoints
+                        ).permitAll()
 
-                        // Role-based endpoints - FIXED: Use hasAuthority for explicit control
-                        .requestMatchers("/api/dashboard/admin").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/dashboard/staff").hasAnyAuthority("ROLE_STAFF", "ROLE_ADMIN")
-                        .requestMatchers("/api/accounts/**").hasAuthority("ROLE_ADMIN")
+                        // Role-based endpoints - use hasRole (Spring adds ROLE_ prefix automatically)
+                        .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
+                        .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
+                        .requestMatchers("/api/accounts/**").hasRole("ADMIN")
 
-                        // Other authenticated endpoints
+                        // ME endpoint - allow any authenticated user
+                        .requestMatchers("/api/me").authenticated()
+
+                        // All other API endpoints require authentication
                         .requestMatchers("/api/**").authenticated()
-                        .requestMatchers("/me").authenticated()
 
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -67,7 +68,8 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
