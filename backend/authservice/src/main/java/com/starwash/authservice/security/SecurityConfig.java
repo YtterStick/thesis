@@ -36,27 +36,37 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                     // Public endpoints - no authentication required
                     .requestMatchers(
-                        "/login", 
-                        "/register", 
-                        "/logout",
-                        "/health",                    // ✅ ADDED - Render health check
-                        "/api/health",                // ✅ ADDED - API health check
-                        "/",                         // ✅ ADDED - Root endpoint
+                        "/api/auth/login", 
+                        "/api/auth/register", 
+                        "/api/auth/logout",
+                        "/api/health",                    // API health check
+                        "/",                             // Root endpoint
+                        
+                        // ✅ PUBLIC SERVICE ENDPOINTS - Allow all services, stock, machines
+                        "/api/services",
                         "/api/services/**",
+                        "/api/stock", 
                         "/api/stock/**",
+                        "/api/machines",
+                        "/api/machines/**",
+                        
+                        // Other public endpoints
                         "/api/track/**",
                         "/api/terms/**",
-                        "/api/laundry-jobs/**", 
-                        "/api/machines/**"
+                        "/api/laundry-jobs/**"
                     ).permitAll()
                     
                     // Authenticated endpoints
-                    .requestMatchers("/me").authenticated()
+                    .requestMatchers("/api/auth/me").authenticated()
                     
                     // Role-based endpoints
                     .requestMatchers("/api/accounts/**").hasRole("ADMIN")
+                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     
-                    .anyRequest().authenticated()
+                    // All other API endpoints require authentication
+                    .requestMatchers("/api/**").authenticated()
+                    
+                    .anyRequest().permitAll() // Allow other non-API endpoints
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .logout(logout -> logout.disable())
@@ -67,7 +77,8 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
