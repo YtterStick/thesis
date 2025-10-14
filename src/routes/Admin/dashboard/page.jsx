@@ -181,7 +181,7 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // Separate function for actual API call
+  // Separate function for actual API call - FIXED VERSION
   const fetchFreshData = async () => {
     console.log("🔄 Fetching fresh dashboard data");
     const token = localStorage.getItem('authToken');
@@ -190,62 +190,81 @@ export default function AdminDashboardPage() {
       throw new Error('Authentication required');
     }
 
-    // Use the centralized API configuration
-    const data = await api.get("dashboard/admin");
-    
-    const newDashboardData = {
-      totalIncome: data.totalIncome || 0,
-      totalLoads: data.totalLoads || 0,
-      unwashedCount: data.unwashedCount || 0,
-      totalUnclaimed: data.totalUnclaimed || 0,
-      overviewData: data.overviewData || [],
-      unclaimedList: data.unclaimedList || [],
-    };
-
-    const currentTime = Date.now();
-
-    // Only update state and cache if data has actually changed
-    if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
-      console.log("🔄 Dashboard data updated with fresh data");
+    try {
+      // FIX: Manually add Authorization header to ensure it's sent
+      const data = await api.get("dashboard/admin", {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
-      // Update cache
-      dashboardCache = {
-        data: newDashboardData,
-        timestamp: currentTime
+      const newDashboardData = {
+        totalIncome: data.totalIncome || 0,
+        totalLoads: data.totalLoads || 0,
+        unwashedCount: data.unwashedCount || 0,
+        totalUnclaimed: data.totalUnclaimed || 0,
+        overviewData: data.overviewData || [],
+        unclaimedList: data.unclaimedList || [],
       };
-      cacheTimestamp = currentTime;
-      
-      // Persist to localStorage
-      saveCacheToStorage(dashboardCache);
-      
-      if (isMountedRef.current) {
-        setDashboardData({
-          ...newDashboardData,
-          loading: false,
-          error: null,
-          lastUpdated: new Date(),
-          dataVersion: (dashboardData.dataVersion || 0) + 1
-        });
-      }
-    } else {
-      console.log("✅ No changes in dashboard data, updating timestamp only");
-      // Just update the timestamp to extend cache life
-      cacheTimestamp = currentTime;
-      dashboardCache.timestamp = currentTime;
-      saveCacheToStorage(dashboardCache);
-      
-      if (isMountedRef.current) {
-        setDashboardData(prev => ({
-          ...prev,
-          loading: false,
-          error: null,
-          lastUpdated: new Date()
-        }));
-      }
-    }
 
-    if (isMountedRef.current) {
-      setInitialLoad(false);
+      const currentTime = Date.now();
+
+      // Only update state and cache if data has actually changed
+      if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
+        console.log("🔄 Dashboard data updated with fresh data");
+        
+        // Update cache
+        dashboardCache = {
+          data: newDashboardData,
+          timestamp: currentTime
+        };
+        cacheTimestamp = currentTime;
+        
+        // Persist to localStorage
+        saveCacheToStorage(dashboardCache);
+        
+        if (isMountedRef.current) {
+          setDashboardData({
+            ...newDashboardData,
+            loading: false,
+            error: null,
+            lastUpdated: new Date(),
+            dataVersion: (dashboardData.dataVersion || 0) + 1
+          });
+        }
+      } else {
+        console.log("✅ No changes in dashboard data, updating timestamp only");
+        // Just update the timestamp to extend cache life
+        cacheTimestamp = currentTime;
+        dashboardCache.timestamp = currentTime;
+        saveCacheToStorage(dashboardCache);
+        
+        if (isMountedRef.current) {
+          setDashboardData(prev => ({
+            ...prev,
+            loading: false,
+            error: null,
+            lastUpdated: new Date()
+          }));
+        }
+      }
+
+      if (isMountedRef.current) {
+        setInitialLoad(false);
+      }
+    } catch (error) {
+      console.error('❌ Error in fetchFreshData:', error);
+      
+      // Provide more specific error messages
+      if (error.message.includes('403')) {
+        throw new Error('Access forbidden. You may not have admin privileges.');
+      } else if (error.message.includes('401')) {
+        throw new Error('Authentication failed. Please log in again.');
+      } else if (error.message.includes('Failed to fetch')) {
+        throw new Error('Network error. Please check your connection.');
+      } else {
+        throw error;
+      }
     }
   };
 
@@ -470,7 +489,7 @@ export default function AdminDashboardPage() {
             </p>
             <p className="text-sm"
                style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
-              Auto-retrying in 30 seconds...
+              {dashboardData.error || 'Auto-retrying in 30 seconds...'}
             </p>
           </div>
         </motion.div>
@@ -533,6 +552,9 @@ export default function AdminDashboardPage() {
           </p>
           <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
             Real-time business overview and analytics
+            {dashboardData.lastUpdated && (
+              <span> • Last updated: {dashboardData.lastUpdated.toLocaleTimeString()}</span>
+            )}
           </p>
         </div>
       </motion.div>

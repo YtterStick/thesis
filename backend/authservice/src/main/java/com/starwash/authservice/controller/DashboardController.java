@@ -2,13 +2,14 @@ package com.starwash.authservice.controller;
 
 import com.starwash.authservice.service.DashboardService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard")
-@CrossOrigin(origins = "http://localhost:3000")
+// Remove the restrictive @CrossOrigin since you have global CORS config
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -18,34 +19,25 @@ public class DashboardController {
     }
 
     @GetMapping("/staff")
-    public ResponseEntity<Map<String, Object>> getStaffDashboard(
-            @RequestHeader("Authorization") String authHeader) {
-        
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(401).build();
-        }
-
+    @PreAuthorize("hasRole('STAFF') or hasRole('ADMIN')") // Allow both staff and admin
+    public ResponseEntity<Map<String, Object>> getStaffDashboard() {
         try {
             Map<String, Object> dashboardData = dashboardService.getStaffDashboardData();
             return ResponseEntity.ok(dashboardData);
         } catch (Exception e) {
+            e.printStackTrace(); // Add logging
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    // NEW: Admin dashboard endpoint
     @GetMapping("/admin")
-    public ResponseEntity<Map<String, Object>> getAdminDashboard(
-            @RequestHeader("Authorization") String authHeader) {
-        
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(401).build();
-        }
-
+    @PreAuthorize("hasRole('ADMIN')") // Only admin can access
+    public ResponseEntity<Map<String, Object>> getAdminDashboard() {
         try {
             Map<String, Object> dashboardData = dashboardService.getAdminDashboardData();
             return ResponseEntity.ok(dashboardData);
         } catch (Exception e) {
+            e.printStackTrace(); // Add logging
             return ResponseEntity.internalServerError().build();
         }
     }

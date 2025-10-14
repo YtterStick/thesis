@@ -3,6 +3,7 @@ package com.starwash.authservice.security;
 import com.starwash.authservice.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -35,35 +36,28 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         // Allow OPTIONS requests for CORS preflight
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Public endpoints - no authentication required
+                        // Public endpoints
                         .requestMatchers(
                                 "/",
                                 "/health",
                                 "/api/health",
                                 "/login",
-                                "/register",
-                                "/logout",
-                                "/api/services/**",
-                                "/api/stock/**",
-                                "/api/track/**",
-                                "/api/terms/**",
-                                "/api/laundry-jobs/**",
-                                "/api/machines/**",
-                                "/debug/**")
+                                "/register")
                         .permitAll()
 
-                        // Authenticated endpoints
-                        .requestMatchers("/me").authenticated()
-
                         // Role-based endpoints
+                        .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
+                        .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers("/api/accounts/**").hasRole("ADMIN")
-                        .requestMatchers("/api/dashboard/**").hasRole("ADMIN") // Add this line
+
+                        // Other authenticated endpoints
+                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/me").authenticated()
 
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .logout(logout -> logout.disable())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
