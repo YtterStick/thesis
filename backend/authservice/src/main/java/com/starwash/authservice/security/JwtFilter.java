@@ -19,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -39,9 +40,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Allow public endpoints without authentication
-        if (path.startsWith("/login") || path.startsWith("/register") || 
-            path.startsWith("/health") || path.equals("/")) {
+        if (path.startsWith("/login") || path.startsWith("/register")) {
             chain.doFilter(request, response);
             return;
         }
@@ -66,24 +65,12 @@ public class JwtFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    System.out.println("✅ Authenticated: " + username + " [" + role + "] for path: " + path);
+                    System.out.println("✅ Authenticated: " + username + " [" + role + "]");
                 } else {
                     response.setStatus(HttpStatus.FORBIDDEN.value());
                     response.getWriter().write("Account is deactivated");
                     return;
                 }
-            } else {
-                // Token is invalid
-                response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                response.getWriter().write("Invalid token");
-                return;
-            }
-        } else {
-            // No token provided for protected endpoint
-            if (path.startsWith("/api/")) {
-                response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                response.getWriter().write("Authorization header required");
-                return;
             }
         }
 
