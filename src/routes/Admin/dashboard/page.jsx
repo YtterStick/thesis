@@ -19,6 +19,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { getApiUrl, api } from "@/lib/api-config";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours (or even longer!)
 const POLLING_INTERVAL = 10000; // 10 seconds
@@ -58,45 +59,6 @@ const isTokenExpired = (token) => {
   } catch (err) {
     console.warn("❌ Failed to decode token:", err);
     return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    // Clear cache on token expiry
-    dashboardCache = null;
-    cacheTimestamp = null;
-    localStorage.removeItem('dashboardCache');
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  try {
-    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-    if (!response.ok) {
-      console.error(`❌ ${method} ${endpoint} failed:`, response.status);
-      throw new Error(`Request failed: ${response.status}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    return contentType && contentType.includes("application/json")
-      ? response.json()
-      : response.text();
-  } catch (error) {
-    console.error('Fetch error:', error);
-    throw error;
   }
 };
 
@@ -228,18 +190,8 @@ export default function AdminDashboardPage() {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch('http://localhost:8080/api/dashboard/admin', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch dashboard data: ${response.status}`);
-    }
-
-    const data = await response.json();
+    // Use the centralized API configuration
+    const data = await api.get("dashboard/admin");
     
     const newDashboardData = {
       totalIncome: data.totalIncome || 0,

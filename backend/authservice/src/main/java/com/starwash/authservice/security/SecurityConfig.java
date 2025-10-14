@@ -34,34 +34,34 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                    // Allow OPTIONS requests for CORS preflight
-                    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                    
-                    // Public endpoints - no authentication required
-                    .requestMatchers(
-                        "/", 
-                        "/health", 
-                        "/api/health",
-                        "/login", 
-                        "/register", 
-                        "/logout",
-                        "/api/services/**",
-                        "/api/stock/**",
-                        "/api/track/**",
-                        "/api/terms/**",
-                        "/api/laundry-jobs/**", 
-                        "/api/machines/**",
-                        "/debug/**"
-                    ).permitAll()
-                    
-                    // Authenticated endpoints
-                    .requestMatchers("/me").authenticated()
-                    
-                    // Role-based endpoints
-                    .requestMatchers("/api/accounts/**").hasRole("ADMIN")
-                    
-                    .anyRequest().authenticated()
-                )
+                        // Allow OPTIONS requests for CORS preflight
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Public endpoints - no authentication required
+                        .requestMatchers(
+                                "/",
+                                "/health",
+                                "/api/health",
+                                "/login",
+                                "/register",
+                                "/logout",
+                                "/api/services/**",
+                                "/api/stock/**",
+                                "/api/track/**",
+                                "/api/terms/**",
+                                "/api/laundry-jobs/**",
+                                "/api/machines/**",
+                                "/debug/**")
+                        .permitAll()
+
+                        // Authenticated endpoints
+                        .requestMatchers("/me").authenticated()
+
+                        // Role-based endpoints
+                        .requestMatchers("/api/accounts/**").hasRole("ADMIN")
+                        .requestMatchers("/api/dashboard/**").hasRole("ADMIN") // Add this line
+
+                        .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .logout(logout -> logout.disable())
                 .authenticationProvider(authenticationProvider())
