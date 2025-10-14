@@ -38,19 +38,21 @@ public class SecurityConfig {
                         // Allow OPTIONS requests for CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Public endpoints
+                        // Public endpoints - FIXED: Include API paths
                         .requestMatchers(
                                 "/",
                                 "/health",
                                 "/api/health",
+                                "/api/login",      // Added /api/ prefix
+                                "/api/register",   // Added /api/ prefix
                                 "/login",
                                 "/register")
                         .permitAll()
 
-                        // Role-based endpoints
-                        .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
-                        .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers("/api/accounts/**").hasRole("ADMIN")
+                        // Role-based endpoints - FIXED: Use hasAuthority for explicit control
+                        .requestMatchers("/api/dashboard/admin").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/dashboard/staff").hasAnyAuthority("ROLE_STAFF", "ROLE_ADMIN")
+                        .requestMatchers("/api/accounts/**").hasAuthority("ROLE_ADMIN")
 
                         // Other authenticated endpoints
                         .requestMatchers("/api/**").authenticated()

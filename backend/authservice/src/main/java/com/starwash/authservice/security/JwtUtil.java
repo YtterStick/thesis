@@ -43,7 +43,7 @@ public class JwtUtil {
 
     public boolean validateToken(String token) {
         try {
-            Claims claims = extractClaims(token);
+            Claims claims = extractAllClaims(token); // FIXED: Changed from extractClaims to extractAllClaims
             Date now = new Date();
             Date exp = claims.getExpiration();
 
@@ -53,6 +53,7 @@ public class JwtUtil {
                 return false;
             }
 
+            System.out.println("✅ Token validated for user: " + claims.getSubject());
             return true;
         } catch (ExpiredJwtException e) {
             System.out.println("⏳ Token expired for user: " + e.getClaims().getSubject());
@@ -68,37 +69,43 @@ public class JwtUtil {
 
     public String getUsername(String token) {
         try {
-            return extractClaims(token).getSubject();
+            return extractAllClaims(token).getSubject(); // FIXED: Changed from extractClaims to extractAllClaims
         } catch (Exception e) {
+            System.out.println("❌ Error extracting username from token: " + e.getMessage());
             return null;
         }
     }
 
     public String getRole(String token) {
         try {
-            return extractClaims(token).get("role", String.class);
+            String role = extractAllClaims(token).get("role", String.class); // FIXED: Changed from extractClaims to extractAllClaims
+            System.out.println("🔍 Extracted role from token: " + role);
+            return role;
         } catch (Exception e) {
+            System.out.println("❌ Error extracting role from token: " + e.getMessage());
             return null;
         }
     }
 
     public Date getIssuedAt(String token) {
         try {
-            return extractClaims(token).getIssuedAt();
+            return extractAllClaims(token).getIssuedAt(); // FIXED: Changed from extractClaims to extractAllClaims
         } catch (Exception e) {
+            System.out.println("❌ Error extracting issued at from token: " + e.getMessage());
             return null;
         }
     }
 
     public Date getExpiration(String token) {
         try {
-            return extractClaims(token).getExpiration();
+            return extractAllClaims(token).getExpiration(); // FIXED: Changed from extractClaims to extractAllClaims
         } catch (Exception e) {
+            System.out.println("❌ Error extracting expiration from token: " + e.getMessage());
             return null;
         }
     }
 
-    private Claims extractClaims(String token) {
+    private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()

@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/contexts/auth-context";
 import {
   PackageX,
   PhilippinePeso,
@@ -19,19 +20,17 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getApiUrl, api } from "@/lib/api-config";
+import { api } from "@/lib/api-config";
 
-const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours (or even longer!)
-const POLLING_INTERVAL = 10000; // 10 seconds
-const ALLOWED_SKEW_MS = 5000;
+const CACHE_DURATION = 4 * 60 * 60 * 1000;
+const POLLING_INTERVAL = 10000;
 
-// Initialize cache properly - make it globally available
+// Initialize cache properly
 const initializeCache = () => {
   try {
     const stored = localStorage.getItem('dashboardCache');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Check if cache is still valid
       if (Date.now() - parsed.timestamp < CACHE_DURATION) {
         console.log("📦 Initializing from stored cache");
         return parsed;
@@ -45,24 +44,9 @@ const initializeCache = () => {
   return null;
 };
 
-// Global cache instance
 let dashboardCache = initializeCache();
 let cacheTimestamp = dashboardCache?.timestamp || null;
 
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-//adawdw
-// Save cache to localStorage for persistence
 const saveCacheToStorage = (data) => {
   try {
     localStorage.setItem('dashboardCache', JSON.stringify({
@@ -73,12 +57,36 @@ const saveCacheToStorage = (data) => {
     console.warn('Failed to save cache to storage:', error);
   }
 };
+// Add this to your dashboard component temporarily
+const debugTokenInfo = () => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('🔐 Token Debug Info:');
+      console.log('   User:', payload.sub);
+      console.log('   Role:', payload.role);
+      console.log('   Expires:', new Date(payload.exp * 1000));
+      console.log('   Issued:', new Date(payload.iat * 1000));
+      console.log('   All claims:', payload);
+    } catch (error) {
+      console.error('❌ Failed to decode token:', error);
+    }
+  } else {
+    console.log('❌ No token found in localStorage');
+  }
+};
 
 export default function AdminDashboardPage() {
-  const { theme } = useTheme();
   
-  // Calculate isDarkMode based on theme - matching User side
+  const { theme } = useTheme();
+  const { isAuthenticated, user, logout } = useAuth();
+  
+  // Calculate isDarkMode based on theme
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  // Check if user has admin role
+  const isAdmin = user?.role === 'ADMIN';
 
   // Initialize state with cached data if available
   const [dashboardData, setDashboardData] = useState(() => {
@@ -86,7 +94,7 @@ export default function AdminDashboardPage() {
       console.log("🎯 Initializing state with cached data");
       return {
         ...dashboardCache.data,
-        loading: false, // Don't show loading if we have cached data
+        loading: false,
         error: null,
         lastUpdated: new Date(dashboardCache.timestamp),
         dataVersion: 0
@@ -107,7 +115,7 @@ export default function AdminDashboardPage() {
     };
   });
 
-  const [initialLoad, setInitialLoad] = useState(!dashboardCache); // Only initial load if no cache
+  const [initialLoad, setInitialLoad] = useState(!dashboardCache);
   const pollingIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
 
@@ -126,17 +134,18 @@ export default function AdminDashboardPage() {
   };
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
-    // Don't fetch if component is unmounted
-    if (!isMountedRef.current) return;
+    // Don't fetch if component is unmounted or user is not authenticated/admin
+    if (!isMountedRef.current || !isAuthenticated || !isAdmin) {
+      return;
+    }
 
     try {
       const now = Date.now();
       
-      // Check cache first unless forced refresh - use longer cache duration
+      // Check cache first unless forced refresh
       if (!forceRefresh && dashboardCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
         console.log("📦 Using cached dashboard data");
         
-        // Always update with cached data to ensure UI is populated
         setDashboardData(prev => ({
           ...dashboardCache.data,
           loading: false,
@@ -147,8 +156,8 @@ export default function AdminDashboardPage() {
         
         setInitialLoad(false);
         
-        // Still fetch fresh data in background but don't wait for it
-        if (now - cacheTimestamp > 30000) { // If cache is older than 30 seconds, refresh in background
+        // Fetch fresh data in background if cache is older than 30 seconds
+        if (now - cacheTimestamp > 30000) {
           console.log("🔄 Fetching fresh data in background");
           fetchFreshData();
         }
@@ -179,24 +188,19 @@ export default function AdminDashboardPage() {
       }
       setInitialLoad(false);
     }
-  }, []);
+  }, [isAuthenticated, isAdmin]);
 
-  // Separate function for actual API call - FIXED VERSION
+  // Simplified fetch function using your existing API config
   const fetchFreshData = async () => {
     console.log("🔄 Fetching fresh dashboard data");
-    const token = localStorage.getItem('authToken');
     
-    if (!token || isTokenExpired(token)) {
-      throw new Error('Authentication required');
+    if (!isAuthenticated || !isAdmin) {
+      throw new Error('Authentication required or insufficient privileges');
     }
 
     try {
-      // FIX: Manually add Authorization header to ensure it's sent
-      const data = await api.get("dashboard/admin", {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Use your existing api.get function which should handle tokens automatically
+      const data = await api.get("dashboard/admin");
       
       const newDashboardData = {
         totalIncome: data.totalIncome || 0,
@@ -234,7 +238,6 @@ export default function AdminDashboardPage() {
         }
       } else {
         console.log("✅ No changes in dashboard data, updating timestamp only");
-        // Just update the timestamp to extend cache life
         cacheTimestamp = currentTime;
         dashboardCache.timestamp = currentTime;
         saveCacheToStorage(dashboardCache);
@@ -255,10 +258,12 @@ export default function AdminDashboardPage() {
     } catch (error) {
       console.error('❌ Error in fetchFreshData:', error);
       
-      // Provide more specific error messages
+      // Handle specific error cases
       if (error.message.includes('403')) {
         throw new Error('Access forbidden. You may not have admin privileges.');
       } else if (error.message.includes('401')) {
+        // Token might be invalid, trigger logout
+        logout();
         throw new Error('Authentication failed. Please log in again.');
       } else if (error.message.includes('Failed to fetch')) {
         throw new Error('Network error. Please check your connection.');
@@ -271,27 +276,49 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     isMountedRef.current = true;
     
-    // Always show cached data immediately if available
-    if (dashboardCache) {
-      console.log("🚀 Showing cached data immediately");
+  debugTokenInfo();
+    
+    // Add debug info to see what's happening
+    console.log('🔐 Auth Status:', { isAuthenticated, user, isAdmin });
+    
+    // Only fetch data if user is authenticated and is admin
+    if (isAuthenticated && isAdmin) {
+      // Always show cached data immediately if available
+      if (dashboardCache) {
+        console.log("🚀 Showing cached data immediately");
+        setDashboardData(prev => ({
+          ...dashboardCache.data,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(cacheTimestamp),
+          dataVersion: prev.dataVersion + 1
+        }));
+        setInitialLoad(false);
+      }
+      
+      // Then fetch fresh data
+      fetchDashboardData();
+      
+      // Set up polling with smart updates
+      pollingIntervalRef.current = setInterval(() => {
+        console.log("🔄 Auto-refreshing dashboard data...");
+        fetchDashboardData(false);
+      }, POLLING_INTERVAL);
+    } else if (!isAuthenticated) {
       setDashboardData(prev => ({
-        ...dashboardCache.data,
+        ...prev,
         loading: false,
-        error: null,
-        lastUpdated: new Date(cacheTimestamp),
-        dataVersion: prev.dataVersion + 1
+        error: 'Please log in to access the dashboard'
+      }));
+      setInitialLoad(false);
+    } else if (!isAdmin) {
+      setDashboardData(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Insufficient privileges. Admin access required.'
       }));
       setInitialLoad(false);
     }
-    
-    // Then fetch fresh data
-    fetchDashboardData();
-    
-    // Set up polling with smart updates
-    pollingIntervalRef.current = setInterval(() => {
-      console.log("🔄 Auto-refreshing dashboard data...");
-      fetchDashboardData(false);
-    }, POLLING_INTERVAL);
     
     return () => {
       isMountedRef.current = false;
@@ -299,7 +326,7 @@ export default function AdminDashboardPage() {
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, isAuthenticated, isAdmin, logout]);
 
   const formatCurrency = (amount) => {
     return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
@@ -417,6 +444,50 @@ export default function AdminDashboardPage() {
       </div>
     </motion.div>
   );
+
+  // Show access denied message if user is not admin
+  if (isAuthenticated && !isAdmin) {
+    return (
+      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 mb-4"
+        >
+          <LineChart size={22} style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }} />
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+            Access Denied
+          </p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex items-center justify-center h-52 rounded-xl border-2 p-6"
+          style={{
+            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
+          <div className="text-center">
+            <AlertCircle className="h-14 w-14 mx-auto mb-3" 
+                         style={{ color: '#F87171' }} />
+            <p className="text-base font-semibold mb-1"
+               style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              Insufficient Privileges
+            </p>
+            <p className="text-sm"
+               style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+              You need admin privileges to access this dashboard.
+            </p>
+            <p className="text-sm mt-2"
+               style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+              Current role: {user?.role}
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // Show skeleton loader only during initial load AND when no cached data is available
   if (initialLoad && !dashboardCache) {
