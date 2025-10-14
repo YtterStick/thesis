@@ -6,9 +6,10 @@ import Services from "./services";
 import ServiceTracking from "./ServiceTracking";
 import TermsCondition from "./TermsCondition";
 import { useScrollSpy } from "./useScrollSpy";
-import { getApiUrl, api } from "@/lib/api-config";
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
 import { useTheme } from "@/hooks/use-theme";
+
+const API_BASE_URL = "http://localhost:8080/api";
 
 const AnimatedNumber = ({ value, isChanging }) => {
   if (!isChanging) {
@@ -114,11 +115,21 @@ const LandingPage = () => {
       controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const laundryJobs = await api.get("laundry-jobs", {
+      const response = await fetch(`${API_BASE_URL}/laundry-jobs`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         signal: controller.signal
       });
       
       clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const laundryJobs = await response.json();
 
       let totalUnwashed = 0;
       let totalWashing = 0;
@@ -186,7 +197,6 @@ const LandingPage = () => {
 
     } catch (error) {
       if (error.name !== 'AbortError') {
-        console.error("❌ Error fetching laundry stats:", error);
         setStats([
           { number: "0", label: "Total Laundry Load", changing: false },
           { number: "0", label: "Total No. of Washing", changing: false },
@@ -221,6 +231,7 @@ const LandingPage = () => {
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode ? 'bg-[#0B2B26] text-white' : 'bg-[#E0EAE8] text-[#0B2B26]'
     } font-poppins`} id="home">
+      {/* Remove onThemeChange prop since Header now uses the theme hook internally */}
       <Header activeSection={activeSection} />
 
       <div className="h-24" />

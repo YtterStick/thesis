@@ -19,7 +19,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getApiUrl, api } from "@/lib/api-config";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours (or even longer!)
 const POLLING_INTERVAL = 10000; // 10 seconds
@@ -59,6 +58,45 @@ const isTokenExpired = (token) => {
   } catch (err) {
     console.warn("❌ Failed to decode token:", err);
     return true;
+  }
+};
+
+const secureFetch = async (endpoint, method = "GET", body = null) => {
+  const token = localStorage.getItem("authToken");
+
+  if (!token || isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    // Clear cache on token expiry
+    dashboardCache = null;
+    cacheTimestamp = null;
+    localStorage.removeItem('dashboardCache');
+    window.location.href = "/login";
+    return;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  try {
+    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+
+    if (!response.ok) {
+      console.error(`❌ ${method} ${endpoint} failed:`, response.status);
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    return contentType && contentType.includes("application/json")
+      ? response.json()
+      : response.text();
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
   }
 };
 
@@ -181,7 +219,7 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // Separate function for actual API call - SIMPLIFIED VERSION
+  // Separate function for actual API call
   const fetchFreshData = async () => {
     console.log("🔄 Fetching fresh dashboard data");
     const token = localStorage.getItem('authToken');
@@ -190,77 +228,72 @@ export default function AdminDashboardPage() {
       throw new Error('Authentication required');
     }
 
-    try {
-      // SIMPLIFIED: Just use the api.get method - token is now handled automatically in api-config
-      const data = await api.get("dashboard/admin");
+    const response = await fetch('http://localhost:8080/api/dashboard/admin', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch dashboard data: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    const newDashboardData = {
+      totalIncome: data.totalIncome || 0,
+      totalLoads: data.totalLoads || 0,
+      unwashedCount: data.unwashedCount || 0,
+      totalUnclaimed: data.totalUnclaimed || 0,
+      overviewData: data.overviewData || [],
+      unclaimedList: data.unclaimedList || [],
+    };
+
+    const currentTime = Date.now();
+
+    // Only update state and cache if data has actually changed
+    if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
+      console.log("🔄 Dashboard data updated with fresh data");
       
-      const newDashboardData = {
-        totalIncome: data.totalIncome || 0,
-        totalLoads: data.totalLoads || 0,
-        unwashedCount: data.unwashedCount || 0,
-        totalUnclaimed: data.totalUnclaimed || 0,
-        overviewData: data.overviewData || [],
-        unclaimedList: data.unclaimedList || [],
+      // Update cache
+      dashboardCache = {
+        data: newDashboardData,
+        timestamp: currentTime
       };
-
-      const currentTime = Date.now();
-
-      // Only update state and cache if data has actually changed
-      if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
-        console.log("🔄 Dashboard data updated with fresh data");
-        
-        // Update cache
-        dashboardCache = {
-          data: newDashboardData,
-          timestamp: currentTime
-        };
-        cacheTimestamp = currentTime;
-        
-        // Persist to localStorage
-        saveCacheToStorage(dashboardCache);
-        
-        if (isMountedRef.current) {
-          setDashboardData({
-            ...newDashboardData,
-            loading: false,
-            error: null,
-            lastUpdated: new Date(),
-            dataVersion: (dashboardData.dataVersion || 0) + 1
-          });
-        }
-      } else {
-        console.log("✅ No changes in dashboard data, updating timestamp only");
-        // Just update the timestamp to extend cache life
-        cacheTimestamp = currentTime;
-        dashboardCache.timestamp = currentTime;
-        saveCacheToStorage(dashboardCache);
-        
-        if (isMountedRef.current) {
-          setDashboardData(prev => ({
-            ...prev,
-            loading: false,
-            error: null,
-            lastUpdated: new Date()
-          }));
-        }
-      }
-
-      if (isMountedRef.current) {
-        setInitialLoad(false);
-      }
-    } catch (error) {
-      console.error('❌ Error in fetchFreshData:', error);
+      cacheTimestamp = currentTime;
       
-      // Provide more specific error messages
-      if (error.message.includes('403')) {
-        throw new Error('Access forbidden. You may not have admin privileges.');
-      } else if (error.message.includes('401')) {
-        throw new Error('Authentication failed. Please log in again.');
-      } else if (error.message.includes('Failed to fetch')) {
-        throw new Error('Network error. Please check your connection.');
-      } else {
-        throw error;
+      // Persist to localStorage
+      saveCacheToStorage(dashboardCache);
+      
+      if (isMountedRef.current) {
+        setDashboardData({
+          ...newDashboardData,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(),
+          dataVersion: (dashboardData.dataVersion || 0) + 1
+        });
       }
+    } else {
+      console.log("✅ No changes in dashboard data, updating timestamp only");
+      // Just update the timestamp to extend cache life
+      cacheTimestamp = currentTime;
+      dashboardCache.timestamp = currentTime;
+      saveCacheToStorage(dashboardCache);
+      
+      if (isMountedRef.current) {
+        setDashboardData(prev => ({
+          ...prev,
+          loading: false,
+          error: null,
+          lastUpdated: new Date()
+        }));
+      }
+    }
+
+    if (isMountedRef.current) {
+      setInitialLoad(false);
     }
   };
 
@@ -485,7 +518,7 @@ export default function AdminDashboardPage() {
             </p>
             <p className="text-sm"
                style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
-              {dashboardData.error || 'Auto-retrying in 30 seconds...'}
+              Auto-retrying in 30 seconds...
             </p>
           </div>
         </motion.div>
@@ -548,9 +581,6 @@ export default function AdminDashboardPage() {
           </p>
           <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
             Real-time business overview and analytics
-            {dashboardData.lastUpdated && (
-              <span> • Last updated: {dashboardData.lastUpdated.toLocaleTimeString()}</span>
-            )}
           </p>
         </div>
       </motion.div>

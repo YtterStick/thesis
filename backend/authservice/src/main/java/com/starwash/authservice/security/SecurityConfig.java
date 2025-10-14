@@ -16,7 +16,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
@@ -45,13 +44,13 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/login",
                                 "/register",
-                                "/api/login", 
+                                "/api/login",
                                 "/api/register",
                                 "/api/debug/**",
-                                "/api/test/**"
-                        ).permitAll()
+                                "/api/test/**")
+                        .permitAll()
 
-                        // Role-based endpoints
+                        // Role-based endpoints - FIXED: Added dashboard endpoints
                         .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
                         .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers("/api/accounts/**").hasRole("ADMIN")
@@ -63,7 +62,7 @@ public class SecurityConfig {
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
-    }
+    }   
 
     @Bean
     public AuthenticationProvider authenticationProvider() {

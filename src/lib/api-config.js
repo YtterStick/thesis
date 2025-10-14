@@ -23,45 +23,90 @@ const getAuthToken = () => {
   return localStorage.getItem('authToken');
 };
 
+// Check if token is expired
+const isTokenExpired = (token) => {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload));
+    const exp = decoded.exp * 1000;
+    const now = Date.now();
+    const ALLOWED_SKEW_MS = 5000;
+    return exp + ALLOWED_SKEW_MS < now;
+  } catch (err) {
+    console.warn("❌ Failed to decode token:", err);
+    return true;
+  }
+};
+
 // Centralized fetch function with error handling
 export const apiFetch = async (endpoint, options = {}) => {
   const url = getApiUrl(endpoint);
   const token = getAuthToken();
 
+  // Check token validity for protected endpoints
+  if (token && isTokenExpired(token)) {
+    console.warn("⛔ Token expired. Redirecting to login.");
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('dashboardCache');
+    window.location.href = "/login";
+    throw new Error('Authentication token expired');
+  }
+
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }), // Add auth header if token exists
+      ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
-    credentials: 'include', // Important for CORS with authentication
+    credentials: 'include',
     ...options
   };
 
   try {
     console.log(`🌐 API Call: ${options.method || 'GET'} ${url}`);
-    console.log(`🔐 Auth Token: ${token ? 'Present' : 'Missing'}`);
     
     const response = await fetch(url, defaultOptions);
     
     console.log(`📡 Response Status: ${response.status} for ${endpoint}`);
     
+    // Handle authentication errors
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('dashboardCache');
+      window.location.href = "/login";
+      throw new Error('Authentication failed');
+    }
+    
     if (!response.ok) {
-      // For 403 errors, provide more specific messaging
-      if (response.status === 403) {
-        throw new Error('Access forbidden - check user permissions or authentication');
-      }
       const errorText = await response.text();
       console.error(`❌ API Error (${endpoint}): ${response.status} - ${errorText}`);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data = await response.json();
-    console.log(`✅ API Success (${endpoint}):`, data);
-    return data;
+    // Handle empty responses
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      console.log(`✅ API Success (${endpoint}):`, data);
+      return data;
+    } else {
+      console.log(`✅ API Success (${endpoint}): Empty response`);
+      return null;
+    }
     
   } catch (error) {
     console.error(`🚨 API Fetch Error (${endpoint}):`, error);
+    
+    // Don't redirect for network errors, only for auth errors
+    if (error.message.includes('Authentication')) {
+      throw error;
+    }
+    
+    // For network errors, provide user-friendly message
+    if (error.message.includes('Failed to fetch')) {
+      throw new Error('Unable to connect to server. Please check your internet connection.');
+    }
+    
     throw error;
   }
 };
@@ -98,4 +143,15 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data)
     })
+};
+
+// Health check function
+export const checkApiHealth = async () => {
+  try {
+    const response = await fetch(getApiUrl('health'));
+    return response.ok;
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return false;
+  }
 };

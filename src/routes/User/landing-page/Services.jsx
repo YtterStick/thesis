@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { getApiUrl, api } from "@/lib/api-config";
 
 // Assets
 import assetClothing from "@/assets/USER_ASSET/asset_clothing.png";
@@ -19,12 +18,24 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
       setLoading(true);
       console.log("🔄 Starting to fetch services from backend...");
       
-      const servicesData = await api.get('services');
+      const response = await fetch('http://localhost:8080/api/services');
+      
+      console.log("📡 Response status:", response.status);
+      console.log("📡 Response ok:", response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Response not OK. Response text:", errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const servicesData = await response.json();
       console.log('✅ Successfully fetched services:', servicesData);
       setServices(servicesData);
       
     } catch (err) {
       console.error('❌ Error fetching services:', err);
+      console.error('❌ Error message:', err.message);
       setServices([]);
     }
   };
@@ -33,7 +44,13 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchStockItems = async () => {
     try {
       console.log("🔄 Fetching stock items...");
-      const stockData = await api.get('stock');
+      const response = await fetch('http://localhost:8080/api/stock');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const stockData = await response.json();
       console.log('✅ Successfully fetched stock items:', stockData);
       setStockItems(stockData);
     } catch (err) {
@@ -46,7 +63,13 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchMachines = async () => {
     try {
       console.log("🔄 Fetching machines...");
-      const machinesData = await api.get('machines');
+      const response = await fetch('http://localhost:8080/api/machines');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const machinesData = await response.json();
       console.log('✅ Successfully fetched machines:', machinesData);
       setMachines(machinesData);
     } catch (err) {

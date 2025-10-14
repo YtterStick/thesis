@@ -1,5 +1,7 @@
 package com.starwash.authservice.security;
 
+import com.starwash.authservice.model.User;
+import com.starwash.authservice.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,14 +18,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-
+import java.util.Optional;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
-    public JwtFilter(JwtUtil jwtUtil) {
+    public JwtFilter(JwtUtil jwtUtil, UserRepository userRepository) {
         this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -34,16 +38,10 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        String method = request.getMethod();
-        
-        System.out.println("🔍 JwtFilter processing: " + method + " " + path);
 
-        // Don't process authentication for public endpoints
-        if (path.equals("/api/login") || path.equals("/api/register") || 
-            path.equals("/api/health") || path.equals("/") ||
-            path.equals("/health") || path.startsWith("/api/debug") ||
-            path.startsWith("/api/test")) {
-            System.out.println("✅ Public endpoint, skipping auth: " + path);
+        // Allow public endpoints without authentication
+        if (path.startsWith("/login") || path.startsWith("/register") || 
+            path.startsWith("/health") || path.equals("/")) {
             chain.doFilter(request, response);
             return;
         }
@@ -56,15 +54,11 @@ public class JwtFilter extends OncePerRequestFilter {
             if (jwtUtil.validateToken(token)) {
                 String username = jwtUtil.getUsername(token);
                 String role = jwtUtil.getRole(token);
-                
-                System.out.println("📝 Token details - Username: " + username + ", Role: " + role);
 
-                if (role != null) {
-                    // Use role from token for authorization
-                    System.out.println("🎯 Setting authentication with role: ROLE_" + role);
-                    
+                Optional<User> userOpt = userRepository.findByUsername(username);
+                if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
                     List<SimpleGrantedAuthority> authorities =
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(username, null, authorities);
@@ -72,22 +66,25 @@ public class JwtFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    System.out.println("✅ SUCCESS: Authenticated " + username + " as ROLE_" + role + " for " + path);
+                    System.out.println("✅ Authenticated: " + username + " [" + role + "] for path: " + path);
                 } else {
-                    System.out.println("❌ FAIL: No role in token");
                     response.setStatus(HttpStatus.FORBIDDEN.value());
-                    response.getWriter().write("No role in token");
+                    response.getWriter().write("Account is deactivated");
                     return;
                 }
             } else {
-                System.out.println("❌ FAIL: Invalid token for path: " + path);
+                // Token is invalid
                 response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                response.getWriter().write("Invalid or expired token");
+                response.getWriter().write("Invalid token");
                 return;
             }
         } else {
-            System.out.println("⚠️ WARNING: No valid Authorization header for: " + path);
-            // Let Spring Security handle unauthorized requests
+            // No token provided for protected endpoint
+            if (path.startsWith("/api/")) {
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                response.getWriter().write("Authorization header required");
+                return;
+            }
         }
 
         chain.doFilter(request, response);
