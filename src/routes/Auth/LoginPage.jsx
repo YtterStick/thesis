@@ -140,7 +140,7 @@ const LoginPage = () => {
     setIsAuthenticating(true);
 
     try {
-      const loginRes = await fetch("http://localhost:8080/login", {
+      const loginRes = await fetch("https://thesis-g0pr.onrender.com/api/login",  {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

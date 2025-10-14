@@ -41,7 +41,7 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
   const options = { method, headers };
   if (body) options.body = JSON.stringify(body);
 
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+  const response = await fetch(`https://thesis-g0pr.onrender.com/api${endpoint}`, options);
 
   if (!response.ok) {
     const errorText = await response.text();
