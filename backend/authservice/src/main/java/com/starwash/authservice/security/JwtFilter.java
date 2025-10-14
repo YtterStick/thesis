@@ -39,8 +39,14 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
+        System.out.println("🛡️ JwtFilter processing: " + path);
 
-        if (path.startsWith("/login") || path.startsWith("/register")) {
+        // Public endpoints - FIXED: Include API paths
+        if (path.equals("/api/login") || path.equals("/api/register") || 
+            path.equals("/login") || path.equals("/register") ||
+            path.equals("/health") || path.equals("/api/health") ||
+            path.equals("/")) {
+            System.out.println("✅ Public endpoint, skipping auth: " + path);
             chain.doFilter(request, response);
             return;
         }
@@ -49,15 +55,20 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
+            System.out.println("🔐 Token found for: " + path);
 
             if (jwtUtil.validateToken(token)) {
                 String username = jwtUtil.getUsername(token);
                 String role = jwtUtil.getRole(token);
+                System.out.println("✅ Token valid for user: " + username + " with role: " + role);
 
                 Optional<User> userOpt = userRepository.findByUsername(username);
                 if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
-                    List<SimpleGrantedAuthority> authorities =
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                    // Create authority with ROLE_ prefix
+                    String authority = "ROLE_" + role.toUpperCase();
+                    List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(authority));
+                    
+                    System.out.println("🎯 Setting authentication with authority: " + authority);
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(username, null, authorities);
@@ -65,13 +76,18 @@ public class JwtFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    System.out.println("✅ Authenticated: " + username + " [" + role + "]");
+                    System.out.println("✅ Authenticated: " + username + " [" + authority + "] for " + path);
                 } else {
+                    System.out.println("❌ User not found or inactive: " + username);
                     response.setStatus(HttpStatus.FORBIDDEN.value());
                     response.getWriter().write("Account is deactivated");
                     return;
                 }
+            } else {
+                System.out.println("❌ Invalid token for: " + path);
             }
+        } else {
+            System.out.println("❌ No Authorization header for protected endpoint: " + path);
         }
 
         chain.doFilter(request, response);
