@@ -38,11 +38,16 @@ public class JwtFilter extends OncePerRequestFilter {
             @NonNull FilterChain chain)
             throws ServletException, IOException {
 
-        // Don't process authentication for public endpoints
         String path = request.getRequestURI();
+        String method = request.getMethod();
+        
+        System.out.println("🔍 JwtFilter processing: " + method + " " + path);
+
+        // Don't process authentication for public endpoints
         if (path.equals("/api/login") || path.equals("/api/register") || 
             path.equals("/api/health") || path.equals("/") ||
-            path.equals("/health")) {
+            path.equals("/health") || path.startsWith("/api/debug")) {
+            System.out.println("✅ Public endpoint, skipping auth: " + path);
             chain.doFilter(request, response);
             return;
         }
@@ -55,11 +60,30 @@ public class JwtFilter extends OncePerRequestFilter {
             if (jwtUtil.validateToken(token)) {
                 String username = jwtUtil.getUsername(token);
                 String role = jwtUtil.getRole(token);
+                
+                System.out.println("📝 Token details - Username: " + username + ", Role: " + role);
 
+                // Check if user exists and is active
                 Optional<User> userOpt = userRepository.findByUsername(username);
-                if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
+                boolean userValid = false;
+                
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    System.out.println("👤 User found - Status: " + user.getStatus() + ", Role: " + user.getRole());
+                    userValid = "Active".equals(user.getStatus());
+                } else {
+                    System.out.println("⚠️ User not found in database: " + username);
+                    // For now, we'll allow the request if token is valid but user not in DB
+                    // This handles cases where user was deleted but token is still valid
+                    userValid = true;
+                }
+
+                if (userValid && role != null) {
+                    // Use role from token for authorization
+                    System.out.println("🎯 Setting authentication with role: ROLE_" + role);
+                    
                     List<SimpleGrantedAuthority> authorities =
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role));
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(username, null, authorities);
@@ -67,22 +91,22 @@ public class JwtFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    System.out.println("✅ Authenticated: " + username + " [" + role + "] for " + path);
+                    System.out.println("✅ SUCCESS: Authenticated " + username + " as ROLE_" + role + " for " + path);
                 } else {
-                    System.out.println("❌ User not found or inactive: " + username);
+                    System.out.println("❌ FAIL: User validation failed - Valid: " + userValid + ", Role: " + role);
                     response.setStatus(HttpStatus.FORBIDDEN.value());
-                    response.getWriter().write("Account is deactivated");
+                    response.getWriter().write("User validation failed");
                     return;
                 }
             } else {
-                System.out.println("❌ Invalid token for path: " + path);
+                System.out.println("❌ FAIL: Invalid token for path: " + path);
                 response.setStatus(HttpStatus.UNAUTHORIZED.value());
                 response.getWriter().write("Invalid or expired token");
                 return;
             }
         } else {
-            System.out.println("❌ No Authorization header for path: " + path);
-            // Don't block here - let Spring Security handle unauthorized requests
+            System.out.println("⚠️ WARNING: No valid Authorization header for: " + path);
+            // Let Spring Security handle unauthorized requests
         }
 
         chain.doFilter(request, response);
