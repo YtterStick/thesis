@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const res = await fetch("http://localhost:8080/me", {
+      const res = await fetch("https://thesis-g0pr.onrender.com/api/me", { // ✅ UPDATED URL
         headers: { Authorization: `Bearer ${token}` },
       });
 
