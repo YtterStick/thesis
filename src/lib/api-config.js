@@ -53,6 +53,8 @@ export const apiFetch = async (endpoint, options = {}) => {
   // For public endpoints like login, don't require a token
   if (isPublicEndpoint(endpoint)) {
     console.log(`🌐 Public API Call: ${options.method || 'GET'} ${url}`);
+  console.log(`🔐 Token present: ${!!token}`);
+  console.log(`📦 Headers:`, options.headers);
   } else {
     // For protected endpoints, validate token
     if (!token) {
@@ -154,3 +156,4 @@ export const api = {
       body: JSON.stringify(data)
     })
 };
+
