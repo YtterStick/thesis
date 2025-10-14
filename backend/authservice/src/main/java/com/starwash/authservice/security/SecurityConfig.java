@@ -39,10 +39,15 @@ public class SecurityConfig {
                         "/login", 
                         "/register", 
                         "/logout",
+                        "/health",                    // ✅ ADDED - Render health check
+                        "/api/health",                // ✅ ADDED - API health check
+                        "/",                         // ✅ ADDED - Root endpoint
                         "/api/services/**",
                         "/api/stock/**",
                         "/api/track/**",
-                        "/api/terms/**"  // ✅ ADD THIS LINE - Make terms endpoints public for users
+                        "/api/terms/**",
+                        "/api/laundry-jobs/**", 
+                        "/api/machines/**"
                     ).permitAll()
                     
                     // Authenticated endpoints
@@ -50,9 +55,6 @@ public class SecurityConfig {
                     
                     // Role-based endpoints
                     .requestMatchers("/api/accounts/**").hasRole("ADMIN")
-                    
-                    // Other public endpoints
-                    .requestMatchers("/api/laundry-jobs/**", "/api/machines/**").permitAll()
                     
                     .anyRequest().authenticated()
                 )
