@@ -17,6 +17,7 @@ import { Eye, EyeOff, Sparkles, Orbit, Satellite, Rocket, User, Lock } from "luc
 import { motion } from "framer-motion";
 import logoLight from "@/assets/logo-dark.svg";
 import AuthLoader from "@/components/feedback/AuthLoader";
+import { getApiUrl } from "@/lib/api-config";
 
 const decodeToken = (token) => {
   try {
@@ -140,7 +141,7 @@ const LoginPage = () => {
     setIsAuthenticating(true);
 
     try {
-      const loginRes = await fetch("https://thesis-g0pr.onrender.com/api/login",  {
+      const loginRes = await fetch(getApiUrl("login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

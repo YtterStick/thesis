@@ -32,17 +32,23 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
-                .cors(Customizer.withDefaults())
+                .cors(Customizer.withDefaults()) // This will use your CorsConfig bean
                 .authorizeHttpRequests(auth -> auth
                     // Public endpoints - no authentication required
                     .requestMatchers(
+                        "/", 
+                        "/health", 
+                        "/api/health",
                         "/login", 
                         "/register", 
                         "/logout",
                         "/api/services/**",
                         "/api/stock/**",
                         "/api/track/**",
-                        "/api/terms/**"  // ✅ ADD THIS LINE - Make terms endpoints public for users
+                        "/api/terms/**",
+                        "/api/laundry-jobs/**", 
+                        "/api/machines/**",
+                        "/debug/**" // Add debug endpoints as public
                     ).permitAll()
                     
                     // Authenticated endpoints
@@ -50,9 +56,6 @@ public class SecurityConfig {
                     
                     // Role-based endpoints
                     .requestMatchers("/api/accounts/**").hasRole("ADMIN")
-                    
-                    // Other public endpoints
-                    .requestMatchers("/api/laundry-jobs/**", "/api/machines/**").permitAll()
                     
                     .anyRequest().authenticated()
                 )

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { getApiUrl } from "@/lib/api-config";
 
 // Assets
 import assetClothing from "@/assets/USER_ASSET/asset_clothing.png";
@@ -18,7 +19,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
       setLoading(true);
       console.log("🔄 Starting to fetch services from backend...");
       
-      const response = await fetch('http://localhost:8080/api/services');
+      const response = await fetch(getApiUrl('services'));
       
       console.log("📡 Response status:", response.status);
       console.log("📡 Response ok:", response.ok);
@@ -44,7 +45,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchStockItems = async () => {
     try {
       console.log("🔄 Fetching stock items...");
-      const response = await fetch('http://localhost:8080/api/stock');
+      const response = await fetch(getApiUrl('stock'));
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -63,7 +64,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchMachines = async () => {
     try {
       console.log("🔄 Fetching machines...");
-      const response = await fetch('http://localhost:8080/api/machines');
+      const response = await fetch(getApiUrl('machines'));
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

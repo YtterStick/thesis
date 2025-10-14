@@ -5,16 +5,17 @@ import {
   createContext,
   useContext,
 } from "react";
+import { getApiUrl } from "@/lib/api-config";
 import {
   getToken,
   decodeToken,
   clearAuthTokens,
-} from "@/lib/auth"; // ✅ centralized token logic
+} from "@/lib/auth";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // { username, role }
+  const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -40,7 +41,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const res = await fetch("https://thesis-g0pr.onrender.com/api/me", { // ✅ UPDATED URL
+      const res = await fetch(getApiUrl("me"), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -76,13 +77,13 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (token) => {
     localStorage.setItem("authToken", token);
-    localStorage.setItem("authSync", Date.now().toString()); // 🔄 trigger sync
+    localStorage.setItem("authSync", Date.now().toString());
     await hydrate();
   };
 
   const logout = () => {
     clearAuthTokens();
-    localStorage.setItem("authSync", Date.now().toString()); // 🔄 trigger sync
+    localStorage.setItem("authSync", Date.now().toString());
     resetAuth();
     console.log("🚪 Logged out");
   };

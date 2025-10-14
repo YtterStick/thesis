@@ -6,10 +6,9 @@ import Services from "./services";
 import ServiceTracking from "./ServiceTracking";
 import TermsCondition from "./TermsCondition";
 import { useScrollSpy } from "./useScrollSpy";
+import { getApiUrl } from "@/lib/api-config";
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
 import { useTheme } from "@/hooks/use-theme";
-
-const API_BASE_URL = "http://localhost:8080/api";
 
 const AnimatedNumber = ({ value, isChanging }) => {
   if (!isChanging) {
@@ -115,7 +114,7 @@ const LandingPage = () => {
       controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`${API_BASE_URL}/laundry-jobs`, {
+      const response = await fetch(getApiUrl("laundry-jobs"), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
