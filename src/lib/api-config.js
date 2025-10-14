@@ -18,13 +18,20 @@ export const getApiUrl = (endpoint) => {
   return `${API_CONFIG.baseURL}/${cleanEndpoint}`;
 };
 
+// Get auth token from localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('authToken');
+};
+
 // Centralized fetch function with error handling
 export const apiFetch = async (endpoint, options = {}) => {
   const url = getApiUrl(endpoint);
-  
+  const token = getAuthToken();
+
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }), // Add auth header if token exists
       ...options.headers,
     },
     credentials: 'include', // Important for CORS with authentication
@@ -33,12 +40,17 @@ export const apiFetch = async (endpoint, options = {}) => {
 
   try {
     console.log(`🌐 API Call: ${options.method || 'GET'} ${url}`);
+    console.log(`🔐 Auth Token: ${token ? 'Present' : 'Missing'}`);
     
     const response = await fetch(url, defaultOptions);
     
     console.log(`📡 Response Status: ${response.status} for ${endpoint}`);
     
     if (!response.ok) {
+      // For 403 errors, provide more specific messaging
+      if (response.status === 403) {
+        throw new Error('Access forbidden - check user permissions or authentication');
+      }
       const errorText = await response.text();
       console.error(`❌ API Error (${endpoint}): ${response.status} - ${errorText}`);
       throw new Error(`HTTP error! status: ${response.status}`);

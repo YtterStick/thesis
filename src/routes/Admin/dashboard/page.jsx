@@ -181,7 +181,7 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // Separate function for actual API call - FIXED VERSION
+  // Separate function for actual API call - SIMPLIFIED VERSION
   const fetchFreshData = async () => {
     console.log("🔄 Fetching fresh dashboard data");
     const token = localStorage.getItem('authToken');
@@ -191,12 +191,8 @@ export default function AdminDashboardPage() {
     }
 
     try {
-      // FIX: Manually add Authorization header to ensure it's sent
-      const data = await api.get("dashboard/admin", {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // SIMPLIFIED: Just use the api.get method - token is now handled automatically in api-config
+      const data = await api.get("dashboard/admin");
       
       const newDashboardData = {
         totalIncome: data.totalIncome || 0,
