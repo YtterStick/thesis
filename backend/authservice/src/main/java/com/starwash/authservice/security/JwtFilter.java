@@ -41,71 +41,55 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         System.out.println("🛡️ JwtFilter processing: " + path);
 
-        // Public endpoints - let them through without JWT check
-        if (isPublicEndpoint(path)) {
-            System.out.println("✅ Public endpoint, skipping JWT auth: " + path);
+        // Public endpoints - FIXED: Include API paths
+        if (path.equals("/api/login") || path.equals("/api/register") || 
+            path.equals("/login") || path.equals("/register") ||
+            path.equals("/health") || path.equals("/api/health") ||
+            path.equals("/")) {
+            System.out.println("✅ Public endpoint, skipping auth: " + path);
             chain.doFilter(request, response);
             return;
         }
 
         String authHeader = request.getHeader("Authorization");
 
-        // If no Authorization header, continue without authentication
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("⚠️ No Bearer token for protected endpoint: " + path + " - allowing request to continue");
-            chain.doFilter(request, response);
-            return;
-        }
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            System.out.println("🔐 Token found for: " + path);
 
-        // We have a Bearer token, let's process it
-        String token = authHeader.substring(7);
-        System.out.println("🔐 Token found for: " + path);
+            if (jwtUtil.validateToken(token)) {
+                String username = jwtUtil.getUsername(token);
+                String role = jwtUtil.getRole(token);
+                System.out.println("✅ Token valid for user: " + username + " with role: " + role);
 
-        if (jwtUtil.validateToken(token)) {
-            String username = jwtUtil.getUsername(token);
-            String role = jwtUtil.getRole(token);
-            System.out.println("✅ Token valid for user: " + username + " with role: " + role);
+                Optional<User> userOpt = userRepository.findByUsername(username);
+                if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
+                    // Create authority with ROLE_ prefix
+                    String authority = "ROLE_" + role.toUpperCase();
+                    List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(authority));
+                    
+                    System.out.println("🎯 Setting authentication with authority: " + authority);
 
-            Optional<User> userOpt = userRepository.findByUsername(username);
-            if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
-                // Create authority with ROLE_ prefix
-                String authority = "ROLE_" + role.toUpperCase();
-                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(authority));
-                
-                System.out.println("🎯 Setting authentication with authority: " + authority);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(username, null, authorities);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                System.out.println("✅ Authenticated: " + username + " [" + authority + "] for " + path);
+                    System.out.println("✅ Authenticated: " + username + " [" + authority + "] for " + path);
+                } else {
+                    System.out.println("❌ User not found or inactive: " + username);
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                    response.getWriter().write("Account is deactivated");
+                    return;
+                }
             } else {
-                System.out.println("❌ User not found or inactive: " + username);
-                response.setStatus(HttpStatus.FORBIDDEN.value());
-                response.getWriter().write("Account is deactivated");
-                return;
+                System.out.println("❌ Invalid token for: " + path);
             }
         } else {
-            System.out.println("❌ Invalid token for: " + path);
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.getWriter().write("Invalid token");
-            return;
+            System.out.println("❌ No Authorization header for protected endpoint: " + path);
         }
 
         chain.doFilter(request, response);
-    }
-
-    private boolean isPublicEndpoint(String path) {
-        return path.equals("/api/login") || 
-               path.equals("/api/register") || 
-               path.equals("/login") || 
-               path.equals("/register") ||
-               path.equals("/health") || 
-               path.equals("/api/health") ||
-               path.equals("/") ||
-               path.startsWith("/api/debug/") ||
-               path.startsWith("/api/test/");
     }
 }
