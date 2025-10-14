@@ -45,8 +45,10 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/login",
                                 "/register",
-                                "/api/login",
-                                "/api/register"
+                                "/api/login", 
+                                "/api/register",
+                                "/api/debug/**",
+                                "/api/test/**"
                         ).permitAll()
 
                         // Role-based endpoints
@@ -54,12 +56,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers("/api/accounts/**").hasRole("ADMIN")
 
-                        // All other API endpoints require authentication (but not specific role)
+                        // All other API endpoints require authentication
                         .requestMatchers("/api/**").authenticated()
 
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

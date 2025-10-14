@@ -1,7 +1,5 @@
 package com.starwash.authservice.security;
 
-import com.starwash.authservice.model.User;
-import com.starwash.authservice.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,17 +16,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final UserRepository userRepository;
 
-    public JwtFilter(JwtUtil jwtUtil, UserRepository userRepository) {
+    public JwtFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
-        this.userRepository = userRepository;
     }
 
     @Override
@@ -46,7 +41,8 @@ public class JwtFilter extends OncePerRequestFilter {
         // Don't process authentication for public endpoints
         if (path.equals("/api/login") || path.equals("/api/register") || 
             path.equals("/api/health") || path.equals("/") ||
-            path.equals("/health") || path.startsWith("/api/debug")) {
+            path.equals("/health") || path.startsWith("/api/debug") ||
+            path.startsWith("/api/test")) {
             System.out.println("✅ Public endpoint, skipping auth: " + path);
             chain.doFilter(request, response);
             return;
@@ -63,22 +59,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 
                 System.out.println("📝 Token details - Username: " + username + ", Role: " + role);
 
-                // Check if user exists and is active
-                Optional<User> userOpt = userRepository.findByUsername(username);
-                boolean userValid = false;
-                
-                if (userOpt.isPresent()) {
-                    User user = userOpt.get();
-                    System.out.println("👤 User found - Status: " + user.getStatus() + ", Role: " + user.getRole());
-                    userValid = "Active".equals(user.getStatus());
-                } else {
-                    System.out.println("⚠️ User not found in database: " + username);
-                    // For now, we'll allow the request if token is valid but user not in DB
-                    // This handles cases where user was deleted but token is still valid
-                    userValid = true;
-                }
-
-                if (userValid && role != null) {
+                if (role != null) {
                     // Use role from token for authorization
                     System.out.println("🎯 Setting authentication with role: ROLE_" + role);
                     
@@ -93,9 +74,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
                     System.out.println("✅ SUCCESS: Authenticated " + username + " as ROLE_" + role + " for " + path);
                 } else {
-                    System.out.println("❌ FAIL: User validation failed - Valid: " + userValid + ", Role: " + role);
+                    System.out.println("❌ FAIL: No role in token");
                     response.setStatus(HttpStatus.FORBIDDEN.value());
-                    response.getWriter().write("User validation failed");
+                    response.getWriter().write("No role in token");
                     return;
                 }
             } else {
