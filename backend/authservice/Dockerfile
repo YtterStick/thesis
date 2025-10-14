@@ -2,13 +2,14 @@ FROM openjdk:24-jdk-slim
 
 WORKDIR /app
 
-# Copy everything from current directory (backend/authservice/)
 COPY . .
 
-# Build the application
 RUN chmod +x gradlew && ./gradlew clean build -x test
+
+# List JAR files for debugging
+RUN ls -la build/libs/
 
 EXPOSE 10000
 
-# Run the application
-CMD ["java", "-jar", "build/libs/*.jar"]
+# Use the exact JAR filename
+CMD ["java", "-jar", "build/libs/authservice-0.0.1-SNAPSHOT.jar"]
