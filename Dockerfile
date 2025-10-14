@@ -1,11 +1,11 @@
-FROM openjdk:24-jdk-slim
+FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
-COPY backend/authservice/ .
+COPY backend/archservice/ .
 
 RUN chmod +x gradlew && ./gradlew clean build -x test
 
-EXPOSE 10000
+EXPOSE 8080
 
-CMD ["java", "-jar", "build/libs/*.jar"]
+ENTRYPOINT ["java", "-jar", "build/libs/archservice-0.0.1-SNAPSHOT.jar"]
