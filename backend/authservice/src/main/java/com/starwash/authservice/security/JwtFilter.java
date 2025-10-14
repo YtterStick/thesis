@@ -41,7 +41,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         System.out.println("🛡️ JwtFilter processing: " + path);
 
-        // Public endpoints - FIXED: Include API paths
+        // Public endpoints
         if (path.equals("/api/login") || path.equals("/api/register") || 
             path.equals("/login") || path.equals("/register") ||
             path.equals("/health") || path.equals("/api/health") ||
@@ -64,8 +64,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 Optional<User> userOpt = userRepository.findByUsername(username);
                 if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
-                    // Create authority with ROLE_ prefix
-                    String authority = "ROLE_" + role.toUpperCase();
+                    // FIXED: Use role directly without ROLE_ prefix to match SecurityConfig
+                    String authority = role.toUpperCase();
                     List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(authority));
                     
                     System.out.println("🎯 Setting authentication with authority: " + authority);
@@ -85,9 +85,15 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
             } else {
                 System.out.println("❌ Invalid token for: " + path);
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                response.getWriter().write("Invalid or expired token");
+                return;
             }
         } else {
             System.out.println("❌ No Authorization header for protected endpoint: " + path);
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.getWriter().write("Authorization header required");
+            return;
         }
 
         chain.doFilter(request, response);
