@@ -39,21 +39,16 @@ public class SecurityConfig {
                         "/api/auth/login", 
                         "/api/auth/register", 
                         "/api/auth/logout",
-                        "/api/health",                    // API health check
-                        "/",                             // Root endpoint
+                        "/api/health",
+                        "/",
                         
-                        // ✅ PUBLIC SERVICE ENDPOINTS - Allow all services, stock, machines
-                        "/api/services",
+                        // All these are now under /api prefix
                         "/api/services/**",
-                        "/api/stock", 
                         "/api/stock/**",
-                        "/api/machines",
-                        "/api/machines/**",
-                        
-                        // Other public endpoints
                         "/api/track/**",
                         "/api/terms/**",
-                        "/api/laundry-jobs/**"
+                        "/api/laundry-jobs/**", 
+                        "/api/machines/**"
                     ).permitAll()
                     
                     // Authenticated endpoints
@@ -63,10 +58,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/accounts/**").hasRole("ADMIN")
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     
-                    // All other API endpoints require authentication
-                    .requestMatchers("/api/**").authenticated()
-                    
-                    .anyRequest().permitAll() // Allow other non-API endpoints
+                    .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .logout(logout -> logout.disable())

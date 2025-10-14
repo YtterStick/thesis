@@ -4,40 +4,27 @@ import { useState, useEffect } from "react";
 // Assets
 import assetClothing from "@/assets/USER_ASSET/asset_clothing.png";
 
-// Simple fetch function without authentication for public endpoints
+// Simple fetch function for public endpoints
 const publicFetch = async (endpoint) => {
   try {
-    console.log(`🔄 Making public request to: https://thesis-g0pr.onrender.com/api${endpoint}`);
+    const API_BASE = "https://thesis-g0pr.onrender.com/api";
+    console.log(`🔄 Fetching from: ${API_BASE}${endpoint}`);
     
-    const response = await fetch(`https://thesis-g0pr.onrender.com/api${endpoint}`, {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Remove credentials for public endpoints
-      credentials: 'omit'
     });
 
     console.log(`📡 Response status: ${response.status}`);
-    console.log(`📡 Response ok: ${response.ok}`);
-
+    
     if (!response.ok) {
-      // For 403 errors, try without any headers
-      if (response.status === 403) {
-        console.log('🔄 Retrying without headers due to 403...');
-        const retryResponse = await fetch(`https://thesis-g0pr.onrender.com/api${endpoint}`);
-        
-        if (!retryResponse.ok) {
-          const errorText = await retryResponse.text();
-          console.error("❌ Retry failed:", errorText);
-          throw new Error(`HTTP error! status: ${retryResponse.status}`);
-        }
-        
-        return await retryResponse.json();
+      // If endpoint returns 404, use fallback data
+      if (response.status === 404) {
+        console.log('⚠️ Endpoint not found, using fallback data');
+        return getFallbackData(endpoint);
       }
-      
-      const errorText = await response.text();
-      console.error("❌ Response not OK. Response text:", errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
@@ -46,8 +33,53 @@ const publicFetch = async (endpoint) => {
     return data;
   } catch (err) {
     console.error('❌ Fetch error:', err);
-    throw err;
+    // Return fallback data on any error
+    return getFallbackData(endpoint);
   }
+};
+
+// Fallback data when backend is not available
+const getFallbackData = (endpoint) => {
+  if (endpoint === '/services') {
+    return [
+      {
+        id: "1",
+        name: "Wash & Fold",
+        description: "Complete washing and folding service for your everyday laundry needs",
+        price: 150
+      },
+      {
+        id: "2", 
+        name: "Dry Cleaning",
+        description: "Professional dry cleaning for delicate and special fabrics",
+        price: 200
+      },
+      {
+        id: "3",
+        name: "Ironing Service", 
+        description: "Professional ironing to keep your clothes crisp and neat",
+        price: 100
+      }
+    ];
+  }
+  
+  if (endpoint === '/stock') {
+    return [
+      { id: "1", name: "plastic", price: 3 },
+      { id: "2", name: "detergent", price: 5 },
+      { id: "3", name: "fabric conditioner", price: 7 }
+    ];
+  }
+  
+  if (endpoint === '/machines') {
+    return [
+      { id: "1", capacityKg: 8 },
+      { id: "2", capacityKg: 10 },
+      { id: "3", capacityKg: 12 }
+    ];
+  }
+  
+  return [];
 };
 
 const Services = ({ isVisible, isMobile, isDarkMode }) => {
@@ -59,7 +91,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch services from backend - PUBLIC endpoint
+  // Fetch services from backend
   const fetchServices = async () => {
     try {
       console.log("🔄 Starting to fetch services from backend...");
@@ -68,12 +100,12 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
       setError(null);
     } catch (err) {
       console.error('❌ Error fetching services:', err);
-      setServices([]);
-      setError('Failed to load services. Please try again later.');
+      setServices(getFallbackData('/services'));
+      setError('Using demo data - Backend temporarily unavailable');
     }
   };
 
-  // Fetch stock items from backend - PUBLIC endpoint
+  // Fetch stock items from backend
   const fetchStockItems = async () => {
     try {
       console.log("🔄 Fetching stock items...");
@@ -81,11 +113,11 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
       setStockItems(stockData);
     } catch (err) {
       console.error('❌ Error fetching stock items:', err);
-      setStockItems([]);
+      setStockItems(getFallbackData('/stock'));
     }
   };
 
-  // Fetch machines from backend - PUBLIC endpoint
+  // Fetch machines from backend
   const fetchMachines = async () => {
     try {
       console.log("🔄 Fetching machines...");
@@ -93,7 +125,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
       setMachines(machinesData);
     } catch (err) {
       console.error('❌ Error fetching machines:', err);
-      setMachines([]);
+      setMachines(getFallbackData('/machines'));
     }
   };
 
@@ -138,7 +170,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
         ]);
       } catch (error) {
         console.error('Error fetching data:', error);
-        setError('Failed to load data. Please check your connection.');
+        setError('Failed to load some data. Showing available information.');
       } finally {
         setLoading(false);
       }
@@ -221,7 +253,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
                 </motion.h2>
               )}
               
-              {/* Error State */}
+              {/* Error Message */}
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -235,21 +267,11 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
                   <p className={isDarkMode ? 'text-red-800' : 'text-red-600'}>
                     {error}
                   </p>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="mt-2 px-4 py-2 rounded-lg text-sm font-medium"
-                    style={{
-                      backgroundColor: isDarkMode ? '#2A524C' : '#0B2B26',
-                      color: '#F3EDE3'
-                    }}
-                  >
-                    Retry
-                  </button>
                 </motion.div>
               )}
               
               {/* Loading State */}
-              {loading && !error && (
+              {loading && (
                 <div className="flex justify-center items-center py-12">
                   <div className="text-center">
                     <div 
@@ -263,17 +285,8 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
                 </div>
               )}
               
-              {/* Empty State - No services loaded */}
-              {!loading && !error && services.length === 0 && (
-                <div className="text-center py-12">
-                  <p className={isDarkMode ? 'text-white' : 'text-[#183D3D]'}>
-                    No services available at the moment.
-                  </p>
-                </div>
-              )}
-              
               {/* Services Cards */}
-              {!loading && !error && services.length > 0 && (
+              {!loading && services.length > 0 && (
                 <div className="flex flex-col gap-4 md:gap-4">
                   {services.map((service, index) => (
                     <motion.div
