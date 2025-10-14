@@ -32,8 +32,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
-                .cors(Customizer.withDefaults()) // This will use your CorsConfig bean
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                    // Allow OPTIONS requests for CORS preflight
+                    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                    
                     // Public endpoints - no authentication required
                     .requestMatchers(
                         "/", 
@@ -48,7 +51,7 @@ public class SecurityConfig {
                         "/api/terms/**",
                         "/api/laundry-jobs/**", 
                         "/api/machines/**",
-                        "/debug/**" // Add debug endpoints as public
+                        "/debug/**"
                     ).permitAll()
                     
                     // Authenticated endpoints

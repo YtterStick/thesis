@@ -17,7 +17,7 @@ import { Eye, EyeOff, Sparkles, Orbit, Satellite, Rocket, User, Lock } from "luc
 import { motion } from "framer-motion";
 import logoLight from "@/assets/logo-dark.svg";
 import AuthLoader from "@/components/feedback/AuthLoader";
-import { getApiUrl } from "@/lib/api-config";
+import { getApiUrl, api } from "@/lib/api-config";
 
 const decodeToken = (token) => {
   try {
@@ -123,6 +123,8 @@ const LoginPage = () => {
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    // Clear error when user starts typing
+    if (error) setError("");
   };
 
   const handleFocus = (field) => {
@@ -137,42 +139,80 @@ const LoginPage = () => {
     e.preventDefault();
     if (isAuthenticating) return;
 
+    // Basic validation
+    if (!form.username.trim() || !form.password.trim()) {
+      setError("Please enter both username and password");
+      return;
+    }
+
     setError("");
     setIsAuthenticating(true);
 
     try {
-      const loginRes = await fetch(getApiUrl("login"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+      console.log("🔐 Attempting login...");
+      
+      // Use the api.post convenience method with better error handling
+      const data = await api.post("login", form);
+      
+      console.log("✅ Login response received:", data);
 
-      // Handle different HTTP status codes
-      if (loginRes.status === 403) {
-        throw new Error("Account is deactivated. Please contact administrator.");
-      } else if (!loginRes.ok) {
-        throw new Error("Invalid username or password");
+      if (!data.token) {
+        throw new Error("No authentication token received from server");
       }
 
-      const { token } = await loginRes.json();
-      if (!token) throw new Error("No token received");
-
-      const decoded = decodeToken(token);
-      if (!decoded) throw new Error("Token expired or invalid");
+      const decoded = decodeToken(data.token);
+      if (!decoded) throw new Error("Token is invalid or expired");
 
       setLoginMeta({
         issuedAt: decoded.issuedAt,
         expiresAt: decoded.expiresAt,
       });
 
-      localStorage.setItem("authToken", token);
-      await login(token);
+      // Store token and update auth state
+      localStorage.setItem("authToken", data.token);
+      await login(data.token);
+      
+      console.log("🎉 Login successful, user authenticated");
+
     } catch (err) {
       console.error("❌ Login error:", err);
-      setError(err.message);
+      
+      // Provide more user-friendly error messages
+      if (err.message.includes("Failed to fetch")) {
+        setError("Unable to connect to the server. Please check your internet connection and try again.");
+      } else if (err.message.includes("HTTP error! status: 401")) {
+        setError("Invalid username or password. Please try again.");
+      } else if (err.message.includes("HTTP error! status: 403")) {
+        setError("Account is deactivated. Please contact administrator.");
+      } else if (err.message.includes("HTTP error! status: 404")) {
+        setError("Service temporarily unavailable. Please try again later.");
+      } else if (err.message.includes("HTTP error! status: 500")) {
+        setError("Server error. Please try again later.");
+      } else {
+        setError(err.message || "An unexpected error occurred. Please try again.");
+      }
+      
       setIsAuthenticating(false);
     }
   };
+
+  // Test API connection on component mount (optional)
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const response = await fetch(getApiUrl("health"));
+        if (response.ok) {
+          console.log("✅ Backend connection test: SUCCESS");
+        } else {
+          console.warn("⚠️ Backend connection test: Server responded with error");
+        }
+      } catch (error) {
+        console.error("❌ Backend connection test: FAILED", error);
+      }
+    };
+
+    testConnection();
+  }, []);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#E0EAE8] via-[#D5DCDB] to-[#E0EAE8] px-4 py-10">
@@ -233,7 +273,9 @@ const LoginPage = () => {
                     onFocus={() => handleFocus('username')}
                     onBlur={() => handleBlur('username')}
                     required
-                    className="bg-white/60 border-[#1C3F3A]/30 text-[#0B2B26] pl-10 pr-4 py-5 rounded-lg focus:ring-2 focus:ring-[#2A8C6F] focus:border-transparent transition-all duration-300"
+                    disabled={isAuthenticating}
+                    className="bg-white/60 border-[#1C3F3A]/30 text-[#0B2B26] pl-10 pr-4 py-5 rounded-lg focus:ring-2 focus:ring-[#2A8C6F] focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder=" "
                   />
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <User className="h-5 w-5 text-[#1C3F3A]/50" />
@@ -263,7 +305,9 @@ const LoginPage = () => {
                     onFocus={() => handleFocus('password')}
                     onBlur={() => handleBlur('password')}
                     required
-                    className="bg-white/60 border-[#1C3F3A]/30 text-[#0B2B26] pl-10 pr-10 py-5 rounded-lg focus:ring-2 focus:ring-[#2A8C6F] focus:border-transparent transition-all duration-300"
+                    disabled={isAuthenticating}
+                    className="bg-white/60 border-[#1C3F3A]/30 text-[#0B2B26] pl-10 pr-10 py-5 rounded-lg focus:ring-2 focus:ring-[#2A8C6F] focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder=" "
                   />
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <Lock className="h-5 w-5 text-[#1C3F3A]/50" />
@@ -281,7 +325,8 @@ const LoginPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#1C3F3A]/50 hover:text-[#2A8C6F] transition-colors duration-300"
+                    disabled={isAuthenticating}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#1C3F3A]/50 hover:text-[#2A8C6F] transition-colors duration-300 disabled:opacity-30"
                     aria-label="Toggle password visibility"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -296,19 +341,19 @@ const LoginPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg shadow-sm"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
-                  {error}
+                  <span>{error}</span>
                 </motion.div>
               )}
 
               {/* Login Button */}
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <motion.div whileHover={{ scale: isAuthenticating ? 1 : 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   type="submit"
-                  disabled={isAuthenticating}
-                  className="w-full bg-gradient-to-br from-[#1C3F3A] to-[#2A8C6F] hover:from-[#225C4A] hover:to-[#2A8C6F] text-[#F3EDE3] font-medium py-6 rounded-lg transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl"
+                  disabled={isAuthenticating || !form.username.trim() || !form.password.trim()}
+                  className="w-full bg-gradient-to-br from-[#1C3F3A] to-[#2A8C6F] hover:from-[#225C4A] hover:to-[#2A8C6F] text-[#F3EDE3] font-medium py-6 rounded-lg transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isAuthenticating ? (
                     <>

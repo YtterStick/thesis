@@ -41,11 +41,19 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
+      console.log("🔄 Hydrating auth state...");
       const res = await fetch(getApiUrl("me"), {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        credentials: "include"
       });
 
-      if (!res.ok) throw new Error("Invalid token");
+      if (!res.ok) {
+        console.error("❌ Auth hydration failed:", res.status);
+        throw new Error("Invalid token");
+      }
 
       const data = await res.json();
       setUser({ username: data.user, role: data.role });
@@ -76,9 +84,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (token) => {
-    localStorage.setItem("authToken", token);
-    localStorage.setItem("authSync", Date.now().toString());
-    await hydrate();
+    try {
+      setIsAuthenticating(true);
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("authSync", Date.now().toString());
+      await hydrate();
+    } catch (error) {
+      console.error("❌ Login error in auth context:", error);
+      throw error;
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const logout = () => {
@@ -110,7 +126,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticating,
       }}
     >
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

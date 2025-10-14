@@ -12,22 +12,25 @@ public class CorsConfig {
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
-        System.out.println("✅ Global CORS config active");
-
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
+                System.out.println("🔧 Configuring CORS for all endpoints");
+                
                 registry.addMapping("/**")
                         .allowedOrigins(
-                            "http://localhost:3000",  // Local development
-                            "https://starwashph.com", // Replace with your actual Hostinger domain
+                            "http://localhost:3000",
+                            "https://localhost:3000",
+                            "https://starwashph.com",
                             "https://www.starwashph.com"
                         )
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD")
                         .allowedHeaders("*")
-                        .exposedHeaders("Authorization")
+                        .exposedHeaders("Authorization", "Content-Type", "Content-Disposition")
                         .allowCredentials(true)
-                        .maxAge(3600); // Cache preflight response for 1 hour
+                        .maxAge(3600);
+                
+                System.out.println("✅ CORS configured for origins: localhost:3000, starwashph.com");
             }
         };
     }
