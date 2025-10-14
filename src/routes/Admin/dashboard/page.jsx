@@ -9,6 +9,8 @@ import {
   AlertCircle,
   TrendingUp,
   Users,
+  RefreshCw,
+  Database
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -18,28 +20,32 @@ import {
   Area,
   XAxis,
   YAxis,
+  CartesianGrid
 } from "recharts";
+import { api, getApiUrl } from "@/lib/api-config";
 
-const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours (or even longer!)
-const POLLING_INTERVAL = 10000; // 10 seconds
-const ALLOWED_SKEW_MS = 5000;
+// Cache configuration
+const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
+const POLLING_INTERVAL = 30000; // 30 seconds
+const BACKGROUND_REFRESH_INTERVAL = 60000; // 1 minute
 
-// Initialize cache properly - make it globally available
+// Initialize cache from localStorage
 const initializeCache = () => {
   try {
     const stored = localStorage.getItem('dashboardCache');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Check if cache is still valid
       if (Date.now() - parsed.timestamp < CACHE_DURATION) {
         console.log("📦 Initializing from stored cache");
         return parsed;
       } else {
         console.log("🗑️ Stored cache expired");
+        localStorage.removeItem('dashboardCache');
       }
     }
   } catch (error) {
     console.warn('Failed to load cache from storage:', error);
+    localStorage.removeItem('dashboardCache');
   }
   return null;
 };
@@ -48,59 +54,7 @@ const initializeCache = () => {
 let dashboardCache = initializeCache();
 let cacheTimestamp = dashboardCache?.timestamp || null;
 
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    // Clear cache on token expiry
-    dashboardCache = null;
-    cacheTimestamp = null;
-    localStorage.removeItem('dashboardCache');
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  try {
-    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-    if (!response.ok) {
-      console.error(`❌ ${method} ${endpoint} failed:`, response.status);
-      throw new Error(`Request failed: ${response.status}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    return contentType && contentType.includes("application/json")
-      ? response.json()
-      : response.text();
-  } catch (error) {
-    console.error('Fetch error:', error);
-    throw error;
-  }
-};
-
-// Save cache to localStorage for persistence
+// Save cache to localStorage
 const saveCacheToStorage = (data) => {
   try {
     localStorage.setItem('dashboardCache', JSON.stringify({
@@ -112,10 +66,16 @@ const saveCacheToStorage = (data) => {
   }
 };
 
+// Clear cache
+export const clearDashboardCache = () => {
+  dashboardCache = null;
+  cacheTimestamp = null;
+  localStorage.removeItem('dashboardCache');
+  console.log('🧹 Dashboard cache cleared');
+};
+
 export default function AdminDashboardPage() {
   const { theme } = useTheme();
-  
-  // Calculate isDarkMode based on theme - matching User side
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   // Initialize state with cached data if available
@@ -124,10 +84,11 @@ export default function AdminDashboardPage() {
       console.log("🎯 Initializing state with cached data");
       return {
         ...dashboardCache.data,
-        loading: false, // Don't show loading if we have cached data
+        loading: false,
         error: null,
         lastUpdated: new Date(dashboardCache.timestamp),
-        dataVersion: 0
+        dataVersion: 0,
+        isUsingCache: true
       };
     }
     
@@ -141,15 +102,18 @@ export default function AdminDashboardPage() {
       loading: true,
       error: null,
       lastUpdated: null,
-      dataVersion: 0
+      dataVersion: 0,
+      isUsingCache: false
     };
   });
 
-  const [initialLoad, setInitialLoad] = useState(!dashboardCache); // Only initial load if no cache
+  const [initialLoad, setInitialLoad] = useState(!dashboardCache);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const pollingIntervalRef = useRef(null);
+  const backgroundRefreshRef = useRef(null);
   const isMountedRef = useRef(true);
 
-  // Function to check if data has actually changed
+  // Check if data has changed
   const hasDataChanged = (newData, oldData) => {
     if (!oldData) return true;
     
@@ -163,37 +127,42 @@ export default function AdminDashboardPage() {
     );
   };
 
-  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
-    // Don't fetch if component is unmounted
+  // Fetch dashboard data
+  const fetchDashboardData = useCallback(async (forceRefresh = false, showLoading = false) => {
     if (!isMountedRef.current) return;
+
+    if (showLoading) {
+      setIsRefreshing(true);
+    }
 
     try {
       const now = Date.now();
       
-      // Check cache first unless forced refresh - use longer cache duration
+      // Check cache first unless forced refresh
       if (!forceRefresh && dashboardCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
         console.log("📦 Using cached dashboard data");
         
-        // Always update with cached data to ensure UI is populated
         setDashboardData(prev => ({
           ...dashboardCache.data,
           loading: false,
           error: null,
           lastUpdated: new Date(cacheTimestamp),
-          dataVersion: prev.dataVersion + 1
+          dataVersion: prev.dataVersion + 1,
+          isUsingCache: true
         }));
         
         setInitialLoad(false);
+        setIsRefreshing(false);
         
-        // Still fetch fresh data in background but don't wait for it
-        if (now - cacheTimestamp > 30000) { // If cache is older than 30 seconds, refresh in background
+        // Refresh in background if cache is older than 30 seconds
+        if (now - cacheTimestamp > 30000) {
           console.log("🔄 Fetching fresh data in background");
-          fetchFreshData();
+          fetchFreshData(false);
         }
         return;
       }
 
-      await fetchFreshData();
+      await fetchFreshData(showLoading);
     } catch (error) {
       console.error('Error in fetchDashboardData:', error);
       if (!isMountedRef.current) return;
@@ -206,95 +175,99 @@ export default function AdminDashboardPage() {
           loading: false,
           error: error.message,
           lastUpdated: new Date(cacheTimestamp),
-          dataVersion: prev.dataVersion + 1
+          dataVersion: prev.dataVersion + 1,
+          isUsingCache: true
         }));
       } else {
         setDashboardData(prev => ({
           ...prev,
           loading: false,
-          error: error.message
+          error: error.message,
+          isUsingCache: false
         }));
       }
       setInitialLoad(false);
+      setIsRefreshing(false);
     }
   }, []);
 
-  // Separate function for actual API call
-  const fetchFreshData = async () => {
+  // Fetch fresh data from API
+  const fetchFreshData = async (showLoading = true) => {
     console.log("🔄 Fetching fresh dashboard data");
-    const token = localStorage.getItem('authToken');
     
-    if (!token || isTokenExpired(token)) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch('http://localhost:8080/api/dashboard/admin', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch dashboard data: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    const newDashboardData = {
-      totalIncome: data.totalIncome || 0,
-      totalLoads: data.totalLoads || 0,
-      unwashedCount: data.unwashedCount || 0,
-      totalUnclaimed: data.totalUnclaimed || 0,
-      overviewData: data.overviewData || [],
-      unclaimedList: data.unclaimedList || [],
-    };
-
-    const currentTime = Date.now();
-
-    // Only update state and cache if data has actually changed
-    if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
-      console.log("🔄 Dashboard data updated with fresh data");
+    try {
+      const data = await api.get('dashboard/admin');
       
-      // Update cache
-      dashboardCache = {
-        data: newDashboardData,
-        timestamp: currentTime
+      const newDashboardData = {
+        totalIncome: data.totalIncome || 0,
+        totalLoads: data.totalLoads || 0,
+        unwashedCount: data.unwashedCount || 0,
+        totalUnclaimed: data.totalUnclaimed || 0,
+        overviewData: data.overviewData || [],
+        unclaimedList: data.unclaimedList || [],
       };
-      cacheTimestamp = currentTime;
-      
-      // Persist to localStorage
-      saveCacheToStorage(dashboardCache);
-      
-      if (isMountedRef.current) {
-        setDashboardData({
-          ...newDashboardData,
-          loading: false,
-          error: null,
-          lastUpdated: new Date(),
-          dataVersion: (dashboardData.dataVersion || 0) + 1
-        });
-      }
-    } else {
-      console.log("✅ No changes in dashboard data, updating timestamp only");
-      // Just update the timestamp to extend cache life
-      cacheTimestamp = currentTime;
-      dashboardCache.timestamp = currentTime;
-      saveCacheToStorage(dashboardCache);
-      
-      if (isMountedRef.current) {
-        setDashboardData(prev => ({
-          ...prev,
-          loading: false,
-          error: null,
-          lastUpdated: new Date()
-        }));
-      }
-    }
 
-    if (isMountedRef.current) {
-      setInitialLoad(false);
+      const currentTime = Date.now();
+
+      // Only update state and cache if data has actually changed
+      if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
+        console.log("🔄 Dashboard data updated with fresh data");
+        
+        // Update cache
+        dashboardCache = {
+          data: newDashboardData,
+          timestamp: currentTime
+        };
+        cacheTimestamp = currentTime;
+        
+        // Persist to localStorage
+        saveCacheToStorage(dashboardCache);
+        
+        if (isMountedRef.current) {
+          setDashboardData({
+            ...newDashboardData,
+            loading: false,
+            error: null,
+            lastUpdated: new Date(),
+            dataVersion: (dashboardData.dataVersion || 0) + 1,
+            isUsingCache: false
+          });
+        }
+      } else {
+        console.log("✅ No changes in dashboard data, updating timestamp only");
+        cacheTimestamp = currentTime;
+        if (dashboardCache) {
+          dashboardCache.timestamp = currentTime;
+          saveCacheToStorage(dashboardCache);
+        }
+        
+        if (isMountedRef.current) {
+          setDashboardData(prev => ({
+            ...prev,
+            loading: false,
+            error: null,
+            lastUpdated: new Date(),
+            isUsingCache: true
+          }));
+        }
+      }
+
+    } catch (error) {
+      throw error;
+    } finally {
+      if (isMountedRef.current) {
+        setInitialLoad(false);
+        if (showLoading) {
+          setIsRefreshing(false);
+        }
+      }
     }
+  };
+
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    console.log("🎯 Manual refresh triggered");
+    fetchDashboardData(true, true);
   };
 
   useEffect(() => {
@@ -308,33 +281,43 @@ export default function AdminDashboardPage() {
         loading: false,
         error: null,
         lastUpdated: new Date(cacheTimestamp),
-        dataVersion: prev.dataVersion + 1
+        dataVersion: prev.dataVersion + 1,
+        isUsingCache: true
       }));
       setInitialLoad(false);
     }
     
     // Then fetch fresh data
-    fetchDashboardData();
+    fetchDashboardData(false, false);
     
     // Set up polling with smart updates
     pollingIntervalRef.current = setInterval(() => {
       console.log("🔄 Auto-refreshing dashboard data...");
-      fetchDashboardData(false);
+      fetchDashboardData(false, false);
     }, POLLING_INTERVAL);
+
+    // Set up background refresh (less frequent)
+    backgroundRefreshRef.current = setInterval(() => {
+      console.log("🔄 Background refresh...");
+      fetchDashboardData(true, false);
+    }, BACKGROUND_REFRESH_INTERVAL);
     
     return () => {
       isMountedRef.current = false;
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
+      if (backgroundRefreshRef.current) {
+        clearInterval(backgroundRefreshRef.current);
+      }
     };
   }, [fetchDashboardData]);
 
   const formatCurrency = (amount) => {
-    return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+    return `₱${typeof amount === 'number' ? amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,') : '0.00'}`;
   };
 
-  // Skeleton loader components with updated colors
+  // Skeleton loader components
   const SkeletonCard = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -455,13 +438,19 @@ export default function AdminDashboardPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 mb-4"
+          className="flex items-center justify-between mb-4"
         >
-          <div className="h-8 w-8 rounded-lg animate-pulse"
-               style={{
-                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
-               }}></div>
-          <div className="h-8 w-44 rounded-lg animate-pulse"
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
+            <div className="h-8 w-44 rounded-lg animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
+          </div>
+          <div className="h-9 w-24 rounded-lg animate-pulse"
                style={{
                  backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                }}></div>
@@ -493,12 +482,26 @@ export default function AdminDashboardPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 mb-4"
+          className="flex items-center justify-between mb-4"
         >
-          <LineChart size={22} style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }} />
-          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
-            Admin Dashboard
-          </p>
+          <div className="flex items-center gap-3">
+            <LineChart size={22} style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }} />
+            <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+              Admin Dashboard
+            </p>
+          </div>
+          <Button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
+            style={{
+              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+              color: "#F3EDE3",
+            }}
+          >
+            <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -516,10 +519,21 @@ export default function AdminDashboardPage() {
                style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
               Failed to load dashboard data
             </p>
-            <p className="text-sm"
+            <p className="text-sm mb-3"
                style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
-              Auto-retrying in 30 seconds...
+              {dashboardData.error}
             </p>
+            <Button
+              onClick={handleManualRefresh}
+              className="flex items-center gap-2 mx-auto"
+              style={{
+                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                color: "#F3EDE3",
+              }}
+            >
+              <RefreshCw size={16} />
+              Try Again
+            </Button>
           </div>
         </motion.div>
       </div>
@@ -559,33 +573,74 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
-      {/* 🧢 Section Header */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 mb-3"
+        className="flex items-center justify-between mb-3"
       >
-        <motion.div
-          whileHover={{ scale: 1.1, rotate: 5 }}
-          className="rounded-lg p-2"
+        <div className="flex items-center gap-3">
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            className="rounded-lg p-2"
+            style={{
+              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+              color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+            }}
+          >
+            <LineChart size={22} />
+          </motion.div>
+          <div>
+            <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+              Admin Dashboard
+            </p>
+            <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+              Real-time business overview and analytics
+              {dashboardData.lastUpdated && (
+                <span className="ml-2">
+                  • Updated {dashboardData.lastUpdated.toLocaleTimeString()}
+                  {dashboardData.isUsingCache && " (Cached)"}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+        
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-            color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+            color: "#F3EDE3",
           }}
         >
-          <LineChart size={22} />
-        </motion.div>
-        <div>
-          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
-            Admin Dashboard
-          </p>
-          <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
-            Real-time business overview and analytics
-          </p>
-        </div>
+          <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+          {isRefreshing ? "Refreshing..." : "Refresh"}
+        </motion.button>
       </motion.div>
 
-      {/* 📊 Summary Cards */}
+      {/* Cache Indicator */}
+      {dashboardData.isUsingCache && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 p-3 rounded-lg border"
+          style={{
+            backgroundColor: isDarkMode ? "#2A524C20" : "#E0EAE8",
+            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          }}
+        >
+          <Database size={16} style={{ color: isDarkMode ? '#3DD9B6' : '#0B2B26' }} />
+          <span className="text-sm" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+            Showing cached data • Auto-refreshing in background
+          </span>
+        </motion.div>
+      )}
+
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {summaryCards.map(({ title, icon, value, color, description }, index) => (
           <motion.div
@@ -639,7 +694,7 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      {/* 📈 Chart & Unclaimed List */}
+      {/* Chart & Unclaimed List */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
         {/* Chart Card */}
         <motion.div
@@ -680,6 +735,12 @@ export default function AdminDashboardPage() {
                 data={displayData.overviewData} 
                 margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
               >
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke={isDarkMode ? '#2A524C' : '#E0EAE8'}
+                  horizontal={true}
+                  vertical={false}
+                />
                 <defs>
                   <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#0891B2" stopOpacity={0.8} />
@@ -687,7 +748,7 @@ export default function AdminDashboardPage() {
                   </linearGradient>
                 </defs>
                 <Tooltip
-                  cursor={false}
+                  cursor={{ stroke: isDarkMode ? '#2A524C' : '#E0EAE8', strokeWidth: 1 }}
                   formatter={(value) => [`₱${Number(value).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`, "Revenue"]}
                   contentStyle={{
                     backgroundColor: isDarkMode ? '#0B2B26' : '#FFFFFF',
@@ -783,7 +844,7 @@ export default function AdminDashboardPage() {
               <div className="space-y-3">
                 {displayData.unclaimedList.map((transaction, index) => (
                   <motion.div
-                    key={transaction.id}
+                    key={transaction.id || index}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
@@ -801,13 +862,13 @@ export default function AdminDashboardPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <p className="font-semibold text-sm mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                          {transaction.customerName}
+                          {transaction.customerName || 'Unknown Customer'}
                         </p>
                         <p className="text-sm mb-1" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
-                          {transaction.serviceType} • {transaction.loadCount || 0} loads
+                          {transaction.serviceType || 'Unknown Service'} • {transaction.loadCount || 0} loads
                         </p>
                         <p className="text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/60' }}>
-                          {transaction.date}
+                          {transaction.date || 'No date'}
                         </p>
                       </div>
                       <motion.span
@@ -828,6 +889,39 @@ export default function AdminDashboardPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Loading Overlay */}
+      <AnimatePresence>
+        {isRefreshing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg p-6 flex items-center gap-3"
+            >
+              <RefreshCw size={24} className="animate-spin text-[#0B2B26]" />
+              <p className="text-[#0B2B26] font-medium">Refreshing data...</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
+// Button component (if not already imported)
+const Button = ({ children, onClick, disabled, className = '', ...props }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+    {...props}
+  >
+    {children}
+  </button>
+);

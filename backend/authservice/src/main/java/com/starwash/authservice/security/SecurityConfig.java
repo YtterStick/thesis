@@ -16,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
@@ -37,37 +38,34 @@ public class SecurityConfig {
                         // Allow OPTIONS requests for CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Public endpoints - no authentication required
+                        // Public endpoints
                         .requestMatchers(
                                 "/",
                                 "/health",
                                 "/api/health",
                                 "/login",
-                                "/register",
-                                "/api/login",
-                                "/api/register",
-                                "/api/debug/**",
-                                "/api/test/**")
+                                "/register")
                         .permitAll()
 
-                        // Role-based endpoints - FIXED: Added dashboard endpoints
+                        // Role-based endpoints
                         .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
                         .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers("/api/accounts/**").hasRole("ADMIN")
 
-                        // All other API endpoints require authentication
+                        // Other authenticated endpoints
                         .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/me").authenticated()
 
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
-    }   
+    }
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
