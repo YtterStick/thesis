@@ -38,23 +38,24 @@ public class SecurityConfig {
                         // Allow OPTIONS requests for CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Public endpoints
+                        // Public endpoints - no authentication required
                         .requestMatchers(
                                 "/",
                                 "/health",
                                 "/api/health",
                                 "/login",
-                                "/register")
-                        .permitAll()
+                                "/register",
+                                "/api/login",
+                                "/api/register"
+                        ).permitAll()
 
                         // Role-based endpoints
                         .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
                         .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers("/api/accounts/**").hasRole("ADMIN")
 
-                        // Other authenticated endpoints
+                        // All other API endpoints require authentication (but not specific role)
                         .requestMatchers("/api/**").authenticated()
-                        .requestMatchers("/me").authenticated()
 
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -65,7 +66,8 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }

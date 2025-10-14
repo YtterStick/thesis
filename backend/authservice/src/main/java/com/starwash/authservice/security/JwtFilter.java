@@ -38,9 +38,11 @@ public class JwtFilter extends OncePerRequestFilter {
             @NonNull FilterChain chain)
             throws ServletException, IOException {
 
+        // Don't process authentication for public endpoints
         String path = request.getRequestURI();
-
-        if (path.startsWith("/login") || path.startsWith("/register")) {
+        if (path.equals("/api/login") || path.equals("/api/register") || 
+            path.equals("/api/health") || path.equals("/") ||
+            path.equals("/health")) {
             chain.doFilter(request, response);
             return;
         }
@@ -65,13 +67,22 @@ public class JwtFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    System.out.println("✅ Authenticated: " + username + " [" + role + "]");
+                    System.out.println("✅ Authenticated: " + username + " [" + role + "] for " + path);
                 } else {
+                    System.out.println("❌ User not found or inactive: " + username);
                     response.setStatus(HttpStatus.FORBIDDEN.value());
                     response.getWriter().write("Account is deactivated");
                     return;
                 }
+            } else {
+                System.out.println("❌ Invalid token for path: " + path);
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                response.getWriter().write("Invalid or expired token");
+                return;
             }
+        } else {
+            System.out.println("❌ No Authorization header for path: " + path);
+            // Don't block here - let Spring Security handle unauthorized requests
         }
 
         chain.doFilter(request, response);
