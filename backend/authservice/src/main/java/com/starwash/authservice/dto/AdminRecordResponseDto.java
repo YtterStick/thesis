@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public class AdminRecordResponseDto {
     private String id;
+    private String invoiceNumber; // Add this field
     private String customerName;
     private String contact;
     private String serviceName;
@@ -23,18 +24,19 @@ public class AdminRecordResponseDto {
     private String claimProcessedBy;
     private boolean disposed;
     private String disposedBy;
-    private int unwashedLoadsCount; // NEW: Track unwashed loads count
+    private int unwashedLoadsCount;
 
     public AdminRecordResponseDto() {}
     
-    public AdminRecordResponseDto(String id, String customerName, String contact, String serviceName, 
+    public AdminRecordResponseDto(String id, String invoiceNumber, String customerName, String contact, String serviceName, 
                                  int loads, String detergent, String fabric, double totalPrice,
                                  String paymentMethod, String pickupStatus, String laundryStatus,
                                  String processedByStaff, boolean paid, boolean expired, 
                                  LocalDateTime createdAt, Boolean gcashVerified,
                                  String laundryProcessedBy, String claimProcessedBy,
-                                 boolean disposed, String disposedBy, int unwashedLoadsCount) { 
+                                 boolean disposed, String disposedBy, int unwashedLoadsCount) {
         this.id = id;
+        this.invoiceNumber = invoiceNumber;
         this.customerName = customerName;
         this.contact = contact;
         this.serviceName = serviceName;
@@ -59,6 +61,9 @@ public class AdminRecordResponseDto {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    
+    public String getInvoiceNumber() { return invoiceNumber; }
+    public void setInvoiceNumber(String invoiceNumber) { this.invoiceNumber = invoiceNumber; }
     
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
-import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, Calendar } from "lucide-react";
+import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, Calendar, Filter } from "lucide-react";
 
 const MainPage = () => {
     const { theme } = useTheme();
@@ -13,6 +13,9 @@ const MainPage = () => {
     const [timeFilter, setTimeFilter] = useState("all");
     const [activeFilter, setActiveFilter] = useState(null);
     const [sortOrder, setSortOrder] = useState(null);
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+    const filterDropdownRef = useRef(null);
 
     useEffect(() => {
         const fetchRecords = async () => {
@@ -31,6 +34,7 @@ const MainPage = () => {
 
                 const mapped = data.map((r) => ({
                     id: r.id,
+                    invoiceNumber: r.invoiceNumber, // Add invoice number
                     name: r.customerName,
                     service: r.serviceName,
                     loads: r.loads,
@@ -48,7 +52,7 @@ const MainPage = () => {
                     disposed: r.disposed || false,
                     disposedBy: r.disposedBy || "—",
                     gcashVerified: r.gcashVerified || false,
-                    unwashedLoadsCount: r.unwashedLoadsCount || 0, // NEW: Get unwashed loads count
+                    unwashedLoadsCount: r.unwashedLoadsCount || 0,
                 }));
                 setRecords(mapped);
             } catch (error) {
@@ -59,6 +63,16 @@ const MainPage = () => {
         };
 
         fetchRecords();
+    }, []);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handlePointerDown = (e) => {
+            if (filterDropdownRef.current?.contains(e.target)) return;
+            setShowFilterDropdown(false);
+        };
+        document.addEventListener("pointerdown", handlePointerDown);
+        return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, []);
 
     // Skeleton Loader Components
@@ -251,14 +265,14 @@ const MainPage = () => {
 
     const filteredRecords = getFilteredRecords();
 
-    // Handle card click
-    const handleCardClick = (filterType) => {
+    // Handle filter selection
+    const handleFilterSelect = (filterType) => {
         const isSortable = filterType === "income" || filterType === "loads";
         
-        // If clicking the same card that's already active
+        // If selecting the same filter that's already active
         if (activeFilter === filterType) {
             if (isSortable) {
-                // For sortable cards, check if we need to toggle or deactivate
+                // For sortable filters, check if we need to toggle or deactivate
                 if (sortOrder === "desc") {
                     // Switch to ascending order
                     setSortOrder("asc");
@@ -268,16 +282,25 @@ const MainPage = () => {
                     setSortOrder(null);
                 }
             } else {
-                // For non-sortable cards, deactivate on second click
+                // For non-sortable filters, deactivate on second click
                 setActiveFilter(null);
                 setSortOrder(null);
             }
         } else {
             // Set new active filter
             setActiveFilter(filterType);
-            // Set default sort order for sortable cards
+            // Set default sort order for sortable filters
             setSortOrder(isSortable ? "desc" : null);
         }
+        
+        setShowFilterDropdown(false);
+    };
+
+    // Clear all filters
+    const clearFilters = () => {
+        setActiveFilter(null);
+        setSortOrder(null);
+        setShowFilterDropdown(false);
     };
 
     // Update the metrics calculation - FIXED VERSION
@@ -308,9 +331,6 @@ const MainPage = () => {
             icon: <PhilippinePeso size={26} />,
             color: "#3DD9B6",
             tooltip: "Total income from filtered transactions",
-            filterType: "income",
-            active: activeFilter === "income",
-            sortable: true,
         },
         {
             label: "Total Loads",
@@ -318,9 +338,6 @@ const MainPage = () => {
             icon: <Package size={26} />,
             color: "#60A5FA",
             tooltip: "Total number of laundry loads in filtered period",
-            filterType: "loads",
-            active: activeFilter === "loads",
-            sortable: true,
         },
         {
             label: "Unwashed Loads",
@@ -328,9 +345,6 @@ const MainPage = () => {
             icon: <Clock8 size={26} />,
             color: "#FB923C",
             tooltip: "Individual loads that are not yet completed (excluding disposed loads)",
-            filterType: "unwashed",
-            active: activeFilter === "unwashed",
-            sortable: false,
         },
         {
             label: "Expired Loads",
@@ -338,9 +352,6 @@ const MainPage = () => {
             icon: <TimerOff size={26} />,
             color: "#A78BFA",
             tooltip: "Loads that exceeded their pickup window (excluding disposed loads)",
-            filterType: "expired",
-            active: activeFilter === "expired",
-            sortable: false,
         },
         {
             label: "Unclaimed Loads",
@@ -348,9 +359,39 @@ const MainPage = () => {
             icon: <AlertCircle size={26} />,
             color: "#FACC15",
             tooltip: "Completed loads that haven't been picked up yet (excluding expired and disposed loads)",
-            filterType: "unclaimed",
-            active: activeFilter === "unclaimed",
+        },
+    ];
+
+    const filterOptions = [
+        {
+            label: "Sort by Income",
+            value: "income",
+            sortable: true,
+            description: "Sort transactions by price"
+        },
+        {
+            label: "Sort by Loads",
+            value: "loads",
+            sortable: true,
+            description: "Sort transactions by number of loads"
+        },
+        {
+            label: "Show Expired Only",
+            value: "expired",
             sortable: false,
+            description: "Show only expired records"
+        },
+        {
+            label: "Show Unwashed Only",
+            value: "unwashed",
+            sortable: false,
+            description: "Show only unwashed records"
+        },
+        {
+            label: "Show Unclaimed Only",
+            value: "unclaimed",
+            sortable: false,
+            description: "Show only unclaimed records"
         },
     ];
 
@@ -361,6 +402,17 @@ const MainPage = () => {
         { value: "year", label: "This Year" },
         { value: "all", label: "All Time" },
     ];
+
+    const getActiveFilterLabel = () => {
+        if (!activeFilter) return "No filter";
+        const filter = filterOptions.find(f => f.value === activeFilter);
+        if (!filter) return "No filter";
+        
+        if (filter.sortable) {
+            return `${filter.label} (${sortOrder === "desc" ? "High to Low" : "Low to High"})`;
+        }
+        return filter.label;
+    };
 
     return (
         <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
@@ -391,35 +443,110 @@ const MainPage = () => {
                     </div>
                 </div>
 
-                {/* Time Filter */}
+                {/* Time Filter and Filter Button */}
                 <div className="flex items-center gap-2">
-                    <Calendar
-                        size={18}
-                        style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
-                    />
-                    <select
-                        value={timeFilter}
-                        onChange={(e) => {
-                            setTimeFilter(e.target.value);
-                            setActiveFilter(null);
-                            setSortOrder(null);
-                        }}
-                        className="rounded-lg border-2 px-3 py-2 text-sm focus:outline-none transition-all"
-                        style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                            color: isDarkMode ? "#13151B" : "#0B2B26",
-                        }}
-                    >
-                        {timeFilters.map((filter) => (
-                            <option
-                                key={filter.value}
-                                value={filter.value}
-                            >
-                                {filter.label}
-                            </option>
-                        ))}
-                    </select>
+                    {/* Time Filter */}
+                    <div className="flex items-center gap-2">
+                        <Calendar
+                            size={18}
+                            style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
+                        />
+                        <select
+                            value={timeFilter}
+                            onChange={(e) => {
+                                setTimeFilter(e.target.value);
+                                setActiveFilter(null);
+                                setSortOrder(null);
+                            }}
+                            className="rounded-lg border-2 px-3 py-2 text-sm focus:outline-none transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                            }}
+                        >
+                            {timeFilters.map((filter) => (
+                                <option
+                                    key={filter.value}
+                                    value={filter.value}
+                                >
+                                    {filter.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Filter Button */}
+                    <div className="relative" ref={filterDropdownRef}>
+                        <button
+                            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                            className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-all ${
+                                activeFilter ? "ring-2 ring-offset-2" : ""
+                            }`}
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                ringColor: activeFilter ? "#3DD9B6" : "",
+                            }}
+                        >
+                            <Filter size={16} />
+                            <span>Filter</span>
+                            {activeFilter && (
+                                <span className="ml-1 text-xs opacity-70">
+                                    ({getActiveFilterLabel()})
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Filter Dropdown */}
+                        {showFilterDropdown && (
+                            <div className="absolute right-0 z-50 mt-2 w-64 rounded-lg border-2 p-2 shadow-lg"
+                                 style={{
+                                     backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                 }}>
+                                <div className="space-y-1">
+                                    {filterOptions.map((option) => (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => handleFilterSelect(option.value)}
+                                            className={`flex w-full items-start justify-between rounded p-2 text-left text-sm transition-all ${
+                                                activeFilter === option.value 
+                                                    ? "bg-opacity-20" 
+                                                    : "hover:bg-opacity-10"
+                                            }`}
+                                            style={{
+                                                backgroundColor: activeFilter === option.value 
+                                                    ? `${option.value === "income" ? "#3DD9B6" : option.value === "loads" ? "#60A5FA" : option.value === "expired" ? "#A78BFA" : option.value === "unwashed" ? "#FB923C" : "#FACC15"}20`
+                                                    : "transparent",
+                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            }}
+                                        >
+                                            <div>
+                                                <div className="font-medium">{option.label}</div>
+                                                <div className="text-xs opacity-70">{option.description}</div>
+                                            </div>
+                                            {activeFilter === option.value && option.sortable && (
+                                                <span className="text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                                    {sortOrder === "desc" ? "↓" : "↑"}
+                                                </span>
+                                            )}
+                                        </button>
+                                    ))}
+                                    
+                                    {activeFilter && (
+                                        <button
+                                            onClick={clearFilters}
+                                            className="w-full rounded border border-red-300 p-2 text-sm text-red-600 transition-all hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
+                                        >
+                                            Clear Filters
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </motion.div>
 
@@ -430,7 +557,7 @@ const MainPage = () => {
                         <SkeletonCard key={index} index={index} />
                     ))
                 ) : (
-                    summaryCards.map(({ label, value, icon, color, tooltip, filterType, active, sortable }, index) => (
+                    summaryCards.map(({ label, value, icon, color, tooltip }, index) => (
                         <motion.div
                             key={label}
                             initial={{ opacity: 0, y: 20 }}
@@ -441,16 +568,12 @@ const MainPage = () => {
                                 y: -2,
                                 transition: { duration: 0.2 }
                             }}
-                            className={`rounded-xl border-2 p-5 transition-all cursor-pointer ${
-                                active ? "ring-2 ring-offset-2" : ""
-                            }`}
+                            className="rounded-xl border-2 p-5 transition-all"
                             style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                ringColor: active ? color : "",
                             }}
                             title={tooltip}
-                            onClick={() => handleCardClick(filterType)}
                         >
                             <div className="flex items-center justify-between mb-4">
                                 <motion.div
@@ -479,11 +602,6 @@ const MainPage = () => {
                                 <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                                     {label}
                                 </h3>
-                                {active && sortable && (
-                                    <span className="text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                        {sortOrder === "desc" ? "↓ High to Low" : "↑ Low to High"}
-                                    </span>
-                                )}
                             </div>
                         </motion.div>
                     ))
@@ -511,8 +629,7 @@ const MainPage = () => {
                         <div className="flex items-center gap-2">
                             {activeFilter && (
                                 <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                    Filtered by: {summaryCards.find(card => card.filterType === activeFilter)?.label}
-                                    {(activeFilter === "income" || activeFilter === "loads") && ` (${sortOrder === "desc" ? "High to Low" : "Low to High"})`}
+                                    Filtered by: {getActiveFilterLabel()}
                                 </span>
                             )}
                             <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>

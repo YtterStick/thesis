@@ -2,85 +2,41 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, ScrollText } from "lucide-react";
 
+const API_BASE_URL = "http://localhost:8080/api";
+
 const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [activeTerm, setActiveTerm] = useState(0);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [termsData, setTermsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
- const termsData = [
-    {
-      title: "Service Agreement",
-      description: "By using our laundry services, you agree to abide by all terms and conditions outlined herein. Services are provided on a first-come, first-served basis."
-    },
-    {
-      title: "Service Hours",
-      description: "Our standard operating hours are 7:00 AM to 7:00 PM, Monday through Saturday. Holiday schedules may vary."
-    },
-    {
-      title: "Service Pricing",
-      description: "All prices are subject to change without prior notice. Current pricing is displayed at our facility and on our official platforms."
-    },
-    {
-      title: "Payment Methods",
-      description: "We accept cash, credit/debit cards, and digital payments. Payment is due upon completion of services."
-    },
-    {
-      title: "Additional Charges",
-      description: "Extra charges may apply for special treatments, stain removal, or oversized items. These will be communicated before processing."
-    },
-    {
-      title: "Item Inspection",
-      description: "All items are inspected upon receipt. Existing damages or stains should be reported at drop-off."
-    },
-    {
-      title: "Cleaning Methods",
-      description: "We reserve the right to determine the appropriate cleaning method based on fabric type and condition."
-    },
-    {
-      title: "Unclaimed Items",
-      description: "Items unclaimed after 30 days may be disposed of or donated at our discretion."
-    },
-    {
-      title: "Damage Claims",
-      description: "Claims for damaged items must be made within 24 hours of pickup. We are not liable for pre-existing conditions."
-    },
-    {
-      title: "Lost Items",
-      description: "While we take utmost care, we are not responsible for lost items unless due to proven negligence."
-    },
-    {
-      title: "Valuables",
-      description: "Remove all valuables from pockets. We are not responsible for items left in clothing."
-    },
-    {
-      title: "Customer Responsibilities",
-      description: "Customers are responsible for separating delicate items. Special handling requests should be specified at drop-off."
-    },
-    {
-      title: "Hazardous Materials",
-      description: "Do not include items contaminated with hazardous materials, chemicals, or biological waste."
-    },
-    {
-      title: "Pickup Timing", 
-      description: "Please collect your laundry within our operating hours. Late pickups may incur storage fees."
-    },
-    {
-      title: "Service Cancellation",
-      description: "Services may be cancelled before processing begins. Cancellation fees may apply for specialized services."
-    },
-    {
-      title: "Refund Policy",
-      description: "Refunds are provided at management's discretion for unsatisfactory services. Processing fees may be non-refundable."
-    },
-    {
-      title: "Personal Information",
-      description: "We collect necessary personal information for service provision and do not share it with third parties without consent."
-    },
-    {
-      title: "Communication",
-      description: "By providing contact information, you agree to receive service-related communications."
+  // Fetch terms from backend API
+  const fetchTerms = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/terms`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch terms: ${response.status}`);
+      }
+      
+      const terms = await response.json();
+      setTermsData(terms);
+    } catch (err) {
+      console.error('Error fetching terms:', err);
+      setError('Failed to load terms and conditions. Please try again later.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchTerms();
+  }, []);
 
   const toggleSection = () => {
     setIsOpen(!isOpen);
@@ -94,13 +50,87 @@ const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
   useEffect(() => {
     if (isVisible) {
       setIsOpen(true);
-      if (!hasUserInteracted && activeTerm === null) {
+      if (!hasUserInteracted && activeTerm === null && termsData.length > 0) {
         setActiveTerm(0);
       }
     } else {
       setIsOpen(false);
     }
-  }, [isVisible, hasUserInteracted, activeTerm]);
+  }, [isVisible, hasUserInteracted, activeTerm, termsData]);
+
+  // Refresh terms data when section is opened
+  useEffect(() => {
+    if (isOpen && termsData.length === 0 && !loading) {
+      fetchTerms();
+    }
+  }, [isOpen]);
+
+  if (loading && termsData.length === 0) {
+    return (
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isVisible ? 1 : 0 }}
+        transition={{ duration: 0.8, delay: 2.0 }}
+        className={`py-12 md:py-16 px-4 ${
+          isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
+        }`}
+        id="terms"
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="rounded-2xl overflow-hidden border-2 p-8 text-center"
+            style={{
+              backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D',
+              borderColor: isDarkMode ? '#2A524C' : '#183D3D',
+              color: isDarkMode ? '#13151B' : '#F3EDE3'
+            }}
+          >
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2"
+                style={{ borderColor: isDarkMode ? '#18442A' : '#F3EDE3' }}></div>
+            </div>
+            <p className="mt-4">Loading terms and conditions...</p>
+          </div>
+        </div>
+      </motion.section>
+    );
+  }
+
+  if (error && termsData.length === 0) {
+    return (
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isVisible ? 1 : 0 }}
+        transition={{ duration: 0.8, delay: 2.0 }}
+        className={`py-12 md:py-16 px-4 ${
+          isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
+        }`}
+        id="terms"
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="rounded-2xl overflow-hidden border-2 p-8 text-center"
+            style={{
+              backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D',
+              borderColor: isDarkMode ? '#2A524C' : '#183D3D',
+              color: isDarkMode ? '#13151B' : '#F3EDE3'
+            }}
+          >
+            <p className="text-red-500 mb-4">{error}</p>
+            <button
+              onClick={fetchTerms}
+              className="px-6 py-2 rounded-lg font-semibold border-2 transition-all transform hover:scale-105"
+              style={{
+                backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
+                color: isDarkMode ? '#FFFFFF' : '#183D3D',
+                borderColor: isDarkMode ? '#18442A' : '#F3EDE3'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </motion.section>
+    );
+  }
 
   return (
     <motion.section
@@ -170,70 +200,88 @@ const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
               >
                 <div className="max-h-96 overflow-y-auto">
                   <div className="p-6">
-                    <div className="space-y-4">
-                      {termsData.map((term, index) => (
-                        <div 
-                          key={index} 
-                          className="border rounded-lg overflow-hidden"
+                    {termsData.length === 0 ? (
+                      <div className="text-center py-8"
+                        style={{ color: isDarkMode ? '#6B7280' : '#183D3D' }}>
+                        <p>No terms and conditions available.</p>
+                        <button
+                          onClick={fetchTerms}
+                          className="mt-4 px-4 py-2 rounded-lg font-semibold border transition-all"
                           style={{
-                            backgroundColor: isDarkMode ? '#FFFFFF' : '#F3EDE3',
-                            borderColor: isDarkMode ? '#2A524C' : '#183D3D'
+                            backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
+                            color: isDarkMode ? '#FFFFFF' : '#183D3D',
+                            borderColor: isDarkMode ? '#18442A' : '#F3EDE3'
                           }}
                         >
-                          <button
-                            onClick={() => toggleTerm(index)}
-                            className="w-full p-4 text-left flex items-center justify-between transition-colors hover:opacity-90"
-                            style={{ 
-                              color: isDarkMode ? '#13151B' : '#183D3D',
-                              backgroundColor: isDarkMode ? '#FFFFFF' : '#F3EDE3'
+                          Refresh
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {termsData.map((term, index) => (
+                          <div 
+                            key={term.id || index} 
+                            className="border rounded-lg overflow-hidden"
+                            style={{
+                              backgroundColor: isDarkMode ? '#FFFFFF' : '#F3EDE3',
+                              borderColor: isDarkMode ? '#2A524C' : '#183D3D'
                             }}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                                style={{ 
-                                  backgroundColor: isDarkMode ? '#18442A' : '#183D3D',
-                                  color: isDarkMode ? '#FFFFFF' : '#F3EDE3'
-                                }}>
-                                <span className="font-semibold text-sm">
-                                  {index + 1}
+                            <button
+                              onClick={() => toggleTerm(index)}
+                              className="w-full p-4 text-left flex items-center justify-between transition-colors hover:opacity-90"
+                              style={{ 
+                                color: isDarkMode ? '#13151B' : '#183D3D',
+                                backgroundColor: isDarkMode ? '#FFFFFF' : '#F3EDE3'
+                              }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ 
+                                    backgroundColor: isDarkMode ? '#18442A' : '#183D3D',
+                                    color: isDarkMode ? '#FFFFFF' : '#F3EDE3'
+                                  }}>
+                                  <span className="font-semibold text-sm">
+                                    {index + 1}
+                                  </span>
+                                </div>
+                                <span className="font-semibold text-left">
+                                  {term.title}
                                 </span>
                               </div>
-                              <span className="font-semibold text-left">
-                                {term.title}
-                              </span>
-                            </div>
-                            {activeTerm === index ? (
-                              <ChevronUp className="w-5 h-5 flex-shrink-0" 
-                                style={{ color: isDarkMode ? '#18442A' : '#183D3D' }} />
-                            ) : (
-                              <ChevronDown className="w-5 h-5 flex-shrink-0"
-                                style={{ color: isDarkMode ? '#18442A' : '#183D3D' }} />
-                            )}
-                          </button>
-                          <AnimatePresence>
-                            {activeTerm === index && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3 }}
-                              >
-                                <div className="p-4 border-t"
-                                  style={{ 
-                                    borderColor: isDarkMode ? '#2A524C' : '#183D3D',
-                                    backgroundColor: isDarkMode ? '#F8FAFC' : '#FFFFFF',
-                                    color: isDarkMode ? '#6B7280' : '#183D3D'
-                                  }}>
-                                  <p className="leading-relaxed">
-                                    {term.description}
-                                  </p>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      ))}
-                    </div>
+                              {activeTerm === index ? (
+                                <ChevronUp className="w-5 h-5 flex-shrink-0" 
+                                  style={{ color: isDarkMode ? '#18442A' : '#183D3D' }} />
+                              ) : (
+                                <ChevronDown className="w-5 h-5 flex-shrink-0"
+                                  style={{ color: isDarkMode ? '#18442A' : '#183D3D' }} />
+                              )}
+                            </button>
+                            <AnimatePresence>
+                              {activeTerm === index && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                >
+                                  <div className="p-4 border-t"
+                                    style={{ 
+                                      borderColor: isDarkMode ? '#2A524C' : '#183D3D',
+                                      backgroundColor: isDarkMode ? '#F8FAFC' : '#FFFFFF',
+                                      color: isDarkMode ? '#6B7280' : '#183D3D'
+                                    }}>
+                                    <p className="leading-relaxed">
+                                      {term.content}
+                                    </p>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 

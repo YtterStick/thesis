@@ -121,6 +121,9 @@ const formatDateForBackend = (dateString) => {
 
 const CustomBarTooltip = ({ active, payload, label, isDarkMode }) => {
     if (active && payload && payload.length) {
+        // Extract month information from payload if available
+        const monthInfo = payload[0]?.payload?.month ? ` (${payload[0].payload.month})` : '';
+        
         return (
             <div
                 className="rounded-lg border-2 p-3 shadow-lg"
@@ -130,9 +133,9 @@ const CustomBarTooltip = ({ active, payload, label, isDarkMode }) => {
                     color: isDarkMode ? "#13151B" : "#0B2B26",
                 }}
             >
-                <p className="font-medium">{label}</p>
+                <p className="font-medium">{label}{monthInfo}</p>
                 <p className="text-sm">
-                    Sales: <span className="font-medium">₱{payload[0].value.toLocaleString()}</span>
+                    Income: <span className="font-medium">₱{payload[0].value.toLocaleString()}</span>
                 </p>
             </div>
         );
@@ -240,212 +243,251 @@ const SalesReportPage = () => {
         return Math.round(percentage);
     };
 
-    const fetchSalesReport = useCallback(async (forceRefresh = false) => {
-        try {
-            // Check cache first unless forced refresh
-            const now = Date.now();
-            const cacheKey = `${dateRange}-${startDate}-${endDate}-${serviceTypeFilter}`;
+    // Smart date grouping function
+    const getSmartDateGrouping = (startDate, endDate) => {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-            if (
-                !forceRefresh &&
-                salesReportCache &&
-                salesReportCache.cacheKey === cacheKey &&
-                cacheTimestamp &&
-                now - cacheTimestamp < CACHE_DURATION
-            ) {
-                console.log("📦 Using cached sales report data");
-                setSalesData(salesReportCache.salesData);
-                setServiceDistributionData(salesReportCache.serviceDistributionData);
-                setRecentTransactions(salesReportCache.recentTransactions);
-                setSummaryData(salesReportCache.summaryData);
-                setIsLoading(false);
-                setInitialLoad(false);
-                return;
+        if (diffDays <= 7) {
+            return "daily"; // Show daily data for up to 7 days
+        } else if (diffDays <= 90) {
+            return "weekly"; // Show weekly data for up to 3 months
+        } else {
+            return "monthly"; // Show monthly data for longer periods
+        }
+    };
+
+    // Function to get month name for a given date
+    const getMonthName = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-US", { month: "long" });
+    };
+
+    // Function to process sales data based on date range
+    const processSalesData = (rawData, rangeType, start, end) => {
+        if (!rawData || rawData.length === 0) return [];
+
+        // For "This Month", show only one bar for the whole month
+        if (rangeType === "month") {
+            const totalSales = rawData.reduce((sum, item) => sum + (item.sales || 0), 0);
+            const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+            return [
+                {
+                    period: currentMonth,
+                    sales: totalSales,
+                },
+            ];
+        }
+
+        if (rangeType === "custom") {
+            const grouping = getSmartDateGrouping(start, end);
+
+            if (grouping === "weekly") {
+                // Group by weeks for custom ranges longer than 1 week
+                const weeklyData = {};
+                rawData.forEach((item) => {
+                    if (item.period) {
+                        const date = new Date(item.period);
+                        const weekNumber = Math.ceil(date.getDate() / 7);
+                        const monthName = getMonthName(item.period);
+                        const weekKey = `Week ${weekNumber}`;
+
+                        if (!weeklyData[weekKey]) {
+                            weeklyData[weekKey] = {
+                                sales: 0,
+                                month: monthName
+                            };
+                        }
+                        weeklyData[weekKey].sales += item.sales || 0;
+                    }
+                });
+
+                return Object.entries(weeklyData).map(([period, data]) => ({
+                    period,
+                    sales: data.sales,
+                    month: data.month
+                }));
+            } else if (grouping === "monthly") {
+                // Group by months for custom ranges longer than 3 months
+                const monthlyData = {};
+                rawData.forEach((item) => {
+                    if (item.period) {
+                        const date = new Date(item.period);
+                        const monthKey = date.toLocaleDateString("en-US", { month: "short" });
+
+                        if (!monthlyData[monthKey]) {
+                            monthlyData[monthKey] = 0;
+                        }
+                        monthlyData[monthKey] += item.sales || 0;
+                    }
+                });
+
+                return Object.entries(monthlyData).map(([period, sales]) => ({
+                    period,
+                    sales,
+                }));
             }
+        }
 
-            setIsLoading(true);
-            const token = localStorage.getItem("authToken");
+        // Default: return data as is (daily)
+        return rawData;
+    };
 
-            setDatesSwapped(false);
+    const fetchSalesReport = useCallback(
+        async (forceRefresh = false) => {
+            try {
+                // Check cache first unless forced refresh
+                const now = Date.now();
+                const cacheKey = `${dateRange}-${startDate}-${endDate}-${serviceTypeFilter}`;
 
-            let requestStartDate = startDate;
-            let requestEndDate = endDate;
-
-            if (dateRange === "custom") {
-                if (!startDate || !endDate) {
-                    toast({
-                        title: "Error",
-                        description: "Please select both start and end dates for custom range",
-                        variant: "destructive",
-                    });
+                if (
+                    !forceRefresh &&
+                    salesReportCache &&
+                    salesReportCache.cacheKey === cacheKey &&
+                    cacheTimestamp &&
+                    now - cacheTimestamp < CACHE_DURATION
+                ) {
+                    console.log("📦 Using cached sales report data");
+                    setSalesData(salesReportCache.salesData);
+                    setServiceDistributionData(salesReportCache.serviceDistributionData);
+                    setRecentTransactions(salesReportCache.recentTransactions);
+                    setSummaryData(salesReportCache.summaryData);
                     setIsLoading(false);
                     setInitialLoad(false);
                     return;
                 }
 
-                const start = new Date(startDate);
-                const end = new Date(endDate);
+                setIsLoading(true);
+                const token = localStorage.getItem("authToken");
 
-                if (start > end) {
-                    requestStartDate = endDate;
-                    requestEndDate = startDate;
-                    setDatesSwapped(true);
+                setDatesSwapped(false);
 
-                    toast({
-                        title: "Info",
-                        description: "Start date was after end date. Dates have been auto-swapped.",
-                        variant: "default",
-                    });
+                let requestStartDate = startDate;
+                let requestEndDate = endDate;
+
+                if (dateRange === "custom") {
+                    if (!startDate || !endDate) {
+                        toast({
+                            title: "Error",
+                            description: "Please select both start and end dates for custom range",
+                            variant: "destructive",
+                        });
+                        setIsLoading(false);
+                        setInitialLoad(false);
+                        return;
+                    }
+
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+
+                    if (start > end) {
+                        requestStartDate = endDate;
+                        requestEndDate = startDate;
+                        setDatesSwapped(true);
+
+                        toast({
+                            title: "Info",
+                            description: "Start date was after end date. Dates have been auto-swapped.",
+                            variant: "default",
+                        });
+                    }
                 }
-            }
 
-            const params = new URLSearchParams();
-            if (dateRange !== "custom") {
-                params.append("dateRange", dateRange);
-            } else {
-                params.append("dateRange", "custom");
-                if (requestStartDate) params.append("startDate", formatDateForBackend(requestStartDate));
-                if (requestEndDate) params.append("endDate", formatDateForBackend(requestEndDate));
-            }
-            if (serviceTypeFilter !== "all") {
-                params.append("serviceType", serviceTypeFilter);
-            }
-
-            const response = await fetch(`http://localhost:8080/api/reports/sales?${params}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (!response.ok) {
-                if (response.status === 400) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Invalid request parameters");
-                } else if (response.status === 401) {
-                    throw new Error("Authentication failed");
+                const params = new URLSearchParams();
+                if (dateRange !== "custom") {
+                    params.append("dateRange", dateRange);
                 } else {
-                    throw new Error("Failed to fetch sales report");
+                    params.append("dateRange", "custom");
+                    if (requestStartDate) params.append("startDate", formatDateForBackend(requestStartDate));
+                    if (requestEndDate) params.append("endDate", formatDateForBackend(requestEndDate));
                 }
-            }
+                if (serviceTypeFilter !== "all") {
+                    params.append("serviceType", serviceTypeFilter);
+                }
 
-            const data = await response.json();
+                const response = await fetch(`http://localhost:8080/api/reports/sales?${params}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                });
 
-            // Process sales data to ensure all dates are properly formatted and visible
-            let processedSalesData = data.salesTrend || [];
-
-            if (dateRange === "year") {
-                const allMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-                const salesMap = {};
-                processedSalesData.forEach((item) => {
-                    const monthNames = [
-                        "January",
-                        "February",
-                        "March",
-                        "April",
-                        "May",
-                        "June",
-                        "July",
-                        "August",
-                        "September",
-                        "October",
-                        "November",
-                        "December",
-                    ];
-                    const monthIndex = monthNames.findIndex((name) => name === item.period);
-                    if (monthIndex !== -1) {
-                        salesMap[allMonths[monthIndex]] = item.sales;
+                if (!response.ok) {
+                    if (response.status === 400) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || "Invalid request parameters");
+                    } else if (response.status === 401) {
+                        throw new Error("Authentication failed");
                     } else {
-                        // If period is already in abbreviated format, use it directly
-                        salesMap[item.period] = item.sales;
+                        throw new Error("Failed to fetch sales report");
                     }
-                });
+                }
 
-                // Create a complete dataset with all months
-                processedSalesData = allMonths.map((month) => ({
-                    period: month,
-                    sales: salesMap[month] || 0,
-                }));
-            } else if (dateRange === "week" || dateRange === "month") {
-                // Ensure proper date formatting for shorter time periods
-                processedSalesData = processedSalesData.map((item) => {
-                    // If the period is a date string, format it properly
-                    if (item.period && item.period.includes("-")) {
-                        try {
-                            const date = new Date(item.period);
-                            if (!isNaN(date.getTime())) {
-                                return {
-                                    ...item,
-                                    period: date.toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                    }),
-                                };
-                            }
-                        } catch (e) {
-                            console.warn("Failed to parse date:", item.period);
-                        }
-                    }
-                    return item;
-                });
-            }
+                const data = await response.json();
 
-            // Apply safe growth percentage calculation
-            const safeGrowthPercentage = calculateSafeGrowthPercentage(data.summary?.todaySales || 0, data.summary?.yesterdaySales || 0);
+                // Process sales data with smart grouping
+                let processedSalesData = processSalesData(data.salesTrend || [], dateRange, requestStartDate, requestEndDate);
 
-            const newData = {
-                salesData: processedSalesData,
-                serviceDistributionData: data.serviceDistribution || [],
-                recentTransactions: data.recentTransactions || [],
-                summaryData: {
-                    ...data.summary,
-                    growthPercentage: safeGrowthPercentage, // Use the safe calculation
-                    totalSales: data.summary?.totalSales || 0,
-                    totalTransactions: data.summary?.totalTransactions || 0,
-                    totalCustomers: data.summary?.totalCustomers || 0,
-                    averageOrderValue: data.summary?.averageOrderValue || 0,
-                    todaySales: data.summary?.todaySales || 0,
-                    yesterdaySales: data.summary?.yesterdaySales || 0,
-                    totalLoads: data.summary?.totalLoads || 0,
-                },
-            };
+                // Apply safe growth percentage calculation
+                const safeGrowthPercentage = calculateSafeGrowthPercentage(data.summary?.todaySales || 0, data.summary?.yesterdaySales || 0);
 
-            // Only update state and cache if data has actually changed
-            if (hasDataChanged(newData, salesReportCache)) {
-                console.log("🔄 Sales report data updated");
-
-                // Update cache
-                salesReportCache = {
-                    ...newData,
-                    cacheKey: cacheKey,
+                const newData = {
+                    salesData: processedSalesData,
+                    serviceDistributionData: data.serviceDistribution || [],
+                    recentTransactions: data.recentTransactions || [],
+                    summaryData: {
+                        ...data.summary,
+                        growthPercentage: safeGrowthPercentage, // Use the safe calculation
+                        totalSales: data.summary?.totalSales || 0,
+                        totalTransactions: data.summary?.totalTransactions || 0,
+                        totalCustomers: data.summary?.totalCustomers || 0,
+                        averageOrderValue: data.summary?.averageOrderValue || 0,
+                        todaySales: data.summary?.todaySales || 0,
+                        yesterdaySales: data.summary?.yesterdaySales || 0,
+                        totalLoads: data.summary?.totalLoads || 0,
+                    },
                 };
-                cacheTimestamp = Date.now();
 
-                setSalesData(newData.salesData);
-                setServiceDistributionData(newData.serviceDistributionData);
-                setRecentTransactions(newData.recentTransactions);
-                setSummaryData(newData.summaryData);
-            } else {
-                console.log("✅ No changes in sales report data, skipping update");
-                // Just update the timestamp to extend cache life
-                cacheTimestamp = Date.now();
+                // Only update state and cache if data has actually changed
+                if (hasDataChanged(newData, salesReportCache)) {
+                    console.log("🔄 Sales report data updated");
+
+                    // Update cache
+                    salesReportCache = {
+                        ...newData,
+                        cacheKey: cacheKey,
+                    };
+                    cacheTimestamp = Date.now();
+
+                    setSalesData(newData.salesData);
+                    setServiceDistributionData(newData.serviceDistributionData);
+                    setRecentTransactions(newData.recentTransactions);
+                    setSummaryData(newData.summaryData);
+                } else {
+                    console.log("✅ No changes in sales report data, skipping update");
+                    // Just update the timestamp to extend cache life
+                    cacheTimestamp = Date.now();
+                }
+
+                setCurrentPage(1);
+                setIsLoading(false);
+                setInitialLoad(false);
+            } catch (error) {
+                console.error(error);
+                toast({
+                    title: "Error",
+                    description: error.message || "Failed to load sales report",
+                    variant: "destructive",
+                });
+                setIsLoading(false);
+                setInitialLoad(false);
             }
-
-            setCurrentPage(1);
-            setIsLoading(false);
-            setInitialLoad(false);
-        } catch (error) {
-            console.error(error);
-            toast({
-                title: "Error",
-                description: error.message || "Failed to load sales report",
-                variant: "destructive",
-            });
-            setIsLoading(false);
-            setInitialLoad(false);
-        }
-    }, [dateRange, startDate, endDate, serviceTypeFilter, toast]);
+        },
+        [dateRange, startDate, endDate, serviceTypeFilter, toast],
+    );
 
     useEffect(() => {
         handleDateRangeChange("today");
@@ -461,7 +503,7 @@ const SalesReportPage = () => {
             console.log("🔄 Auto-refreshing sales report data...");
             fetchSalesReport(false);
         }, POLLING_INTERVAL);
-        
+
         return () => clearInterval(intervalId);
     }, [fetchSalesReport]);
 
@@ -507,8 +549,8 @@ const SalesReportPage = () => {
                 setEndDate(today.toISOString().split("T")[0]);
                 break;
             case "month":
-                const monthStart = new Date(today);
-                monthStart.setDate(1);
+                // For "This Month", set to first day of current month to today
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
                 setStartDate(monthStart.toISOString().split("T")[0]);
                 setEndDate(today.toISOString().split("T")[0]);
                 break;
@@ -764,8 +806,8 @@ const SalesReportPage = () => {
                             backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
                         }}
                     ></div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        {[...Array(3)].map((_, i) => (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                        {[...Array(4)].map((_, i) => (
                             <div
                                 key={i}
                                 className="space-y-2"
@@ -899,7 +941,7 @@ const SalesReportPage = () => {
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                             <div className="space-y-2">
                                 <Label
                                     className="mb-1 block"
@@ -947,18 +989,21 @@ const SalesReportPage = () => {
                                         >
                                             Start Date
                                         </Label>
-                                        <Input
-                                            type="date"
-                                            value={startDate}
-                                            max={endDate || undefined}
-                                            onChange={(e) => handleStartDateChange(e.target.value)}
-                                            className="transition-all"
-                                            style={{
-                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                color: isDarkMode ? "#13151B" : "#0B2B26",
-                                            }}
-                                        />
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }} />
+                                            <Input
+                                                type="date"
+                                                value={startDate}
+                                                max={endDate || undefined}
+                                                onChange={(e) => handleStartDateChange(e.target.value)}
+                                                className="w-full pl-10 transition-all"
+                                                style={{
+                                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Label
@@ -967,18 +1012,21 @@ const SalesReportPage = () => {
                                         >
                                             End Date
                                         </Label>
-                                        <Input
-                                            type="date"
-                                            value={endDate}
-                                            min={startDate || undefined}
-                                            onChange={(e) => handleEndDateChange(e.target.value)}
-                                            className="transition-all"
-                                            style={{
-                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                color: isDarkMode ? "#13151B" : "#0B2B26",
-                                            }}
-                                        />
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }} />
+                                            <Input
+                                                type="date"
+                                                value={endDate}
+                                                min={startDate || undefined}
+                                                onChange={(e) => handleEndDateChange(e.target.value)}
+                                                className="w-full pl-10 transition-all"
+                                                style={{
+                                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                 </>
                             )}
@@ -1081,7 +1129,9 @@ const SalesReportPage = () => {
                     >
                         <CardHeader>
                             <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Income Trend</CardTitle>
-                            <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>Income performance overview</CardDescription>
+                            <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
+                                {dateRange === "month" ? "Current month total income" : "Income performance overview"}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ResponsiveContainer

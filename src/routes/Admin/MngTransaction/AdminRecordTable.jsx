@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import * as XLSX from "xlsx";
 import PrintableReceipt from "@/components/PrintableReceipt";
 
-const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Price", "Date", "Payment", "Laundry Status", "Pickup Status", "Actions"];
+const tableHeaders = ["Invoice", "Name", "Service", "Loads", "Detergent", "Price", "Date", "Payment", "Laundry Status", "Pickup Status", "Actions"];
 
 const renderStatusBadge = (status, type = "pickup", isDarkMode) => {
     const iconMap = {
@@ -86,13 +86,46 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
 
     const isInRange = (dateStr) => {
         if (!dateStr) return false;
+        
         const created = new Date(dateStr);
-        const from = selectedRange?.from ? new Date(selectedRange.from) : null;
-        const to = selectedRange?.to ? new Date(selectedRange.to) : null;
-        if (from && to) return created >= from && created <= to;
-        if (from) return created >= from;
-        if (to) return created <= to;
+        if (isNaN(created.getTime())) return false; // Handle invalid dates
+        
+        created.setHours(0, 0, 0, 0);
+        
+        // Ensure selectedRange exists and handle null values
+        const range = selectedRange || {};
+        const from = range.from ? new Date(range.from) : null;
+        const to = range.to ? new Date(range.to) : null;
+        
+        if (from) from.setHours(0, 0, 0, 0);
+        if (to) to.setHours(23, 59, 59, 999);
+
+        if (from && to) {
+            return created >= from && created <= to;
+        }
+        if (from) {
+            return created >= from;
+        }
+        if (to) {
+            return created <= to;
+        }
         return true;
+    };
+
+    const formatDateRange = () => {
+        // Add null check for selectedRange
+        if (!selectedRange) return "Date Range";
+        
+        if (selectedRange.from && selectedRange.to) {
+            return `${format(selectedRange.from, "MMM dd, yyyy")} - ${format(selectedRange.to, "MMM dd, yyyy")}`;
+        }
+        if (selectedRange.from) {
+            return `From ${format(selectedRange.from, "MMM dd, yyyy")}`;
+        }
+        if (selectedRange.to) {
+            return `Until ${format(selectedRange.to, "MMM dd, yyyy")}`;
+        }
+        return "Date Range";
     };
 
     const shouldHighlight = (item, index) => {
@@ -181,6 +214,7 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
 
     const handleExport = () => {
         const dataToExport = allItems.map((item) => ({
+            "Invoice Number": item.invoiceNumber || "—",
             "Customer Name": item.name,
             Service: item.service,
             Loads: item.loads,
@@ -278,7 +312,7 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
                                 }}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {selectedRange.from || selectedRange.to ? "Filtered" : "Date Range"}
+                                {formatDateRange()}
                             </Button>
                             {showCalendar && (
                                 <div className="absolute right-0 z-50 mt-2 rounded-lg border-2 p-2 shadow-lg"
@@ -289,7 +323,10 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
                                     <Calendar
                                         mode="range"
                                         selected={selectedRange}
-                                        onSelect={setSelectedRange}
+                                        onSelect={(range) => {
+                                            // Ensure range is always an object with from and to properties
+                                            setSelectedRange(range || { from: null, to: null });
+                                        }}
                                         className="max-w-[350px] text-xs [&_button]:h-7 [&_button]:w-7 [&_button]:text-[11px] [&_td]:p-1 [&_thead_th]:text-[11px]"
                                     />
                                     {(selectedRange.from || selectedRange.to) && (
@@ -338,6 +375,7 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
                                 <th className="w-10 px-2 py-2"></th>
                                 {tableHeaders.map((header) => {
                                     const fieldMap = {
+                                        Invoice: "invoiceNumber",
                                         Name: "name",
                                         Service: "service",
                                         Loads: "loads",
@@ -438,6 +476,10 @@ const AdminRecordTable = ({ items = [], allItems = [], activeFilter, sortOrder, 
                                                             <ChevronDown className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
                                                         )}
                                                     </button>
+                                                </td>
+                                                {/* Invoice Number Column */}
+                                                <td className="px-3 py-2 font-mono text-xs" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                    {record.invoiceNumber || "—"}
                                                 </td>
                                                 <td className="px-3 py-2 font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                                                     {record.name}
