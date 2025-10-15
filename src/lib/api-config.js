@@ -1,21 +1,17 @@
-// lib/api-config.js
 export const API_CONFIG = {
   baseURL: import.meta.env.VITE_API_BASE_URL || 'https://thesis-g0pr.onrender.com',
   timeout: 10000
 };
 
-// Helper function to get full API URL
 export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
   return `${API_CONFIG.baseURL}/api/${cleanEndpoint}`;
 };
 
-// Get auth token from localStorage
 const getAuthToken = () => {
   return localStorage.getItem('authToken');
 };
 
-// Check if token is expired
 const isTokenExpired = (token) => {
   try {
     const payload = token.split('.')[1];
@@ -30,7 +26,6 @@ const isTokenExpired = (token) => {
   }
 };
 
-// Check if endpoint is public (doesn't require authentication)
 const isPublicEndpoint = (endpoint) => {
   const publicEndpoints = [
     'login',
@@ -43,18 +38,14 @@ const isPublicEndpoint = (endpoint) => {
   );
 };
 
-// Centralized fetch function with automatic token handling
 export const apiFetch = async (endpoint, options = {}) => {
   const url = getApiUrl(endpoint);
   
-  // Get token
   const token = getAuthToken();
   
-  // For public endpoints like login, don't require a token
   if (isPublicEndpoint(endpoint)) {
     console.log(`🌐 Public API Call: ${options.method || 'GET'} ${url}`);
   } else {
-    // For protected endpoints, validate token
     if (!token) {
       console.warn('🚨 No token found for protected endpoint');
       throw new Error('Authentication required');
@@ -72,14 +63,13 @@ export const apiFetch = async (endpoint, options = {}) => {
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }), // Only add token if it exists
+      ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
     credentials: 'include',
     ...options
   };
 
-  // Remove duplicate Authorization header if present
   if (options.headers?.Authorization) {
     delete defaultOptions.headers.Authorization;
   }
@@ -96,7 +86,6 @@ export const apiFetch = async (endpoint, options = {}) => {
     
     if (response.status === 401) {
       console.error('❌ Unauthorized - token may be invalid or expired');
-      // Only remove token if this wasn't a login attempt
       if (!isPublicEndpoint(endpoint)) {
         localStorage.removeItem('authToken');
       }
@@ -109,7 +98,6 @@ export const apiFetch = async (endpoint, options = {}) => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    // For endpoints that might not return JSON
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       const data = await response.json();
@@ -126,7 +114,6 @@ export const apiFetch = async (endpoint, options = {}) => {
   }
 };
 
-// Specialized API functions
 export const api = {
   get: (endpoint, options = {}) => apiFetch(endpoint, { ...options, method: 'GET' }),
   

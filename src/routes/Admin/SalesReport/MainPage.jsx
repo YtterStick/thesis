@@ -9,6 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+import { api } from "@/lib/api-config";
 
 let salesReportCache = null;
 let cacheTimestamp = null;
@@ -361,8 +362,7 @@ const SalesReportPage = () => {
                 }
 
                 setIsLoading(true);
-                const token = localStorage.getItem("authToken");
-
+                
                 setDatesSwapped(false);
 
                 let requestStartDate = startDate;
@@ -408,25 +408,8 @@ const SalesReportPage = () => {
                     params.append("serviceType", serviceTypeFilter);
                 }
 
-                const response = await fetch(`http://localhost:8080/api/reports/sales?${params}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                });
-
-                if (!response.ok) {
-                    if (response.status === 400) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || "Invalid request parameters");
-                    } else if (response.status === 401) {
-                        throw new Error("Authentication failed");
-                    } else {
-                        throw new Error("Failed to fetch sales report");
-                    }
-                }
-
-                const data = await response.json();
+                // Use the api utility instead of direct fetch
+                const data = await api.get(`/reports/sales?${params}`);
 
                 // Process sales data with smart grouping
                 let processedSalesData = processSalesData(data.salesTrend || [], dateRange, requestStartDate, requestEndDate);
@@ -469,7 +452,7 @@ const SalesReportPage = () => {
                 } else {
                     console.log("✅ No changes in sales report data, skipping update");
                     // Just update the timestamp to extend cache life
-                    cacheTimestamp = Date.now();
+                    cacheTimestamp = now;
                 }
 
                 setCurrentPage(1);
