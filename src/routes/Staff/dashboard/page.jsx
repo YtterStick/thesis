@@ -3,11 +3,10 @@ import { useTheme } from "@/hooks/use-theme";
 import { PackageX, PhilippinePeso, Package, Clock8, Timer, AlertCircle, LineChart } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
-const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
-const POLLING_INTERVAL = 15000; // 15 seconds
+const CACHE_DURATION = 4 * 60 * 60 * 1000;
+const POLLING_INTERVAL = 15000;
 const ALLOWED_SKEW_MS = 5000;
 
-// Initialize cache properly
 const initializeCache = () => {
   try {
     const stored = localStorage.getItem('staffDashboardCache');
@@ -26,7 +25,6 @@ const initializeCache = () => {
   return null;
 };
 
-// Global cache instance
 let staffDashboardCache = initializeCache();
 let cacheTimestamp = staffDashboardCache?.timestamp || null;
 
@@ -81,7 +79,6 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
   }
 };
 
-// Save cache to localStorage for persistence
 const saveCacheToStorage = (data) => {
   try {
     localStorage.setItem('staffDashboardCache', JSON.stringify({
@@ -96,10 +93,8 @@ const saveCacheToStorage = (data) => {
 const StaffDashboardPage = () => {
   const { theme } = useTheme();
   
-  // Calculate isDarkMode based on theme
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-  // Initialize state with cached data if available
   const [dashboardData, setDashboardData] = useState(() => {
     if (staffDashboardCache && staffDashboardCache.data) {
       console.log("🎯 Initializing staff state with cached data");
@@ -131,7 +126,6 @@ const StaffDashboardPage = () => {
   const pollingIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
 
-  // Function to check if data has actually changed
   const hasDataChanged = (newData, oldData) => {
     if (!oldData) return true;
     
@@ -151,7 +145,6 @@ const StaffDashboardPage = () => {
     try {
       const now = Date.now();
       
-      // Check cache first unless forced refresh
       if (!forceRefresh && staffDashboardCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
         console.log("📦 Using cached staff dashboard data");
         
@@ -165,7 +158,6 @@ const StaffDashboardPage = () => {
         
         setInitialLoad(false);
         
-        // Fetch fresh data in background if cache is older than 30 seconds
         if (now - cacheTimestamp > 30000) {
           console.log("🔄 Fetching fresh staff data in background");
           fetchFreshData();
@@ -178,7 +170,6 @@ const StaffDashboardPage = () => {
       console.error('Error in fetchDashboardData:', error);
       if (!isMountedRef.current) return;
       
-      // On error, keep cached data if available
       if (staffDashboardCache) {
         console.log("⚠️ Fetch failed, falling back to cached data");
         setDashboardData(prev => ({
@@ -199,7 +190,6 @@ const StaffDashboardPage = () => {
     }
   }, []);
 
-  // Separate function for actual API call
   const fetchFreshData = async () => {
     console.log("🔄 Fetching fresh staff dashboard data");
     const token = localStorage.getItem('authToken');
@@ -232,18 +222,15 @@ const StaffDashboardPage = () => {
 
     const currentTime = Date.now();
 
-    // Only update state and cache if data has actually changed
     if (!staffDashboardCache || hasDataChanged(newDashboardData, staffDashboardCache.data)) {
       console.log("🔄 Staff dashboard data updated with fresh data");
       
-      // Update cache
       staffDashboardCache = {
         data: newDashboardData,
         timestamp: currentTime
       };
       cacheTimestamp = currentTime;
       
-      // Persist to localStorage
       saveCacheToStorage(staffDashboardCache);
       
       if (isMountedRef.current) {
@@ -257,7 +244,6 @@ const StaffDashboardPage = () => {
       }
     } else {
       console.log("✅ No changes in staff dashboard data, updating timestamp only");
-      // Just update the timestamp to extend cache life
       cacheTimestamp = currentTime;
       staffDashboardCache.timestamp = currentTime;
       saveCacheToStorage(staffDashboardCache);
@@ -280,7 +266,6 @@ const StaffDashboardPage = () => {
   useEffect(() => {
     isMountedRef.current = true;
     
-    // Always show cached data immediately if available
     if (staffDashboardCache) {
       console.log("🚀 Showing cached staff data immediately");
       setDashboardData(prev => ({
@@ -293,16 +278,13 @@ const StaffDashboardPage = () => {
       setInitialLoad(false);
     }
     
-    // Then fetch fresh data
     fetchDashboardData();
     
-    // Set up polling with smart updates
     pollingIntervalRef.current = setInterval(() => {
       console.log("🔄 Auto-refreshing staff dashboard data...");
       fetchDashboardData(false);
     }, POLLING_INTERVAL);
 
-    // Time updater for machine countdowns
     const timeTimer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -354,15 +336,14 @@ const StaffDashboardPage = () => {
   };
 
   const getStatusColor = (status) => {
-    if (status.includes("m") || status.includes("s")) return "#3B82F6"; // blue
-    if (status === "In Use") return "#F59E0B"; // orange
-    if (status === "Available") return "#10B981"; // green
-    if (status === "Maintenance") return "#EF4444"; // red
-    if (status === "Done") return "#8B5CF6"; // purple
-    return isDarkMode ? "#9CA3AF" : "#6B7280"; // slate
+    if (status.includes("m") || status.includes("s")) return "#3B82F6";
+    if (status === "In Use") return "#F59E0B";
+    if (status === "Available") return "#10B981";
+    if (status === "Maintenance") return "#EF4444";
+    if (status === "Done") return "#8B5CF6";
+    return isDarkMode ? "#9CA3AF" : "#6B7280";
   };
 
-  // Calculate machine statistics
   const calculateMachineStats = () => {
     const machines = displayData.allMachines || [];
     const totalMachines = machines.length;
@@ -390,7 +371,6 @@ const StaffDashboardPage = () => {
     };
   };
 
-  // IMPROVED Skeleton loader components with consistent heights
   const SkeletonCard = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -564,7 +544,6 @@ const StaffDashboardPage = () => {
     </motion.div>
   );
 
-  // Show skeleton loader only during initial load AND when no cached data is available
   if (initialLoad && !staffDashboardCache) {
     return (
       <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
@@ -605,7 +584,6 @@ const StaffDashboardPage = () => {
     );
   }
 
-  // If we have cached data, show it immediately even if loading fresh data
   const displayData = staffDashboardCache ? staffDashboardCache.data : dashboardData;
 
   if (dashboardData.error && !staffDashboardCache) {
@@ -681,12 +659,11 @@ const StaffDashboardPage = () => {
   const washers = displayData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "WASHER");
   const dryers = displayData.allMachines.filter((machine) => machine && machine.type && machine.type.toUpperCase() === "DRYER");
 
-  // Calculate machine statistics
   const machineStats = calculateMachineStats();
 
   return (
     <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
-      {/* 🧢 Section Header */}
+      {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -709,7 +686,7 @@ const StaffDashboardPage = () => {
         </div>
       </motion.div>
 
-      {/* 📊 Summary Cards */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {summaryCards.map(({ title, icon, value, color, description }, index) => (
           <motion.div
@@ -782,7 +759,7 @@ const StaffDashboardPage = () => {
               <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                 All Machines Status
               </p>
-              {/* NEW: Machine Statistics Label */}
+              {/* Machine Statistics Label */}
               <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
                 {machineStats.total} total • {machineStats.available} available • {machineStats.inUse} in use • {machineStats.maintenance} maintenance
               </span>

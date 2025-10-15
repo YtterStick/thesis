@@ -5,21 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import QRCode from "react-qr-code";
 import { ScrollText, Save, Eye, Receipt, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const ALLOWED_SKEW_MS = 5000;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;
 
-// Initialize cache properly
 const initializeCache = () => {
   try {
     const stored = localStorage.getItem('receiptSettingsCache');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Check if cache is still valid
       if (Date.now() - parsed.timestamp < CACHE_DURATION) {
         console.log("📦 Initializing receipt settings from stored cache");
         return parsed;
@@ -33,7 +30,6 @@ const initializeCache = () => {
   return null;
 };
 
-// Global cache instance
 let receiptSettingsCache = initializeCache();
 let cacheTimestamp = receiptSettingsCache?.timestamp || null;
 
@@ -55,7 +51,6 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
 
   if (!token || isTokenExpired(token)) {
     console.warn("⛔ Token expired. Redirecting to login.");
-    // Clear cache on token expiry
     receiptSettingsCache = null;
     cacheTimestamp = null;
     localStorage.removeItem('receiptSettingsCache');
@@ -84,7 +79,6 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
     : response.text();
 };
 
-// Save cache to localStorage for persistence
 const saveCacheToStorage = (data) => {
   try {
     localStorage.setItem('receiptSettingsCache', JSON.stringify({
@@ -102,7 +96,6 @@ export default function ReceiptConfigPage() {
   
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-  // Initialize state with cached data if available
   const [settings, setSettings] = useState(() => {
     if (receiptSettingsCache && receiptSettingsCache.data) {
       console.log("🎯 Initializing receipt settings state with cached data");
@@ -130,7 +123,6 @@ export default function ReceiptConfigPage() {
   const [initialLoad, setInitialLoad] = useState(!receiptSettingsCache); // Only initial load if no cache
   const isMountedRef = useRef(true);
 
-  // Function to check if data has actually changed
   const hasDataChanged = (newData, oldData) => {
     if (!oldData) return true;
     
@@ -151,17 +143,14 @@ export default function ReceiptConfigPage() {
   };
 
   const fetchSettings = useCallback(async (forceRefresh = false) => {
-    // Don't fetch if component is unmounted
     if (!isMountedRef.current) return;
 
     try {
       const now = Date.now();
       
-      // Check cache first unless forced refresh
       if (!forceRefresh && receiptSettingsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
         console.log("📦 Using cached receipt settings");
         
-        // Always update with cached data to ensure UI is populated
         if (isMountedRef.current) {
           setSettings(receiptSettingsCache.data);
           setIsLoading(false);
@@ -196,7 +185,6 @@ export default function ReceiptConfigPage() {
     }
   }, [toast]);
 
-  // Separate function for actual API call
   const fetchFreshSettings = async () => {
     console.log("🔄 Fetching fresh receipt settings");
     if (isMountedRef.current) {
@@ -215,18 +203,15 @@ export default function ReceiptConfigPage() {
 
     const currentTime = Date.now();
 
-    // Only update state and cache if data has actually changed
     if (!receiptSettingsCache || hasDataChanged(newSettings, receiptSettingsCache.data)) {
       console.log("🔄 Receipt settings updated with fresh data");
       
-      // Update cache
       receiptSettingsCache = {
         data: newSettings,
         timestamp: currentTime
       };
       cacheTimestamp = currentTime;
       
-      // Persist to localStorage
       saveCacheToStorage(newSettings);
       
       if (isMountedRef.current) {
@@ -234,7 +219,6 @@ export default function ReceiptConfigPage() {
       }
     } else {
       console.log("✅ No changes in receipt settings, updating timestamp only");
-      // Just update the timestamp to extend cache life
       cacheTimestamp = currentTime;
       receiptSettingsCache.timestamp = currentTime;
       saveCacheToStorage(receiptSettingsCache.data);
@@ -249,7 +233,6 @@ export default function ReceiptConfigPage() {
   useEffect(() => {
     isMountedRef.current = true;
     
-    // Always show cached data immediately if available
     if (receiptSettingsCache) {
       console.log("🚀 Showing cached receipt settings immediately");
       setSettings(receiptSettingsCache.data);
@@ -257,7 +240,6 @@ export default function ReceiptConfigPage() {
       setInitialLoad(false);
     }
     
-    // Then fetch fresh data
     fetchSettings();
     
     return () => {
@@ -278,7 +260,6 @@ export default function ReceiptConfigPage() {
       
       await secureFetch("/format-settings", "POST", payload);
       
-      // Update cache
       receiptSettingsCache = {
         data: payload,
         timestamp: Date.now()
@@ -470,7 +451,6 @@ export default function ReceiptConfigPage() {
     </motion.div>
   );
 
-  // Skeleton loader components
   const SkeletonCard = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -539,7 +519,6 @@ export default function ReceiptConfigPage() {
     </motion.div>
   );
 
-  // Show skeleton loader only during initial load AND when no cached data is available
   if (initialLoad && !receiptSettingsCache) {
     return (
       <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">

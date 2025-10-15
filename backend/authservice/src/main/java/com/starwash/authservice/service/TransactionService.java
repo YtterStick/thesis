@@ -22,7 +22,6 @@ public class TransactionService {
     private final FormatSettingsRepository formatSettingsRepository;
     private final LaundryJobRepository laundryJobRepository;
     private final NotificationService notificationService;
-    private final UserRepository userRepository;
     private final AuditService auditService;
 
     public TransactionService(ServiceRepository serviceRepository,
@@ -31,7 +30,6 @@ public class TransactionService {
             FormatSettingsRepository formatSettingsRepository,
             LaundryJobRepository laundryJobRepository,
             NotificationService notificationService,
-            UserRepository userRepository,
             AuditService auditService) {
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
@@ -39,7 +37,6 @@ public class TransactionService {
         this.formatSettingsRepository = formatSettingsRepository;
         this.laundryJobRepository = laundryJobRepository;
         this.notificationService = notificationService;
-        this.userRepository = userRepository;
         this.auditService = auditService;
     }
 
@@ -103,10 +100,9 @@ public class TransactionService {
                 change,
                 issueDate,
                 dueDate,
-                staffId, // Use the staffId parameter
+                staffId,
                 now);
 
-        // Set GCash reference if payment method is GCash
         if ("GCash".equals(request.getPaymentMethod())) {
             transaction.setGcashReference(request.getGcashReference());
             transaction.setGcashVerified(false);
@@ -114,7 +110,6 @@ public class TransactionService {
 
         transactionRepository.save(transaction);
 
-        // 🔔 Create notification for new laundry service
         createNewLaundryServiceNotification(transaction);
 
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
@@ -142,12 +137,12 @@ public class TransactionService {
                 serviceDto,
                 consumableDtos,
                 total,
-                0.0, // tax
-                0.0, // discount
+                0.0,
+                0.0,
                 total,
                 request.getPaymentMethod(),
-                amountGiven, // ✅ FIXED: Use actual amountGiven
-                change, // ✅ FIXED: Use actual change
+                amountGiven,
+                change,
                 issueDate,
                 dueDate,
                 new FormatSettingsDto(settings),
@@ -155,7 +150,7 @@ public class TransactionService {
                 fabricQty,
                 plasticQty,
                 loads,
-                staffId); // Add staffId as staffName
+                staffId);
     }
 
     private void createNewLaundryServiceNotification(Transaction transaction) {
@@ -166,7 +161,6 @@ public class TransactionService {
                     transaction.getServiceName(),
                     transaction.getServiceQuantity());
 
-            // Notify all staff users about the new laundry service
             notificationService.notifyAllStaff("new_laundry_service", title, message, transaction.getId());
 
             System.out.println("🔔 Notification created for new laundry service: " + transaction.getInvoiceNumber());
@@ -217,12 +211,12 @@ public class TransactionService {
                 serviceDto,
                 consumableDtos,
                 tx.getTotalPrice(),
-                0.0, // tax
-                0.0, // discount
+                0.0,
+                0.0,
                 tx.getTotalPrice(),
                 tx.getPaymentMethod(),
-                tx.getAmountGiven(), // ✅ FIXED: Use transaction's amountGiven
-                tx.getChange(), // ✅ FIXED: Use transaction's change
+                tx.getAmountGiven(),
+                tx.getChange(),
                 tx.getIssueDate(),
                 tx.getDueDate(),
                 new FormatSettingsDto(settings),
@@ -230,7 +224,7 @@ public class TransactionService {
                 fabricQty,
                 plasticQty,
                 tx.getServiceQuantity(),
-                tx.getStaffId()); // Add staffId to the invoice
+                tx.getStaffId());
     }
 
     public List<RecordResponseDto> getAllRecords() {
@@ -287,7 +281,7 @@ public class TransactionService {
         return allRecords.stream()
                 .filter(record -> {
                     if (record.isDisposed()) {
-                        return false; // Exclude disposed records
+                        return false;
                     }
                     return "UNCLAIMED".equals(record.getPickupStatus()) || record.isExpired();
                 })
@@ -303,7 +297,6 @@ public class TransactionService {
 
         List<RecordResponseDto> allRecords = this.getAllRecords();
 
-        // Filter out disposed records for today's counts
         List<RecordResponseDto> todaysRecords = allRecords.stream()
                 .filter(record -> !record.isDisposed())
                 .filter(record -> {
@@ -320,7 +313,6 @@ public class TransactionService {
                 .mapToInt(RecordResponseDto::getLoads)
                 .sum();
 
-        // Filter out disposed jobs for other counts
         List<LaundryJob> nonDisposedJobs = laundryJobRepository.findByDisposedFalse();
 
         int unwashedCount = (int) nonDisposedJobs.stream()
@@ -337,7 +329,6 @@ public class TransactionService {
                 .filter(job -> !job.isExpired())
                 .count();
 
-        // Calculate expired count excluding disposed
         int expiredCount = (int) laundryJobRepository.findByExpiredTrueAndDisposedFalse().size();
 
         summary.put("todayIncome", todayIncome);
@@ -359,7 +350,7 @@ public class TransactionService {
         return allTransactions.stream().map(tx -> {
             AdminRecordResponseDto dto = new AdminRecordResponseDto();
             dto.setId(tx.getId());
-            dto.setInvoiceNumber(tx.getInvoiceNumber()); // Add this line
+            dto.setInvoiceNumber(tx.getInvoiceNumber());
             dto.setCustomerName(tx.getCustomerName());
             dto.setContact(tx.getContact());
             dto.setServiceName(tx.getServiceName());
@@ -388,7 +379,6 @@ public class TransactionService {
                 dto.setPickupStatus(
                         job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
 
-                // FIX: Calculate laundry status based on individual load statuses
                 if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
                     long completedLoads = job.getLoadAssignments().stream()
                             .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
@@ -401,7 +391,6 @@ public class TransactionService {
                     } else if (completedLoads > 0) {
                         dto.setLaundryStatus("In Progress");
                     } else {
-                        // Check if any load is in progress (not NOT_STARTED and not COMPLETED)
                         boolean anyInProgress = job.getLoadAssignments().stream()
                                 .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
                                         !"COMPLETED".equalsIgnoreCase(load.getStatus()));
@@ -413,7 +402,6 @@ public class TransactionService {
                         }
                     }
 
-                    // ADD: Calculate unwashed loads count for this transaction
                     long unwashedLoadsCount = job.getLoadAssignments().stream()
                             .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
                             .count();
@@ -421,7 +409,7 @@ public class TransactionService {
 
                 } else {
                     dto.setLaundryStatus("Not Started");
-                    dto.setUnwashedLoadsCount(tx.getServiceQuantity()); // All loads are unwashed if no assignments
+                    dto.setUnwashedLoadsCount(tx.getServiceQuantity());
                 }
 
                 dto.setExpired(job.isExpired());
@@ -434,7 +422,7 @@ public class TransactionService {
             } else {
                 dto.setPickupStatus("UNCLAIMED");
                 dto.setLaundryStatus("Not Started");
-                dto.setUnwashedLoadsCount(tx.getServiceQuantity()); // All loads are unwashed if no job exists
+                dto.setUnwashedLoadsCount(tx.getServiceQuantity());
                 dto.setExpired(tx.getDueDate() != null
                         && tx.getDueDate().isBefore(LocalDateTime.now()));
                 dto.setLaundryProcessedBy(null);

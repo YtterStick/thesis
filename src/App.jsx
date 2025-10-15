@@ -6,7 +6,7 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-// 📦 Admin Pages
+//Admin Page
 import Layout from "@/routes/layout";
 import DashboardPage from "@/routes/Admin/dashboard/page";
 import SalesReportPage from "@/routes/Admin/SalesReport/MainPage";
@@ -22,7 +22,7 @@ import DocumentSettingsPage from "@/routes/Admin/Format/MainPage";
 import PaymentMethodsPage from "./routes/Admin/Payment/MainPage";
 import AuditTrailPage from "@/routes/Admin/AuditTrail/MainPage";
 
-// 👕 Staff Pages
+//Staff Page
 import StaffDashboardPage from "@/routes/Staff/dashboard/page";
 import NewTransactionPage from "@/routes/Staff/transaction/MainPage";
 import StaffRecordsPage from "@/routes/Staff/records/MainPage";
@@ -31,16 +31,12 @@ import StaffServiceTracking from "@/routes/Staff/tracking/MainPage";
 import StaffClaimingLaundry from "@/routes/Staff/claiming/MainPage";
 import MissingItemsPage from "./routes/Staff/missing/MainPage";
 
-// 👤 User Landing Page (No Login Required)
 import LandingPage from "@/routes/User/landing-page/LandingPage";
 
-// ✅ Toast Provider
 import { Toaster } from "@/components/ui/toaster";
 
-// 🛡️ AuthGuard
 import AuthGuard from "@/utils/AuthGuard";
 
-// 🛡️ Route Wrappers with AuthGuard
 const AdminRoute = ({ element }) => (
   <AuthGuard requiredRole="ADMIN">
     <Layout>{element}</Layout>
@@ -53,7 +49,6 @@ const StaffRoute = ({ element }) => (
   </AuthGuard>
 );
 
-// 🚨 Fallback Pages
 const NotFoundPage = () => (
   <div className="text-center text-red-500 mt-24 text-xl font-semibold">
     🚧 404 - Page Not Found
@@ -68,12 +63,12 @@ const UnauthorizedPage = () => (
 
 function App() {
   const router = createBrowserRouter([
-    { path: "/", element: <Navigate to="/home" replace /> }, // Changed default to home
-    { path: "/home", element: <LandingPage /> }, // User landing page
+    { path: "/", element: <Navigate to="/home" replace /> },
+    { path: "/home", element: <LandingPage /> },
     { path: "/login", element: <LoginPage /> },
     { path: "/unauthorized", element: <UnauthorizedPage /> },
 
-    // 🔒 Admin Routes
+    //Admin Routes
     { path: "/dashboard", element: <AdminRoute element={<DashboardPage />} /> },
     { path: "/salesreports", element: <AdminRoute element={<SalesReportPage />} /> },
     { path: "/managetransaction", element: <AdminRoute element={<ManageTransactionPage />} /> },
@@ -87,7 +82,7 @@ function App() {
     { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
     { path: "/audittrail", element: <AdminRoute element={<AuditTrailPage />} /> },
 
-    // 👕 Staff Routes
+    //Staff Routes
     { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },
     { path: "/staff/transactions/new", element: <StaffRoute element={<NewTransactionPage />} /> },
     { path: "/staff/inventory", element: <StaffRoute element={<StaffInventoryPage/> } /> },
@@ -96,7 +91,6 @@ function App() {
     { path: "/staff/claiming", element: <StaffRoute element={<StaffClaimingLaundry/>} /> },
     { path: "/staff/missing-items", element: <StaffRoute element={<MissingItemsPage/>} /> },
 
-    // ❌ Catch-all
     { path: "*", element: <NotFoundPage /> },
   ]);
 

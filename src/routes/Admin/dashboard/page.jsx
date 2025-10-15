@@ -9,7 +9,6 @@ import { api } from "@/lib/api-config";
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 10000;
 
-// Initialize cache properly
 const initializeCache = () => {
     try {
         const stored = localStorage.getItem("dashboardCache");
@@ -45,7 +44,6 @@ const saveCacheToStorage = (data) => {
     }
 };
 
-// Test if basic authentication works
 const testBasicAuth = async () => {
     try {
         console.log('🔍 Testing /me endpoint...');
@@ -59,7 +57,6 @@ const testBasicAuth = async () => {
     }
 };
 
-// Add this to your dashboard component temporarily
 const debugTokenInfo = () => {
     const token = localStorage.getItem("authToken");
     if (token) {
@@ -83,13 +80,10 @@ export default function AdminDashboardPage() {
     const { theme } = useTheme();
     const { isAuthenticated, user, logout } = useAuth();
 
-    // Calculate isDarkMode based on theme
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-    // Check if user has admin role
     const isAdmin = user?.role === "ADMIN";
 
-    // Initialize state with cached data if available
     const [dashboardData, setDashboardData] = useState(() => {
         if (dashboardCache && dashboardCache.data) {
             console.log("🎯 Initializing state with cached data");
@@ -120,7 +114,6 @@ export default function AdminDashboardPage() {
     const pollingIntervalRef = useRef(null);
     const isMountedRef = useRef(true);
 
-    // Function to check if data has actually changed
     const hasDataChanged = (newData, oldData) => {
         if (!oldData) return true;
 
@@ -136,7 +129,6 @@ export default function AdminDashboardPage() {
 
     const fetchDashboardData = useCallback(
         async (forceRefresh = false) => {
-            // Don't fetch if component is unmounted or user is not authenticated/admin
             if (!isMountedRef.current || !isAuthenticated || !isAdmin) {
                 return;
             }
@@ -144,7 +136,6 @@ export default function AdminDashboardPage() {
             try {
                 const now = Date.now();
 
-                // Check cache first unless forced refresh
                 if (!forceRefresh && dashboardCache && cacheTimestamp && now - cacheTimestamp < CACHE_DURATION) {
                     console.log("📦 Using cached dashboard data");
 
@@ -158,7 +149,6 @@ export default function AdminDashboardPage() {
 
                     setInitialLoad(false);
 
-                    // Fetch fresh data in background if cache is older than 30 seconds
                     if (now - cacheTimestamp > 30000) {
                         console.log("🔄 Fetching fresh data in background");
                         fetchFreshData();
@@ -171,7 +161,6 @@ export default function AdminDashboardPage() {
                 console.error("Error in fetchDashboardData:", error);
                 if (!isMountedRef.current) return;
 
-                // On error, keep cached data if available
                 if (dashboardCache) {
                     console.log("⚠️ Fetch failed, falling back to cached data");
                     setDashboardData((prev) => ({
@@ -194,7 +183,6 @@ export default function AdminDashboardPage() {
         [isAuthenticated, isAdmin],
     );
 
-    // Enhanced fetch function with better debugging
     const fetchFreshData = async () => {
         console.log("🔄 Fetching fresh dashboard data");
 
@@ -203,7 +191,6 @@ export default function AdminDashboardPage() {
         }
 
         try {
-            // Test basic auth first
             const userInfo = await testBasicAuth();
             if (!userInfo) {
                 throw new Error("Basic authentication failed");
@@ -211,7 +198,6 @@ export default function AdminDashboardPage() {
 
             console.log("🔐 User authenticated, proceeding to dashboard data...");
 
-            // Use your existing api.get function which should handle tokens automatically
             const data = await api.get("/api/dashboard/admin");
 
             const newDashboardData = {
@@ -225,18 +211,15 @@ export default function AdminDashboardPage() {
 
             const currentTime = Date.now();
 
-            // Only update state and cache if data has actually changed
             if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
                 console.log("🔄 Dashboard data updated with fresh data");
 
-                // Update cache
                 dashboardCache = {
                     data: newDashboardData,
                     timestamp: currentTime,
                 };
                 cacheTimestamp = currentTime;
 
-                // Persist to localStorage
                 saveCacheToStorage(dashboardCache);
 
                 if (isMountedRef.current) {
@@ -270,13 +253,11 @@ export default function AdminDashboardPage() {
         } catch (error) {
             console.error("❌ Error in fetchFreshData:", error);
 
-            // Handle specific error cases
             if (error.message.includes("403")) {
                 console.log("🔍 403 Error Details:");
                 debugTokenInfo();
                 throw new Error("Access forbidden. You may not have admin privileges. Check backend logs.");
             } else if (error.message.includes("401")) {
-                // Token might be invalid, trigger logout
                 console.log("🔍 401 Error - Token may be invalid");
                 logout();
                 throw new Error("Authentication failed. Please log in again.");
@@ -298,12 +279,9 @@ export default function AdminDashboardPage() {
 
         runTests();
 
-        // Add debug info to see what's happening
         console.log("🔐 Auth Status:", { isAuthenticated, user, isAdmin });
 
-        // Only fetch data if user is authenticated and is admin
         if (isAuthenticated && isAdmin) {
-            // Always show cached data immediately if available
             if (dashboardCache) {
                 console.log("🚀 Showing cached data immediately");
                 setDashboardData((prev) => ({
@@ -316,10 +294,8 @@ export default function AdminDashboardPage() {
                 setInitialLoad(false);
             }
 
-            // Then fetch fresh data
             fetchDashboardData();
 
-            // Set up polling with smart updates
             pollingIntervalRef.current = setInterval(() => {
                 console.log("🔄 Auto-refreshing dashboard data...");
                 fetchDashboardData(false);
@@ -352,7 +328,6 @@ export default function AdminDashboardPage() {
         return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
     };
 
-    // Skeleton loader components with updated colors
     const SkeletonCard = () => (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -491,7 +466,6 @@ export default function AdminDashboardPage() {
         </motion.div>
     );
 
-    // Show access denied message if user is not admin
     if (isAuthenticated && !isAdmin) {
         return (
             <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
@@ -549,7 +523,6 @@ export default function AdminDashboardPage() {
         );
     }
 
-    // Show skeleton loader only during initial load AND when no cached data is available
     if (initialLoad && !dashboardCache) {
         return (
             <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
@@ -590,7 +563,6 @@ export default function AdminDashboardPage() {
         );
     }
 
-    // If we have cached data, show it immediately even if loading fresh data
     const displayData = dashboardCache ? dashboardCache.data : dashboardData;
 
     if (dashboardData.error && !dashboardCache) {
@@ -677,7 +649,7 @@ export default function AdminDashboardPage() {
 
     return (
         <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
-            {/* 🧢 Section Header */}
+            {/* Section Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -710,7 +682,7 @@ export default function AdminDashboardPage() {
                 </div>
             </motion.div>
 
-            {/* 📊 Summary Cards */}
+            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {summaryCards.map(({ title, icon, value, color, description }, index) => (
                     <motion.div

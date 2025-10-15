@@ -83,11 +83,9 @@ const AuditTrailPage = () => {
   const [dateRange, setDateRange] = useState("all");
   const [users, setUsers] = useState([]);
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Actions filter options
   const actionTypes = [
     { value: "all", label: "All Actions" },
     { value: "LOGIN", label: "Login" },
@@ -99,7 +97,6 @@ const AuditTrailPage = () => {
     { value: "TRANSACTION", label: "Transaction" },
   ];
 
-  // Items per page options
   const pageSizeOptions = [10, 25, 50, 100];
 
   const fetchAuditLogs = useCallback(async () => {
@@ -108,13 +105,11 @@ const AuditTrailPage = () => {
       const data = await secureFetch("/audit-logs");
       console.log("📊 Audit logs response:", data);
       
-      // Handle different response structures
       const logs = data.logs || data || [];
       console.log(`📋 Total logs found: ${logs.length}`);
       
       setAuditLogs(logs);
       
-      // Extract unique users for filter
       const uniqueUsers = [...new Set(logs.map(log => log.username))].map(username => ({
         value: username,
         label: username
@@ -132,7 +127,6 @@ const AuditTrailPage = () => {
     fetchAuditLogs();
   }, [fetchAuditLogs]);
 
-  // Filter logs based on search and filters
   const filteredLogs = auditLogs.filter(log => {
     const matchesSearch = 
       log.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -143,7 +137,6 @@ const AuditTrailPage = () => {
     const matchesAction = selectedAction === "all" || log.action === selectedAction;
     const matchesUser = selectedUser === "all" || log.username === selectedUser;
 
-    // Date range filtering
     let matchesDate = true;
     if (dateRange !== "all" && log.timestamp) {
       const logDate = new Date(log.timestamp);
@@ -171,14 +164,12 @@ const AuditTrailPage = () => {
     return matchesSearch && matchesAction && matchesUser && matchesDate;
   });
 
-  // Pagination calculations
   const totalItems = filteredLogs.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentLogs = filteredLogs.slice(startIndex, endIndex);
 
-  // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedAction, selectedUser, dateRange, itemsPerPage]);
@@ -208,7 +199,6 @@ const AuditTrailPage = () => {
     });
   };
 
-  // Pagination handlers
   const goToFirstPage = () => setCurrentPage(1);
   const goToLastPage = () => setCurrentPage(totalPages);
   const goToPreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
