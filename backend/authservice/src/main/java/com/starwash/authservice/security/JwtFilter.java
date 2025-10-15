@@ -39,94 +39,57 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        String method = request.getMethod();
-        String authHeader = request.getHeader("Authorization");
+        System.out.println("🛡️ JwtFilter processing: " + path);
 
-        System.out.println("🛡️ JwtFilter processing: " + method + " " + path);
-        System.out.println("🔐 Authorization header: " + (authHeader != null ? "Present" : "Missing"));
-
-        // Public endpoints - no auth required
-        if (isPublicEndpoint(path, method)) {
+        // Public endpoints - FIXED: Include API paths
+        if (path.equals("/api/login") || path.equals("/api/register") || 
+            path.equals("/login") || path.equals("/register") ||
+            path.equals("/health") || path.equals("/api/health") ||
+            path.equals("/")) {
             System.out.println("✅ Public endpoint, skipping auth: " + path);
             chain.doFilter(request, response);
             return;
         }
 
-        // Check for Authorization header
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("❌ No valid Authorization header for protected endpoint: " + path);
-            sendError(response, HttpStatus.UNAUTHORIZED, "Authorization header required");
-            return;
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            System.out.println("🔐 Token found for: " + path);
+
+            if (jwtUtil.validateToken(token)) {
+                String username = jwtUtil.getUsername(token);
+                String role = jwtUtil.getRole(token);
+                System.out.println("✅ Token valid for user: " + username + " with role: " + role);
+
+                Optional<User> userOpt = userRepository.findByUsername(username);
+                if (userOpt.isPresent() && "Active".equals(userOpt.get().getStatus())) {
+                    // Create authority with ROLE_ prefix
+                    String authority = "ROLE_" + role.toUpperCase();
+                    List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(authority));
+                    
+                    System.out.println("🎯 Setting authentication with authority: " + authority);
+
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(username, null, authorities);
+
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                    System.out.println("✅ Authenticated: " + username + " [" + authority + "] for " + path);
+                } else {
+                    System.out.println("❌ User not found or inactive: " + username);
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                    response.getWriter().write("Account is deactivated");
+                    return;
+                }
+            } else {
+                System.out.println("❌ Invalid token for: " + path);
+            }
+        } else {
+            System.out.println("❌ No Authorization header for protected endpoint: " + path);
         }
 
-        // Process JWT token
-        String token = authHeader.substring(7);
-        System.out.println("🔐 Token found, length: " + token.length());
-
-        if (!jwtUtil.validateToken(token)) {
-            System.out.println("❌ Invalid token for: " + path);
-            sendError(response, HttpStatus.UNAUTHORIZED, "Invalid or expired token");
-            return;
-        }
-
-        String username = jwtUtil.getUsername(token);
-        String role = jwtUtil.getRole(token);
-        System.out.println("✅ Token valid for user: " + username + " with role: " + role);
-
-        Optional<User> userOpt = userRepository.findByUsername(username);
-        if (userOpt.isEmpty()) {
-            System.out.println("❌ User not found: " + username);
-            sendError(response, HttpStatus.FORBIDDEN, "User not found");
-            return;
-        }
-
-        User user = userOpt.get();
-        if (!"Active".equals(user.getStatus())) {
-            System.out.println("❌ User account inactive: " + username);
-            sendError(response, HttpStatus.FORBIDDEN, "Account is deactivated");
-            return;
-        }
-
-        // Set authentication in security context
-        String authority = role.toUpperCase();
-        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(authority));
-        
-        System.out.println("🎯 Setting authentication with authority: " + authority);
-
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(username, null, authorities);
-
-        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        System.out.println("✅ Authenticated: " + username + " [" + authority + "] for " + path);
         chain.doFilter(request, response);
-    }
-
-    private boolean isPublicEndpoint(String path, String method) {
-        // OPTIONS requests for CORS preflight
-        if ("OPTIONS".equalsIgnoreCase(method)) {
-            return true;
-        }
-
-        // Public endpoints
-        List<String> publicPaths = List.of(
-            "/api/login",
-            "/api/register", 
-            "/login",
-            "/register",
-            "/health",
-            "/api/health",
-            "/"
-        );
-
-        return publicPaths.contains(path);
-    }
-
-    private void sendError(HttpServletResponse response, HttpStatus status, String message) throws IOException {
-        response.setStatus(status.value());
-        response.setContentType("application/json");
-        response.getWriter().write("{\"error\": \"" + message + "\"}");
-        response.getWriter().flush();
     }
 }

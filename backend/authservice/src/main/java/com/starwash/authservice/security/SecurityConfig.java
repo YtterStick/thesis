@@ -12,13 +12,10 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import java.util.List;
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
@@ -41,20 +38,25 @@ public class SecurityConfig {
                         // Allow OPTIONS requests for CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Public endpoints
+                        // Public endpoints - FIXED: Include API paths
                         .requestMatchers(
                                 "/",
                                 "/health",
                                 "/api/health",
-                                "/api/login",
-                                "/api/register",
+                                "/api/login",      // Added /api/ prefix
+                                "/api/register",   // Added /api/ prefix
                                 "/login",
                                 "/register")
                         .permitAll()
 
-                        // TEMPORARY: Permit all for testing - REMOVE THIS IN PRODUCTION
-                        .requestMatchers("/api/**").permitAll()
-                        .requestMatchers("/me").permitAll()
+                        // Role-based endpoints - FIXED: Use hasAuthority for explicit control
+                        .requestMatchers("/api/dashboard/admin").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/dashboard/staff").hasAnyAuthority("ROLE_STAFF", "ROLE_ADMIN")
+                        .requestMatchers("/api/accounts/**").hasAuthority("ROLE_ADMIN")
+
+                        // Other authenticated endpoints
+                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/me").authenticated()
 
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -65,8 +67,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
