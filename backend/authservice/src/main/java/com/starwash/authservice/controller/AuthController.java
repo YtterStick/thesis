@@ -198,4 +198,5 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of("user", username, "role", role));
     }
+    
 }
