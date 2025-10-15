@@ -1,13 +1,13 @@
 // lib/api-config.js
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://thesis-g0pr.onrender.com', // No /api here
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://thesis-g0pr.onrender.com',
   timeout: 10000
 };
 
 // Helper function to get full API URL
 export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${API_CONFIG.baseURL}/${cleanEndpoint}`;  // No /api here either
+  return `${API_CONFIG.baseURL}/api/${cleanEndpoint}`;
 };
 
 // Get auth token from localStorage
@@ -53,8 +53,6 @@ export const apiFetch = async (endpoint, options = {}) => {
   // For public endpoints like login, don't require a token
   if (isPublicEndpoint(endpoint)) {
     console.log(`🌐 Public API Call: ${options.method || 'GET'} ${url}`);
-  console.log(`🔐 Token present: ${!!token}`);
-  console.log(`📦 Headers:`, options.headers);
   } else {
     // For protected endpoints, validate token
     if (!token) {
@@ -156,4 +154,3 @@ export const api = {
       body: JSON.stringify(data)
     })
 };
-

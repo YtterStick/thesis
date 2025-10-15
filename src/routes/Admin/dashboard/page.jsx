@@ -7,7 +7,7 @@ import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "rec
 import { api } from "@/lib/api-config";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
-const POLLING_INTERVAL = 30000; // Increased to 30 seconds
+const POLLING_INTERVAL = 10000;
 
 // Initialize cache properly
 const initializeCache = () => {
@@ -48,14 +48,34 @@ const saveCacheToStorage = (data) => {
 // Test if basic authentication works
 const testBasicAuth = async () => {
     try {
-        console.log("🔍 Testing /me endpoint...");
-        const userInfo = await api.get("me");
-        console.log("✅ /me endpoint successful:", userInfo);
-        console.log("👤 Current user role:", userInfo.role);
+        console.log('🔍 Testing /me endpoint...');
+        const userInfo = await api.get('me');
+        console.log('✅ /me endpoint successful:', userInfo);
+        console.log('👤 Current user role:', userInfo.role);
         return userInfo;
     } catch (error) {
-        console.error("❌ /me endpoint failed:", error);
+        console.error('❌ /me endpoint failed:', error);
         return null;
+    }
+};
+
+// Add this to your dashboard component temporarily
+const debugTokenInfo = () => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            console.log("🔐 Token Debug Info:");
+            console.log("   User:", payload.sub);
+            console.log("   Role:", payload.role);
+            console.log("   Expires:", new Date(payload.exp * 1000));
+            console.log("   Issued:", new Date(payload.iat * 1000));
+            console.log("   All claims:", payload);
+        } catch (error) {
+            console.error("❌ Failed to decode token:", error);
+        }
+    } else {
+        console.log("❌ No token found in localStorage");
     }
 };
 
@@ -100,88 +120,18 @@ export default function AdminDashboardPage() {
     const pollingIntervalRef = useRef(null);
     const isMountedRef = useRef(true);
 
-    // Enhanced fetch function with better debugging
-    const fetchFreshData = async () => {
-        console.log("🔄 Fetching fresh dashboard data");
+    // Function to check if data has actually changed
+    const hasDataChanged = (newData, oldData) => {
+        if (!oldData) return true;
 
-        if (!isAuthenticated || !isAdmin) {
-            throw new Error("Authentication required or insufficient privileges");
-        }
-
-        try {
-            // Test basic auth first
-            const userInfo = await testBasicAuth();
-            if (!userInfo) {
-                throw new Error("Basic authentication failed");
-            }
-
-            console.log("🔐 User authenticated, proceeding to dashboard data...");
-
-            const data = await api.get("api/dashboard/admin");
-
-            const newDashboardData = {
-                totalIncome: data.totalIncome || 0,
-                totalLoads: data.totalLoads || 0,
-                unwashedCount: data.unwashedCount || 0,
-                totalUnclaimed: data.totalUnclaimed || 0,
-                overviewData: data.overviewData || [],
-                unclaimedList: data.unclaimedList || [],
-            };
-
-            const currentTime = Date.now();
-
-            console.log("🔄 Dashboard data updated with fresh data");
-
-            // Update cache
-            dashboardCache = {
-                data: newDashboardData,
-                timestamp: currentTime,
-            };
-            cacheTimestamp = currentTime;
-
-            // Persist to localStorage
-            saveCacheToStorage(dashboardCache);
-
-            if (isMountedRef.current) {
-                setDashboardData({
-                    ...newDashboardData,
-                    loading: false,
-                    error: null,
-                    lastUpdated: new Date(),
-                    dataVersion: (dashboardData.dataVersion || 0) + 1,
-                });
-            }
-
-            if (isMountedRef.current) {
-                setInitialLoad(false);
-            }
-        } catch (error) {
-            console.error("❌ Error in fetchFreshData:", error);
-
-            // Handle specific error cases
-            if (error.message.includes("403")) {
-                console.log("🔍 403 Error Details - checking token info:");
-                const token = localStorage.getItem("authToken");
-                if (token) {
-                    try {
-                        const payload = JSON.parse(atob(token.split(".")[1]));
-                        console.log("Token payload:", payload);
-                    } catch (e) {
-                        console.error("Failed to decode token:", e);
-                    }
-                }
-                throw new Error("Access forbidden. You may not have admin privileges.");
-            } else if (error.message.includes("401")) {
-                // Token might be invalid, trigger logout
-                console.log("🔍 401 Error - Token may be invalid");
-                logout();
-                throw new Error("Authentication failed. Please log in again.");
-            } else if (error.message.includes("Failed to fetch")) {
-                throw new Error("Network error. Please check your connection.");
-            } else {
-                throw error;
-            }
-        }
+        return (
+            newData.totalIncome !== oldData.totalIncome ||
+            newData.totalLoads !== oldData.totalLoads ||
+            newData.unwashedCount !== oldData.unwashedCount ||
+            newData.totalUnclaimed !== oldData.totalUnclaimed ||
+            JSON.stringify(newData.overviewData) !== JSON.stringify(oldData.overviewData) ||
+            JSON.stringify(newData.unclaimedList) !== JSON.stringify(oldData.unclaimedList)
+        );
     };
 
     const fetchDashboardData = useCallback(
@@ -241,11 +191,112 @@ export default function AdminDashboardPage() {
                 setInitialLoad(false);
             }
         },
-        [isAuthenticated, isAdmin, logout],
+        [isAuthenticated, isAdmin],
     );
+
+    // Enhanced fetch function with better debugging
+    const fetchFreshData = async () => {
+        console.log("🔄 Fetching fresh dashboard data");
+
+        if (!isAuthenticated || !isAdmin) {
+            throw new Error("Authentication required or insufficient privileges");
+        }
+
+        try {
+            // Test basic auth first
+            const userInfo = await testBasicAuth();
+            if (!userInfo) {
+                throw new Error("Basic authentication failed");
+            }
+
+            console.log("🔐 User authenticated, proceeding to dashboard data...");
+
+            // Use your existing api.get function which should handle tokens automatically
+            const data = await api.get("/api/dashboard/admin");
+
+            const newDashboardData = {
+                totalIncome: data.totalIncome || 0,
+                totalLoads: data.totalLoads || 0,
+                unwashedCount: data.unwashedCount || 0,
+                totalUnclaimed: data.totalUnclaimed || 0,
+                overviewData: data.overviewData || [],
+                unclaimedList: data.unclaimedList || [],
+            };
+
+            const currentTime = Date.now();
+
+            // Only update state and cache if data has actually changed
+            if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
+                console.log("🔄 Dashboard data updated with fresh data");
+
+                // Update cache
+                dashboardCache = {
+                    data: newDashboardData,
+                    timestamp: currentTime,
+                };
+                cacheTimestamp = currentTime;
+
+                // Persist to localStorage
+                saveCacheToStorage(dashboardCache);
+
+                if (isMountedRef.current) {
+                    setDashboardData({
+                        ...newDashboardData,
+                        loading: false,
+                        error: null,
+                        lastUpdated: new Date(),
+                        dataVersion: (dashboardData.dataVersion || 0) + 1,
+                    });
+                }
+            } else {
+                console.log("✅ No changes in dashboard data, updating timestamp only");
+                cacheTimestamp = currentTime;
+                dashboardCache.timestamp = currentTime;
+                saveCacheToStorage(dashboardCache);
+
+                if (isMountedRef.current) {
+                    setDashboardData((prev) => ({
+                        ...prev,
+                        loading: false,
+                        error: null,
+                        lastUpdated: new Date(),
+                    }));
+                }
+            }
+
+            if (isMountedRef.current) {
+                setInitialLoad(false);
+            }
+        } catch (error) {
+            console.error("❌ Error in fetchFreshData:", error);
+
+            // Handle specific error cases
+            if (error.message.includes("403")) {
+                console.log("🔍 403 Error Details:");
+                debugTokenInfo();
+                throw new Error("Access forbidden. You may not have admin privileges. Check backend logs.");
+            } else if (error.message.includes("401")) {
+                // Token might be invalid, trigger logout
+                console.log("🔍 401 Error - Token may be invalid");
+                logout();
+                throw new Error("Authentication failed. Please log in again.");
+            } else if (error.message.includes("Failed to fetch")) {
+                throw new Error("Network error. Please check your connection.");
+            } else {
+                throw error;
+            }
+        }
+    };
 
     useEffect(() => {
         isMountedRef.current = true;
+
+        const runTests = async () => {
+            debugTokenInfo();
+            await testBasicAuth();
+        };
+
+        runTests();
 
         // Add debug info to see what's happening
         console.log("🔐 Auth Status:", { isAuthenticated, user, isAdmin });
@@ -295,13 +346,13 @@ export default function AdminDashboardPage() {
                 clearInterval(pollingIntervalRef.current);
             }
         };
-    }, [fetchDashboardData, isAuthenticated, isAdmin]);
+    }, [fetchDashboardData, isAuthenticated, isAdmin, logout]);
 
     const formatCurrency = (amount) => {
         return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
     };
 
-    // Skeleton loader components
+    // Skeleton loader components with updated colors
     const SkeletonCard = () => (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
