@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/health",
                                 "/api/health",
                                 "/api/login",      // Added /api/ prefix
+                                "/api/logout",
                                 "/api/register",   // Added /api/ prefix
                                 "/login",
                                 "/register")

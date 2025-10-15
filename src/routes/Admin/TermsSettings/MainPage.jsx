@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
@@ -8,92 +8,199 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Plus, X, Edit2, Trash2 } from "lucide-react";
 import TermsModal from "./TermsModal";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api-config"; // Import the api utility
 
-const ALLOWED_SKEW_MS = 5000;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-const isTokenExpired = (token) => {
+// Initialize cache properly
+const initializeCache = () => {
   try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
+    const stored = localStorage.getItem('termsCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Check if cache is still valid
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        console.log("📦 Initializing terms from stored cache");
+        return parsed;
+      } else {
+        console.log("🗑️ Stored terms cache expired");
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load terms cache from storage:', error);
   }
+  return null;
 };
 
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+// Global cache instances
+let termsCache = initializeCache();
+let cacheTimestamp = termsCache?.timestamp || null;
 
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    window.location.href = "/login";
-    return;
+// Save cache to localStorage for persistence
+const saveCacheToStorage = (data) => {
+  try {
+    localStorage.setItem('termsCache', JSON.stringify({
+      data: data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save terms cache to storage:', error);
   }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Request failed: ${response.status} - ${errorText}`);
-  }
-
-  const contentType = response.headers.get("content-type");
-
-  if (contentType && contentType.includes("application/json")) {
-    try {
-      return await response.json();
-    } catch (err) {
-      console.warn("Expected JSON but failed to parse:", err);
-      return null;
-    }
-  }
-
-  return null;
 };
 
 const MainPage = () => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   
-  const [terms, setTerms] = useState([]);
+  const [terms, setTerms] = useState(() => {
+    if (termsCache && termsCache.data) {
+      console.log("🎯 Initializing terms state with cached data");
+      return termsCache.data;
+    }
+    return [];
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTerm, setEditingTerm] = useState(null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!termsCache); // Only loading if no cache
+  const [initialLoad, setInitialLoad] = useState(!termsCache); // Only initial load if no cache
+  const isMountedRef = useRef(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchTerms = async () => {
-      try {
-        setLoading(true);
-        const data = await secureFetch("/terms");
-        setTerms(data || []);
-      } catch (err) {
-        console.error("❌ Error fetching terms:", err.message);
-        setError("Failed to load terms.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Function to check if data has actually changed
+  const hasDataChanged = (newData, oldData) => {
+    if (!oldData) return true;
+    return JSON.stringify(newData) !== JSON.stringify(oldData);
+  };
 
-    fetchTerms();
+  const fetchTerms = useCallback(async (forceRefresh = false) => {
+    // Don't fetch if component is unmounted
+    if (!isMountedRef.current) return;
+
+    try {
+      const now = Date.now();
+      
+      // Check cache first unless forced refresh
+      if (!forceRefresh && termsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+        console.log("📦 Using cached terms data");
+        
+        // Always update with cached data to ensure UI is populated
+        setTerms(termsCache.data);
+        setLoading(false);
+        setInitialLoad(false);
+        return;
+      }
+
+      await fetchFreshTerms();
+    } catch (err) {
+      console.error("❌ Error fetching terms:", err.message);
+      if (!isMountedRef.current) return;
+      
+      // On error, keep cached data if available
+      if (termsCache) {
+        console.log("⚠️ Fetch failed, falling back to cached terms data");
+        setTerms(termsCache.data);
+        setError("Failed to refresh terms. Showing cached data.");
+      } else {
+        setError("Failed to load terms. Make sure you're logged in.");
+      }
+      setLoading(false);
+      setInitialLoad(false);
+    }
   }, []);
+
+  // Separate function for actual API call using the api utility
+  const fetchFreshTerms = async () => {
+    console.log("🔄 Fetching fresh terms data");
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
+
+    try {
+      // Use the api utility instead of direct fetch
+      const data = await api.get("api/terms");
+      const newTerms = data || [];
+      
+      const currentTime = Date.now();
+
+      // Only update state and cache if data has actually changed
+      if (!termsCache || hasDataChanged(newTerms, termsCache.data)) {
+        console.log("🔄 Terms data updated with fresh data");
+        
+        // Update cache
+        termsCache = {
+          data: newTerms,
+          timestamp: currentTime
+        };
+        cacheTimestamp = currentTime;
+        
+        // Persist to localStorage
+        saveCacheToStorage(newTerms);
+        
+        if (isMountedRef.current) {
+          setTerms(newTerms);
+          setError(null);
+        }
+      } else {
+        console.log("✅ No changes in terms data, updating timestamp only");
+        // Just update the timestamp to extend cache life
+        cacheTimestamp = currentTime;
+        termsCache.timestamp = currentTime;
+        saveCacheToStorage(termsCache.data);
+      }
+
+      if (isMountedRef.current) {
+        setLoading(false);
+        setInitialLoad(false);
+      }
+    } catch (error) {
+      console.error("❌ Error in fetchFreshTerms:", error);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setInitialLoad(false);
+        throw error;
+      }
+    }
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    // Always show cached data immediately if available
+    if (termsCache) {
+      console.log("🚀 Showing cached terms data immediately");
+      setTerms(termsCache.data);
+      setLoading(false);
+      setInitialLoad(false);
+    }
+    
+    // Then fetch fresh data
+    fetchTerms();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [fetchTerms]);
 
   const handleAddTerm = async (newTerm) => {
     try {
-      const saved = await secureFetch("/terms", "POST", newTerm);
-      setTerms((prev) => [...prev, saved]);
+      // Use the api utility for POST request
+      const saved = await api.post("api/terms", newTerm);
+      
+      setTerms((prev) => {
+        const newTerms = [...prev, saved];
+        
+        // Update cache
+        termsCache = {
+          data: newTerms,
+          timestamp: Date.now()
+        };
+        cacheTimestamp = Date.now();
+        saveCacheToStorage(newTerms);
+        
+        return newTerms;
+      });
+      
       setIsModalOpen(false);
 
       toast({
@@ -113,8 +220,23 @@ const MainPage = () => {
 
   const handleEditTerm = async (updatedTerm) => {
     try {
-      const saved = await secureFetch(`/terms/${updatedTerm.id}`, "PUT", updatedTerm);
-      setTerms((prev) => prev.map((term) => (term.id === saved.id ? saved : term)));
+      // Use the api utility for PUT request
+      const saved = await api.put(`api/terms/${updatedTerm.id}`, updatedTerm);
+      
+      setTerms((prev) => {
+        const newTerms = prev.map((term) => (term.id === saved.id ? saved : term));
+        
+        // Update cache
+        termsCache = {
+          data: newTerms,
+          timestamp: Date.now()
+        };
+        cacheTimestamp = Date.now();
+        saveCacheToStorage(newTerms);
+        
+        return newTerms;
+      });
+      
       setEditingTerm(null);
       setIsModalOpen(false);
 
@@ -135,8 +257,22 @@ const MainPage = () => {
 
   const handleDeleteTerm = async (id, title) => {
     try {
-      await secureFetch(`/terms/${id}`, "DELETE");
-      setTerms((prev) => prev.filter((term) => term.id !== id));
+      // Use the api utility for DELETE request
+      await api.delete(`api/terms/${id}`);
+      
+      setTerms((prev) => {
+        const newTerms = prev.filter((term) => term.id !== id);
+        
+        // Update cache
+        termsCache = {
+          data: newTerms,
+          timestamp: Date.now()
+        };
+        cacheTimestamp = Date.now();
+        saveCacheToStorage(newTerms);
+        
+        return newTerms;
+      });
 
       toast({
         title: "Terms deleted",
@@ -198,6 +334,74 @@ const MainPage = () => {
       </div>
     </motion.div>
   );
+
+  // Show skeleton loader only during initial load AND when no cached data is available
+  if (initialLoad && !termsCache) {
+    return (
+      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        {/* Header Skeleton */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
+            <div className="space-y-2">
+              <div className="h-6 w-44 rounded-lg animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+              <div className="h-4 w-56 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+            </div>
+          </div>
+          <div className="h-10 w-32 rounded-lg animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+        </motion.div>
+
+        {/* Terms List Skeleton */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="rounded-xl border-2 transition-all"
+            style={{
+              backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+              borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            }}
+          >
+            <CardHeader className="rounded-t-xl pb-4"
+              style={{
+                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+              }}
+            >
+              <div className="h-6 w-32 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+            </CardHeader>
+
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {[...Array(3)].map((_, index) => (
+                  <SkeletonCard key={index} index={index} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">

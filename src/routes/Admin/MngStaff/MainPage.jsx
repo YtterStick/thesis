@@ -5,7 +5,7 @@ import StaffTable from "./StaffTable";
 import StaffForm from "./StaffForm";
 import { ShieldCheck, Users, User, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { secureFetch } from "@/lib/secureFetch";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const MainPage = () => {
   const { theme } = useTheme();
@@ -25,7 +25,8 @@ const MainPage = () => {
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        const data = await secureFetch("/accounts");
+        // Use the api utility instead of secureFetch
+        const data = await api.get("api/accounts");
         const enriched = data.map((acc) => ({
           ...acc,
           status: acc.status || "Active",
@@ -49,20 +50,8 @@ const MainPage = () => {
 
   const handleStatusChange = useCallback(async (id, newStatus) => {
     try {
-      const token = localStorage.getItem("authToken");
-      const response = await fetch(`http://localhost:8080/api/accounts/${id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update status");
-      }
+      // Use the api utility instead of direct fetch
+      await api.patch(`api/accounts/${id}/status`, { status: newStatus });
 
       setAccountList(prev => 
         prev.map(acc => 

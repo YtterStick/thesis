@@ -18,57 +18,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-
-const ALLOWED_SKEW_MS = 5000;
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Request failed: ${response.status} - ${errorText}`);
-  }
-
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    try {
-      return await response.json();
-    } catch (err) {
-      console.warn("Expected JSON but failed to parse:", err);
-      return null;
-    }
-  }
-
-  return null;
-};
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const getStockStatusCounts = (items) => {
   let out = 0, low = 0, adequate = 0;
@@ -103,7 +53,8 @@ const MainPage = () => {
 
   const fetchInventory = async () => {
     try {
-      const data = await secureFetch("/stock");
+      // Use the api utility instead of secureFetch
+      const data = await api.get("api/stock");
       const safeItems = Array.isArray(data) ? data : (data.items ?? []);
       setItems(safeItems);
     } catch (error) {
@@ -116,9 +67,11 @@ const MainPage = () => {
   const handleSave = async (data) => {
     try {
       if (editingItem) {
-        await secureFetch(`/stock/${editingItem.id}`, "PUT", data);
+        // Use api utility for PUT request
+        await api.put(`api/stock/${editingItem.id}`, data);
       } else {
-        await secureFetch("/stock", "POST", data);
+        // Use api utility for POST request
+        await api.post("api/stock", data);
       }
       setShowForm(false);
       setEditingItem(null);
@@ -130,7 +83,8 @@ const MainPage = () => {
 
   const handleDelete = async (item) => {
     try {
-      await secureFetch(`/stock/${item.id}`, "DELETE");
+      // Use api utility for DELETE request
+      await api.delete(`api/stock/${item.id}`);
       await fetchInventory();
     } catch (error) {
       console.error("Error deleting item:", error);
@@ -144,7 +98,8 @@ const MainPage = () => {
 
   const handleAddStock = async (amount) => {
     try {
-      await secureFetch(`/stock/${selectedItem.id}/restock?amount=${amount}`, "PUT");
+      // Use api utility for PUT request
+      await api.put(`api/stock/${selectedItem.id}/restock?amount=${amount}`);
       setSelectedItem(null);
       setShowStockModal(false);
       await fetchInventory();

@@ -22,8 +22,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+import { api } from "@/lib/api-config"; // Import the api utility
 
-const ALLOWED_SKEW_MS = 5000;
 const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
 const POLLING_INTERVAL = 10000; // 10 seconds
 
@@ -50,53 +50,6 @@ const initializeCache = () => {
 // Global cache instances
 let paymentManagementCache = initializeCache();
 let cacheTimestamp = paymentManagementCache?.timestamp || null;
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    // Clear cache on token expiry
-    paymentManagementCache = null;
-    cacheTimestamp = null;
-    localStorage.removeItem('paymentManagementCache');
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-  if (!response.ok) {
-    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
-    throw new Error(`Request failed: ${response.status}`);
-  }
-
-  const contentType = response.headers.get("content-type");
-  return contentType && contentType.includes("application/json")
-    ? response.json()
-    : response.text();
-};
 
 // Save cache to localStorage for persistence
 const saveCacheToStorage = (data) => {
@@ -344,7 +297,7 @@ const PaymentManagementPage = () => {
     }
   }, []);
 
-  // Separate function for actual API calls
+  // Separate function for actual API calls using the api utility
   const fetchFreshData = async () => {
     console.log("🔄 Fetching fresh payment data");
     
@@ -353,10 +306,10 @@ const PaymentManagementPage = () => {
     }
 
     try {
-      // Fetch both payment settings and pending transactions
+      // Fetch both payment settings and pending transactions using the api utility
       const [settingsData, transactionsData] = await Promise.all([
-        secureFetch("/payment-settings"),
-        secureFetch("/transactions/pending-gcash")
+        api.get("api/payment-settings"),
+        api.get("api/transactions/pending-gcash")
       ]);
       
       const newPaymentData = {
@@ -463,7 +416,8 @@ const PaymentManagementPage = () => {
       setIsUpdating(true);
       const newStatus = !paymentData.gcashEnabled;
 
-      await secureFetch("/payment-settings", "PUT", { gcashEnabled: newStatus });
+      // Use the api utility for PUT request
+      await api.put("api/payment-settings", { gcashEnabled: newStatus });
 
       // Update local state and cache
       const updatedData = {
@@ -508,7 +462,8 @@ const PaymentManagementPage = () => {
 
     try {
       setIsVerifying(true);
-      await secureFetch(`/transactions/${transactionToVerify.id}/verify-gcash`, "POST");
+      // Use the api utility for POST request
+      await api.post(`api/transactions/${transactionToVerify.id}/verify-gcash`);
       
       toast({
         title: "Success",
@@ -1038,4 +993,4 @@ const PaymentManagementPage = () => {
   );
 };
 
-export default PaymentManagementPage; 
+export default PaymentManagementPage;

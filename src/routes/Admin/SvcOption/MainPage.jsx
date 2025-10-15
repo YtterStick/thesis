@@ -5,12 +5,8 @@ import { Trash2, Plus, Settings, WashingMachine, X, Package } from "lucide-react
 import EditServiceModal from "./components/EditServiceModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api-config"; // Import the api utility
 
-const ALLOWED_SKEW_MS = 5000;
-
-// Cache for services data - use object structure like AdminDashboard
-let servicesCache = null;
-let cacheTimestamp = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Initialize cache properly
@@ -34,63 +30,8 @@ const initializeCache = () => {
 };
 
 // Initialize global cache
-servicesCache = initializeCache();
-cacheTimestamp = servicesCache?.timestamp || null;
-
-const isTokenExpired = (token) => {
-    try {
-        const payload = token.split(".")[1];
-        const decoded = JSON.parse(atob(payload));
-        const exp = decoded.exp * 1000;
-        const now = Date.now();
-        return exp + ALLOWED_SKEW_MS < now;
-    } catch (err) {
-        console.warn("❌ Failed to decode token:", err);
-        return true;
-    }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-    const token = localStorage.getItem("authToken");
-
-    if (!token || isTokenExpired(token)) {
-        console.warn("⛔ Token expired. Redirecting to login.");
-        // Clear cache on token expiry
-        servicesCache = null;
-        cacheTimestamp = null;
-        localStorage.removeItem('servicesCache');
-        window.location.href = "/login";
-        return;
-    }
-
-    const headers = {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-    };
-
-    const options = { method, headers };
-    if (body) options.body = JSON.stringify(body);
-
-    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Request failed: ${response.status} - ${errorText}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-
-    if (contentType && contentType.includes("application/json")) {
-        try {
-            return await response.json();
-        } catch (err) {
-            console.warn("Expected JSON but failed to parse:", err);
-            return null;
-        }
-    }
-
-    return null;
-};
+let servicesCache = initializeCache();
+let cacheTimestamp = servicesCache?.timestamp || null;
 
 // Save cache to localStorage for persistence
 const saveCacheToStorage = (data) => {
@@ -165,45 +106,54 @@ export default function MainPage() {
       }
     }, []);
 
-    // Separate function for actual API call
+    // Separate function for actual API call using the api utility
     const fetchFreshServices = async () => {
       console.log("🔄 Fetching fresh services data");
       setLoading(true);
 
-      const data = await secureFetch("/services");
-      const newServices = data || [];
-      
-      const currentTime = Date.now();
+      try {
+        const data = await api.get("api/services");
+        const newServices = data || [];
+        
+        const currentTime = Date.now();
 
-      // Only update state and cache if data has actually changed
-      if (!servicesCache || hasDataChanged(newServices, servicesCache.data)) {
-        console.log("🔄 Services data updated with fresh data");
-        
-        // Update cache
-        servicesCache = {
-          data: newServices,
-          timestamp: currentTime
-        };
-        cacheTimestamp = currentTime;
-        
-        // Persist to localStorage
-        saveCacheToStorage(newServices);
-        
-        if (isMountedRef.current) {
-          setServices(newServices);
-          setError(null);
+        // Only update state and cache if data has actually changed
+        if (!servicesCache || hasDataChanged(newServices, servicesCache.data)) {
+          console.log("🔄 Services data updated with fresh data");
+          
+          // Update cache
+          servicesCache = {
+            data: newServices,
+            timestamp: currentTime
+          };
+          cacheTimestamp = currentTime;
+          
+          // Persist to localStorage
+          saveCacheToStorage(newServices);
+          
+          if (isMountedRef.current) {
+            setServices(newServices);
+            setError(null);
+          }
+        } else {
+          console.log("✅ No changes in services data, updating timestamp only");
+          // Just update the timestamp to extend cache life
+          cacheTimestamp = currentTime;
+          servicesCache.timestamp = currentTime;
+          saveCacheToStorage(servicesCache.data);
         }
-      } else {
-        console.log("✅ No changes in services data, updating timestamp only");
-        // Just update the timestamp to extend cache life
-        cacheTimestamp = currentTime;
-        servicesCache.timestamp = currentTime;
-        saveCacheToStorage(servicesCache.data);
-      }
 
-      if (isMountedRef.current) {
-        setLoading(false);
-        setInitialLoad(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+          setInitialLoad(false);
+        }
+      } catch (error) {
+        console.error("❌ Error in fetchFreshServices:", error);
+        if (isMountedRef.current) {
+          setLoading(false);
+          setInitialLoad(false);
+          throw error;
+        }
       }
     };
 
@@ -228,10 +178,15 @@ export default function MainPage() {
 
     const handleSave = async (updated) => {
         const method = updated.id ? "PUT" : "POST";
-        const endpoint = updated.id ? `/services/${updated.id}` : "/services";
+        const endpoint = updated.id ? `api/services/${updated.id}` : "api/services";
 
         try {
-            const saved = await secureFetch(endpoint, method, updated);
+            let saved;
+            if (updated.id) {
+                saved = await api.put(endpoint, updated);
+            } else {
+                saved = await api.post(endpoint, updated);
+            }
 
             setServices((prev) => {
                 const exists = prev.some((s) => s.id === saved.id);
@@ -267,7 +222,8 @@ export default function MainPage() {
 
     const handleDelete = async (id) => {
         try {
-            await secureFetch(`/services/${id}`, "DELETE");
+            await api.delete(`api/services/${id}`);
+            
             setServices((prev) => {
                 const newServices = prev.filter((s) => s.id !== id);
                 

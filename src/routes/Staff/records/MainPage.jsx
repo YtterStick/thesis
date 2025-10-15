@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import RecordTable from "./RecordTable.jsx";
 import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, Calendar } from "lucide-react";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const MainPage = () => {
     const { theme } = useTheme();
@@ -22,29 +23,10 @@ const MainPage = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const token = localStorage.getItem("authToken");
-
-                const [recordsRes, summaryRes] = await Promise.all([
-                    fetch("http://localhost:8080/api/records/staff", {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                        },
-                    }),
-                    fetch("http://localhost:8080/api/records/staff/summary", {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                        },
-                    })
-                ]);
-
-                if (!recordsRes.ok) throw new Error("Failed to fetch records");
-                if (!summaryRes.ok) throw new Error("Failed to fetch summary data");
-
+                // Use the api utility instead of direct fetch calls
                 const [recordsData, summaryData] = await Promise.all([
-                    recordsRes.json(),
-                    summaryRes.json()
+                    api.get("api/records/staff"),
+                    api.get("api/records/staff/summary")
                 ]);
 
                 // Make sure to include the id field for the print functionality

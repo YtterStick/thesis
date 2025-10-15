@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QRCode from "react-qr-code";
 import { ScrollText, Save, Eye, Receipt, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const ALLOWED_SKEW_MS = 5000;
 const CACHE_DURATION = 5 * 60 * 1000;
@@ -33,51 +34,7 @@ const initializeCache = () => {
 let receiptSettingsCache = initializeCache();
 let cacheTimestamp = receiptSettingsCache?.timestamp || null;
 
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    receiptSettingsCache = null;
-    cacheTimestamp = null;
-    localStorage.removeItem('receiptSettingsCache');
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-  if (!response.ok) {
-    console.error(`❌ ${method} ${endpoint} failed:`, response.status);
-    throw new Error(`Request failed: ${response.status}`);
-  }
-
-  const contentType = response.headers.get("content-type");
-  return contentType && contentType.includes("application/json")
-    ? response.json()
-    : response.text();
-};
+// Remove the old secureFetch function and use the api utility instead
 
 const saveCacheToStorage = (data) => {
   try {
@@ -191,42 +148,56 @@ export default function ReceiptConfigPage() {
       setIsLoading(true);
     }
 
-    const data = await secureFetch("/format-settings");
-    
-    const newSettings = {
-      storeName: data?.storeName || "",
-      address: data?.address || "",
-      phone: data?.phone || "",
-      footerNote: data?.footerNote || "",
-      trackingUrl: data?.trackingUrl || "",
-    };
-
-    const currentTime = Date.now();
-
-    if (!receiptSettingsCache || hasDataChanged(newSettings, receiptSettingsCache.data)) {
-      console.log("🔄 Receipt settings updated with fresh data");
+    try {
+      // Use the api utility instead of direct fetch
+      const data = await api.get("api/format-settings");
       
-      receiptSettingsCache = {
-        data: newSettings,
-        timestamp: currentTime
+      const newSettings = {
+        storeName: data?.storeName || "",
+        address: data?.address || "",
+        phone: data?.phone || "",
+        footerNote: data?.footerNote || "",
+        trackingUrl: data?.trackingUrl || "",
       };
-      cacheTimestamp = currentTime;
-      
-      saveCacheToStorage(newSettings);
-      
-      if (isMountedRef.current) {
-        setSettings(newSettings);
-      }
-    } else {
-      console.log("✅ No changes in receipt settings, updating timestamp only");
-      cacheTimestamp = currentTime;
-      receiptSettingsCache.timestamp = currentTime;
-      saveCacheToStorage(receiptSettingsCache.data);
-    }
 
-    if (isMountedRef.current) {
-      setIsLoading(false);
-      setInitialLoad(false);
+      const currentTime = Date.now();
+
+      if (!receiptSettingsCache || hasDataChanged(newSettings, receiptSettingsCache.data)) {
+        console.log("🔄 Receipt settings updated with fresh data");
+        
+        receiptSettingsCache = {
+          data: newSettings,
+          timestamp: currentTime
+        };
+        cacheTimestamp = currentTime;
+        
+        saveCacheToStorage(newSettings);
+        
+        if (isMountedRef.current) {
+          setSettings(newSettings);
+        }
+      } else {
+        console.log("✅ No changes in receipt settings, updating timestamp only");
+        cacheTimestamp = currentTime;
+        receiptSettingsCache.timestamp = currentTime;
+        saveCacheToStorage(receiptSettingsCache.data);
+      }
+
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        setInitialLoad(false);
+      }
+    } catch (error) {
+      console.error("Error fetching receipt settings:", error);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        setInitialLoad(false);
+        toast({
+          title: "Error",
+          description: "Failed to load receipt configuration",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -258,7 +229,8 @@ export default function ReceiptConfigPage() {
         trackingUrl: settings.trackingUrl 
       };
       
-      await secureFetch("/format-settings", "POST", payload);
+      // Use the api utility for POST request
+      await api.post("api/format-settings", payload);
       
       receiptSettingsCache = {
         data: payload,

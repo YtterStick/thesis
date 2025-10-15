@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
 import QR from "qrcode";
 import { Printer } from "lucide-react";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const ServiceInvoiceCard = ({ transaction, settings }) => {
   if (!transaction || !settings) return null;
@@ -39,11 +40,12 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
         });
   };
 
+  // Updated QR code logic for your domain
   const qrValue =
     settings.trackingUrl && (invoiceNumber || transactionId)
       ? settings.trackingUrl.includes("{id}")
         ? settings.trackingUrl.replace("{id}", invoiceNumber || transactionId)
-        : `http://localhost:3000/track/${invoiceNumber || transactionId}`
+        : `https://starwashph.com/track/${invoiceNumber || transactionId}`
       : null;
 
   if (qrValue) {

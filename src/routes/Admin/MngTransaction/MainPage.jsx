@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
 import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, Calendar, Filter } from "lucide-react";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const MainPage = () => {
     const { theme } = useTheme();
@@ -20,18 +21,9 @@ const MainPage = () => {
     useEffect(() => {
         const fetchRecords = async () => {
             try {
-                const token = localStorage.getItem("authToken");
-                const res = await fetch("http://localhost:8080/api/admin/records", {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                });
-
-                if (!res.ok) throw new Error("Failed to fetch records");
-
-                const data = await res.json();
-
+                // Use the api utility instead of direct fetch
+                const data = await api.get("api/admin/records");
+                
                 const mapped = data.map((r) => ({
                     id: r.id,
                     invoiceNumber: r.invoiceNumber, // Add invoice number

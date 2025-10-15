@@ -2,10 +2,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { PackageX, PhilippinePeso, Package, Clock8, Timer, AlertCircle, LineChart } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 15000;
-const ALLOWED_SKEW_MS = 5000;
 
 const initializeCache = () => {
   try {
@@ -27,57 +27,6 @@ const initializeCache = () => {
 
 let staffDashboardCache = initializeCache();
 let cacheTimestamp = staffDashboardCache?.timestamp || null;
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    console.warn("⛔ Token expired. Redirecting to login.");
-    staffDashboardCache = null;
-    cacheTimestamp = null;
-    localStorage.removeItem('staffDashboardCache');
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  try {
-    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-    if (!response.ok) {
-      console.error(`❌ ${method} ${endpoint} failed:`, response.status);
-      throw new Error(`Request failed: ${response.status}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    return contentType && contentType.includes("application/json")
-      ? response.json()
-      : response.text();
-  } catch (error) {
-    console.error('Fetch error:', error);
-    throw error;
-  }
-};
 
 const saveCacheToStorage = (data) => {
   try {
@@ -192,74 +141,74 @@ const StaffDashboardPage = () => {
 
   const fetchFreshData = async () => {
     console.log("🔄 Fetching fresh staff dashboard data");
-    const token = localStorage.getItem('authToken');
     
-    if (!token || isTokenExpired(token)) {
-      throw new Error('Authentication required');
+    if (isMountedRef.current) {
+      setDashboardData(prev => ({ ...prev, loading: true }));
     }
 
-    const response = await fetch('http://localhost:8080/api/dashboard/staff', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch dashboard data: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    const newDashboardData = {
-      todayIncome: data.todayIncome || 0,
-      todayLoads: data.todayLoads || 0,
-      unwashedCount: data.unwashedCount || 0,
-      unclaimedCount: data.unclaimedCount || 0,
-      allMachines: data.allMachines || [],
-      completedUnclaimedTransactions: data.completedUnclaimedTransactions || [],
-    };
-
-    const currentTime = Date.now();
-
-    if (!staffDashboardCache || hasDataChanged(newDashboardData, staffDashboardCache.data)) {
-      console.log("🔄 Staff dashboard data updated with fresh data");
+    try {
+      // Use the api utility instead of direct fetch
+      const data = await api.get("api/dashboard/staff");
       
-      staffDashboardCache = {
-        data: newDashboardData,
-        timestamp: currentTime
+      const newDashboardData = {
+        todayIncome: data.todayIncome || 0,
+        todayLoads: data.todayLoads || 0,
+        unwashedCount: data.unwashedCount || 0,
+        unclaimedCount: data.unclaimedCount || 0,
+        allMachines: data.allMachines || [],
+        completedUnclaimedTransactions: data.completedUnclaimedTransactions || [],
       };
-      cacheTimestamp = currentTime;
-      
-      saveCacheToStorage(staffDashboardCache);
-      
-      if (isMountedRef.current) {
-        setDashboardData({
-          ...newDashboardData,
-          loading: false,
-          error: null,
-          lastUpdated: new Date(),
-          dataVersion: (dashboardData.dataVersion || 0) + 1
-        });
+
+      const currentTime = Date.now();
+
+      if (!staffDashboardCache || hasDataChanged(newDashboardData, staffDashboardCache.data)) {
+        console.log("🔄 Staff dashboard data updated with fresh data");
+        
+        staffDashboardCache = {
+          data: newDashboardData,
+          timestamp: currentTime
+        };
+        cacheTimestamp = currentTime;
+        
+        saveCacheToStorage(staffDashboardCache);
+        
+        if (isMountedRef.current) {
+          setDashboardData({
+            ...newDashboardData,
+            loading: false,
+            error: null,
+            lastUpdated: new Date(),
+            dataVersion: (dashboardData.dataVersion || 0) + 1
+          });
+        }
+      } else {
+        console.log("✅ No changes in staff dashboard data, updating timestamp only");
+        cacheTimestamp = currentTime;
+        staffDashboardCache.timestamp = currentTime;
+        saveCacheToStorage(staffDashboardCache);
+        
+        if (isMountedRef.current) {
+          setDashboardData(prev => ({
+            ...prev,
+            loading: false,
+            error: null,
+            lastUpdated: new Date()
+          }));
+        }
       }
-    } else {
-      console.log("✅ No changes in staff dashboard data, updating timestamp only");
-      cacheTimestamp = currentTime;
-      staffDashboardCache.timestamp = currentTime;
-      saveCacheToStorage(staffDashboardCache);
-      
+
+      if (isMountedRef.current) {
+        setInitialLoad(false);
+      }
+    } catch (error) {
+      console.error('Error fetching fresh staff data:', error);
       if (isMountedRef.current) {
         setDashboardData(prev => ({
           ...prev,
           loading: false,
-          error: null,
-          lastUpdated: new Date()
+          error: error.message
         }));
       }
-    }
-
-    if (isMountedRef.current) {
-      setInitialLoad(false);
     }
   };
 

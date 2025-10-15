@@ -5,6 +5,7 @@ import {
   decodeToken,
   clearAuthTokens,
 } from "@/lib/auth"; // ✅ centralized token logic
+import { api } from "@/lib/api-config"; // Import the api utility
 
 export const useLogout = () => {
   const navigate = useNavigate();
@@ -24,24 +25,14 @@ export const useLogout = () => {
           console.log("⏳ Expires at:", new Date(decoded.exp * 1000).toLocaleString());
         }
 
-        // 🔐 Call backend logout
+        // 🔐 Call backend logout using the api utility
         try {
-          const response = await fetch("http://localhost:8080/logout", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          const text = await response.text();
-
-          if (!response.ok) {
-            console.warn("🚧 Logout failed:", text);
-          } else {
-            console.log("✅ Backend logout success");
-          }
+          // Use the api utility instead of direct fetch
+          await api.post("/logout");
+          console.log("✅ Backend logout success");
         } catch (err) {
           console.warn("⚠️ Backend logout error:", err.message);
+          // Continue with client-side logout even if backend fails
         }
       }
 

@@ -15,6 +15,7 @@ import {
     RefreshCw,
 } from "lucide-react";
 import PropTypes from "prop-types";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchResultClick }) => {
     const { theme, setTheme } = useTheme();
@@ -131,26 +132,12 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     // Fetch notifications
     const fetchNotifications = async () => {
         try {
-            const token = localStorage.getItem("authToken");
-            console.log("Fetching notifications with token:", token);
+            console.log("Fetching notifications...");
 
-            const response = await fetch("http://localhost:8080/api/notifications", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            console.log("Notifications response status:", response.status);
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Fetched notifications:", data);
-                setNotifications(data);
-            } else {
-                console.error("Failed to fetch notifications:", response.status);
-                const errorText = await response.text();
-                console.error("Error details:", errorText);
-            }
+            // Use the api utility instead of direct fetch
+            const data = await api.get("api/notifications");
+            console.log("Fetched notifications:", data);
+            setNotifications(data);
         } catch (error) {
             console.error("Error fetching notifications:", error);
         }
@@ -159,19 +146,10 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     // Fetch unread count
     const fetchUnreadCount = async () => {
         try {
-            const token = localStorage.getItem("authToken");
-            const response = await fetch("http://localhost:8080/api/notifications/unread-count", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (response.ok) {
-                const count = await response.json();
-                setUnreadCount(count);
-                return count;
-            }
-            return unreadCount;
+            // Use the api utility instead of direct fetch
+            const count = await api.get("api/notifications/unread-count");
+            setUnreadCount(count);
+            return count;
         } catch (error) {
             console.error("Error fetching unread count:", error);
             return unreadCount;
@@ -181,14 +159,9 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     // Mark notification as read
     const markAsRead = async (id) => {
         try {
-            const token = localStorage.getItem("authToken");
-            await fetch(`http://localhost:8080/api/notifications/${id}/read`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
+            // Use the api utility instead of direct fetch
+            await api.post(`api/notifications/${id}/read`);
+            
             // Refresh notifications and count
             fetchNotifications();
             fetchUnreadCount();
@@ -200,14 +173,9 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     // Mark all as read
     const markAllAsRead = async () => {
         try {
-            const token = localStorage.getItem("authToken");
-            await fetch("http://localhost:8080/api/notifications/read-all", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
+            // Use the api utility instead of direct fetch
+            await api.post("api/notifications/read-all");
+            
             // Refresh notifications and count
             fetchNotifications();
             fetchUnreadCount();

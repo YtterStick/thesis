@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { WashingMachine, WrenchIcon, X, PlusCircle, Save, Grid, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -16,64 +16,51 @@ import washingAnimation from "@/assets/lottie/washing-machine.json";
 import dryerAnimation from "@/assets/lottie/dryer-machine.json";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+import { api } from "@/lib/api-config"; // Import the api utility
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Initialize cache properly
+const initializeCache = () => {
+  try {
+    const stored = localStorage.getItem('machinesCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Check if cache is still valid
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        console.log("📦 Initializing machines from stored cache");
+        return parsed;
+      } else {
+        console.log("🗑️ Stored machines cache expired");
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load machines cache from storage:', error);
+  }
+  return null;
+};
+
+// Global cache instances
+let machinesCache = initializeCache();
+let cacheTimestamp = machinesCache?.timestamp || null;
+
+// Save cache to localStorage for persistence
+const saveCacheToStorage = (data) => {
+  try {
+    localStorage.setItem('machinesCache', JSON.stringify({
+      data: data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save machines cache to storage:', error);
+  }
+};
 
 const initialForm = {
   name: "",
   type: "",
   capacityKg: "",
   status: "Available",
-};
-
-const ALLOWED_SKEW_MS = 5000;
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-
-  if (!token || isTokenExpired(token)) {
-    window.location.href = "/login";
-    return;
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Request failed: ${response.status} - ${errorText}`);
-  }
-
-  const contentType = response.headers.get("content-type");
-
-  if (contentType && contentType.includes("application/json")) {
-    try {
-      return await response.json();
-    } catch (err) {
-      console.warn("Expected JSON but failed to parse:", err);
-      return null;
-    }
-  }
-
-  return null;
 };
 
 function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit }) {
@@ -451,8 +438,15 @@ export default function MachineMainPage() {
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   
   const [form, setForm] = useState(initialForm);
-  const [machines, setMachines] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [machines, setMachines] = useState(() => {
+    if (machinesCache && machinesCache.data) {
+      console.log("🎯 Initializing machines state with cached data");
+      return machinesCache.data;
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(!machinesCache); // Only loading if no cache
+  const [initialLoad, setInitialLoad] = useState(!machinesCache); // Only initial load if no cache
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -479,20 +473,102 @@ export default function MachineMainPage() {
     document.body.style.overflow = modalOpen ? "hidden" : "";
   }, [modalOpen]);
 
-  useEffect(() => {
-    const fetchMachines = async () => {
-      try {
-        const data = await secureFetch("/machines");
-        setMachines(data);
-      } catch (err) {
-        setError("Failed to load machines. Make sure you're logged in.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Function to check if data has actually changed
+  const hasDataChanged = (newData, oldData) => {
+    if (!oldData) return true;
+    return JSON.stringify(newData) !== JSON.stringify(oldData);
+  };
 
-    fetchMachines();
+  const fetchMachines = useCallback(async (forceRefresh = false) => {
+    try {
+      const now = Date.now();
+      
+      // Check cache first unless forced refresh
+      if (!forceRefresh && machinesCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+        console.log("📦 Using cached machines data");
+        
+        // Always update with cached data to ensure UI is populated
+        setMachines(machinesCache.data);
+        setLoading(false);
+        setInitialLoad(false);
+        return;
+      }
+
+      await fetchFreshMachines();
+    } catch (err) {
+      console.error("❌ Error fetching machines:", err.message);
+      
+      // On error, keep cached data if available
+      if (machinesCache) {
+        console.log("⚠️ Fetch failed, falling back to cached machines data");
+        setMachines(machinesCache.data);
+        setError("Failed to refresh machines. Showing cached data.");
+      } else {
+        setError("Failed to load machines. Make sure you're logged in.");
+      }
+      setLoading(false);
+      setInitialLoad(false);
+    }
   }, []);
+
+  // Separate function for actual API call using the api utility
+  const fetchFreshMachines = async () => {
+    console.log("🔄 Fetching fresh machines data");
+    setLoading(true);
+
+    try {
+      // Use the api utility instead of direct fetch
+      const data = await api.get("api/machines");
+      const newMachines = data || [];
+      
+      const currentTime = Date.now();
+
+      // Only update state and cache if data has actually changed
+      if (!machinesCache || hasDataChanged(newMachines, machinesCache.data)) {
+        console.log("🔄 Machines data updated with fresh data");
+        
+        // Update cache
+        machinesCache = {
+          data: newMachines,
+          timestamp: currentTime
+        };
+        cacheTimestamp = currentTime;
+        
+        // Persist to localStorage
+        saveCacheToStorage(newMachines);
+        
+        setMachines(newMachines);
+        setError(null);
+      } else {
+        console.log("✅ No changes in machines data, updating timestamp only");
+        // Just update the timestamp to extend cache life
+        cacheTimestamp = currentTime;
+        machinesCache.timestamp = currentTime;
+        saveCacheToStorage(machinesCache.data);
+      }
+
+      setLoading(false);
+      setInitialLoad(false);
+    } catch (error) {
+      console.error("❌ Error in fetchFreshMachines:", error);
+      setLoading(false);
+      setInitialLoad(false);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    // Always show cached data immediately if available
+    if (machinesCache) {
+      console.log("🚀 Showing cached machines data immediately");
+      setMachines(machinesCache.data);
+      setLoading(false);
+      setInitialLoad(false);
+    }
+    
+    // Then fetch fresh data
+    fetchMachines();
+  }, [fetchMachines]);
 
   const handleSubmit = async () => {
     if (!form.name || !form.type || !form.capacityKg) {
@@ -513,17 +589,36 @@ export default function MachineMainPage() {
       return;
     }
 
-    const method = form.id ? "PUT" : "POST";
-    const endpoint = form.id ? `/machines/${form.id}` : "/machines";
-
     try {
-      await secureFetch(endpoint, method, {
-        ...form,
-        capacityKg: parseFloat(form.capacityKg),
-      });
+      let saved;
+      if (form.id) {
+        // Use the api utility for PUT request
+        saved = await api.put(`api/machines/${form.id}`, {
+          ...form,
+          capacityKg: parseFloat(form.capacityKg),
+        });
+      } else {
+        // Use the api utility for POST request
+        saved = await api.post("api/machines", {
+          ...form,
+          capacityKg: parseFloat(form.capacityKg),
+        });
+      }
 
-      const updatedMachines = await secureFetch("/machines");
+      // Update local state and cache
+      const updatedMachines = form.id 
+        ? machines.map(m => m.id === saved.id ? saved : m)
+        : [...machines, saved];
+      
       setMachines(updatedMachines);
+      
+      // Update cache
+      machinesCache = {
+        data: updatedMachines,
+        timestamp: Date.now()
+      };
+      cacheTimestamp = Date.now();
+      saveCacheToStorage(updatedMachines);
 
       toast({
         title: form.id ? "Machine updated" : "Machine added",
@@ -534,7 +629,13 @@ export default function MachineMainPage() {
       setSelectedMachine(null);
       setModalOpen(false);
     } catch (error) {
+      console.error("❌ Error saving machine:", error);
       setError("Failed to save machine.");
+      toast({
+        title: "Save failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -558,10 +659,21 @@ export default function MachineMainPage() {
 
   const handleDelete = async (id) => {
     try {
-      await secureFetch(`/machines/${id}`, "DELETE");
+      // Use the api utility for DELETE request
+      await api.delete(`api/machines/${id}`);
 
-      const updatedMachines = await secureFetch("/machines");
+      // Update local state and cache
+      const updatedMachines = machines.filter(m => m.id !== id);
       setMachines(updatedMachines);
+      
+      // Update cache
+      machinesCache = {
+        data: updatedMachines,
+        timestamp: Date.now()
+      };
+      cacheTimestamp = Date.now();
+      saveCacheToStorage(updatedMachines);
+      
       setConfirmDeleteId(null);
 
       toast({
@@ -569,7 +681,7 @@ export default function MachineMainPage() {
         description: "The machine has been removed successfully.",
       });
     } catch (error) {
-      console.error("Error deleting machine:", error);
+      console.error("❌ Error deleting machine:", error);
       setError("Failed to delete machine.");
       toast({
         title: "Delete failed",
@@ -592,6 +704,58 @@ export default function MachineMainPage() {
   const SkeletonListItem = () => (
     <div className="h-16 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
   );
+
+  // Show skeleton loader only during initial load AND when no cached data is available
+  if (initialLoad && !machinesCache) {
+    return (
+      <div className="min-h-screen px-6 pb-6 pt-4 text-slate-900 dark:text-white">
+        {/* Header Skeleton */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg animate-pulse"
+                 style={{
+                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 }}></div>
+            <div className="space-y-2">
+              <div className="h-6 w-44 rounded-lg animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+              <div className="h-4 w-56 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+            </div>
+          </div>
+          <div className="h-10 w-40 rounded-lg animate-pulse"
+               style={{
+                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               }}></div>
+        </motion.div>
+
+        {/* Content Skeleton */}
+        <div className="space-y-8">
+          {[...Array(2)].map((_, sectionIndex) => (
+            <div key={sectionIndex} className="space-y-4">
+              <div className="h-6 w-32 rounded animate-pulse"
+                   style={{
+                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   }}></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {[...Array(5)].map((_, i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen px-6 pb-6 pt-4 text-slate-900 dark:text-white">

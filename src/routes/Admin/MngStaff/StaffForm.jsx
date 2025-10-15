@@ -7,50 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-
-const ALLOWED_SKEW_MS = 5000;
-
-const isTokenExpired = (token) => {
-    try {
-        const payload = token.split(".")[1];
-        const decoded = JSON.parse(atob(payload));
-        const exp = decoded.exp * 1000;
-        const now = Date.now();
-
-        return exp + ALLOWED_SKEW_MS < now;
-    } catch (err) {
-        console.warn("❌ Failed to decode token:", err);
-        return true;
-    }
-};
-
-const secureFetch = async (endpoint, method = "POST", body = null) => {
-    const token = localStorage.getItem("authToken");
-
-    if (!token || isTokenExpired(token)) {
-        console.warn("⛔ Token expired. Redirecting to login.");
-        window.location.href = "/login";
-        return;
-    }
-
-    const headers = {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-    };
-
-    const options = { method, headers };
-    if (body) options.body = JSON.stringify(body);
-
-    const response = await fetch(`http://localhost:8080${endpoint}`, options);
-
-    if (!response.ok) {
-        const error = await response.json();
-        console.error(`❌ ${method} ${endpoint} failed:`, error);
-        throw new Error(error.message || "Request failed");
-    }
-
-    return response.json();
-};
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const StaffForm = ({ onAdd, onClose }) => {
     const { theme } = useTheme();
@@ -162,7 +119,8 @@ const StaffForm = ({ onAdd, onClose }) => {
         };
 
         try {
-            const result = await secureFetch("/register", "POST", payload);
+            // Use the api utility instead of secureFetch
+            const result = await api.post("/register", payload);
 
             if (typeof onAdd === "function") {
                 onAdd({
