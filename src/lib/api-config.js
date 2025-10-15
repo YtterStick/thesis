@@ -1,13 +1,13 @@
 // lib/api-config.js
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://thesis-g0pr.onrender.com',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://thesis-g0pr.onrender.com', // No /api here
   timeout: 10000
 };
 
 // Helper function to get full API URL
 export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${API_CONFIG.baseURL}/api/${cleanEndpoint}`;
+  return `${API_CONFIG.baseURL}/${cleanEndpoint}`;  // No /api here either
 };
 
 // Get auth token from localStorage

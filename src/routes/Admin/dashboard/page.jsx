@@ -48,13 +48,13 @@ const saveCacheToStorage = (data) => {
 // Test if basic authentication works
 const testBasicAuth = async () => {
     try {
-        console.log('🔍 Testing /me endpoint...');
-        const userInfo = await api.get('me');
-        console.log('✅ /me endpoint successful:', userInfo);
-        console.log('👤 Current user role:', userInfo.role);
+        console.log("🔍 Testing /me endpoint...");
+        const userInfo = await api.get("me");
+        console.log("✅ /me endpoint successful:", userInfo);
+        console.log("👤 Current user role:", userInfo.role);
         return userInfo;
     } catch (error) {
-        console.error('❌ /me endpoint failed:', error);
+        console.error("❌ /me endpoint failed:", error);
         return null;
     }
 };
@@ -117,8 +117,7 @@ export default function AdminDashboardPage() {
 
             console.log("🔐 User authenticated, proceeding to dashboard data...");
 
-            // Use your existing api.get function which should handle tokens automatically
-            const data = await api.get("dashboard/admin");
+            const data = await api.get("api/dashboard/admin");
 
             const newDashboardData = {
                 totalIncome: data.totalIncome || 0,
