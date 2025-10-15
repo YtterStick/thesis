@@ -5,7 +5,7 @@ export const API_CONFIG = {
 
 export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${API_CONFIG.baseURL}/${cleanEndpoint}`;
+  return `${API_CONFIG.baseURL}/api/${cleanEndpoint}`;
 };
 
 const getAuthToken = () => {
@@ -30,6 +30,8 @@ const isPublicEndpoint = (endpoint) => {
   const publicEndpoints = [
     'login',
     'register',
+    'health',
+    'api/health'
   ];
   return publicEndpoints.some(publicEndpoint => 
     endpoint.includes(publicEndpoint)

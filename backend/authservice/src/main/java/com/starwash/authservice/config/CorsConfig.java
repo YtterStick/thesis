@@ -19,6 +19,8 @@ public class CorsConfig {
                 
                 registry.addMapping("/**")
                         .allowedOrigins(
+                            "http://localhost:3000",
+                            "https://localhost:3000",
                             "https://starwashph.com",
                             "https://www.starwashph.com"
                         )
@@ -28,7 +30,7 @@ public class CorsConfig {
                         .allowCredentials(true)
                         .maxAge(3600);
                 
-                System.out.println("✅ CORS configured for origins: starwashph.com");
+                System.out.println("✅ CORS configured for origins: localhost:3000, starwashph.com");
             }
         };
     }
