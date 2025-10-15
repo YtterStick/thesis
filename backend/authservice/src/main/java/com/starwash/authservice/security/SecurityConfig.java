@@ -41,8 +41,6 @@ public class SecurityConfig {
                         // Public endpoints - FIXED: Include API paths
                         .requestMatchers(
                                 "/",
-                                "/health",
-                                "/api/health",
                                 "/api/login",      // Added /api/ prefix
                                 "/api/register",   // Added /api/ prefix
                                 "/login",

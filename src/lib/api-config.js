@@ -30,8 +30,6 @@ const isPublicEndpoint = (endpoint) => {
   const publicEndpoints = [
     'login',
     'register',
-    'health',
-    'api/health'
   ];
   return publicEndpoints.some(publicEndpoint => 
     endpoint.includes(publicEndpoint)
