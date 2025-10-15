@@ -5,7 +5,7 @@ export const API_CONFIG = {
 
 export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${API_CONFIG.baseURL}/api/${cleanEndpoint}`;
+  return `${API_CONFIG.baseURL}/${cleanEndpoint}`;
 };
 
 const getAuthToken = () => {
