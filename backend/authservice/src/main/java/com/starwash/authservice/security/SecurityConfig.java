@@ -47,7 +47,12 @@ public class SecurityConfig {
                         "/api/health",
                         "/api/laundry-jobs",
                         "/api/services",
-                        "/api/services/**"
+                        "/api/services/**",
+                        "/api/stock",
+                        "/api/stock/**",
+                        "/api/machines",
+                        "/api/machines/**",
+                        "/api/terms"
                     ).permitAll()
                     
                     // OPTIONS preflight requests

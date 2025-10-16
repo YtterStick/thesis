@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, ScrollText } from "lucide-react";
 
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
 
 const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -18,7 +18,7 @@ const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_BASE_URL}/terms`);
+      const response = await fetch(`${API_BASE_URL}/api/terms`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch terms: ${response.status}`);

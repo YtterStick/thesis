@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 // Assets
 import assetClothing from "@/assets/USER_ASSET/asset_clothing.png";
 
+const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
+
 const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -18,7 +20,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
       setLoading(true);
       console.log("🔄 Starting to fetch services from backend...");
       
-      const response = await fetch('http://localhost:8080/api/services');
+      const response = await fetch(`${API_BASE_URL}/api/services`);
       
       console.log("📡 Response status:", response.status);
       console.log("📡 Response ok:", response.ok);
@@ -44,7 +46,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchStockItems = async () => {
     try {
       console.log("🔄 Fetching stock items...");
-      const response = await fetch('http://localhost:8080/api/stock');
+      const response = await fetch(`${API_BASE_URL}/api/stock`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -63,7 +65,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchMachines = async () => {
     try {
       console.log("🔄 Fetching machines...");
-      const response = await fetch('http://localhost:8080/api/machines');
+      const response = await fetch(`${API_BASE_URL}/api/machines`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
