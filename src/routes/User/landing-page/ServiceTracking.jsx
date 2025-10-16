@@ -15,6 +15,8 @@ import dryerMachine from "@/assets/lottie/dryer-machine.json";
 import clothes from "@/assets/lottie/clothes.json";
 import unwashed from "@/assets/lottie/unwashed.json";
 
+const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
+
 const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
     const [receiptNumber, setReceiptNumber] = useState("");
     const [showStatus, setShowStatus] = useState(false);
@@ -80,7 +82,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
 
         try {
             console.log(`🔍 Fetching tracking data for: ${invoiceNumber}`);
-            const response = await fetch(`http://localhost:8080/api/track/${invoiceNumber}`);
+            const response = await fetch(`${API_BASE_URL}/api/track/${invoiceNumber}`);
 
             if (!response.ok) {
                 if (response.status === 404) {
