@@ -10,6 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import PaymentSection from "./PaymentSection";
 import ServiceSelector from "./ServiceSelector";
 import ConsumablesSection from "./ConsumablesSection";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
 const POLLING_INTERVAL = 60000; // 1 minute polling
@@ -159,53 +160,20 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
     const fetchFreshData = async () => {
         console.log("🔄 Fetching fresh transaction form data");
-        const token = localStorage.getItem("authToken");
-        if (!token || typeof token !== "string" || !token.includes(".")) {
-            toast({
-                title: "Authentication Error",
-                description: "Invalid or missing token. Please log in again.",
-                variant: "destructive",
-            });
-            window.location.href = "/login";
-            return;
-        }
-
+        
         try {
-            const [servicesRes, stockRes, paymentRes] = await Promise.all([
-                fetch("http://localhost:8080/api/services", {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                }),
-                fetch("http://localhost:8080/api/stock", {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                }),
-                fetch("http://localhost:8080/api/payment-settings", {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                })
+            // Use the api utility instead of direct fetch calls
+            const [servicesData, stockData, paymentData] = await Promise.all([
+                api.get("api/services"),
+                api.get("api/stock"),
+                api.get("api/payment-settings")
             ]);
 
-            if (!servicesRes.ok || !stockRes.ok) {
-                throw new Error("Failed to fetch data");
-            }
-
-            const servicesData = await servicesRes.json();
-            const stockData = await stockRes.json();
             const safeStockItems = Array.isArray(stockData) ? stockData : (stockData.items ?? []);
 
             let paymentMethodsData = ["Cash"];
-            if (paymentRes.ok) {
-                const paymentData = await paymentRes.json();
-                if (paymentData.gcashEnabled) {
-                    paymentMethodsData.push("GCash");
-                }
+            if (paymentData && paymentData.gcashEnabled) {
+                paymentMethodsData.push("GCash");
             }
 
             const newData = {

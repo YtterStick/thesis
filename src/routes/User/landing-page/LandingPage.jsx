@@ -65,6 +65,8 @@ const LandingPage = () => {
   ]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const [autoSearchId, setAutoSearchId] = useState("");
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
 
   // Use your theme hook
   const { theme } = useTheme();
@@ -86,11 +88,52 @@ const LandingPage = () => {
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
+
+    // Check for auto-search parameter in URL
+    const handleAutoSearch = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchParam = urlParams.get('search');
+      
+      if (searchParam && !hasAutoSearched) {
+        console.log("🔍 Auto-search detected:", searchParam);
+        setAutoSearchId(searchParam);
+        setHasAutoSearched(true);
+        
+        // Scroll to service tracking section after a short delay to ensure component is mounted
+        setTimeout(() => {
+          const trackingElement = document.getElementById("service_tracking");
+          if (trackingElement) {
+            console.log("📍 Scrolling to service tracking section");
+            trackingElement.scrollIntoView({ 
+              behavior: "smooth",
+              block: "start"
+            });
+          }
+        }, 1000);
+      }
+    };
+
+    // Check if we're already at the service_tracking section
+    const checkHash = () => {
+      if (window.location.hash === '#service_tracking') {
+        console.log("📍 Already at service tracking section");
+        handleAutoSearch();
+      }
+    };
+
+    // Handle initial load
+    if (window.location.hash === '#service_tracking' || window.location.search.includes('search=')) {
+      handleAutoSearch();
+    }
+
+    // Also check hash changes
+    window.addEventListener('hashchange', checkHash);
     
     return () => {
       window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('hashchange', checkHash);
     };
-  }, []);
+  }, [hasAutoSearched]);
 
   useEffect(() => {
     fetchLaundryStats();
@@ -377,7 +420,11 @@ const LandingPage = () => {
       </div>
 
       <div id="service_tracking">
-        <ServiceTracking isVisible={isVisible} isDarkMode={isDarkMode} />
+        <ServiceTracking 
+          isVisible={isVisible} 
+          isDarkMode={isDarkMode} 
+          autoSearchId={autoSearchId} // Pass the auto-search ID
+        />
       </div>
 
       <div id="terms">

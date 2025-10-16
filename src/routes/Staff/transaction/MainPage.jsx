@@ -5,54 +5,7 @@ import TotalPreviewCard from "@/components/TotalPreviewCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { RotateCcw, XCircle } from "lucide-react";
-
-const ALLOWED_SKEW_MS = 5000;
-
-const isTokenExpired = (token) => {
-    try {
-        const payload = token.split(".")[1];
-        const decoded = JSON.parse(atob(payload));
-        const exp = decoded.exp * 1000;
-        const now = Date.now();
-        return exp + ALLOWED_SKEW_MS < now;
-    } catch (err) {
-        console.warn("❌ Failed to decode token:", err);
-        return true;
-    }
-};
-
-const secureFetch = async (endpoint, method = "POST", body = null) => {
-    const token = localStorage.getItem("authToken");
-    if (!token || typeof token !== "string" || !token.includes(".") || isTokenExpired(token)) {
-        window.location.href = "/login";
-        throw new Error("Token expired or invalid");
-    }
-
-    try {
-        const payload = token.split(".")[1];
-        const decoded = JSON.parse(atob(payload));
-        if (decoded.sub) {
-            localStorage.setItem("staffId", decoded.sub);
-        }
-    } catch (err) {
-        console.warn("❌ Failed to extract staffId from token:", err);
-    }
-
-    const headers = {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-    };
-
-    const options = { method, headers };
-    if (body) options.body = JSON.stringify(body);
-
-    const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Request failed: ${response.status} - ${errorText}`);
-    }
-    return response.json();
-};
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const MainPage = () => {
     const formRef = useRef();
@@ -95,7 +48,8 @@ const MainPage = () => {
         setErrorMessage(null);
 
         try {
-            const response = await secureFetch("/transactions", "POST", payload);
+            // Use the api utility directly for the POST request
+            const response = await api.post("api/transactions", payload);
             console.log("🧾 Invoice saved:", response.invoiceNumber);
 
             const staffId = localStorage.getItem("staffId");

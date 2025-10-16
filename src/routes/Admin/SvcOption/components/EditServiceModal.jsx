@@ -4,7 +4,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, X, AlertCircle } from "lucide-react";
+import { Save, X, AlertCircle, Lock } from "lucide-react";
 
 // Permanent services that cannot be modified
 const PERMANENT_SERVICES = ["Wash & Dry", "Wash", "Dry"];
@@ -40,28 +40,30 @@ export default function EditServiceModal({ service, onClose, onSave }) {
   const validateForm = () => {
     const newErrors = {};
     
-    // Name validation
-    if (!form.name.trim()) {
-      newErrors.name = "Service name is required";
-    } else {
-      const name = form.name.trim();
-      const normalized = name.toLowerCase();
-      
-      // Prevent variations of Wash and Dry
-      if (normalized === "washes" || normalized === "washs") {
-        newErrors.name = "Service name must be exactly 'Wash'";
-      } else if (normalized === "drys" || normalized === "dries") {
-        newErrors.name = "Service name must be exactly 'Dry'";
-      } else if (normalized === "wash" && name !== "Wash") {
-        newErrors.name = "Service name must be exactly 'Wash'";
-      } else if (normalized === "dry" && name !== "Dry") {
-        newErrors.name = "Service name must be exactly 'Dry'";
-      }
-      
-      // Prevent any variations containing wash/dry
-      if ((normalized.includes("wash") || normalized.includes("dry")) && 
-          !PERMANENT_SERVICES.map(s => s.toLowerCase()).includes(normalized)) {
-        newErrors.name = "Service name cannot contain variations of 'Wash' or 'Dry'";
+    // Name validation - only for non-permanent services
+    if (!isPermanentService) {
+      if (!form.name.trim()) {
+        newErrors.name = "Service name is required";
+      } else {
+        const name = form.name.trim();
+        const normalized = name.toLowerCase();
+        
+        // Prevent variations of Wash and Dry
+        if (normalized === "washes" || normalized === "washs") {
+          newErrors.name = "Service name must be exactly 'Wash'";
+        } else if (normalized === "drys" || normalized === "dries") {
+          newErrors.name = "Service name must be exactly 'Dry'";
+        } else if (normalized === "wash" && name !== "Wash") {
+          newErrors.name = "Service name must be exactly 'Wash'";
+        } else if (normalized === "dry" && name !== "Dry") {
+          newErrors.name = "Service name must be exactly 'Dry'";
+        }
+        
+        // Prevent any variations containing wash/dry
+        if ((normalized.includes("wash") || normalized.includes("dry")) && 
+            !PERMANENT_SERVICES.map(s => s.toLowerCase()).includes(normalized)) {
+          newErrors.name = "Service name cannot contain variations of 'Wash' or 'Dry'";
+        }
       }
     }
 
@@ -75,6 +77,9 @@ export default function EditServiceModal({ service, onClose, onSave }) {
   };
 
   const handleChange = (field, value) => {
+    // Don't allow name changes for permanent services
+    if (field === "name" && isPermanentService) return;
+    
     setForm((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -132,7 +137,7 @@ export default function EditServiceModal({ service, onClose, onSave }) {
               {isPermanentService && (
                 <p className="text-xs mt-1 flex items-center gap-1" 
                    style={{ color: isDarkMode ? '#0891B2' : '#0E7490' }}>
-                  <AlertCircle size={12} />
+                  <Lock size={12} />
                   Permanent service - name cannot be changed
                 </p>
               )}
@@ -155,28 +160,50 @@ export default function EditServiceModal({ service, onClose, onSave }) {
             <div>
               <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                 Service Name
+                {isPermanentService && (
+                  <span className="ml-2 text-xs" style={{ color: isDarkMode ? '#0891B2' : '#0E7490' }}>
+                    (Locked)
+                  </span>
+                )}
               </Label>
-              <Input
-                className="rounded-lg border-2 transition-all"
-                style={{
-                  backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                  borderColor: errors.name 
-                    ? (isDarkMode ? "#F87171" : "#EF4444")
-                    : (isDarkMode ? "#2A524C" : "#0B2B26"),
-                  color: isDarkMode ? "#13151B" : "#0B2B26",
-                }}
-                value={form.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="e.g. Express Service, Premium Care"
-                disabled={isPermanentService}
-              />
+              
+              {isPermanentService ? (
+                // Display-only field for permanent services
+                <div 
+                  className="flex items-center gap-2 rounded-lg border-2 p-2 transition-all"
+                  style={{
+                    backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                  }}
+                >
+                  <Lock size={16} style={{ color: isDarkMode ? '#6B7280' : '#6B7280' }} />
+                  <span className="flex-1">{form.name}</span>
+                </div>
+              ) : (
+                // Editable field for custom services
+                <Input
+                  className="rounded-lg border-2 transition-all"
+                  style={{
+                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    borderColor: errors.name 
+                      ? (isDarkMode ? "#F87171" : "#EF4444")
+                      : (isDarkMode ? "#2A524C" : "#0B2B26"),
+                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                  }}
+                  value={form.name}
+                  onChange={(e) => handleChange("name", e.target.value)}
+                  placeholder="e.g. Express Service, Premium Care"
+                />
+              )}
+              
               {errors.name && (
                 <p className="text-xs mt-1 flex items-center gap-1" style={{ color: isDarkMode ? '#F87171' : '#EF4444' }}>
                   <AlertCircle size={12} />
                   {errors.name}
                 </p>
               )}
-              {!isEditing && (
+              {!isEditing && !isPermanentService && (
                 <p className="text-xs mt-1" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
                   Note: Cannot use names containing "Wash", "Dry", or their variations
                 </p>

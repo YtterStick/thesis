@@ -6,6 +6,7 @@ import { Search, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const MainPage = () => {
     const { theme } = useTheme();
@@ -35,15 +36,8 @@ const MainPage = () => {
     const fetchCompletedTransactions = async () => {
         try {
             setIsLoading(true);
-            const token = localStorage.getItem("authToken");
-            const response = await fetch("http://localhost:8080/api/claiming/completed-unclaimed", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            });
-            if (!response.ok) throw new Error("Failed to fetch completed transactions");
-            const data = await response.json();
+            // Use the api utility instead of direct fetch
+            const data = await api.get("api/claiming/completed-unclaimed");
 
             const filteredData = data.filter((transaction) => {
                 if (transaction.paymentMethod === "GCash") {
@@ -84,15 +78,8 @@ const MainPage = () => {
     const fetchExpiredTransactions = async () => {
         try {
             setIsLoadingExpired(true);
-            const token = localStorage.getItem("authToken");
-            const response = await fetch("http://localhost:8080/api/expired", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            });
-            if (!response.ok) throw new Error("Failed to fetch expired transactions");
-            const data = await response.json();
+            // Use the api utility instead of direct fetch
+            const data = await api.get("api/expired");
 
             const sortedData = data.sort((a, b) => {
                 const aDate = a.dueDate ? new Date(a.dueDate).getTime() : 0;
@@ -131,26 +118,8 @@ const MainPage = () => {
 
     const handleClaim = async (transactionId) => {
         try {
-            const token = localStorage.getItem("authToken");
-            const response = await fetch(`http://localhost:8080/api/claiming/${transactionId}/claim`, {
-                method: "PATCH",
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            });
-
-            if (!response.ok) {
-                if (response.status === 400) {
-                    const errorData = await response.json();
-                    if (errorData.message && errorData.message.includes("expired")) {
-                        throw new Error("Cannot claim expired job");
-                    }
-                    if (errorData.message && errorData.message.includes("GCash")) {
-                        throw new Error("GCash payment not verified");
-                    }
-                }
-                throw new Error("Failed to claim transaction");
-            }
-
-            const claimedTransaction = await response.json();
+            // Use the api utility instead of direct fetch
+            const claimedTransaction = await api.patch(`api/claiming/${transactionId}/claim`);
 
             toast({
                 title: "Success",
@@ -182,16 +151,8 @@ const MainPage = () => {
 
     const handleDispose = async (transactionId) => {
         try {
-            const token = localStorage.getItem("authToken");
-            const response = await fetch(`http://localhost:8080/api/expired/${transactionId}/dispose`, {
-                method: "PATCH",
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || "Failed to dispose transaction");
-            }
+            // Use the api utility instead of direct fetch
+            await api.patch(`api/expired/${transactionId}/dispose`);
 
             toast({
                 title: "Success",

@@ -10,48 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-
-const ALLOWED_SKEW_MS = 5000;
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    return Date.now() > exp + ALLOWED_SKEW_MS;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const fetchInventory = async () => {
-  const token = localStorage.getItem("authToken");
-  if (!token || isTokenExpired(token)) {
-    window.location.href = "/login";
-    return [];
-  }
-
   try {
-    const response = await fetch("http://localhost:8080/api/stock", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Request failed: ${response.status} - ${errorText}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (contentType?.includes("application/json")) {
-      return await response.json();
-    }
-
-    return [];
+    // Use the api utility instead of direct fetch
+    const data = await api.get("api/stock");
+    return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error("Error fetching inventory:", error);
     return [];

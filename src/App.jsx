@@ -1,7 +1,6 @@
 import { ThemeProvider } from "@/contexts/theme-context";
 import { AuthProvider } from "@/contexts/auth-context";
 import {
-  Navigate,
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
@@ -63,7 +62,9 @@ const UnauthorizedPage = () => (
 
 function App() {
   const router = createBrowserRouter([
-    { path: "/", element: <Navigate to="/home" replace /> },
+    // REMOVED the client-side redirect from "/" to "/home"
+    // The server now handles this redirect
+    { path: "/", element: <LandingPage /> }, // Direct render for root path
     { path: "/home", element: <LandingPage /> },
     { path: "/login", element: <LoginPage /> },
     { path: "/unauthorized", element: <UnauthorizedPage /> },

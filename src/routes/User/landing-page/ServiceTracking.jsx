@@ -1,6 +1,6 @@
+import React, { useState, useEffect, useRef } from "react"; // Add useRef import here
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
-import { Search, Loader2, CheckCircle2,Bell,AlertTriangle,Clock,Phone} from "lucide-react";
+import { Search, Loader2, CheckCircle2, Bell, AlertTriangle, Clock, Phone } from "lucide-react";
 
 // Import components
 import ViewReceipt from "./ViewReceipt";
@@ -17,7 +17,12 @@ import unwashed from "@/assets/lottie/unwashed.json";
 
 const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
 
-const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
+const ServiceTracking = ({ 
+  isVisible, 
+  isDarkMode, 
+  isMobile: propIsMobile,
+  autoSearchId // Add this prop for auto-searching
+}) => {
     const [receiptNumber, setReceiptNumber] = useState("");
     const [showStatus, setShowStatus] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
@@ -31,7 +36,17 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile }) => {
     const [error, setError] = useState(null);
     const [trackingData, setTrackingData] = useState(null);
 
-    const mainCardRef = useRef(null);
+    const mainCardRef = useRef(null); // This was causing the error
+
+    // Auto-search when component mounts with autoSearchId
+    useEffect(() => {
+        if (autoSearchId && autoSearchId.trim()) {
+            console.log("🚀 Auto-searching for:", autoSearchId);
+            setReceiptNumber(autoSearchId);
+            fetchTrackingData(autoSearchId);
+            addToRecentSearches(autoSearchId);
+        }
+    }, [autoSearchId]);
 
     // Check if mobile on mount and resize
     useEffect(() => {

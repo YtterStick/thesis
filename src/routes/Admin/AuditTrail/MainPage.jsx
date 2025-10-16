@@ -33,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
 const ALLOWED_SKEW_MS = 5000;
 
 const isTokenExpired = (token) => {
@@ -63,7 +64,7 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
   const options = { method, headers };
   if (body) options.body = JSON.stringify(body);
 
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Request failed: ${response.status} - ${errorText}`);
@@ -99,10 +100,38 @@ const AuditTrailPage = () => {
 
   const pageSizeOptions = [10, 25, 50, 100];
 
+  // Fetch all users from /users endpoint instead of extracting from logs
+  const fetchUsers = useCallback(async () => {
+    try {
+      const data = await secureFetch("/users");
+      console.log("👥 Users response:", data);
+      
+      const userList = data.users || data || [];
+      const uniqueUsers = userList.map(user => ({
+        value: user.username || user.email,
+        label: user.username || user.email
+      }));
+      
+      // Add "Unknown" user for logs without usernames and "All Users" option
+      setUsers([
+        { value: "all", label: "All Users" },
+        ...uniqueUsers,
+        { value: "unknown", label: "Unknown" }
+      ]);
+    } catch (error) {
+      console.error("❌ Failed to fetch users:", error);
+      // Fallback to "All Users" and "Unknown"
+      setUsers([
+        { value: "all", label: "All Users" },
+        { value: "unknown", label: "Unknown" }
+      ]);
+    }
+  }, []);
+
   const fetchAuditLogs = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await secureFetch("/audit-logs");
+      const data = await secureFetch("/api/audit-logs");
       console.log("📊 Audit logs response:", data);
       
       const logs = data.logs || data || [];
@@ -110,18 +139,15 @@ const AuditTrailPage = () => {
       
       setAuditLogs(logs);
       
-      const uniqueUsers = [...new Set(logs.map(log => log.username))].map(username => ({
-        value: username,
-        label: username
-      }));
-      setUsers([{ value: "all", label: "All Users" }, ...uniqueUsers]);
+      // Fetch users separately
+      await fetchUsers();
     } catch (error) {
       console.error("❌ Failed to fetch audit logs:", error);
       setAuditLogs([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchUsers]);
 
   useEffect(() => {
     fetchAuditLogs();
@@ -135,7 +161,10 @@ const AuditTrailPage = () => {
       log.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesAction = selectedAction === "all" || log.action === selectedAction;
-    const matchesUser = selectedUser === "all" || log.username === selectedUser;
+    
+    // Handle user filtering including "unknown" case
+    const matchesUser = selectedUser === "all" || 
+      (selectedUser === "unknown" ? !log.username : log.username === selectedUser);
 
     let matchesDate = true;
     if (dateRange !== "all" && log.timestamp) {
@@ -228,7 +257,7 @@ const AuditTrailPage = () => {
             className="rounded-lg p-2"
             style={{
               backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-              color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+              color: "#F3EDE3",
             }}
           >
             <History size={22} />
@@ -237,7 +266,7 @@ const AuditTrailPage = () => {
             <h1 className="text-2xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
               Audit Trail
             </h1>
-            <p className="text-sm" style={{ color: isDarkMode ? '#9CA3AF' : '#0B2B26/70' }}>
+            <p className="text-sm" style={{ color: isDarkMode ? '#9CA3AF' : '#6B7280' }}>
               Monitor all system activities and user actions
             </p>
           </div>
@@ -246,7 +275,7 @@ const AuditTrailPage = () => {
         <div className="flex items-center gap-2">
           <Button
             onClick={fetchAuditLogs}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 transition-all hover:opacity-80"
             style={{
               backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
               color: "#F3EDE3",
@@ -274,12 +303,16 @@ const AuditTrailPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <Search 
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2" 
+                  size={16} 
+                  style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}
+                />
                 <Input
                   placeholder="Search logs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 rounded-lg border-2"
+                  className="pl-10 rounded-lg border-2 transition-all"
                   style={{
                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                     backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -290,7 +323,7 @@ const AuditTrailPage = () => {
 
               {/* Action Filter */}
               <Select value={selectedAction} onValueChange={setSelectedAction}>
-                <SelectTrigger className="rounded-lg border-2"
+                <SelectTrigger className="rounded-lg border-2 transition-all"
                   style={{
                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                     backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -321,7 +354,7 @@ const AuditTrailPage = () => {
 
               {/* User Filter */}
               <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger className="rounded-lg border-2"
+                <SelectTrigger className="rounded-lg border-2 transition-all"
                   style={{
                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                     backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -352,7 +385,7 @@ const AuditTrailPage = () => {
 
               {/* Date Range Filter */}
               <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="rounded-lg border-2"
+                <SelectTrigger className="rounded-lg border-2 transition-all"
                   style={{
                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                     backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -411,7 +444,7 @@ const AuditTrailPage = () => {
                   setDateRange("all");
                 }}
                 variant="outline"
-                className="rounded-lg border-2"
+                className="rounded-lg border-2 transition-all hover:opacity-80"
                 style={{
                   borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                   backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -445,11 +478,11 @@ const AuditTrailPage = () => {
             
             {/* Items per page selector */}
             <div className="flex items-center gap-2">
-              <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+              <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#6B7280' }}>
                 Show:
               </span>
               <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
-                <SelectTrigger className="w-20 rounded-lg border-2"
+                <SelectTrigger className="w-20 rounded-lg border-2 transition-all"
                   style={{
                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                     backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -488,13 +521,13 @@ const AuditTrailPage = () => {
               <Table>
                 <TableHeader>
                   <TableRow style={{ 
-                    backgroundColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
                   }}>
-                    <TableHead style={{ color: '#F3EDE3' }}>Timestamp</TableHead>
-                    <TableHead style={{ color: '#F3EDE3' }}>User</TableHead>
-                    <TableHead style={{ color: '#F3EDE3' }}>Action</TableHead>
-                    <TableHead style={{ color: '#F3EDE3' }}>Role</TableHead>
-                    <TableHead style={{ color: '#F3EDE3' }}>Description</TableHead>
+                    <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Timestamp</TableHead>
+                    <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>User</TableHead>
+                    <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Action</TableHead>
+                    <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Role</TableHead>
+                    <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Description</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -502,7 +535,7 @@ const AuditTrailPage = () => {
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8">
                         <div className="flex flex-col items-center justify-center">
-                          <History size={48} className="text-gray-400 mb-2" />
+                          <History size={48} style={{ color: isDarkMode ? '#6B7280' : '#6B7280' }} className="mb-2" />
                           <p style={{ color: isDarkMode ? '#9CA3AF' : '#6B7280' }}>
                             {auditLogs.length === 0 ? 'No audit logs available' : 'No logs match your filters'}
                           </p>
@@ -515,23 +548,25 @@ const AuditTrailPage = () => {
                         key={log.id || index} 
                         style={{ 
                           backgroundColor: index % 2 === 0 
-                            ? (isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(11, 43, 38, 0.02)") 
-                            : "transparent" 
+                            ? (isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)") 
+                            : "transparent",
+                          borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
                         }}
                       >
-                        <TableCell style={{ color: isDarkMode ? '#E5E7EB' : '#374151' }}>
+                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#374151' }}>
                           {formatTimestamp(log.timestamp)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <User size={14} className="text-gray-400" />
-                            <span style={{ color: isDarkMode ? '#E5E7EB' : '#374151' }}>
+                            <User size={14} style={{ color: isDarkMode ? '#6B7280' : '#6B7280' }} />
+                            <span style={{ color: isDarkMode ? '#13151B' : '#374151' }}>
                               {log.username || 'Unknown'}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge 
+                            className="transition-all hover:opacity-80"
                             style={{ 
                               backgroundColor: getActionColor(log.action),
                               color: 'white'
@@ -540,10 +575,10 @@ const AuditTrailPage = () => {
                             {log.action || 'UNKNOWN'}
                           </Badge>
                         </TableCell>
-                        <TableCell style={{ color: isDarkMode ? '#E5E7EB' : '#374151' }}>
+                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#374151' }}>
                           {log.entityType || 'System'}
                         </TableCell>
-                        <TableCell style={{ color: isDarkMode ? '#E5E7EB' : '#374151' }}>
+                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#374151' }}>
                           {log.description || 'No description'}
                         </TableCell>
                       </TableRow>
@@ -567,7 +602,7 @@ const AuditTrailPage = () => {
                     size="sm"
                     onClick={goToFirstPage}
                     disabled={currentPage === 1}
-                    className="rounded-lg border-2"
+                    className="rounded-lg border-2 transition-all hover:opacity-80"
                     style={{
                       borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                       backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -583,7 +618,7 @@ const AuditTrailPage = () => {
                     size="sm"
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
-                    className="rounded-lg border-2"
+                    className="rounded-lg border-2 transition-all hover:opacity-80"
                     style={{
                       borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                       backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -613,10 +648,8 @@ const AuditTrailPage = () => {
                           variant={currentPage === pageNum ? "default" : "outline"}
                           size="sm"
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`rounded-lg border-2 ${
-                            currentPage === pageNum 
-                              ? 'font-bold' 
-                              : ''
+                          className={`rounded-lg border-2 transition-all ${
+                            currentPage === pageNum ? 'font-bold' : ''
                           }`}
                           style={{
                             borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -640,7 +673,7 @@ const AuditTrailPage = () => {
                     size="sm"
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
-                    className="rounded-lg border-2"
+                    className="rounded-lg border-2 transition-all hover:opacity-80"
                     style={{
                       borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                       backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
@@ -656,7 +689,7 @@ const AuditTrailPage = () => {
                     size="sm"
                     onClick={goToLastPage}
                     disabled={currentPage === totalPages}
-                    className="rounded-lg border-2"
+                    className="rounded-lg border-2 transition-all hover:opacity-80"
                     style={{
                       borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                       backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",

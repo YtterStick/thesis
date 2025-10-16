@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 // Skeleton Loader Components
 const SkeletonRow = ({ isDarkMode }) => (
@@ -396,17 +397,9 @@ const MissingTable = ({
 
             setIsSearchingLaundryJobs(true);
             try {
-                const token = localStorage.getItem("authToken");
-                const response = await fetch(`http://localhost:8080/api/laundry-jobs/search-by-customer?customerName=${encodeURIComponent(name)}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setLaundryJobSearchResults(data);
-                }
+                // Use the api utility instead of direct fetch
+                const data = await api.get(`api/laundry-jobs/search-by-customer?customerName=${encodeURIComponent(name)}`);
+                setLaundryJobSearchResults(data);
             } catch (error) {
                 console.error("Error searching laundry jobs:", error);
             } finally {

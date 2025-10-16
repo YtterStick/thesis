@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import MissingForm from "./MissingForm";
 import MissingTable from "./MissingTable";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const MissingItemsPage = () => {
     const { theme } = useTheme();
@@ -50,16 +51,8 @@ const MissingItemsPage = () => {
     const fetchMissingItems = async () => {
         try {
             setIsLoading(true);
-            const token = localStorage.getItem("authToken");
-            const response = await fetch(`http://localhost:8080/api/missing-items?t=${new Date().getTime()}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                cache: "no-cache",
-            });
-            if (!response.ok) throw new Error("Failed to fetch missing items");
-            const data = await response.json();
+            // Use the api utility instead of direct fetch
+            const data = await api.get("api/missing-items");
             
             // Sort by found date (newest first)
             const sortedData = data.sort((a, b) => {
@@ -84,15 +77,8 @@ const MissingItemsPage = () => {
     const fetchMachines = async () => {
         try {
             setIsLoadingMachines(true);
-            const token = localStorage.getItem("authToken");
-            const response = await fetch("http://localhost:8080/api/machines", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            });
-            if (!response.ok) throw new Error("Failed to fetch machines");
-            const data = await response.json();
+            // Use the api utility instead of direct fetch
+            const data = await api.get("api/machines");
             setMachines(data);
         } catch (error) {
             console.error(error);
@@ -117,17 +103,8 @@ const MissingItemsPage = () => {
                 return;
             }
 
-            const token = localStorage.getItem("authToken");
-            const response = await fetch("http://localhost:8080/api/missing-items", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(newItem),
-            });
-
-            if (!response.ok) throw new Error("Failed to report missing item");
+            // Use the api utility instead of direct fetch
+            await api.post("api/missing-items", newItem);
 
             toast({
                 title: "Success",
@@ -158,20 +135,8 @@ const MissingItemsPage = () => {
                 return;
             }
 
-            const token = localStorage.getItem("authToken");
-            const response = await fetch(`http://localhost:8080/api/missing-items/${selectedItem.id}/claim`, {
-                method: "PATCH",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ claimedByName: claimName }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Failed to claim item");
-            }
+            // Use the api utility instead of direct fetch
+            await api.patch(`api/missing-items/${selectedItem.id}/claim`, { claimedByName: claimName });
 
             toast({
                 title: "Success",

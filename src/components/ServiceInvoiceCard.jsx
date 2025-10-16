@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
 import QR from "qrcode";
 import { Printer } from "lucide-react";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 const ServiceInvoiceCard = ({ transaction, settings }) => {
   if (!transaction || !settings) return null;
@@ -40,13 +40,11 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
         });
   };
 
-  // Updated QR code logic for your domain
-  const qrValue =
-    settings.trackingUrl && (invoiceNumber || transactionId)
-      ? settings.trackingUrl.includes("{id}")
-        ? settings.trackingUrl.replace("{id}", invoiceNumber || transactionId)
-        : `https://starwashph.com/track/${invoiceNumber || transactionId}`
-      : null;
+  // Updated QR code logic - Use URL parameters before the hash
+  const trackingId = invoiceNumber || transactionId;
+  const qrValue = trackingId 
+    ? `https://starwashph.com/home?search=${encodeURIComponent(trackingId)}#service_tracking`
+    : null;
 
   if (qrValue) {
     console.log("[QR Destination]", qrValue);
@@ -122,7 +120,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
           <div className="col-span-2 flex justify-between">
             <span>Service Type:</span>
             <span className="font-bold">
-              {serviceName || "—"}{" "}
+              {serviceName || "—"}{ " "}
               {servicePrice ? `(${formatCurrency(servicePrice)} per load)` : ""}
             </span>
           </div>

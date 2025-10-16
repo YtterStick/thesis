@@ -16,11 +16,11 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    RefreshCw,
     Search,
 } from "lucide-react";
 import ServiceReceiptCard from "@/components/ServiceReceiptCard";
 import { motion, AnimatePresence } from "framer-motion";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 // Skeleton Loader Components
 const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
@@ -165,26 +165,9 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
     const fetchFormatSettings = async () => {
         try {
             setLoadingSettings(true);
-            const token = localStorage.getItem("authToken");
-
-            const response = await fetch("http://localhost:8080/api/format-settings", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (response.ok) {
-                const settings = await response.json();
-                setFormatSettings(settings);
-            } else {
-                setFormatSettings({
-                    storeName: "StarWash Laundry",
-                    address: "123 Laundry Street, City",
-                    phone: "(123) 456-7890",
-                    footerNote: "Thank you for choosing our service!",
-                });
-            }
+            // Use the api utility instead of direct fetch
+            const settings = await api.get("api/format-settings");
+            setFormatSettings(settings);
         } catch (error) {
             console.error("Error fetching format settings:", error);
             setFormatSettings({
