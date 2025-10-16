@@ -8,7 +8,8 @@ import TermsCondition from "./TermsCondition";
 import { useScrollSpy } from "./useScrollSpy";
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
 import { useTheme } from "@/hooks/use-theme";
-import { publicApi } from "@/lib/public-api-config"; // Import the public API utility
+
+const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
 
 const AnimatedNumber = ({ value, isChanging }) => {
   if (!isChanging) {
@@ -106,11 +107,29 @@ const LandingPage = () => {
   }, []);
 
   const fetchLaundryStats = async () => {
+    let controller = null;
+    
     try {
       setIsRefreshing(true);
       
-      // Use the public API utility instead of direct fetch
-      const laundryJobs = await publicApi.get("laundry-jobs");
+      controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(`${API_BASE_URL}/laundry-jobs`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const laundryJobs = await response.json();
 
       let totalUnwashed = 0;
       let totalWashing = 0;
@@ -177,14 +196,16 @@ const LandingPage = () => {
       });
 
     } catch (error) {
-      console.error("Error fetching laundry stats:", error);
-      setStats([
-        { number: "0", label: "Total Laundry Load", changing: false },
-        { number: "0", label: "Total No. of Washing", changing: false },
-        { number: "0", label: "Total No. of Drying", changing: false }
-      ]);
+      if (error.name !== 'AbortError') {
+        setStats([
+          { number: "0", label: "Total Laundry Load", changing: false },
+          { number: "0", label: "Total No. of Washing", changing: false },
+          { number: "0", label: "Total No. of Drying", changing: false }
+        ]);
+      }
     } finally {
       setIsRefreshing(false);
+      controller = null;
     }
   };
 

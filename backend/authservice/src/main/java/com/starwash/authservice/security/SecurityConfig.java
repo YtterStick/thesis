@@ -47,7 +47,9 @@ public class SecurityConfig {
                                 "/api/logout",
                                 "/api/register",   // Added /api/ prefix
                                 "/login",
-                                "/register")
+                                "/register",
+                                "/laundry-jobs",
+                                "/services")
                         .permitAll()
 
                         // Role-based endpoints - FIXED: Use hasAuthority for explicit control
