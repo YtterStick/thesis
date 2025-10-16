@@ -35,34 +35,39 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // Allow OPTIONS requests for CORS preflight
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // Public endpoints - FIXED: Include API paths
-                        .requestMatchers(
-                                "/",
-                                "/health",
-                                "/api/health",
-                                "/api/login",      // Added /api/ prefix
-                                "/api/logout",
-                                "/api/register",   // Added /api/ prefix
-                                "/login",
-                                "/register",
-                                "api/laundry-jobs",
-                                "api/services")
-                        .permitAll()
-
-                        // Role-based endpoints - FIXED: Use hasAuthority for explicit control
-                        .requestMatchers("/api/dashboard/admin").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/api/dashboard/staff").hasAnyAuthority("ROLE_STAFF", "ROLE_ADMIN")
-                        .requestMatchers("/api/accounts/**").hasAuthority("ROLE_ADMIN")
-
-                        // Other authenticated endpoints
-                        .requestMatchers("/api/**").authenticated()
-                        .requestMatchers("/me").authenticated()
-
-                        .anyRequest().authenticated())
+                    // Public endpoints - no authentication required
+                    .requestMatchers(
+                        "/api/login", 
+                        "/api/register", 
+                        "/api/logout",
+                        "/login",
+                        "/register",
+                        "/",
+                        "/health",
+                        "/api/health",
+                        "/api/laundry-jobs",
+                        "/api/services",
+                        "/api/services/**"
+                    ).permitAll()
+                    
+                    // OPTIONS preflight requests
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    
+                    // Role-based endpoints
+                    .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
+                    .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
+                    .requestMatchers("/api/accounts/**").hasRole("ADMIN")
+                    
+                    // Authenticated endpoints
+                    .requestMatchers("/me").authenticated()
+                    
+                    // Other API endpoints require authentication
+                    .requestMatchers("/api/**").authenticated()
+                    
+                    .anyRequest().authenticated()
+                )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .logout(logout -> logout.disable())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -70,7 +75,8 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
