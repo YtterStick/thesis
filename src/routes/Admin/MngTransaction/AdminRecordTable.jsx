@@ -9,6 +9,7 @@ import * as XLSX from "xlsx";
 import PrintableReceipt from "@/components/PrintableReceipt";
 import { api } from "@/lib/api-config";
 
+// Updated table headers - Removed "Laundry Status"
 const tableHeaders = [
     "Invoice",
     "Name",
@@ -20,7 +21,6 @@ const tableHeaders = [
     "Date",
     "Payment",
     "GCash Ref",
-    "Laundry Status",
     "Pickup Status",
     "Actions",
 ];
@@ -155,9 +155,46 @@ const AdminRecordTable = ({
     const [printData, setPrintData] = useState(null);
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
+    const [allGcashReferences, setAllGcashReferences] = useState({}); // Store ALL GCash references
 
     const rowsPerPage = 10;
     const calendarRef = useRef(null);
+
+    // Format currency with commas
+    const formatCurrency = (amount) => {
+        return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+    };
+
+    // Fetch ALL GCash references once when component loads
+    useEffect(() => {
+        const fetchAllGcashReferences = async () => {
+            try {
+                console.log("🔄 Fetching ALL GCash references...");
+                
+                // Use the same endpoint as your PaymentManagementPage
+                const pendingGcashData = await api.get("api/transactions/pending-gcash");
+                console.log("📦 Received GCash data:", pendingGcashData);
+                
+                // Create a mapping of invoiceNumber -> gcashReference
+                const referencesMap = {};
+                
+                pendingGcashData.forEach(transaction => {
+                    if (transaction.invoiceNumber && transaction.gcashReference) {
+                        referencesMap[transaction.invoiceNumber] = transaction.gcashReference;
+                        console.log(`📝 Mapping: ${transaction.invoiceNumber} -> ${transaction.gcashReference}`);
+                    }
+                });
+                
+                console.log("🗂️ Final references map:", referencesMap);
+                setAllGcashReferences(referencesMap);
+                
+            } catch (error) {
+                console.error("❌ Error fetching GCash references:", error);
+            }
+        };
+
+        fetchAllGcashReferences();
+    }, []);
 
     // Sync local state with props
     useEffect(() => {
@@ -230,6 +267,25 @@ const AdminRecordTable = ({
             return `Until ${format(localSelectedRange.to, "MMM dd, yyyy")}`;
         }
         return "Date Range";
+    };
+
+    // Helper function to get GCash reference - EXACTLY like PaymentManagementPage
+    const getGcashReference = (record) => {
+        // For GCash transactions, try to find the reference
+        if (record.paymentMethod === "GCash") {
+            // First check if we have a reference in our fetched data
+            if (record.invoiceNumber && allGcashReferences[record.invoiceNumber]) {
+                return allGcashReferences[record.invoiceNumber];
+            }
+            // Then check if the record itself has a reference
+            if (record.gcashReference && record.gcashReference !== "—") {
+                return record.gcashReference;
+            }
+            // If no reference found but it's GCash, show "Pending"
+            return "Pending";
+        }
+        // For non-GCash transactions
+        return "—";
     };
 
     // Apply filters
@@ -372,7 +428,7 @@ const AdminRecordTable = ({
         // Apply active filters to export data as well
         const filteredExportItems = applyFilters(exportItems);
 
-        // Prepare data with updated columns
+        // Prepare data with updated columns - REMOVED LAUNDRY STATUS
         const dataToExport = filteredExportItems.map((item) => ({
             "Invoice Number": item.invoiceNumber || "—",
             "Customer Name": item.name,
@@ -380,12 +436,11 @@ const AdminRecordTable = ({
             Loads: item.loads,
             Detergent: item.detergent,
             Fabric: item.fabric || "—",
-            Price: `₱${item.price.toFixed(2)}`,
+            Price: formatCurrency(item.price), // Use formatted currency with commas
             Date: item.createdAt ? format(new Date(item.createdAt), "MMM dd, yyyy") : "—",
             "Payment Method": item.paymentMethod || "—",
-            "GCash Reference": item.gcashReference || "—",
+            "GCash Reference": getGcashReference(item), // Use the helper function
             "Payment Status": item.paid ? "Paid" : "Pending", // Updated to show Pending instead of Unpaid
-            "Laundry Status": item.laundryStatus,
             "Pickup Status": item.disposed ? "Disposed" : item.expired ? "Expired" : item.pickupStatus,
         }));
 
@@ -401,13 +456,12 @@ const AdminRecordTable = ({
             { wch: 8 }, // Loads
             { wch: 15 }, // Detergent
             { wch: 12 }, // Fabric
-            { wch: 12 }, // Price
+            { wch: 15 }, // Price
             { wch: 12 }, // Date
             { wch: 15 }, // Payment Method
             { wch: 20 }, // GCash Reference
             { wch: 12 }, // Payment Status
-            { wch: 15 }, // Laundry Status
-            { wch: 12 }, // Pickup Status
+            { wch: 15 }, // Pickup Status
         ];
         worksheet["!cols"] = colWidths;
 
@@ -500,8 +554,8 @@ const AdminRecordTable = ({
             ["Total Records Exported:", filteredExportItems.length],
             [""],
             ["FINANCIAL SUMMARY"],
-            ["Total Revenue:", `₱${totalIncome.toFixed(2)}`],
-            ["Average Transaction Value:", `₱${filteredExportItems.length > 0 ? (totalIncome / filteredExportItems.length).toFixed(2) : "0.00"}`],
+            ["Total Revenue:", formatCurrency(totalIncome)],
+            ["Average Transaction Value:", formatCurrency(filteredExportItems.length > 0 ? (totalIncome / filteredExportItems.length) : 0)],
             ["Paid Transactions:", paidCount],
             ["Pending Transactions:", pendingCount],
             ["Payment Success Rate:", `${filteredExportItems.length > 0 ? ((paidCount / filteredExportItems.length) * 100).toFixed(1) : "0"}%`],
@@ -731,6 +785,7 @@ const AdminRecordTable = ({
                                 ) : (
                                     paginated.map((record) => {
                                         const isExpanded = expandedRows.has(record.id);
+                                        const gcashRef = getGcashReference(record);
 
                                         return (
                                             <>
@@ -803,7 +858,7 @@ const AdminRecordTable = ({
                                                         className="px-3 py-2 font-semibold whitespace-nowrap"
                                                         style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
                                                     >
-                                                        ₱{record.price.toFixed(2)}
+                                                        {formatCurrency(record.price)}
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 whitespace-nowrap"
@@ -821,15 +876,12 @@ const AdminRecordTable = ({
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 font-mono text-xs whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ 
+                                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                            fontFamily: 'monospace'
+                                                        }}
                                                     >
-                                                        {record.gcashReference}
-                                                    </td>
-                                                    <td className="px-3 py-2 whitespace-nowrap">
-                                                        <div className="flex items-center gap-2">
-                                                            <span style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>{record.laundryStatus}</span>
-                                                            <StatusBadge status={record.laundryStatus} type="laundry" isDarkMode={isDarkMode} />
-                                                        </div>
+                                                        {gcashRef}
                                                     </td>
                                                     <td className="px-3 py-2 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">

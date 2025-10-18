@@ -298,48 +298,48 @@ public class LaundryJobService {
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
-        LaundryJob job = findSingleJobByTransaction(transactionId);
-        Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
-        String svc = (txn != null ? txn.getServiceName() : serviceType);
+        try {
+            LaundryJob job = findSingleJobByTransaction(transactionId);
+            Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
+            String svc = (txn != null ? txn.getServiceName() : serviceType);
 
-        LoadAssignment load = job.getLoadAssignments().stream()
-                .filter(l -> l.getLoadNumber() == loadNumber)
-                .findFirst()
-                .orElse(null);
+            LoadAssignment load = job.getLoadAssignments().stream()
+                    .filter(l -> l.getLoadNumber() == loadNumber)
+                    .findFirst()
+                    .orElse(null);
 
-        if (load == null)
-            return;
+            if (load == null)
+                return;
 
-        String previousStatus = load.getStatus();
-        if (STATUS_COMPLETED.equals(previousStatus) || STATUS_FOLDING.equals(previousStatus))
-            return;
+            String previousStatus = load.getStatus();
+            if (STATUS_COMPLETED.equals(previousStatus) || STATUS_FOLDING.equals(previousStatus))
+                return;
 
-        switch (previousStatus.toUpperCase()) {
-            case STATUS_WASHING:
-                load.setStatus(STATUS_WASHED);
-                releaseMachine(load);
-                break;
-            case STATUS_DRYING:
-                load.setStatus(STATUS_DRIED);
-                releaseMachine(load);
-                break;
-        }
+            // Double-check the timer actually ended
+            if (load.getEndTime() != null && LocalDateTime.now().isAfter(load.getEndTime())) {
+                switch (previousStatus.toUpperCase()) {
+                    case STATUS_WASHING:
+                        load.setStatus(STATUS_WASHED);
+                        releaseMachine(load);
+                        break;
+                    case STATUS_DRYING:
+                        load.setStatus(STATUS_DRIED);
+                        releaseMachine(load);
+                        break;
+                }
 
-        // Send notifications for automatic status changes
-        sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
+                // Send notifications for automatic status changes
+                sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
 
-        laundryJobRepository.save(job);
-
-        // Check if this completion makes all loads completed
-        boolean allCompleted = job.getLoadAssignments().stream()
-                .allMatch(l -> STATUS_COMPLETED.equalsIgnoreCase(l.getStatus()));
-
-        if (allCompleted) {
-            sendCompletionSmsNotification(job, loadNumber);
+                laundryJobRepository.save(job);
+                System.out.println(
+                        "Auto-advanced load " + loadNumber + " from " + previousStatus + " to " + load.getStatus());
+            }
+        } catch (Exception e) {
+            System.err.println("Error in autoAdvanceAfterStepEnds: " + e.getMessage());
+            e.printStackTrace();
         }
     }
-
-    // In LaundryJobService, update the sendStatusChangeNotifications method:
 
     private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, String previousStatus,
             String newStatus) {

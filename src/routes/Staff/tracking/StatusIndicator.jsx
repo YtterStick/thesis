@@ -66,6 +66,10 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
     // Determine if we should show static animation (for completed states)
     const shouldShowStatic = !statusConfig.loop && statusConfig.staticFrame !== undefined;
     
+    // Check if timer is actually running (not just in WASHING/DRYING status)
+    const isTimerRunning = (load.status === "WASHING" || load.status === "DRYING") && 
+                          remaining !== null && remaining > 0;
+    
     return (
         <Tooltip>
             <TooltipTrigger>
@@ -73,9 +77,9 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                     <div className="relative">
                         <Lottie
                             animationData={statusConfig.animation}
-                            loop={statusConfig.loop}
+                            loop={isTimerRunning ? statusConfig.loop : false}
                             style={{ width: 40, height: 40 }}
-                            {...(shouldShowStatic && {
+                            {...(shouldShowStatic && !isTimerRunning && {
                                 initialSegment: [statusConfig.staticFrame, statusConfig.staticFrame]
                             })}
                         />
@@ -89,14 +93,21 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                             </div>
                         )}
                     </div>
-                    <span
-                        className="font-semibold"
-                        style={{ 
-                            color: STATUS_LABEL_COLORS[load.status] || STATUS_LABEL_COLORS.UNWASHED
-                        }}
-                    >
-                        {statusConfig.label}
-                    </span>
+                    <div className="flex flex-col">
+                        <span
+                            className="font-semibold"
+                            style={{ 
+                                color: STATUS_LABEL_COLORS[load.status] || STATUS_LABEL_COLORS.UNWASHED
+                            }}
+                        >
+                            {statusConfig.label}
+                        </span>
+                        {isTimerRunning && (
+                            <span className="text-xs text-gray-500">
+                                {Math.ceil(remaining / 60)}m remaining
+                            </span>
+                        )}
+                    </div>
                 </div>
             </TooltipTrigger>
             <TooltipContent
@@ -106,7 +117,7 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                     borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
                 }}
             >
-                {remaining !== null && remaining > 0
+                {isTimerRunning
                     ? `${Math.ceil(remaining / 60)} min remaining`
                     : load.status === "COMPLETED"
                       ? "Complete"

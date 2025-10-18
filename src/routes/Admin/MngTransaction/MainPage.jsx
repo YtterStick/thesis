@@ -138,38 +138,43 @@ const MainPage = () => {
         !r.disposed
     ).length;
 
+    // Format total income with commas
+    const formatCurrency = (amount) => {
+        return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+    };
+
     const summaryCards = [
         {
             label: "Total Income",
-            value: `₱${totalIncome.toFixed(2)}`,
+            value: formatCurrency(totalIncome),
             icon: <PhilippinePeso size={26} />,
             color: "#3DD9B6",
             tooltip: "Total income from filtered transactions",
         },
         {
             label: "Total Loads",
-            value: totalLoads,
+            value: totalLoads.toLocaleString(),
             icon: <Package size={26} />,
             color: "#60A5FA",
             tooltip: "Total number of laundry loads in filtered period",
         },
         {
             label: "Unwashed Loads",
-            value: unwashed,
+            value: unwashed.toLocaleString(),
             icon: <Clock8 size={26} />,
             color: "#FB923C",
             tooltip: "Individual loads that are not yet completed",
         },
         {
             label: "Expired Loads",
-            value: expired,
+            value: expired.toLocaleString(),
             icon: <TimerOff size={26} />,
             color: "#A78BFA",
             tooltip: "Loads that exceeded their pickup window (excluding disposed loads)",
         },
         {
             label: "Unclaimed Loads",
-            value: unclaimed,
+            value: unclaimed.toLocaleString(),
             icon: <AlertCircle size={26} />,
             color: "#FACC15",
             tooltip: "Completed loads that haven't been picked up yet (excluding expired and disposed loads)",
@@ -397,7 +402,7 @@ const MainPage = () => {
 
     return (
         <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
-            {/* Header */}
+            {/* Header - RESTORED ORIGINAL DESIGN */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -424,9 +429,9 @@ const MainPage = () => {
                     </div>
                 </div>
 
-                {/* Time Filter and Filter Button */}
+                {/* Time Filter and Filter Button - RESTORED ORIGINAL BEAUTIFUL DESIGN */}
                 <div className="flex items-center gap-2">
-                    {/* Time Filter */}
+                    {/* Time Filter - ORIGINAL STYLING */}
                     <div className="flex items-center gap-2">
                         <Calendar
                             size={18}
@@ -453,7 +458,7 @@ const MainPage = () => {
                         </select>
                     </div>
 
-                    {/* Filter Button */}
+                    {/* Filter Button - ORIGINAL STYLING */}
                     <div className="relative" ref={filterDropdownRef}>
                         <button
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
@@ -475,7 +480,7 @@ const MainPage = () => {
                             )}
                         </button>
 
-                        {/* Filter Dropdown */}
+                        {/* Filter Dropdown - ORIGINAL STYLING */}
                         {showFilterDropdown && (
                             <div className="absolute right-0 z-50 mt-2 w-80 rounded-lg border-2 p-4 shadow-lg"
                                  style={{
@@ -626,7 +631,7 @@ const MainPage = () => {
                 </div>
             </motion.div>
 
-            {/* Summary Cards - NOW 5 CARDS WITH UNWASHED LOADS */}
+            {/* Summary Cards - RESTORED ORIGINAL DESIGN */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {loading ? (
                     [...Array(5)].map((_, index) => (
