@@ -141,96 +141,98 @@ public class LaundryJobService {
         return laundryJobRepository.save(job);
     }
 
-   @CacheEvict(value = "laundryJobs", allEntries = true)
-public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, String processedBy) {
-    LaundryJob job = findSingleJobByTransaction(transactionId);
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, String processedBy) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
 
-    LoadAssignment load = job.getLoadAssignments().stream()
-            .filter(l -> l.getLoadNumber() == loadNumber)
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
 
-    if (load.getMachineId() == null) {
-        throw new RuntimeException("No machine assigned");
+        if (load.getMachineId() == null) {
+            throw new RuntimeException("No machine assigned");
+        }
+
+        Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
+        String serviceType = (txn != null ? txn.getServiceName() : "wash");
+
+        String nextStatus = determineNextStatus(serviceType, load);
+
+        int defaultDuration;
+        switch (nextStatus) {
+            case STATUS_WASHING -> defaultDuration = 35;
+            case STATUS_DRYING -> defaultDuration = 40;
+            default -> defaultDuration = 20;
+        }
+
+        int finalDuration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : defaultDuration;
+
+        LocalDateTime now = LocalDateTime.now();
+        load.setStatus(nextStatus);
+        load.setStartTime(now);
+        load.setDurationMinutes(finalDuration);
+        load.setEndTime(now.plusMinutes(finalDuration));
+
+        MachineItem machine = machineRepository.findById(load.getMachineId())
+                .orElseThrow(() -> new RuntimeException("Machine not found"));
+        machine.setStatus(STATUS_IN_USE);
+        machineRepository.save(machine);
+
+        job.setLaundryProcessedBy(processedBy);
+        LaundryJob saved = laundryJobRepository.save(job);
+
+        // Schedule auto-advance ONLY for washing and drying
+        if (STATUS_WASHING.equals(nextStatus) || STATUS_DRYING.equals(nextStatus)) {
+            scheduler.schedule(() -> autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber),
+                    finalDuration, TimeUnit.MINUTES);
+        }
+
+        return saved;
     }
 
-    Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
-    String serviceType = (txn != null ? txn.getServiceName() : "wash");
+    // Add this method to check and sync timer states
+    public void syncTimerStates(LaundryJob job) {
+        LocalDateTime now = LocalDateTime.now();
 
-    String nextStatus = determineNextStatus(serviceType, load);
+        for (LoadAssignment load : job.getLoadAssignments()) {
+            if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
+                    && load.getEndTime() != null && now.isAfter(load.getEndTime())) {
 
-    int defaultDuration;
-    switch (nextStatus) {
-        case STATUS_WASHING -> defaultDuration = 35;
-        case STATUS_DRYING -> defaultDuration = 40;
-        default -> defaultDuration = 20;
-    }
+                // Timer has expired, auto-advance
+                switch (load.getStatus()) {
+                    case STATUS_WASHING:
+                        load.setStatus(STATUS_WASHED);
+                        releaseMachine(load);
+                        break;
+                    case STATUS_DRYING:
+                        load.setStatus(STATUS_DRIED);
+                        releaseMachine(load);
+                        break;
+                }
 
-    int finalDuration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : defaultDuration;
+                // Reschedule if needed for next steps
+                if (STATUS_WASHED.equals(load.getStatus())) {
+                    // Check if this is Wash & Dry service and needs to go to drying
+                    Transaction txn = transactionRepository.findByInvoiceNumber(job.getTransactionId()).orElse(null);
+                    String serviceType = (txn != null ? txn.getServiceName() : "wash");
 
-    LocalDateTime now = LocalDateTime.now();
-    load.setStatus(nextStatus);
-    load.setStartTime(now);
-    load.setDurationMinutes(finalDuration);
-    load.setEndTime(now.plusMinutes(finalDuration));
+                    if ("wash & dry".equalsIgnoreCase(serviceType)) {
+                        load.setStatus(STATUS_DRYING);
+                        load.setStartTime(now);
+                        int dryDuration = load.getDurationMinutes() != null ? load.getDurationMinutes() : 40;
+                        load.setEndTime(now.plusMinutes(dryDuration));
 
-    MachineItem machine = machineRepository.findById(load.getMachineId())
-            .orElseThrow(() -> new RuntimeException("Machine not found"));
-    machine.setStatus(STATUS_IN_USE);
-    machineRepository.save(machine);
-
-    job.setLaundryProcessedBy(processedBy);
-    LaundryJob saved = laundryJobRepository.save(job);
-
-    // Schedule auto-advance ONLY for washing and drying
-    if (STATUS_WASHING.equals(nextStatus) || STATUS_DRYING.equals(nextStatus)) {
-        scheduler.schedule(() -> autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber),
-                finalDuration, TimeUnit.MINUTES);
-    }
-
-    return saved;
-}
-
-// Add this method to check and sync timer states
-public void syncTimerStates(LaundryJob job) {
-    LocalDateTime now = LocalDateTime.now();
-    
-    for (LoadAssignment load : job.getLoadAssignments()) {
-        if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus())) 
-            && load.getEndTime() != null && now.isAfter(load.getEndTime())) {
-            
-            // Timer has expired, auto-advance
-            switch (load.getStatus()) {
-                case STATUS_WASHING:
-                    load.setStatus(STATUS_WASHED);
-                    releaseMachine(load);
-                    break;
-                case STATUS_DRYING:
-                    load.setStatus(STATUS_DRIED);
-                    releaseMachine(load);
-                    break;
-            }
-            
-            // Reschedule if needed for next steps
-            if (STATUS_WASHED.equals(load.getStatus())) {
-                // Check if this is Wash & Dry service and needs to go to drying
-                Transaction txn = transactionRepository.findByInvoiceNumber(job.getTransactionId()).orElse(null);
-                String serviceType = (txn != null ? txn.getServiceName() : "wash");
-                
-                if ("wash & dry".equalsIgnoreCase(serviceType)) {
-                    load.setStatus(STATUS_DRYING);
-                    load.setStartTime(now);
-                    int dryDuration = load.getDurationMinutes() != null ? load.getDurationMinutes() : 40;
-                    load.setEndTime(now.plusMinutes(dryDuration));
-                    
-                    // Schedule drying completion
-                    scheduler.schedule(() -> autoAdvanceAfterStepEnds(serviceType, job.getTransactionId(), load.getLoadNumber()),
-                            dryDuration, TimeUnit.MINUTES);
+                        // Schedule drying completion
+                        scheduler.schedule(
+                                () -> autoAdvanceAfterStepEnds(serviceType, job.getTransactionId(),
+                                        load.getLoadNumber()),
+                                dryDuration, TimeUnit.MINUTES);
+                    }
                 }
             }
         }
     }
-}
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob dryAgain(String transactionId, int loadNumber, String processedBy) {

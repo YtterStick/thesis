@@ -66,63 +66,63 @@ export default function ServiceTrackingPage() {
     }, [jobs, currentPage, totalPages]);
 
     const fetchJobs = useCallback(async () => {
-    try {
-        const data = await api.get("api/laundry-jobs");
+        try {
+            const data = await api.get("api/laundry-jobs");
 
-        const jobsWithLoads = data.map((job) => {
-            const loads = (job.loadAssignments?.length
-                ? job.loadAssignments
-                : Array.from({ length: job.totalLoads || 1 }, (_, i) => ({
-                    loadNumber: i + 1,
-                    machineId: null,
-                    durationMinutes: null,
-                    status: "NOT_STARTED",
-                    startTime: null,
-                    endTime: null,
-                }))
-            ).map((l) => {
-                const currentTime = Date.now();
-                const startTime = l.startTime ? new Date(l.startTime).getTime() : null;
-                const duration = l.durationMinutes || null;
-                
-                let status = l.status?.toUpperCase();
-                
-                // Only trust backend status for timer states
-                // Don't override backend status with frontend calculations
-                if ((status === "WASHING" || status === "DRYING") && startTime && duration) {
-                    const endTime = startTime + duration * 60000;
-                    // Backend should handle the actual status transitions
-                    // We just display what backend tells us
-                }
+            const jobsWithLoads = data.map((job) => {
+                const loads = (
+                    job.loadAssignments?.length
+                        ? job.loadAssignments
+                        : Array.from({ length: job.totalLoads || 1 }, (_, i) => ({
+                              loadNumber: i + 1,
+                              machineId: null,
+                              durationMinutes: null,
+                              status: "NOT_STARTED",
+                              startTime: null,
+                              endTime: null,
+                          }))
+                ).map((l) => {
+                    const currentTime = Date.now();
+                    const startTime = l.startTime ? new Date(l.startTime).getTime() : null;
+                    const duration = l.durationMinutes || null;
+
+                    let status = l.status?.toUpperCase();
+
+                    // Only trust backend status for timer states
+                    // Don't override backend status with frontend calculations
+                    if ((status === "WASHING" || status === "DRYING") && startTime && duration) {
+                        const endTime = startTime + duration * 60000;
+                        // Backend should handle the actual status transitions
+                        // We just display what backend tells us
+                    }
+
+                    return {
+                        loadNumber: l.loadNumber,
+                        machineId: l.machineId || null,
+                        duration: duration,
+                        status: status === "NOT_STARTED" ? "UNWASHED" : status === "COMPLETED" ? "COMPLETED" : status,
+                        startTime: l.startTime,
+                        endTime: l.endTime,
+                        pending: false,
+                    };
+                });
 
                 return {
-                    loadNumber: l.loadNumber,
-                    machineId: l.machineId || null,
-                    duration: duration,
-                    status: status === "NOT_STARTED" ? "UNWASHED" : 
-                           status === "COMPLETED" ? "COMPLETED" : status,
-                    startTime: l.startTime,
-                    endTime: l.endTime,
-                    pending: false,
+                    id: job.id ?? job.transactionId,
+                    ...job,
+                    loads,
                 };
             });
 
-            return {
-                id: job.id ?? job.transactionId,
-                ...job,
-                loads,
-            };
-        });
-
-        setJobs(jobsWithLoads);
-        setError(null);
-        return true;
-    } catch (err) {
-        console.error("Failed to fetch jobs:", err);
-        setError(err.message);
-        return false;
-    }
-}, []);
+            setJobs(jobsWithLoads);
+            setError(null);
+            return true;
+        } catch (err) {
+            console.error("Failed to fetch jobs:", err);
+            setError(err.message);
+            return false;
+        }
+    }, []);
 
     const fetchMachines = async () => {
         try {
@@ -137,29 +137,26 @@ export default function ServiceTrackingPage() {
     };
 
     const fetchData = async (force = false) => {
-    if ((isPolling && !force) || !autoRefresh) return;
+        if ((isPolling && !force) || !autoRefresh) return;
 
-    setIsPolling(true);
-    try {
-        // Use the synced timer endpoint
-        const [jobsSuccess, machinesSuccess] = await Promise.allSettled([
-            api.get("api/laundry-jobs/with-synced-timers"),
-            fetchMachines()
-        ]);
+        setIsPolling(true);
+        try {
+            // Use the synced timer endpoint
+            const [jobsSuccess, machinesSuccess] = await Promise.allSettled([api.get("api/laundry-jobs/with-synced-timers"), fetchMachines()]);
 
-        if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
+            if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
+                setLoading(false);
+            } else if (jobsSuccess.status === "rejected") {
+                throw new Error(jobsSuccess.reason?.message || "Failed to fetch jobs");
+            }
+        } catch (err) {
+            console.error("Failed to fetch data:", err);
+            setError(err.message);
             setLoading(false);
-        } else if (jobsSuccess.status === "rejected") {
-            throw new Error(jobsSuccess.reason?.message || "Failed to fetch jobs");
+        } finally {
+            setIsPolling(false);
         }
-    } catch (err) {
-        console.error("Failed to fetch data:", err);
-        setError(err.message);
-        setLoading(false);
-    } finally {
-        setIsPolling(false);
-    }
-};
+    };
 
     const checkTimerCompletions = useCallback(() => {
         let needsRefresh = false;
