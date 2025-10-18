@@ -14,6 +14,11 @@ const STATUS_ICONS = {
         animation: unwashedAnimation,
         loop: true 
     },
+    NOT_STARTED: {  // Add this for backend status
+        label: "Not Started", 
+        animation: unwashedAnimation,
+        loop: true 
+    },
     WASHING: { 
         label: "Washing", 
         animation: washingAnimation,
@@ -22,8 +27,8 @@ const STATUS_ICONS = {
     WASHED: { 
         label: "Washed", 
         animation: washingAnimation,
-        loop: false, // Static when completed
-        staticFrame: 50 // Use a specific frame for static state
+        loop: false,
+        staticFrame: 50
     },
     DRYING: { 
         label: "Drying", 
@@ -33,8 +38,8 @@ const STATUS_ICONS = {
     DRIED: { 
         label: "Dried", 
         animation: dryingAnimation,
-        loop: false, // Static when completed
-        staticFrame: 30 // Use a specific frame for static state
+        loop: false,
+        staticFrame: 30
     },
     FOLDING: { 
         label: "Folding", 
@@ -44,13 +49,14 @@ const STATUS_ICONS = {
     COMPLETED: { 
         label: "Completed", 
         animation: foldingAnimation,
-        loop: false, // Static when completed
-        staticFrame: 20 // Use a specific frame for static state
+        loop: false,
+        staticFrame: 20
     },
 };
 
 const STATUS_LABEL_COLORS = {
     UNWASHED: "#6B7280",
+    NOT_STARTED: "#6B7280",
     WASHING: "#0891B2",
     WASHED: "#10B981",
     DRYING: "#FB923C",
@@ -60,7 +66,9 @@ const STATUS_LABEL_COLORS = {
 };
 
 const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
-    const statusConfig = STATUS_ICONS[load.status] || STATUS_ICONS.UNWASHED;
+    // Map NOT_STARTED to UNWASHED for icon lookup
+    const displayStatus = load.status === "NOT_STARTED" ? "UNWASHED" : load.status;
+    const statusConfig = STATUS_ICONS[displayStatus] || STATUS_ICONS.UNWASHED;
     const remaining = getRemainingTime(load);
 
     // Determine if we should show static animation (for completed states)
@@ -97,7 +105,7 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                         <span
                             className="font-semibold"
                             style={{ 
-                                color: STATUS_LABEL_COLORS[load.status] || STATUS_LABEL_COLORS.UNWASHED
+                                color: STATUS_LABEL_COLORS[displayStatus] || STATUS_LABEL_COLORS.UNWASHED
                             }}
                         >
                             {statusConfig.label}
@@ -119,7 +127,7 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
             >
                 {isTimerRunning
                     ? `${Math.ceil(remaining / 60)} min remaining`
-                    : load.status === "COMPLETED"
+                    : displayStatus === "COMPLETED"
                       ? "Complete"
                       : "Ready for next step"}
             </TooltipContent>

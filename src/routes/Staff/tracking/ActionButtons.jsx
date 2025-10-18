@@ -16,19 +16,13 @@ const ActionButtons = ({
     machines,
     isDarkMode
 }) => {
+    // Map NOT_STARTED to UNWASHED for logic
+    const displayStatus = load.status === "NOT_STARTED" ? "UNWASHED" : load.status;
+
     if (isLoadRunning(load)) {
         return (
             <div className="flex justify-end">
-                <div
-                    style={{
-                        width: 40,
-                        height: 40,
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        overflow: "hidden",
-                    }}
-                >
+                <div style={{ width: 40, height: 40, display: "flex", justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
                     <div style={{ transform: "scale(0.5)" }}>
                         <Loader />
                     </div>
@@ -37,11 +31,11 @@ const ActionButtons = ({
         );
     }
 
-    // Normalize service type - treat "Wash Only" as "Wash" and "Dry Only" as "Dry"
+    // Normalize service type
     const normalizedServiceType = job.serviceType?.replace(' Only', '') || job.serviceType;
     
-    // Check if the correct machine type is assigned for the current step
-    const machineType = getMachineTypeForStep(load.status, normalizedServiceType);
+    // Check if the correct machine type is assigned
+    const machineType = getMachineTypeForStep(displayStatus, normalizedServiceType);
     const hasCorrectMachine = machineType ? 
         (load.machineId && machines[machineType]?.some(m => m.id === load.machineId)) : 
         true;
@@ -101,7 +95,7 @@ const ActionButtons = ({
 
     return (
         <div className="flex flex-col items-end gap-2">
-            {load.status === "DRIED" ? (
+            {displayStatus === "DRIED" ? (
                 <div className="flex flex-col gap-2 items-end">
                     <CustomButton
                         onClick={() => startDryingAgain(jobKey, loadIndex)}
@@ -121,7 +115,7 @@ const ActionButtons = ({
                         Fold
                     </CustomButton>
                 </div>
-            ) : normalizedServiceType === "Wash" && load.status === "WASHED" ? (
+            ) : normalizedServiceType === "Wash" && displayStatus === "WASHED" ? (
                 <CustomButton
                     onClick={() => advanceStatus(jobKey, loadIndex)}
                     disabled={load.pending}
@@ -130,7 +124,7 @@ const ActionButtons = ({
                 >
                     Done
                 </CustomButton>
-            ) : ["UNWASHED", "WASHED"].includes(load.status) ? (
+            ) : ["UNWASHED", "WASHED", "NOT_STARTED"].includes(displayStatus) ? (
                 <CustomButton
                     onClick={() => startAction(jobKey, loadIndex)}
                     disabled={!hasCorrectMachine || load.pending}
@@ -140,7 +134,7 @@ const ActionButtons = ({
                 >
                     Start
                 </CustomButton>
-            ) : ["DRYING", "FOLDING"].includes(load.status) ? (
+            ) : ["DRYING", "FOLDING"].includes(displayStatus) ? (
                 <CustomButton
                     onClick={() => advanceStatus(jobKey, loadIndex)}
                     disabled={load.pending}
@@ -149,7 +143,7 @@ const ActionButtons = ({
                 >
                     Next
                 </CustomButton>
-            ) : load.status === "COMPLETED" ? (
+            ) : displayStatus === "COMPLETED" ? (
                 <span className="flex items-center gap-1 text-green-600 font-medium">
                     <Check className="h-4 w-4" /> 
                     <span style={{ color: isDarkMode ? '#10B981' : '#059669' }}>

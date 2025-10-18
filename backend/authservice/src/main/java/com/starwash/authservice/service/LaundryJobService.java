@@ -560,85 +560,87 @@ public class LaundryJobService {
     }
 
     private List<LaundryJobDto> processJobsToDtos(List<LaundryJob> jobs) {
-        System.out.println("Processing " + jobs.size() + " jobs to DTOs");
-        
-        if (jobs.isEmpty()) {
-            System.out.println("No jobs to process");
-            return Collections.emptyList();
-        }
-
-        // Log each job being processed
-        for (LaundryJob job : jobs) {
-            System.out.println("Processing job: " + job.getTransactionId() + 
-                              ", Customer: " + job.getCustomerName() +
-                              ", Loads: " + (job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0));
-            
-            if (job.getLoadAssignments() != null) {
-                for (LoadAssignment load : job.getLoadAssignments()) {
-                    System.out.println("  Load " + load.getLoadNumber() + ": " + load.getStatus());
-                }
-            }
-        }
-
-        Set<String> transactionIds = jobs.stream()
-                .map(LaundryJob::getTransactionId)
-                .collect(Collectors.toSet());
-
-        List<Transaction> transactions = transactionRepository.findByInvoiceNumberIn(new ArrayList<>(transactionIds));
-        Map<String, Transaction> transactionMap = transactions.stream()
-                .collect(Collectors.toMap(Transaction::getInvoiceNumber, Function.identity()));
-
-        List<LaundryJobDto> result = new ArrayList<>();
-
-        for (LaundryJob job : jobs) {
-            Transaction tx = transactionMap.get(job.getTransactionId());
-
-            int detergentQty = 0;
-            int fabricQty = 0;
-            LocalDateTime issueDate = null;
-            String serviceType = job.getServiceType();
-            String contact = job.getContact();
-
-            if (tx != null) {
-                issueDate = tx.getIssueDate();
-                serviceType = tx.getServiceName() != null ? tx.getServiceName() : job.getServiceType();
-
-                if (tx.getConsumables() != null) {
-                    detergentQty = tx.getConsumables().stream()
-                            .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                            .mapToInt(c -> c.getQuantity())
-                            .sum();
-
-                    fabricQty = tx.getConsumables().stream()
-                            .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                            .mapToInt(c -> c.getQuantity())
-                            .sum();
-                }
-            }
-
-            System.out.println("Creating DTO for job - Transaction: " + job.getTransactionId() +
-                    ", Service Type: " + serviceType +
-                    ", Job Service Type: " + job.getServiceType());
-
-            LaundryJobDto dto = new LaundryJobDto();
-            dto.setTransactionId(job.getTransactionId());
-            dto.setCustomerName(job.getCustomerName());
-            dto.setContact(contact);
-            dto.setLoadAssignments(job.getLoadAssignments());
-            dto.setDetergentQty(detergentQty);
-            dto.setFabricQty(fabricQty);
-            dto.setStatusFlow(job.getStatusFlow());
-            dto.setCurrentStep(job.getCurrentStep());
-            dto.setIssueDate(issueDate);
-            dto.setServiceType(serviceType);
-            dto.setTotalLoads(job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0);
-
-            result.add(dto);
-        }
-
-        System.out.println("Successfully processed " + result.size() + " job DTOs");
-        return result;
+    System.out.println("Processing " + jobs.size() + " jobs to DTOs");
+    
+    if (jobs.isEmpty()) {
+        System.out.println("No jobs to process");
+        return Collections.emptyList();
     }
+
+    // Log each job being processed
+    for (LaundryJob job : jobs) {
+        System.out.println("Processing job: " + job.getTransactionId() + 
+                          ", Customer: " + job.getCustomerName() +
+                          ", Loads: " + (job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0));
+        
+        if (job.getLoadAssignments() != null) {
+            for (LoadAssignment load : job.getLoadAssignments()) {
+                System.out.println("  Load " + load.getLoadNumber() + ": " + load.getStatus() +
+                                 ", Duration: " + load.getDurationMinutes() +
+                                 ", StartTime: " + load.getStartTime() +
+                                 ", EndTime: " + load.getEndTime());
+            }
+        }
+    }
+
+    Set<String> transactionIds = jobs.stream()
+            .map(LaundryJob::getTransactionId)
+            .collect(Collectors.toSet());
+
+    List<Transaction> transactions = transactionRepository.findByInvoiceNumberIn(new ArrayList<>(transactionIds));
+    Map<String, Transaction> transactionMap = transactions.stream()
+            .collect(Collectors.toMap(Transaction::getInvoiceNumber, Function.identity()));
+
+    List<LaundryJobDto> result = new ArrayList<>();
+
+    for (LaundryJob job : jobs) {
+        Transaction tx = transactionMap.get(job.getTransactionId());
+
+        int detergentQty = 0;
+        int fabricQty = 0;
+        LocalDateTime issueDate = null;
+        String serviceType = job.getServiceType();
+        String contact = job.getContact();
+
+        if (tx != null) {
+            issueDate = tx.getIssueDate();
+            serviceType = tx.getServiceName() != null ? tx.getServiceName() : job.getServiceType();
+
+            if (tx.getConsumables() != null) {
+                detergentQty = tx.getConsumables().stream()
+                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                        .mapToInt(c -> c.getQuantity())
+                        .sum();
+
+                fabricQty = tx.getConsumables().stream()
+                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                        .mapToInt(c -> c.getQuantity())
+                        .sum();
+            }
+        }
+
+        System.out.println("Creating DTO for job - Transaction: " + job.getTransactionId() +
+                ", Service Type: " + serviceType);
+
+        LaundryJobDto dto = new LaundryJobDto();
+        dto.setTransactionId(job.getTransactionId());
+        dto.setCustomerName(job.getCustomerName());
+        dto.setContact(contact);
+        dto.setLoadAssignments(job.getLoadAssignments());
+        dto.setDetergentQty(detergentQty);
+        dto.setFabricQty(fabricQty);
+        dto.setStatusFlow(job.getStatusFlow());
+        dto.setCurrentStep(job.getCurrentStep());
+        dto.setIssueDate(issueDate);
+        dto.setServiceType(serviceType);
+        dto.setTotalLoads(job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0);
+
+        result.add(dto);
+    }
+
+    System.out.println("Successfully processed " + result.size() + " job DTOs");
+    return result;
+}
 
     public LaundryJob findSingleJobByTransaction(String transactionId) {
         return laundryJobRepository.findByTransactionId(transactionId)
