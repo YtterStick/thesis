@@ -172,7 +172,19 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(updatedJob));
     }
 
-    // aggressive
+    // Force complete expired timers
+    @PostMapping("/{transactionId}/force-complete-expired")
+    public ResponseEntity<LaundryJobDto> forceCompleteExpiredTimers(@PathVariable String transactionId) {
+        LaundryJob job = laundryJobService.findSingleJobByTransaction(transactionId);
+        
+        // Force sync and save
+        laundryJobService.syncTimerStates(job);
+        LaundryJob updatedJob = laundryJobService.updateJob(job, "system");
+        
+        return ResponseEntity.ok(toDto(updatedJob));
+    }
+
+    // Aggressive sync for all jobs
     @GetMapping("/with-synced-timers")
     public ResponseEntity<List<LaundryJobDto>> getAllJobsWithSyncedTimers() {
         List<LaundryJobDto> jobs = laundryJobService.getAllJobs();
@@ -181,14 +193,19 @@ public class LaundryJobController {
         for (LaundryJobDto jobDto : jobs) {
             try {
                 LaundryJob job = laundryJobService.findSingleJobByTransaction(jobDto.getTransactionId());
+                
+                // Force sync and save for EVERY job
                 laundryJobService.syncTimerStates(job);
+                laundryJobService.updateJob(job, "system");
+                
             } catch (Exception e) {
                 System.err.println(
                         "❌ Error syncing timer states for job: " + jobDto.getTransactionId() + " - " + e.getMessage());
             }
         }
 
-        return ResponseEntity.ok(jobs);
+        // Return fresh data after all syncs
+        return ResponseEntity.ok(laundryJobService.getAllJobs());
     }
 
     // Search by customer name

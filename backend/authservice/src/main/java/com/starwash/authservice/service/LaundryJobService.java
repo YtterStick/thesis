@@ -137,7 +137,6 @@ public class LaundryJobService {
         return laundryJobRepository.save(job);
     }
 
-    // In LaundryJobService.java - update the startLoad method
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
@@ -185,34 +184,18 @@ public class LaundryJobService {
                 ", startTime: " + now +
                 ", endTime: " + load.getEndTime());
 
-        // Schedule auto-advance ONLY for washing and drying
-        if (STATUS_WASHING.equals(nextStatus) || STATUS_DRYING.equals(nextStatus)) {
-            scheduler.schedule(() -> {
-                try {
-                    autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber);
-                } catch (Exception e) {
-                    System.err.println("❌ Error in scheduled auto-advance: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            }, finalDuration, TimeUnit.MINUTES);
-
-            System.out.println("⏰ Scheduled auto-advance for " + finalDuration + " minutes from now");
-        }
-
         return saved;
     }
 
-    // Update the syncTimerStates to be more aggressive
     public void syncTimerStates(LaundryJob job) {
         LocalDateTime now = LocalDateTime.now();
         boolean jobChanged = false;
 
         for (LoadAssignment load : job.getLoadAssignments()) {
-            // Check if timer should be completed immediately
             if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
                     && load.getEndTime() != null) {
 
-                boolean isExpired = now.isAfter(load.getEndTime());
+                boolean isExpired = now.isAfter(load.getEndTime()) || now.isEqual(load.getEndTime());
 
                 System.out.println("⏰ Checking timer for load " + load.getLoadNumber() +
                         ", status: " + load.getStatus() +
@@ -223,7 +206,6 @@ public class LaundryJobService {
                 if (isExpired) {
                     String previousStatus = load.getStatus();
 
-                    // Timer has expired, auto-advance immediately
                     switch (load.getStatus()) {
                         case STATUS_WASHING:
                             load.setStatus(STATUS_WASHED);
@@ -238,10 +220,8 @@ public class LaundryJobService {
                     }
                     jobChanged = true;
 
-                    // Send notifications for automatic status changes
                     sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
 
-                    // Clear timer data since step is completed
                     load.setStartTime(null);
                     load.setEndTime(null);
                     load.setDurationMinutes(null);
@@ -249,14 +229,12 @@ public class LaundryJobService {
             }
         }
 
-        // Save the job if any changes were made
         if (jobChanged) {
             laundryJobRepository.save(job);
             System.out.println("💾 Saved job changes due to timer completion");
         }
     }
 
-    // Add a new method to get real-time timer status
     public Map<String, Object> getTimerStatus(String transactionId, int loadNumber) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -266,6 +244,7 @@ public class LaundryJobService {
                 .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
 
         Map<String, Object> timerStatus = new HashMap<>();
+        timerStatus.put("status", load.getStatus());
 
         if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
                 && load.getStartTime() != null && load.getEndTime() != null) {
@@ -278,10 +257,11 @@ public class LaundryJobService {
             timerStatus.put("startTime", load.getStartTime());
             timerStatus.put("endTime", load.getEndTime());
             timerStatus.put("durationMinutes", load.getDurationMinutes());
-            timerStatus.put("status", load.getStatus());
+            timerStatus.put("isExpired", remainingSeconds <= 0);
         } else {
             timerStatus.put("isRunning", false);
             timerStatus.put("remainingSeconds", 0);
+            timerStatus.put("isExpired", false);
         }
 
         return timerStatus;
@@ -331,12 +311,7 @@ public class LaundryJobService {
         }
 
         job.setLaundryProcessedBy(processedBy);
-        LaundryJob saved = laundryJobRepository.save(job);
-
-        scheduler.schedule(() -> autoAdvanceAfterStepEnds("dry", transactionId, loadNumber),
-                duration, TimeUnit.MINUTES);
-
-        return saved;
+        return laundryJobRepository.save(job);
     }
 
     private String determineNextStatus(String serviceType, LoadAssignment load) {
@@ -383,65 +358,17 @@ public class LaundryJobService {
         String previousStatus = load.getStatus();
         load.setStatus(newStatus);
 
-        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
-
         if (STATUS_WASHED.equalsIgnoreCase(newStatus) || STATUS_DRIED.equalsIgnoreCase(newStatus)) {
+            load.setStartTime(null);
+            load.setEndTime(null);
+            load.setDurationMinutes(null);
             releaseMachine(load);
         }
 
+        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
+
         job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
-    }
-
-    // In LaundryJobService.java - make auto-advance more aggressive
-    @CacheEvict(value = "laundryJobs", allEntries = true)
-    private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
-        try {
-            LaundryJob job = findSingleJobByTransaction(transactionId);
-            Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
-            String svc = (txn != null ? txn.getServiceName() : serviceType);
-
-            LoadAssignment load = job.getLoadAssignments().stream()
-                    .filter(l -> l.getLoadNumber() == loadNumber)
-                    .findFirst()
-                    .orElse(null);
-
-            if (load == null)
-                return;
-
-            String previousStatus = load.getStatus();
-            if (STATUS_COMPLETED.equals(previousStatus) || STATUS_FOLDING.equals(previousStatus))
-                return;
-
-            // Always check current time against end time, don't rely solely on scheduler
-            LocalDateTime now = LocalDateTime.now();
-            if (load.getEndTime() != null && now.isAfter(load.getEndTime())) {
-                System.out.println("⏰ Scheduled auto-advance triggered for load " + loadNumber);
-
-                switch (previousStatus.toUpperCase()) {
-                    case STATUS_WASHING:
-                        load.setStatus(STATUS_WASHED);
-                        releaseMachine(load);
-                        break;
-                    case STATUS_DRYING:
-                        load.setStatus(STATUS_DRIED);
-                        releaseMachine(load);
-                        break;
-                }
-
-                // Send notifications for automatic status changes
-                sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
-
-                laundryJobRepository.save(job);
-                System.out.println("✅ Scheduled auto-advanced load " + loadNumber + " from " + previousStatus + " to "
-                        + load.getStatus());
-            } else {
-                System.out.println("⏰ Scheduled auto-advance skipped - timer not expired yet");
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Error in autoAdvanceAfterStepEnds: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
 
     private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, String previousStatus,
@@ -605,7 +532,6 @@ public class LaundryJobService {
         Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
         List<LaundryJob> jobs = jobPage.getContent();
 
-        // Filter out ONLY jobs where ALL loads are COMPLETED
         List<LaundryJob> nonCompletedJobs = jobs.stream()
                 .filter(job -> job.getLoadAssignments() != null)
                 .filter(job -> !job.getLoadAssignments().stream()
@@ -621,7 +547,6 @@ public class LaundryJobService {
     public List<LaundryJobDto> getAllJobs() {
         List<LaundryJob> jobs = laundryJobRepository.findAll();
 
-        // Filter out ONLY jobs where ALL loads are COMPLETED
         List<LaundryJob> nonCompletedJobs = jobs.stream()
                 .filter(job -> job.getLoadAssignments() != null)
                 .filter(job -> !job.getLoadAssignments().stream()
@@ -641,7 +566,6 @@ public class LaundryJobService {
             return Collections.emptyList();
         }
 
-        // Log each job being processed
         for (LaundryJob job : jobs) {
             System.out.println("Processing job: " + job.getTransactionId() +
                     ", Customer: " + job.getCustomerName() +
