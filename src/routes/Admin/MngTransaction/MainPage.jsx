@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
-import { PhilippinePeso, Package, Clock8, TimerOff, AlertCircle, Calendar, Filter } from "lucide-react";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter, Clock8 } from "lucide-react";
+import { api } from "@/lib/api-config";
 
 const MainPage = () => {
     const { theme } = useTheme();
@@ -12,21 +12,44 @@ const MainPage = () => {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [timeFilter, setTimeFilter] = useState("all");
-    const [activeFilter, setActiveFilter] = useState(null);
-    const [sortOrder, setSortOrder] = useState(null);
+    const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
+    const [filteredRecordsCount, setFilteredRecordsCount] = useState(0);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
     const filterDropdownRef = useRef(null);
 
+    // Load filters from localStorage on component mount
+    const [activeFilters, setActiveFilters] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const savedFilters = localStorage.getItem('adminRecordFilters');
+            if (savedFilters) {
+                return JSON.parse(savedFilters);
+            }
+        }
+        return {
+            sortBy: "date", // Default to date sorting
+            sortOrder: "desc", // Default to descending
+            statusFilters: [],
+            paymentFilters: [],
+            serviceFilters: []
+        };
+    });
+
+    // Save filters to localStorage whenever they change
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('adminRecordFilters', JSON.stringify(activeFilters));
+        }
+    }, [activeFilters]);
+
     useEffect(() => {
         const fetchRecords = async () => {
             try {
-                // Use the api utility instead of direct fetch
                 const data = await api.get("api/admin/records");
                 
                 const mapped = data.map((r) => ({
                     id: r.id,
-                    invoiceNumber: r.invoiceNumber, // Add invoice number
+                    invoiceNumber: r.invoiceNumber,
                     name: r.customerName,
                     service: r.serviceName,
                     loads: r.loads,
@@ -43,7 +66,7 @@ const MainPage = () => {
                     expired: r.expired,
                     disposed: r.disposed || false,
                     disposedBy: r.disposedBy || "—",
-                    gcashVerified: r.gcashVerified || false,
+                    gcashReference: r.gcashReference || "—",
                     unwashedLoadsCount: r.unwashedLoadsCount || 0,
                 }));
                 setRecords(mapped);
@@ -67,7 +90,205 @@ const MainPage = () => {
         return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, []);
 
-    // Skeleton Loader Components
+    // Filter records based on time filter
+    const filterRecordsByTime = (records) => {
+        const now = new Date();
+        let filtered = [...records];
+
+        switch (timeFilter) {
+            case "today":
+                const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                filtered = records.filter((r) => new Date(r.createdAt) >= todayStart);
+                break;
+            case "week":
+                const weekStart = new Date(now);
+                const dayOfWeek = now.getDay();
+                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                weekStart.setDate(now.getDate() + diffToMonday);
+                weekStart.setHours(0, 0, 0, 0);
+                filtered = records.filter((r) => new Date(r.createdAt) >= weekStart);
+                break;
+            case "month":
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                filtered = records.filter((r) => new Date(r.createdAt) >= monthStart);
+                break;
+            case "year":
+                const yearStart = new Date(now.getFullYear(), 0, 1);
+                filtered = records.filter((r) => new Date(r.createdAt) >= yearStart);
+                break;
+            case "all":
+            default:
+                break;
+        }
+
+        return filtered;
+    };
+
+    const filteredRecords = filterRecordsByTime(records);
+
+    // Update metrics calculation - ADD BACK UNWASHED LOADS
+    const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
+    const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
+    const unwashed = filteredRecords.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
+    const expired = filteredRecords.filter((r) => r.expired && !r.disposed).length;
+    const unclaimed = filteredRecords.filter((r) => 
+        r.pickupStatus === "UNCLAIMED" && 
+        r.laundryStatus === "Completed" &&
+        !r.expired && 
+        !r.disposed
+    ).length;
+
+    const summaryCards = [
+        {
+            label: "Total Income",
+            value: `₱${totalIncome.toFixed(2)}`,
+            icon: <PhilippinePeso size={26} />,
+            color: "#3DD9B6",
+            tooltip: "Total income from filtered transactions",
+        },
+        {
+            label: "Total Loads",
+            value: totalLoads,
+            icon: <Package size={26} />,
+            color: "#60A5FA",
+            tooltip: "Total number of laundry loads in filtered period",
+        },
+        {
+            label: "Unwashed Loads",
+            value: unwashed,
+            icon: <Clock8 size={26} />,
+            color: "#FB923C",
+            tooltip: "Individual loads that are not yet completed",
+        },
+        {
+            label: "Expired Loads",
+            value: expired,
+            icon: <TimerOff size={26} />,
+            color: "#A78BFA",
+            tooltip: "Loads that exceeded their pickup window (excluding disposed loads)",
+        },
+        {
+            label: "Unclaimed Loads",
+            value: unclaimed,
+            icon: <AlertCircle size={26} />,
+            color: "#FACC15",
+            tooltip: "Completed loads that haven't been picked up yet (excluding expired and disposed loads)",
+        },
+    ];
+
+    const timeFilters = [
+        { value: "today", label: "Today" },
+        { value: "week", label: "This Week" },
+        { value: "month", label: "This Month" },
+        { value: "year", label: "This Year" },
+        { value: "all", label: "All Time" },
+    ];
+
+    // Filter options - UPDATED SERVICE AND PAYMENT FILTERS
+    const filterOptions = {
+        sortBy: [
+            { id: "date", label: "Date" },
+            { id: "income", label: "Income" },
+            { id: "loads", label: "Loads" },
+            { id: "name", label: "Name" }
+        ],
+        status: [
+            { id: "expired", label: "Expired Only" },
+            { id: "unclaimed", label: "Unclaimed Only" },
+            { id: "disposed", label: "Disposed Only" },
+            { id: "completed", label: "Completed Only" },
+            { id: "in-progress", label: "In Progress Only" }
+        ],
+        payment: [
+            { id: "paid", label: "Paid Only" },
+            { id: "pending", label: "Pending Only" },
+            { id: "gcash", label: "GCash Only" },
+            { id: "cash", label: "Cash Only" }
+        ],
+        service: [
+            { id: "wash-dry", label: "Wash & Dry Only" },
+            { id: "wash", label: "Wash Only" },
+            { id: "dry", label: "Dry Only" }
+        ]
+    };
+
+    // Handle filter changes
+    const handleSortChange = (sortId) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            sortBy: sortId
+        }));
+    };
+
+    const handleSortOrderChange = (order) => {
+        setActiveFilters(prev => ({
+            ...prev,
+            sortOrder: order
+        }));
+    };
+
+    const handleStatusFilterChange = (statusId) => {
+        setActiveFilters(prev => {
+            const newStatusFilters = prev.statusFilters.includes(statusId)
+                ? prev.statusFilters.filter(id => id !== statusId)
+                : [...prev.statusFilters, statusId];
+            
+            return { ...prev, statusFilters: newStatusFilters };
+        });
+    };
+
+    const handlePaymentFilterChange = (paymentId) => {
+        setActiveFilters(prev => {
+            const newPaymentFilters = prev.paymentFilters.includes(paymentId)
+                ? prev.paymentFilters.filter(id => id !== paymentId)
+                : [...prev.paymentFilters, paymentId];
+            
+            return { ...prev, paymentFilters: newPaymentFilters };
+        });
+    };
+
+    const handleServiceFilterChange = (serviceId) => {
+        setActiveFilters(prev => {
+            const newServiceFilters = prev.serviceFilters.includes(serviceId)
+                ? prev.serviceFilters.filter(id => id !== serviceId)
+                : [...prev.serviceFilters, serviceId];
+            
+            return { ...prev, serviceFilters: newServiceFilters };
+        });
+    };
+
+    const clearAllFilters = () => {
+        const defaultFilters = {
+            sortBy: "date",
+            sortOrder: "desc",
+            statusFilters: [],
+            paymentFilters: [],
+            serviceFilters: []
+        };
+        setActiveFilters(defaultFilters);
+        // Also remove from localStorage
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('adminRecordFilters');
+        }
+    };
+
+    const getActiveFilterCount = () => {
+        let count = 0;
+        // Don't count default date sorting as an active filter
+        if (activeFilters.sortBy && activeFilters.sortBy !== "date") count++;
+        if (activeFilters.sortOrder && activeFilters.sortOrder !== "desc") count++;
+        count += activeFilters.statusFilters.length;
+        count += activeFilters.paymentFilters.length;
+        count += activeFilters.serviceFilters.length;
+        return count;
+    };
+
+    // Handle filtered count update from AdminRecordTable
+    const handleFilteredCountChange = (count) => {
+        setFilteredRecordsCount(count);
+    };
+
+    // Skeleton components
     const SkeletonCard = ({ index }) => (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -132,7 +353,6 @@ const MainPage = () => {
                      }} />
             </div>
 
-            {/* Table Header Skeleton */}
             <div className="overflow-x-auto rounded-lg border-2 mb-4"
                  style={{
                      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -152,7 +372,6 @@ const MainPage = () => {
                 </div>
             </div>
 
-            {/* Table Rows Skeleton */}
             <div className="space-y-3">
                 {[...Array(5)].map((_, rowIndex) => (
                     <div key={rowIndex} className="grid grid-cols-11 gap-4 p-4 rounded-lg border-2"
@@ -175,236 +394,6 @@ const MainPage = () => {
             </div>
         </motion.div>
     );
-
-    // Filter records based on time filter
-    const filterRecordsByTime = (records) => {
-        const now = new Date();
-        let filtered = [...records];
-
-        switch (timeFilter) {
-            case "today":
-                const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                filtered = records.filter((r) => new Date(r.createdAt) >= todayStart);
-                break;
-            case "week":
-                const weekStart = new Date(now);
-                const dayOfWeek = now.getDay();
-                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                weekStart.setDate(now.getDate() + diffToMonday);
-                weekStart.setHours(0, 0, 0, 0);
-                filtered = records.filter((r) => new Date(r.createdAt) >= weekStart);
-                break;
-            case "month":
-                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-                filtered = records.filter((r) => new Date(r.createdAt) >= monthStart);
-                break;
-            case "year":
-                const yearStart = new Date(now.getFullYear(), 0, 1);
-                filtered = records.filter((r) => new Date(r.createdAt) >= yearStart);
-                break;
-            case "all":
-            default:
-                // No filter needed
-                break;
-        }
-
-        return filtered;
-    };
-
-    // Apply filters and sorting based on active filter
-    const getFilteredRecords = () => {
-        let filtered = filterRecordsByTime(records);
-        
-        // Apply additional filters based on active filter
-        switch (activeFilter) {
-            case "income":
-                filtered = [...filtered].sort((a, b) => {
-                    return sortOrder === "asc" ? a.price - b.price : b.price - a.price;
-                });
-                break;
-            case "loads":
-                filtered = [...filtered].sort((a, b) => {
-                    return sortOrder === "asc" ? a.loads - b.loads : b.loads - a.loads;
-                });
-                break;
-            case "expired":
-                // FIX: Only show expired records that are not disposed
-                filtered = filtered.filter((r) => r.expired && !r.disposed);
-                break;
-            case "unwashed":
-                // FIX: Show records that have at least one unwashed load and not disposed
-                filtered = filtered.filter((r) => 
-                    r.unwashedLoadsCount > 0 && 
-                    !r.disposed
-                );
-                break;
-            case "unclaimed":
-                // FIX: Only show unclaimed records where laundry is completed, not expired, and not disposed
-                filtered = filtered.filter((r) => 
-                    r.pickupStatus === "UNCLAIMED" && 
-                    r.laundryStatus === "Completed" &&
-                    !r.expired && 
-                    !r.disposed
-                );
-                break;
-            default:
-                // No additional filter
-                break;
-        }
-        
-        return filtered;
-    };
-
-    const filteredRecords = getFilteredRecords();
-
-    // Handle filter selection
-    const handleFilterSelect = (filterType) => {
-        const isSortable = filterType === "income" || filterType === "loads";
-        
-        // If selecting the same filter that's already active
-        if (activeFilter === filterType) {
-            if (isSortable) {
-                // For sortable filters, check if we need to toggle or deactivate
-                if (sortOrder === "desc") {
-                    // Switch to ascending order
-                    setSortOrder("asc");
-                } else {
-                    // Already in ascending order, so deactivate
-                    setActiveFilter(null);
-                    setSortOrder(null);
-                }
-            } else {
-                // For non-sortable filters, deactivate on second click
-                setActiveFilter(null);
-                setSortOrder(null);
-            }
-        } else {
-            // Set new active filter
-            setActiveFilter(filterType);
-            // Set default sort order for sortable filters
-            setSortOrder(isSortable ? "desc" : null);
-        }
-        
-        setShowFilterDropdown(false);
-    };
-
-    // Clear all filters
-    const clearFilters = () => {
-        setActiveFilter(null);
-        setSortOrder(null);
-        setShowFilterDropdown(false);
-    };
-
-    // Update the metrics calculation - FIXED VERSION
-    const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
-    const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
-
-    // FIX: Unwashed loads should sum the individual unwashed loads count from each transaction
-    const unwashed = filteredRecords.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
-
-    // FIX: Expired loads should only count if NOT disposed
-    const expired = filteredRecords.filter((r) => 
-        r.expired && 
-        !r.disposed
-    ).length;
-
-    // FIX: Unclaimed loads should only count if laundry is completed, not expired, and not disposed
-    const unclaimed = filteredRecords.filter((r) => 
-        r.pickupStatus === "UNCLAIMED" && 
-        r.laundryStatus === "Completed" &&
-        !r.expired && 
-        !r.disposed
-    ).length;
-
-    const summaryCards = [
-        {
-            label: "Total Income",
-            value: `₱${totalIncome.toFixed(2)}`,
-            icon: <PhilippinePeso size={26} />,
-            color: "#3DD9B6",
-            tooltip: "Total income from filtered transactions",
-        },
-        {
-            label: "Total Loads",
-            value: totalLoads,
-            icon: <Package size={26} />,
-            color: "#60A5FA",
-            tooltip: "Total number of laundry loads in filtered period",
-        },
-        {
-            label: "Unwashed Loads",
-            value: unwashed,
-            icon: <Clock8 size={26} />,
-            color: "#FB923C",
-            tooltip: "Individual loads that are not yet completed (excluding disposed loads)",
-        },
-        {
-            label: "Expired Loads",
-            value: expired,
-            icon: <TimerOff size={26} />,
-            color: "#A78BFA",
-            tooltip: "Loads that exceeded their pickup window (excluding disposed loads)",
-        },
-        {
-            label: "Unclaimed Loads",
-            value: unclaimed,
-            icon: <AlertCircle size={26} />,
-            color: "#FACC15",
-            tooltip: "Completed loads that haven't been picked up yet (excluding expired and disposed loads)",
-        },
-    ];
-
-    const filterOptions = [
-        {
-            label: "Sort by Income",
-            value: "income",
-            sortable: true,
-            description: "Sort transactions by price"
-        },
-        {
-            label: "Sort by Loads",
-            value: "loads",
-            sortable: true,
-            description: "Sort transactions by number of loads"
-        },
-        {
-            label: "Show Expired Only",
-            value: "expired",
-            sortable: false,
-            description: "Show only expired records"
-        },
-        {
-            label: "Show Unwashed Only",
-            value: "unwashed",
-            sortable: false,
-            description: "Show only unwashed records"
-        },
-        {
-            label: "Show Unclaimed Only",
-            value: "unclaimed",
-            sortable: false,
-            description: "Show only unclaimed records"
-        },
-    ];
-
-    const timeFilters = [
-        { value: "today", label: "Today" },
-        { value: "week", label: "This Week" },
-        { value: "month", label: "This Month" },
-        { value: "year", label: "This Year" },
-        { value: "all", label: "All Time" },
-    ];
-
-    const getActiveFilterLabel = () => {
-        if (!activeFilter) return "No filter";
-        const filter = filterOptions.find(f => f.value === activeFilter);
-        if (!filter) return "No filter";
-        
-        if (filter.sortable) {
-            return `${filter.label} (${sortOrder === "desc" ? "High to Low" : "Low to High"})`;
-        }
-        return filter.label;
-    };
 
     return (
         <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
@@ -445,11 +434,7 @@ const MainPage = () => {
                         />
                         <select
                             value={timeFilter}
-                            onChange={(e) => {
-                                setTimeFilter(e.target.value);
-                                setActiveFilter(null);
-                                setSortOrder(null);
-                            }}
+                            onChange={(e) => setTimeFilter(e.target.value)}
                             className="rounded-lg border-2 px-3 py-2 text-sm focus:outline-none transition-all"
                             style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
@@ -473,68 +458,167 @@ const MainPage = () => {
                         <button
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                             className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-all ${
-                                activeFilter ? "ring-2 ring-offset-2" : ""
+                                getActiveFilterCount() > 0 ? "ring-2 ring-offset-2 ring-blue-500" : ""
                             }`}
                             style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                                 color: isDarkMode ? "#13151B" : "#0B2B26",
-                                ringColor: activeFilter ? "#3DD9B6" : "",
                             }}
                         >
                             <Filter size={16} />
                             <span>Filter</span>
-                            {activeFilter && (
-                                <span className="ml-1 text-xs opacity-70">
-                                    ({getActiveFilterLabel()})
+                            {getActiveFilterCount() > 0 && (
+                                <span className="ml-1 rounded-full bg-blue-500 px-2 py-1 text-xs text-white">
+                                    {getActiveFilterCount()}
                                 </span>
                             )}
                         </button>
 
                         {/* Filter Dropdown */}
                         {showFilterDropdown && (
-                            <div className="absolute right-0 z-50 mt-2 w-64 rounded-lg border-2 p-2 shadow-lg"
+                            <div className="absolute right-0 z-50 mt-2 w-80 rounded-lg border-2 p-4 shadow-lg"
                                  style={{
                                      backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                                  }}>
-                                <div className="space-y-1">
-                                    {filterOptions.map((option) => (
+                                <div className="mb-4 flex items-center justify-between">
+                                    <h3 className="font-semibold" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                        Filters
+                                    </h3>
+                                    {getActiveFilterCount() > 0 && (
                                         <button
-                                            key={option.value}
-                                            onClick={() => handleFilterSelect(option.value)}
-                                            className={`flex w-full items-start justify-between rounded p-2 text-left text-sm transition-all ${
-                                                activeFilter === option.value 
-                                                    ? "bg-opacity-20" 
-                                                    : "hover:bg-opacity-10"
-                                            }`}
-                                            style={{
-                                                backgroundColor: activeFilter === option.value 
-                                                    ? `${option.value === "income" ? "#3DD9B6" : option.value === "loads" ? "#60A5FA" : option.value === "expired" ? "#A78BFA" : option.value === "unwashed" ? "#FB923C" : "#FACC15"}20`
-                                                    : "transparent",
-                                                color: isDarkMode ? "#13151B" : "#0B2B26",
-                                            }}
+                                            onClick={clearAllFilters}
+                                            className="text-sm text-red-500 hover:text-red-700"
                                         >
-                                            <div>
-                                                <div className="font-medium">{option.label}</div>
-                                                <div className="text-xs opacity-70">{option.description}</div>
-                                            </div>
-                                            {activeFilter === option.value && option.sortable && (
-                                                <span className="text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                                    {sortOrder === "desc" ? "↓" : "↑"}
-                                                </span>
-                                            )}
-                                        </button>
-                                    ))}
-                                    
-                                    {activeFilter && (
-                                        <button
-                                            onClick={clearFilters}
-                                            className="w-full rounded border border-red-300 p-2 text-sm text-red-600 transition-all hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
-                                        >
-                                            Clear Filters
+                                            Clear All
                                         </button>
                                     )}
+                                </div>
+
+                                <div className="space-y-6 max-h-96 overflow-y-auto">
+                                    {/* Sort By Section */}
+                                    <div>
+                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                            Sort By
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-2 mb-3">
+                                            {filterOptions.sortBy.map((option) => (
+                                                <label key={option.id} className="flex items-center space-x-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="sortBy"
+                                                        checked={activeFilters.sortBy === option.id}
+                                                        onChange={() => handleSortChange(option.id)}
+                                                        className="rounded border-2"
+                                                        style={{
+                                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                        }}
+                                                    />
+                                                    <span className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                        {option.label}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleSortOrderChange("asc")}
+                                                className={`flex-1 text-sm py-1 px-2 rounded border ${
+                                                    activeFilters.sortOrder === "asc" 
+                                                        ? "bg-blue-500 text-white" 
+                                                        : "bg-gray-100 text-gray-700"
+                                                }`}
+                                            >
+                                                Ascending
+                                            </button>
+                                            <button
+                                                onClick={() => handleSortOrderChange("desc")}
+                                                className={`flex-1 text-sm py-1 px-2 rounded border ${
+                                                    activeFilters.sortOrder === "desc" 
+                                                        ? "bg-blue-500 text-white" 
+                                                        : "bg-gray-100 text-gray-700"
+                                                }`}
+                                            >
+                                                Descending
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Status Filters */}
+                                    <div>
+                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                            Status
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {filterOptions.status.map((option) => (
+                                                <label key={option.id} className="flex items-center space-x-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={activeFilters.statusFilters.includes(option.id)}
+                                                        onChange={() => handleStatusFilterChange(option.id)}
+                                                        className="rounded border-2"
+                                                        style={{
+                                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                        }}
+                                                    />
+                                                    <span className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                        {option.label}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Payment Filters */}
+                                    <div>
+                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                            Payment
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {filterOptions.payment.map((option) => (
+                                                <label key={option.id} className="flex items-center space-x-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={activeFilters.paymentFilters.includes(option.id)}
+                                                        onChange={() => handlePaymentFilterChange(option.id)}
+                                                        className="rounded border-2"
+                                                        style={{
+                                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                        }}
+                                                    />
+                                                    <span className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                        {option.label}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Service Filters */}
+                                    <div>
+                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                            Service Type
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {filterOptions.service.map((option) => (
+                                                <label key={option.id} className="flex items-center space-x-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={activeFilters.serviceFilters.includes(option.id)}
+                                                        onChange={() => handleServiceFilterChange(option.id)}
+                                                        className="rounded border-2"
+                                                        style={{
+                                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                        }}
+                                                    />
+                                                    <span className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                        {option.label}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -542,7 +626,7 @@ const MainPage = () => {
                 </div>
             </motion.div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards - NOW 5 CARDS WITH UNWASHED LOADS */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {loading ? (
                     [...Array(5)].map((_, index) => (
@@ -618,23 +702,19 @@ const MainPage = () => {
                         <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                             Laundry Records
                         </p>
-                        <div className="flex items-center gap-2">
-                            {activeFilter && (
-                                <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                    Filtered by: {getActiveFilterLabel()}
-                                </span>
-                            )}
-                            <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                                {filteredRecords.length} records found
-                            </span>
-                        </div>
+                        <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            {filteredRecordsCount > 0 ? filteredRecordsCount : filteredRecords.length} records found
+                        </span>
                     </div>
                     <AdminRecordTable
                         items={filteredRecords}
                         allItems={records}
-                        activeFilter={activeFilter}
-                        sortOrder={sortOrder}
                         isDarkMode={isDarkMode}
+                        timeFilter={timeFilter}
+                        selectedRange={selectedRange}
+                        onDateRangeChange={setSelectedRange}
+                        onFilteredCountChange={handleFilteredCountChange}
+                        activeFilters={activeFilters}
                     />
                 </motion.div>
             )}

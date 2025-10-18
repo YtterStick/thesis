@@ -677,7 +677,6 @@ export default function AdminDashboardPage() {
                         style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
                     >
                         Real-time business overview and analytics
-                        {dashboardData.lastUpdated && <span> • Last updated: {dashboardData.lastUpdated.toLocaleTimeString()}</span>}
                     </p>
                 </div>
             </motion.div>
