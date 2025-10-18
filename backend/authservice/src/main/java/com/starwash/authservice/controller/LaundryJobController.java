@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/laundry-jobs")
@@ -152,6 +153,25 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(updatedJob));
     }
 
+    // Get real-time timer status
+    @GetMapping("/{transactionId}/load/{loadNumber}/timer-status")
+    public ResponseEntity<Map<String, Object>> getTimerStatus(
+            @PathVariable String transactionId,
+            @PathVariable int loadNumber) {
+        
+        Map<String, Object> timerStatus = laundryJobService.getTimerStatus(transactionId, loadNumber);
+        return ResponseEntity.ok(timerStatus);
+    }
+
+    // Force sync timer states for a specific job
+    @PostMapping("/{transactionId}/force-sync-timers")
+    public ResponseEntity<LaundryJobDto> forceSyncTimers(@PathVariable String transactionId) {
+        LaundryJob job = laundryJobService.findSingleJobByTransaction(transactionId);
+        laundryJobService.syncTimerStates(job);
+        LaundryJob updatedJob = laundryJobService.updateJob(job, "system");
+        return ResponseEntity.ok(toDto(updatedJob));
+    }
+
     // aggressive
     @GetMapping("/with-synced-timers")
     public ResponseEntity<List<LaundryJobDto>> getAllJobsWithSyncedTimers() {
@@ -198,4 +218,5 @@ public class LaundryJobController {
     public ResponseEntity<String> handleRuntime(RuntimeException ex) {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
+    
 }
