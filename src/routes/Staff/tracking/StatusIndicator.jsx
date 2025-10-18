@@ -77,6 +77,13 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
     // Check if timer is actually running (not just in WASHING/DRYING status)
     const isTimerRunning = (load.status === "WASHING" || load.status === "DRYING") && 
                           remaining !== null && remaining > 0;
+
+    console.log(`🎯 StatusIndicator for load ${load.loadNumber}:`, {
+        displayStatus,
+        remaining,
+        isTimerRunning,
+        shouldShowStatic
+    });
     
     return (
         <Tooltip>
@@ -110,9 +117,9 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                         >
                             {statusConfig.label}
                         </span>
-                        {isTimerRunning && (
+                        {isTimerRunning && remaining !== null && (
                             <span className="text-xs text-gray-500">
-                                {Math.ceil(remaining / 60)}m remaining
+                                {Math.ceil(remaining / 60)}m {remaining % 60}s remaining
                             </span>
                         )}
                     </div>
@@ -125,8 +132,8 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                     borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
                 }}
             >
-                {isTimerRunning
-                    ? `${Math.ceil(remaining / 60)} min remaining`
+                {isTimerRunning && remaining !== null
+                    ? `${Math.ceil(remaining / 60)} min ${remaining % 60} sec remaining`
                     : displayStatus === "COMPLETED"
                       ? "Complete"
                       : "Ready for next step"}

@@ -267,6 +267,9 @@ const TrackingTable = ({
                               <span className="font-semibold" style={{ color: '#0891B2' }}>
                                 {(() => {
                                   const remaining = getRemainingTime(load);
+                                  if (remaining === null) {
+                                    return "Calculating...";
+                                  }
                                   return remaining < 60
                                     ? `${remaining}s`
                                     : `${Math.floor(remaining / 60)}m ${(remaining % 60)
