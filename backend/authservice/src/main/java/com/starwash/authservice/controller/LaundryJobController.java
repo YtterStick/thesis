@@ -55,7 +55,7 @@ public class LaundryJobController {
         existing.setStatusFlow(dto.getStatusFlow());
         existing.setCurrentStep(dto.getCurrentStep());
         existing.setLoadAssignments(dto.getLoadAssignments());
-        existing.setContact(dto.getContact()); // ✅ added contact
+        existing.setContact(dto.getContact());
 
         LaundryJob updated = laundryJobService.updateJob(existing, username);
         return ResponseEntity.ok(toDto(updated));
@@ -143,12 +143,42 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
+    // Sync timer states
+    @PostMapping("/{transactionId}/sync-timer")
+    public ResponseEntity<LaundryJobDto> syncTimerState(@PathVariable String transactionId) {
+        LaundryJob job = laundryJobService.findSingleJobByTransaction(transactionId);
+        laundryJobService.syncTimerStates(job);
+        LaundryJob updatedJob = laundryJobService.updateJob(job, "system");
+        return ResponseEntity.ok(toDto(updatedJob));
+    }
+
+    // Get all jobs with synced timer states
+    @GetMapping("/with-synced-timers")
+    public ResponseEntity<List<LaundryJobDto>> getAllJobsWithSyncedTimers() {
+        List<LaundryJobDto> jobs = laundryJobService.getAllJobs();
+        
+        for (LaundryJobDto jobDto : jobs) {
+            LaundryJob job = laundryJobService.findSingleJobByTransaction(jobDto.getTransactionId());
+            laundryJobService.syncTimerStates(job);
+        }
+        
+        return ResponseEntity.ok(jobs);
+    }
+
+    // Search by customer name
+    @GetMapping("/search-by-customer")
+    public ResponseEntity<List<LaundryJob>> searchLaundryJobsByCustomerName(
+            @RequestParam String customerName) {
+        List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
+        return ResponseEntity.ok(jobs);
+    }
+
     // ========== DTO Conversion ==========
     private LaundryJobDto toDto(LaundryJob job) {
         LaundryJobDto dto = new LaundryJobDto();
         dto.setTransactionId(job.getTransactionId());
         dto.setCustomerName(job.getCustomerName());
-        dto.setContact(job.getContact()); // ✅ include contact in DTO response
+        dto.setContact(job.getContact());
         dto.setLoadAssignments(job.getLoadAssignments());
         dto.setDetergentQty(job.getDetergentQty());
         dto.setFabricQty(job.getFabricQty());
@@ -162,35 +192,4 @@ public class LaundryJobController {
     public ResponseEntity<String> handleRuntime(RuntimeException ex) {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
-
-    // missing item
-    @GetMapping("/search-by-customer")
-    public ResponseEntity<List<LaundryJob>> searchLaundryJobsByCustomerName(
-            @RequestParam String customerName) {
-        List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
-        return ResponseEntity.ok(jobs);
-    }
-
-    // Sync timer states - call this periodically from frontend
-@PostMapping("/{transactionId}/sync-timer")
-public ResponseEntity<LaundryJobDto> syncTimerState(@PathVariable String transactionId) {
-    LaundryJob job = laundryJobService.findSingleJobByTransaction(transactionId);
-    laundryJobService.syncTimerStates(job);
-    LaundryJob updatedJob = laundryJobService.updateJob(job, "system");
-    return ResponseEntity.ok(toDto(updatedJob));
-}
-
-// Get all jobs with synced timer states
-@GetMapping("/with-synced-timers")
-public ResponseEntity<List<LaundryJobDto>> getAllJobsWithSyncedTimers() {
-    List<LaundryJobDto> jobs = laundryJobService.getAllJobs();
-    
-    // Sync timer states for all jobs
-    for (LaundryJobDto jobDto : jobs) {
-        LaundryJob job = laundryJobService.findSingleJobByTransaction(jobDto.getTransactionId());
-        laundryJobService.syncTimerStates(job);
-    }
-    
-    return ResponseEntity.ok(jobs);
-}
 }

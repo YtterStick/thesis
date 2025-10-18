@@ -42,7 +42,7 @@ public class LaundryJobService {
     private SmsService smsService;
 
     @Autowired
-    private NotificationService notificationService; // Add this
+    private NotificationService notificationService;
 
     private static final String STATUS_AVAILABLE = "Available";
     private static final String STATUS_IN_USE = "In Use";
@@ -61,19 +61,16 @@ public class LaundryJobService {
             "wash & dry", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED,
                     STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED),
             "wash", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED, STATUS_COMPLETED),
-            "wash only", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED, STATUS_COMPLETED), // Add this
+            "wash only", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED, STATUS_COMPLETED),
             "dry", List.of(STATUS_NOT_STARTED, STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED),
-            "dry only", List.of(STATUS_NOT_STARTED, STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED)); // Add
-                                                                                                                     // this
+            "dry only", List.of(STATUS_NOT_STARTED, STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED));
 
     private List<String> getFlowByServiceType(String serviceType) {
         if (serviceType == null) {
             return List.of(STATUS_NOT_STARTED, "IN_PROGRESS", STATUS_COMPLETED);
         }
 
-        // Normalize the service type for lookup
         String normalizedType = serviceType.toLowerCase().trim();
-
         return SERVICE_FLOWS.getOrDefault(
                 normalizedType,
                 List.of(STATUS_NOT_STARTED, "IN_PROGRESS", STATUS_COMPLETED));
@@ -99,7 +96,6 @@ public class LaundryJobService {
         job.setDetergentQty(dto.getDetergentQty());
         job.setFabricQty(dto.getFabricQty());
 
-        // Use the service name from transaction directly
         String serviceType = txn.getServiceName();
         job.setServiceType(serviceType);
         job.setStatusFlow(getFlowByServiceType(serviceType));
@@ -182,7 +178,6 @@ public class LaundryJobService {
         job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
-        // Schedule auto-advance ONLY for washing and drying
         if (STATUS_WASHING.equals(nextStatus) || STATUS_DRYING.equals(nextStatus)) {
             scheduler.schedule(() -> autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber),
                     finalDuration, TimeUnit.MINUTES);
@@ -191,7 +186,6 @@ public class LaundryJobService {
         return saved;
     }
 
-    // Add this method to check and sync timer states
     public void syncTimerStates(LaundryJob job) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -199,7 +193,6 @@ public class LaundryJobService {
             if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
                     && load.getEndTime() != null && now.isAfter(load.getEndTime())) {
 
-                // Timer has expired, auto-advance
                 switch (load.getStatus()) {
                     case STATUS_WASHING:
                         load.setStatus(STATUS_WASHED);
@@ -211,9 +204,7 @@ public class LaundryJobService {
                         break;
                 }
 
-                // Reschedule if needed for next steps
                 if (STATUS_WASHED.equals(load.getStatus())) {
-                    // Check if this is Wash & Dry service and needs to go to drying
                     Transaction txn = transactionRepository.findByInvoiceNumber(job.getTransactionId()).orElse(null);
                     String serviceType = (txn != null ? txn.getServiceName() : "wash");
 
@@ -223,7 +214,6 @@ public class LaundryJobService {
                         int dryDuration = load.getDurationMinutes() != null ? load.getDurationMinutes() : 40;
                         load.setEndTime(now.plusMinutes(dryDuration));
 
-                        // Schedule drying completion
                         scheduler.schedule(
                                 () -> autoAdvanceAfterStepEnds(serviceType, job.getTransactionId(),
                                         load.getLoadNumber()),
@@ -291,7 +281,6 @@ public class LaundryJobService {
             return load.getStatus();
         }
 
-        // Normalize service type for comparison
         String normalizedType = serviceType.toLowerCase().trim();
 
         switch (normalizedType) {
@@ -331,7 +320,6 @@ public class LaundryJobService {
         String previousStatus = load.getStatus();
         load.setStatus(newStatus);
 
-        // Send notifications for status changes
         sendStatusChangeNotifications(job, load, previousStatus, newStatus);
 
         if (STATUS_WASHED.equalsIgnoreCase(newStatus) || STATUS_DRIED.equalsIgnoreCase(newStatus)) {
@@ -361,7 +349,6 @@ public class LaundryJobService {
             if (STATUS_COMPLETED.equals(previousStatus) || STATUS_FOLDING.equals(previousStatus))
                 return;
 
-            // Double-check the timer actually ended
             if (load.getEndTime() != null && LocalDateTime.now().isAfter(load.getEndTime())) {
                 switch (previousStatus.toUpperCase()) {
                     case STATUS_WASHING:
@@ -374,9 +361,7 @@ public class LaundryJobService {
                         break;
                 }
 
-                // Send notifications for automatic status changes
                 sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
-
                 laundryJobRepository.save(job);
                 System.out.println(
                         "Auto-advanced load " + loadNumber + " from " + previousStatus + " to " + load.getStatus());
@@ -390,7 +375,6 @@ public class LaundryJobService {
     private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, String previousStatus,
             String newStatus) {
         try {
-            // Notify when load is washed
             if ("WASHED".equalsIgnoreCase(newStatus) && !"WASHED".equalsIgnoreCase(previousStatus)) {
                 notificationService.notifyLoadWashed(
                         job.getCustomerName(),
@@ -398,7 +382,6 @@ public class LaundryJobService {
                         load.getLoadNumber());
             }
 
-            // Notify when load is dried
             if ("DRIED".equalsIgnoreCase(newStatus) && !"DRIED".equalsIgnoreCase(previousStatus)) {
                 notificationService.notifyLoadDried(
                         job.getCustomerName(),
@@ -406,7 +389,6 @@ public class LaundryJobService {
                         load.getLoadNumber());
             }
 
-            // Notify when load is completed
             if ("COMPLETED".equalsIgnoreCase(newStatus) && !"COMPLETED".equalsIgnoreCase(previousStatus)) {
                 notificationService.notifyLoadCompleted(
                         job.getCustomerName(),
@@ -423,10 +405,8 @@ public class LaundryJobService {
     public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
 
-        // Send SMS notification when load is completed
         sendCompletionSmsNotification(job, loadNumber);
 
-        // Also send internal notification
         try {
             String title = "Load Completed";
             String message = String.format(
@@ -460,7 +440,6 @@ public class LaundryJobService {
 
             System.out.println("🎯 All loads completed: " + allLoadsCompleted);
 
-            // Log all load statuses
             System.out.println("🎯 Load statuses:");
             job.getLoadAssignments().forEach(load -> {
                 System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus() +
@@ -480,7 +459,6 @@ public class LaundryJobService {
                 System.out.println("   👤 Customer: " + job.getCustomerName());
                 System.out.println("   🛠️ Service: " + serviceType);
 
-                // Send SMS notification
                 smsService.sendLoadCompletedNotification(
                         job.getContact(),
                         job.getCustomerName(),
@@ -555,13 +533,14 @@ public class LaundryJobService {
         Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
         List<LaundryJob> jobs = jobPage.getContent();
 
-        // Filter out jobs where all loads are completed
+        // Filter out ONLY jobs where ALL loads are COMPLETED
         List<LaundryJob> nonCompletedJobs = jobs.stream()
                 .filter(job -> job.getLoadAssignments() != null)
                 .filter(job -> !job.getLoadAssignments().stream()
                         .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
                 .collect(Collectors.toList());
 
+        System.out.println("Returning " + nonCompletedJobs.size() + " non-completed jobs out of " + jobs.size() + " total jobs");
         return processJobsToDtos(nonCompletedJobs);
     }
 
@@ -569,19 +548,36 @@ public class LaundryJobService {
     public List<LaundryJobDto> getAllJobs() {
         List<LaundryJob> jobs = laundryJobRepository.findAll();
 
-        // Filter out jobs where all loads are completed
+        // Filter out ONLY jobs where ALL loads are COMPLETED
         List<LaundryJob> nonCompletedJobs = jobs.stream()
                 .filter(job -> job.getLoadAssignments() != null)
                 .filter(job -> !job.getLoadAssignments().stream()
                         .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
                 .collect(Collectors.toList());
 
+        System.out.println("Returning " + nonCompletedJobs.size() + " non-completed jobs out of " + jobs.size() + " total jobs");
         return processJobsToDtos(nonCompletedJobs);
     }
 
     private List<LaundryJobDto> processJobsToDtos(List<LaundryJob> jobs) {
+        System.out.println("Processing " + jobs.size() + " jobs to DTOs");
+        
         if (jobs.isEmpty()) {
+            System.out.println("No jobs to process");
             return Collections.emptyList();
+        }
+
+        // Log each job being processed
+        for (LaundryJob job : jobs) {
+            System.out.println("Processing job: " + job.getTransactionId() + 
+                              ", Customer: " + job.getCustomerName() +
+                              ", Loads: " + (job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0));
+            
+            if (job.getLoadAssignments() != null) {
+                for (LoadAssignment load : job.getLoadAssignments()) {
+                    System.out.println("  Load " + load.getLoadNumber() + ": " + load.getStatus());
+                }
+            }
         }
 
         Set<String> transactionIds = jobs.stream()
@@ -600,12 +596,11 @@ public class LaundryJobService {
             int detergentQty = 0;
             int fabricQty = 0;
             LocalDateTime issueDate = null;
-            String serviceType = job.getServiceType(); // Use job's service type as fallback
+            String serviceType = job.getServiceType();
             String contact = job.getContact();
 
             if (tx != null) {
                 issueDate = tx.getIssueDate();
-                // Use transaction's service name, but fall back to job's service type
                 serviceType = tx.getServiceName() != null ? tx.getServiceName() : job.getServiceType();
 
                 if (tx.getConsumables() != null) {
@@ -621,12 +616,10 @@ public class LaundryJobService {
                 }
             }
 
-            // Debug logging
-            System.out.println("Processing job - Transaction: " + job.getTransactionId() +
+            System.out.println("Creating DTO for job - Transaction: " + job.getTransactionId() +
                     ", Service Type: " + serviceType +
                     ", Job Service Type: " + job.getServiceType());
 
-            // Create and populate the DTO
             LaundryJobDto dto = new LaundryJobDto();
             dto.setTransactionId(job.getTransactionId());
             dto.setCustomerName(job.getCustomerName());
@@ -637,12 +630,13 @@ public class LaundryJobService {
             dto.setStatusFlow(job.getStatusFlow());
             dto.setCurrentStep(job.getCurrentStep());
             dto.setIssueDate(issueDate);
-            dto.setServiceType(serviceType); // This will be sent to frontend
+            dto.setServiceType(serviceType);
             dto.setTotalLoads(job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0);
 
             result.add(dto);
         }
 
+        System.out.println("Successfully processed " + result.size() + " job DTOs");
         return result;
     }
 
@@ -721,7 +715,6 @@ public class LaundryJobService {
         return laundryJobRepository.findByCustomerName(customerName);
     }
 
-    // Add to LaundryJobService.java
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob forceAdvanceLoad(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
@@ -731,7 +724,6 @@ public class LaundryJobService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
 
-        // Force advance based on current status
         String currentStatus = load.getStatus();
         String newStatus = currentStatus;
 
