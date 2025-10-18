@@ -137,7 +137,6 @@ public class LaundryJobService {
         return laundryJobRepository.save(job);
     }
 
-    // In LaundryJobService.java - update the startLoad method
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
@@ -166,10 +165,12 @@ public class LaundryJobService {
         int finalDuration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : defaultDuration;
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endTime = now.plusMinutes(finalDuration);
+
         load.setStatus(nextStatus);
         load.setStartTime(now);
         load.setDurationMinutes(finalDuration);
-        load.setEndTime(now.plusMinutes(finalDuration));
+        load.setEndTime(endTime);
 
         MachineItem machine = machineRepository.findById(load.getMachineId())
                 .orElseThrow(() -> new RuntimeException("Machine not found"));
@@ -179,12 +180,18 @@ public class LaundryJobService {
         job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
-        System.out.println("⏰ Timer details saved to backend:");
-System.out.println("   - Start Time: " + now);
-System.out.println("   - Duration: " + finalDuration + " minutes");
-System.out.println("   - End Time: " + load.getEndTime());
-System.out.println("   - Current Time: " + LocalDateTime.now());
-System.out.println("   - Time until end: " + java.time.Duration.between(now, load.getEndTime()).toMinutes() + " minutes");
+        System.out.println("⏰ Started timer for load " + loadNumber +
+                ", status: " + nextStatus +
+                ", duration: " + finalDuration + " minutes" +
+                ", startTime: " + now +
+                ", endTime: " + endTime +
+                ", currentYear: " + now.getYear() +
+                ", endTimeYear: " + endTime.getYear());
+
+        // Verify the dates are correct
+        if (now.getYear() != endTime.getYear()) {
+            System.err.println("⚠️ WARNING: Date year mismatch! Current: " + now.getYear() + ", End: " + endTime.getYear());
+        }
 
         // Schedule auto-advance ONLY for washing and drying
         if (STATUS_WASHING.equals(nextStatus) || STATUS_DRYING.equals(nextStatus)) {
@@ -204,6 +211,40 @@ System.out.println("   - Time until end: " + java.time.Duration.between(now, loa
         return saved;
     }
 
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob resetLoadTimer(String transactionId, int loadNumber, String processedBy) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        // Reset timer with correct current time
+        LocalDateTime now = LocalDateTime.now();
+        int duration = load.getDurationMinutes() != null ? load.getDurationMinutes() : 30;
+        load.setStartTime(now);
+        load.setEndTime(now.plusMinutes(duration));
+
+        System.out.println("🔄 Reset timer for load " + loadNumber + 
+                " with correct time: " + now + 
+                " to " + load.getEndTime() +
+                " (duration: " + duration + " minutes)");
+
+        job.setLaundryProcessedBy(processedBy);
+        return laundryJobRepository.save(job);
+    }
+
+    public Map<String, Object> getDebugTimeInfo() {
+        Map<String, Object> timeInfo = new HashMap<>();
+        timeInfo.put("currentTime", LocalDateTime.now());
+        timeInfo.put("currentYear", LocalDateTime.now().getYear());
+        timeInfo.put("systemTime", new Date());
+        timeInfo.put("timezone", TimeZone.getDefault().getID());
+        return timeInfo;
+    }
+
+    // Update the syncTimerStates to be more aggressive
     public void syncTimerStates(LaundryJob job) {
         LocalDateTime now = LocalDateTime.now();
         boolean jobChanged = false;
@@ -257,6 +298,40 @@ System.out.println("   - Time until end: " + java.time.Duration.between(now, loa
         }
     }
 
+    // Add a new method to get detailed timer information
+    public Map<String, Object> getTimerDetails(String transactionId, int loadNumber) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        Map<String, Object> timerDetails = new HashMap<>();
+        timerDetails.put("status", load.getStatus());
+        timerDetails.put("startTime", load.getStartTime());
+        timerDetails.put("endTime", load.getEndTime());
+        timerDetails.put("durationMinutes", load.getDurationMinutes());
+        timerDetails.put("machineId", load.getMachineId());
+
+        if (load.getStartTime() != null && load.getEndTime() != null) {
+            LocalDateTime now = LocalDateTime.now();
+            long remainingSeconds = java.time.Duration.between(now, load.getEndTime()).getSeconds();
+            timerDetails.put("remainingSeconds", Math.max(0, remainingSeconds));
+            timerDetails.put("isRunning", remainingSeconds > 0);
+            
+            System.out.println("⏰ Timer details for load " + loadNumber + 
+                    ": remaining=" + remainingSeconds + "s, isRunning=" + (remainingSeconds > 0) +
+                    ", start=" + load.getStartTime() + ", end=" + load.getEndTime());
+        } else {
+            timerDetails.put("remainingSeconds", 0);
+            timerDetails.put("isRunning", false);
+        }
+
+        return timerDetails;
+    }
+
+    // Add a new method to get real-time timer status
     public Map<String, Object> getTimerStatus(String transactionId, int loadNumber) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -281,8 +356,8 @@ System.out.println("   - Time until end: " + java.time.Duration.between(now, loa
             timerStatus.put("endTime", load.getEndTime());
             timerStatus.put("durationMinutes", load.getDurationMinutes());
             timerStatus.put("status", load.getStatus());
-
-            System.out.println("⏰ Timer status for load " + loadNumber +
+            
+            System.out.println("⏰ Timer status for load " + loadNumber + 
                     ": remaining=" + remainingSeconds + "s, isRunning=" + isRunning +
                     ", start=" + load.getStartTime() + ", end=" + load.getEndTime());
         } else {
@@ -353,8 +428,7 @@ System.out.println("   - Time until end: " + java.time.Duration.between(now, loa
         String normalizedType = serviceType.toLowerCase().trim();
         String currentStatus = load.getStatus();
 
-        System.out.println(
-                "🔄 Determining next status for service: " + normalizedType + ", current status: " + currentStatus);
+        System.out.println("🔄 Determining next status for service: " + normalizedType + ", current status: " + currentStatus);
 
         switch (normalizedType) {
             case "wash":
@@ -374,7 +448,7 @@ System.out.println("   - Time until end: " + java.time.Duration.between(now, loa
                     return STATUS_DRYING;
                 break;
         }
-
+        
         System.out.println("➡️ Next status determined as: " + currentStatus);
         return currentStatus;
     }

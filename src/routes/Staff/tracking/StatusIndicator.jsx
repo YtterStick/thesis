@@ -9,48 +9,49 @@ import loaderAnimation from "@/assets/lottie/loader.json";
 
 // Updated status icons with static versions for completed states
 const STATUS_ICONS = {
-    UNWASHED: { 
-        label: "Not Started", 
+    UNWASHED: {
+        label: "Not Started",
         animation: unwashedAnimation,
-        loop: true 
+        loop: true,
     },
-    NOT_STARTED: {  // Add this for backend status
-        label: "Not Started", 
+    NOT_STARTED: {
+        // Add this for backend status
+        label: "Not Started",
         animation: unwashedAnimation,
-        loop: true 
+        loop: true,
     },
-    WASHING: { 
-        label: "Washing", 
+    WASHING: {
+        label: "Washing",
         animation: washingAnimation,
-        loop: true 
+        loop: true,
     },
-    WASHED: { 
-        label: "Washed", 
+    WASHED: {
+        label: "Washed",
         animation: washingAnimation,
         loop: false,
-        staticFrame: 50
+        staticFrame: 50,
     },
-    DRYING: { 
-        label: "Drying", 
+    DRYING: {
+        label: "Drying",
         animation: dryingAnimation,
-        loop: true 
+        loop: true,
     },
-    DRIED: { 
-        label: "Dried", 
+    DRIED: {
+        label: "Dried",
         animation: dryingAnimation,
         loop: false,
-        staticFrame: 30
+        staticFrame: 30,
     },
-    FOLDING: { 
-        label: "Folding", 
+    FOLDING: {
+        label: "Folding",
         animation: foldingAnimation,
-        loop: true 
+        loop: true,
     },
-    COMPLETED: { 
-        label: "Completed", 
+    COMPLETED: {
+        label: "Completed",
         animation: foldingAnimation,
         loop: false,
-        staticFrame: 20
+        staticFrame: 20,
     },
 };
 
@@ -69,15 +70,14 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
     // Map NOT_STARTED to UNWASHED for icon lookup
     const displayStatus = load.status === "NOT_STARTED" ? "UNWASHED" : load.status;
     const statusConfig = STATUS_ICONS[displayStatus] || STATUS_ICONS.UNWASHED;
-    
+
     // Use the actual remaining time calculation
     const remaining = getRemainingTime(load);
-    const isTimerRunning = (load.status === "WASHING" || load.status === "DRYING") && 
-                          remaining !== null && remaining > 0;
+    const isTimerRunning = (load.status === "WASHING" || load.status === "DRYING") && remaining !== null && remaining > 0;
 
     // Determine if we should show static animation (for completed states)
     const shouldShowStatic = !statusConfig.loop && statusConfig.staticFrame !== undefined && !isTimerRunning;
-    
+
     console.log(`🎯 StatusIndicator for load ${load.loadNumber}:`, {
         displayStatus,
         remaining,
@@ -85,9 +85,9 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
         shouldShowStatic,
         startTime: load.startTime,
         endTime: load.endTime,
-        duration: load.duration
+        duration: load.duration,
     });
-    
+
     return (
         <Tooltip>
             <TooltipTrigger>
@@ -98,7 +98,7 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                             loop={isTimerRunning}
                             style={{ width: 40, height: 40 }}
                             {...(shouldShowStatic && {
-                                initialSegment: [statusConfig.staticFrame, statusConfig.staticFrame]
+                                initialSegment: [statusConfig.staticFrame, statusConfig.staticFrame],
                             })}
                         />
                         {load.pending && (
@@ -114,15 +114,15 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                     <div className="flex flex-col">
                         <span
                             className="font-semibold"
-                            style={{ 
-                                color: STATUS_LABEL_COLORS[displayStatus] || STATUS_LABEL_COLORS.UNWASHED
+                            style={{
+                                color: STATUS_LABEL_COLORS[displayStatus] || STATUS_LABEL_COLORS.UNWASHED,
                             }}
                         >
                             {statusConfig.label}
                         </span>
                         {isTimerRunning && remaining !== null && (
                             <span className="text-xs text-gray-500">
-                                {Math.floor(remaining / 60)}m {(remaining % 60)}s remaining
+                                {Math.floor(remaining / 60)}m {remaining % 60}s remaining
                             </span>
                         )}
                     </div>

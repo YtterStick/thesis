@@ -65,83 +65,83 @@ export default function ServiceTrackingPage() {
         }
     }, [jobs, currentPage, totalPages]);
 
-   // Fetch timer status from backend for all active loads
-const fetchTimerStatuses = useCallback(async () => {
-    if (!hasActiveJobs) return;
+    // Fetch timer status from backend for all active loads
+    const fetchTimerStatuses = useCallback(async () => {
+        if (!hasActiveJobs) return;
 
-    try {
-        const timerPromises = [];
-        
-        jobs.forEach(job => {
-            job.loads.forEach(load => {
-                if (load.status === "WASHING" || load.status === "DRYING") {
-                    timerPromises.push(
-                        api.get(`api/laundry-jobs/${job.transactionId}/load/${load.loadNumber}/timer-status`)
-                            .then(timerStatus => ({
-                                jobId: job.id,
-                                transactionId: job.transactionId,
-                                loadNumber: load.loadNumber,
-                                timerStatus
-                            }))
-                            .catch(error => {
-                                console.error(`Failed to fetch timer status for load ${load.loadNumber}:`, error);
-                                return null;
-                            })
-                    );
-                }
-            });
-        });
+        try {
+            const timerPromises = [];
 
-        const timerResults = await Promise.all(timerPromises);
-        
-        // Update jobs with real timer status from backend
-        setJobs(prevJobs => prevJobs.map(job => {
-            const jobTimerResults = timerResults.filter(result => 
-                result && (result.jobId === job.id || result.transactionId === job.transactionId)
-            );
-
-            if (jobTimerResults.length === 0) return job;
-
-            return {
-                ...job,
-                loads: job.loads.map(load => {
-                    const timerResult = jobTimerResults.find(result => 
-                        result.loadNumber === load.loadNumber
-                    );
-
-                    if (!timerResult) return load;
-
-                    const timerData = timerResult.timerStatus;
-                    
-                    console.log(`🔄 Updating timer for load ${load.loadNumber}:`, {
-                        previousStatus: load.status,
-                        newStatus: timerData.status,
-                        isRunning: timerData.isRunning,
-                        remaining: timerData.remainingSeconds
-                    });
-
-                    // If timer expired in backend, update status
-                    if (!timerData.isRunning && (load.status === "WASHING" || load.status === "DRYING")) {
-                        console.log(`🔄 Timer expired in backend for load ${load.loadNumber}, updating status`);
+            jobs.forEach((job) => {
+                job.loads.forEach((load) => {
+                    if (load.status === "WASHING" || load.status === "DRYING") {
+                        timerPromises.push(
+                            api
+                                .get(`api/laundry-jobs/${job.transactionId}/load/${load.loadNumber}/timer-status`)
+                                .then((timerStatus) => ({
+                                    jobId: job.id,
+                                    transactionId: job.transactionId,
+                                    loadNumber: load.loadNumber,
+                                    timerStatus,
+                                }))
+                                .catch((error) => {
+                                    console.error(`Failed to fetch timer status for load ${load.loadNumber}:`, error);
+                                    return null;
+                                }),
+                        );
                     }
+                });
+            });
+
+            const timerResults = await Promise.all(timerPromises);
+
+            // Update jobs with real timer status from backend
+            setJobs((prevJobs) =>
+                prevJobs.map((job) => {
+                    const jobTimerResults = timerResults.filter(
+                        (result) => result && (result.jobId === job.id || result.transactionId === job.transactionId),
+                    );
+
+                    if (jobTimerResults.length === 0) return job;
 
                     return {
-                        ...load,
-                        // Update with real backend timer data
-                        startTime: timerData.startTime,
-                        endTime: timerData.endTime,
-                        duration: timerData.durationMinutes,
-                        // Status might have changed if timer expired
-                        status: timerData.status || load.status
-                    };
-                })
-            };
-        }));
+                        ...job,
+                        loads: job.loads.map((load) => {
+                            const timerResult = jobTimerResults.find((result) => result.loadNumber === load.loadNumber);
 
-    } catch (error) {
-        console.error("Error fetching timer statuses:", error);
-    }
-}, [jobs, hasActiveJobs]);
+                            if (!timerResult) return load;
+
+                            const timerData = timerResult.timerStatus;
+
+                            console.log(`🔄 Updating timer for load ${load.loadNumber}:`, {
+                                previousStatus: load.status,
+                                newStatus: timerData.status,
+                                isRunning: timerData.isRunning,
+                                remaining: timerData.remainingSeconds,
+                            });
+
+                            // If timer expired in backend, update status
+                            if (!timerData.isRunning && (load.status === "WASHING" || load.status === "DRYING")) {
+                                console.log(`🔄 Timer expired in backend for load ${load.loadNumber}, updating status`);
+                            }
+
+                            return {
+                                ...load,
+                                // Update with real backend timer data
+                                startTime: timerData.startTime,
+                                endTime: timerData.endTime,
+                                duration: timerData.durationMinutes,
+                                // Status might have changed if timer expired
+                                status: timerData.status || load.status,
+                            };
+                        }),
+                    };
+                }),
+            );
+        } catch (error) {
+            console.error("Error fetching timer statuses:", error);
+        }
+    }, [jobs, hasActiveJobs]);
 
     // Sync timers with backend periodically
     useEffect(() => {
@@ -388,35 +388,59 @@ const fetchTimerStatuses = useCallback(async () => {
     const getJobKey = (job) => job.id ?? `${job.customerName}-${job.issueDate}`;
 
     const getRemainingTime = (load) => {
-        // Always calculate from backend data - this is the source of truth
-        if (!load.startTime || !load.duration) {
-            return null;
-        }
+    // Always calculate from backend data - this is the source of truth
+    if (!load.startTime || !load.endTime) {
+        return null;
+    }
+    
+    try {
+        // Parse the backend datetime strings
+        const start = new Date(load.startTime);
+        const end = new Date(load.endTime);
+        const currentTime = new Date();
+        
+        // Debug logging
+        console.log(`🔍 Date Debug for load ${load.loadNumber}:`, {
+            currentTime: currentTime.toString(),
+            currentYear: currentTime.getFullYear(),
+            startTime: start.toString(),
+            startYear: start.getFullYear(),
+            endTime: end.toString(), 
+            endYear: end.getFullYear(),
+            duration: load.duration
+        });
 
-        try {
-            // Convert backend datetime strings to timestamps
-            const start = new Date(load.startTime).getTime();
-            const end = new Date(load.endTime).getTime(); // Use the actual endTime from backend
-            const currentTime = new Date().getTime(); // Use current time, not the 'now' state
-
-            const remaining = Math.max(Math.floor((end - currentTime) / 1000), 0);
-
-            console.log(`⏰ Timer calculation for load ${load.loadNumber}:`, {
-                start: new Date(load.startTime),
-                startTime: load.startTime,
-                endTime: load.endTime,
-                duration: load.duration,
-                calculatedEnd: new Date(end),
-                now: new Date(currentTime),
-                remainingSeconds: remaining,
-            });
-
+        // Check for date issues
+        if (end.getFullYear() !== currentTime.getFullYear()) {
+            console.warn(`⚠️ Year mismatch: End time is in ${end.getFullYear()}, current is ${currentTime.getFullYear()}`);
+            
+            // Fix the end time by adjusting to current year
+            const fixedEnd = new Date(end);
+            fixedEnd.setFullYear(currentTime.getFullYear());
+            
+            // If fixed end time is in the past, add one year
+            if (fixedEnd < currentTime) {
+                fixedEnd.setFullYear(currentTime.getFullYear() + 1);
+            }
+            
+            const remaining = Math.max(Math.floor((fixedEnd - currentTime) / 1000), 0);
+            console.log(`🔄 Using fixed end time: ${fixedEnd}, remaining: ${remaining}s`);
             return remaining > 0 ? remaining : null;
-        } catch (error) {
-            console.error(`Error calculating remaining time for load ${load.loadNumber}:`, error);
-            return null;
         }
-    };
+
+        const remaining = Math.max(Math.floor((end - currentTime) / 1000), 0);
+        
+        console.log(`⏰ Timer calculation for load ${load.loadNumber}:`, {
+            remainingSeconds: remaining,
+            isFuture: end > currentTime
+        });
+        
+        return remaining > 0 ? remaining : null;
+    } catch (error) {
+        console.error(`Error calculating remaining time for load ${load.loadNumber}:`, error);
+        return null;
+    }
+};
 
     const sendSmsNotification = async (job, serviceType) => {
         const jobKey = getJobKey(job);
