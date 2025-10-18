@@ -4,14 +4,10 @@ import com.starwash.authservice.dto.LaundryJobDto;
 import com.starwash.authservice.model.LaundryJob;
 import com.starwash.authservice.service.LaundryJobService;
 import com.starwash.authservice.security.JwtUtil;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/laundry-jobs")
@@ -30,14 +26,6 @@ public class LaundryJobController {
     @GetMapping
     public ResponseEntity<List<LaundryJobDto>> getAllJobs() {
         return ResponseEntity.ok(laundryJobService.getAllJobs());
-    }
-
-    // GET all jobs with pagination
-    @GetMapping("/page")
-    public ResponseEntity<List<LaundryJobDto>> getAllJobs(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(laundryJobService.getAllJobs(page, size));
     }
 
     // GET single job by transactionId
@@ -67,7 +55,7 @@ public class LaundryJobController {
         existing.setStatusFlow(dto.getStatusFlow());
         existing.setCurrentStep(dto.getCurrentStep());
         existing.setLoadAssignments(dto.getLoadAssignments());
-        existing.setContact(dto.getContact());
+        existing.setContact(dto.getContact()); // ✅ added contact
 
         LaundryJob updated = laundryJobService.updateJob(existing, username);
         return ResponseEntity.ok(toDto(updated));
@@ -102,15 +90,14 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
-    // Start load with frontend time
+    // Start load
     @PatchMapping("/{transactionId}/start-load")
     public ResponseEntity<LaundryJobDto> startLoad(@PathVariable String transactionId,
             @RequestParam int loadNumber,
             @RequestParam(required = false) Integer durationMinutes,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime frontendTime,
             @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
-        LaundryJob job = laundryJobService.startLoad(transactionId, loadNumber, durationMinutes, username, frontendTime);
+        LaundryJob job = laundryJobService.startLoad(transactionId, loadNumber, durationMinutes, username);
         return ResponseEntity.ok(toDto(job));
     }
 
@@ -156,123 +143,31 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
-    // Sync timer states
-    @PostMapping("/{transactionId}/sync-timer")
-    public ResponseEntity<LaundryJobDto> syncTimerState(@PathVariable String transactionId) {
-        LaundryJob job = laundryJobService.findSingleJobByTransaction(transactionId);
-        laundryJobService.syncTimerStates(job);
-        LaundryJob updatedJob = laundryJobService.updateJob(job, "system");
-        return ResponseEntity.ok(toDto(updatedJob));
-    }
-
-    // Get real-time timer status
-    @GetMapping("/{transactionId}/load/{loadNumber}/timer-status")
-    public ResponseEntity<Map<String, Object>> getTimerStatus(
-            @PathVariable String transactionId,
-            @PathVariable int loadNumber) {
-        
-        Map<String, Object> timerStatus = laundryJobService.getTimerStatus(transactionId, loadNumber);
-        return ResponseEntity.ok(timerStatus);
-    }
-
-    // Get detailed timer information
-    @GetMapping("/{transactionId}/load/{loadNumber}/timer-details")
-    public ResponseEntity<Map<String, Object>> getTimerDetails(
-            @PathVariable String transactionId,
-            @PathVariable int loadNumber) {
-        
-        Map<String, Object> timerDetails = laundryJobService.getTimerDetails(transactionId, loadNumber);
-        return ResponseEntity.ok(timerDetails);
-    }
-
-    // Force sync timer states for a specific job
-    @PostMapping("/{transactionId}/force-sync-timers")
-    public ResponseEntity<LaundryJobDto> forceSyncTimers(@PathVariable String transactionId) {
-        LaundryJob job = laundryJobService.findSingleJobByTransaction(transactionId);
-        laundryJobService.syncTimerStates(job);
-        LaundryJob updatedJob = laundryJobService.updateJob(job, "system");
-        return ResponseEntity.ok(toDto(updatedJob));
-    }
-
-    // Get all jobs with synced timers
-    @GetMapping("/with-synced-timers")
-    public ResponseEntity<List<LaundryJobDto>> getAllJobsWithSyncedTimers() {
-        List<LaundryJobDto> jobs = laundryJobService.getAllJobs();
-
-        // Sync timer states for all jobs and force save changes
-        for (LaundryJobDto jobDto : jobs) {
-            try {
-                LaundryJob job = laundryJobService.findSingleJobByTransaction(jobDto.getTransactionId());
-                laundryJobService.syncTimerStates(job);
-            } catch (Exception e) {
-                System.err.println(
-                        "❌ Error syncing timer states for job: " + jobDto.getTransactionId() + " - " + e.getMessage());
-            }
-        }
-
-        return ResponseEntity.ok(jobs);
-    }
-
-    // Reset timer with correct time
-    @PatchMapping("/{transactionId}/reset-timer")
-    public ResponseEntity<LaundryJobDto> resetTimer(@PathVariable String transactionId,
-            @RequestParam int loadNumber,
-            @RequestHeader("Authorization") String authHeader) {
-        String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
-        LaundryJob job = laundryJobService.resetLoadTimer(transactionId, loadNumber, username);
-        return ResponseEntity.ok(toDto(job));
-    }
-
-    // Correct time for a specific load
-    @PostMapping("/{transactionId}/correct-time")
-    public ResponseEntity<LaundryJobDto> correctTime(@PathVariable String transactionId,
-            @RequestParam int loadNumber,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime correctTime) {
-        
-        LaundryJob job = laundryJobService.correctTime(transactionId, loadNumber, correctTime);
-        return ResponseEntity.ok(toDto(job));
-    }
-
-    // Emergency fix all timers
-    @PostMapping("/emergency-fix-timers")
-    public ResponseEntity<String> emergencyFixAllTimers() {
-        String result = laundryJobService.emergencyFixAllTimers();
-        return ResponseEntity.ok(result);
-    }
-
-    // Debug endpoint to check current time
-    @GetMapping("/sync-time")
-    public ResponseEntity<Map<String, Object>> getSyncTime() {
-        Map<String, Object> timeInfo = laundryJobService.getDebugTimeInfo();
-        return ResponseEntity.ok(timeInfo);
-    }
-
-    // Search by customer name
-    @GetMapping("/search-by-customer")
-    public ResponseEntity<List<LaundryJob>> searchLaundryJobsByCustomerName(
-            @RequestParam String customerName) {
-        List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
-        return ResponseEntity.ok(jobs);
-    }
-
     // ========== DTO Conversion ==========
     private LaundryJobDto toDto(LaundryJob job) {
         LaundryJobDto dto = new LaundryJobDto();
         dto.setTransactionId(job.getTransactionId());
         dto.setCustomerName(job.getCustomerName());
-        dto.setContact(job.getContact());
+        dto.setContact(job.getContact()); // ✅ include contact in DTO response
         dto.setLoadAssignments(job.getLoadAssignments());
         dto.setDetergentQty(job.getDetergentQty());
         dto.setFabricQty(job.getFabricQty());
         dto.setStatusFlow(job.getStatusFlow());
         dto.setCurrentStep(job.getCurrentStep());
         dto.setTotalLoads(job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0);
-        dto.setServiceType(job.getServiceType());
         return dto;
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleRuntime(RuntimeException ex) {
         return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
+    // missing item
+    @GetMapping("/search-by-customer")
+    public ResponseEntity<List<LaundryJob>> searchLaundryJobsByCustomerName(
+            @RequestParam String customerName) {
+        List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
+        return ResponseEntity.ok(jobs);
     }
 }
