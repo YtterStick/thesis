@@ -152,16 +152,22 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(updatedJob));
     }
 
-    // Get all jobs with synced timer states
+    // aggressive
     @GetMapping("/with-synced-timers")
     public ResponseEntity<List<LaundryJobDto>> getAllJobsWithSyncedTimers() {
         List<LaundryJobDto> jobs = laundryJobService.getAllJobs();
-        
+
+        // Sync timer states for all jobs and force save changes
         for (LaundryJobDto jobDto : jobs) {
-            LaundryJob job = laundryJobService.findSingleJobByTransaction(jobDto.getTransactionId());
-            laundryJobService.syncTimerStates(job);
+            try {
+                LaundryJob job = laundryJobService.findSingleJobByTransaction(jobDto.getTransactionId());
+                laundryJobService.syncTimerStates(job);
+            } catch (Exception e) {
+                System.err.println(
+                        "❌ Error syncing timer states for job: " + jobDto.getTransactionId() + " - " + e.getMessage());
+            }
         }
-        
+
         return ResponseEntity.ok(jobs);
     }
 
