@@ -179,11 +179,12 @@ public class LaundryJobService {
         job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
-        System.out.println("⏰ Started timer for load " + loadNumber +
-                ", status: " + nextStatus +
-                ", duration: " + finalDuration + " minutes" +
-                ", startTime: " + now +
-                ", endTime: " + load.getEndTime());
+        System.out.println("⏰ Timer details saved to backend:");
+System.out.println("   - Start Time: " + now);
+System.out.println("   - Duration: " + finalDuration + " minutes");
+System.out.println("   - End Time: " + load.getEndTime());
+System.out.println("   - Current Time: " + LocalDateTime.now());
+System.out.println("   - Time until end: " + java.time.Duration.between(now, load.getEndTime()).toMinutes() + " minutes");
 
         // Schedule auto-advance ONLY for washing and drying
         if (STATUS_WASHING.equals(nextStatus) || STATUS_DRYING.equals(nextStatus)) {
@@ -204,58 +205,58 @@ public class LaundryJobService {
     }
 
     public void syncTimerStates(LaundryJob job) {
-    LocalDateTime now = LocalDateTime.now();
-    boolean jobChanged = false;
+        LocalDateTime now = LocalDateTime.now();
+        boolean jobChanged = false;
 
-    for (LoadAssignment load : job.getLoadAssignments()) {
-        // Check if timer should be completed immediately
-        if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
-                && load.getEndTime() != null) {
+        for (LoadAssignment load : job.getLoadAssignments()) {
+            // Check if timer should be completed immediately
+            if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
+                    && load.getEndTime() != null) {
 
-            boolean isExpired = now.isAfter(load.getEndTime()) || now.isEqual(load.getEndTime());
+                boolean isExpired = now.isAfter(load.getEndTime()) || now.isEqual(load.getEndTime());
 
-            System.out.println("⏰ Checking timer for load " + load.getLoadNumber() +
-                    ", status: " + load.getStatus() +
-                    ", endTime: " + load.getEndTime() +
-                    ", currentTime: " + now +
-                    ", expired: " + isExpired);
+                System.out.println("⏰ Checking timer for load " + load.getLoadNumber() +
+                        ", status: " + load.getStatus() +
+                        ", endTime: " + load.getEndTime() +
+                        ", currentTime: " + now +
+                        ", expired: " + isExpired);
 
-            if (isExpired) {
-                String previousStatus = load.getStatus();
+                if (isExpired) {
+                    String previousStatus = load.getStatus();
 
-                // Timer has expired, auto-advance immediately
-                switch (load.getStatus()) {
-                    case STATUS_WASHING:
-                        load.setStatus(STATUS_WASHED);
-                        releaseMachine(load);
-                        System.out.println("✅ Auto-advanced from WASHING to WASHED");
-                        break;
-                    case STATUS_DRYING:
-                        load.setStatus(STATUS_DRIED);
-                        releaseMachine(load);
-                        System.out.println("✅ Auto-advanced from DRYING to DRIED");
-                        break;
+                    // Timer has expired, auto-advance immediately
+                    switch (load.getStatus()) {
+                        case STATUS_WASHING:
+                            load.setStatus(STATUS_WASHED);
+                            releaseMachine(load);
+                            System.out.println("✅ Auto-advanced from WASHING to WASHED");
+                            break;
+                        case STATUS_DRYING:
+                            load.setStatus(STATUS_DRIED);
+                            releaseMachine(load);
+                            System.out.println("✅ Auto-advanced from DRYING to DRIED");
+                            break;
+                    }
+                    jobChanged = true;
+
+                    // Send notifications for automatic status changes
+                    sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
+
+                    // Clear timer data since step is completed
+                    load.setStartTime(null);
+                    load.setEndTime(null);
+                    load.setDurationMinutes(null);
                 }
-                jobChanged = true;
-
-                // Send notifications for automatic status changes
-                sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
-
-                // Clear timer data since step is completed
-                load.setStartTime(null);
-                load.setEndTime(null);
-                load.setDurationMinutes(null);
             }
+        }
+
+        // Save the job if any changes were made
+        if (jobChanged) {
+            laundryJobRepository.save(job);
+            System.out.println("💾 Saved job changes due to timer completion");
         }
     }
 
-    // Save the job if any changes were made
-    if (jobChanged) {
-        laundryJobRepository.save(job);
-        System.out.println("💾 Saved job changes due to timer completion");
-    }
-}
-    // Add a new method to get real-time timer status
     public Map<String, Object> getTimerStatus(String transactionId, int loadNumber) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -272,12 +273,18 @@ public class LaundryJobService {
             LocalDateTime now = LocalDateTime.now();
             long remainingSeconds = java.time.Duration.between(now, load.getEndTime()).getSeconds();
 
-            timerStatus.put("isRunning", true);
+            boolean isRunning = remainingSeconds > 0;
+
+            timerStatus.put("isRunning", isRunning);
             timerStatus.put("remainingSeconds", Math.max(0, remainingSeconds));
             timerStatus.put("startTime", load.getStartTime());
             timerStatus.put("endTime", load.getEndTime());
             timerStatus.put("durationMinutes", load.getDurationMinutes());
             timerStatus.put("status", load.getStatus());
+
+            System.out.println("⏰ Timer status for load " + loadNumber +
+                    ": remaining=" + remainingSeconds + "s, isRunning=" + isRunning +
+                    ", start=" + load.getStartTime() + ", end=" + load.getEndTime());
         } else {
             timerStatus.put("isRunning", false);
             timerStatus.put("remainingSeconds", 0);

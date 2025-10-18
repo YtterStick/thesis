@@ -69,20 +69,23 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
     // Map NOT_STARTED to UNWASHED for icon lookup
     const displayStatus = load.status === "NOT_STARTED" ? "UNWASHED" : load.status;
     const statusConfig = STATUS_ICONS[displayStatus] || STATUS_ICONS.UNWASHED;
-    const remaining = getRemainingTime(load);
-
-    // Determine if we should show static animation (for completed states)
-    const shouldShowStatic = !statusConfig.loop && statusConfig.staticFrame !== undefined;
     
-    // Check if timer is actually running (not just in WASHING/DRYING status)
+    // Use the actual remaining time calculation
+    const remaining = getRemainingTime(load);
     const isTimerRunning = (load.status === "WASHING" || load.status === "DRYING") && 
                           remaining !== null && remaining > 0;
 
+    // Determine if we should show static animation (for completed states)
+    const shouldShowStatic = !statusConfig.loop && statusConfig.staticFrame !== undefined && !isTimerRunning;
+    
     console.log(`🎯 StatusIndicator for load ${load.loadNumber}:`, {
         displayStatus,
         remaining,
         isTimerRunning,
-        shouldShowStatic
+        shouldShowStatic,
+        startTime: load.startTime,
+        endTime: load.endTime,
+        duration: load.duration
     });
     
     return (
@@ -92,9 +95,9 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                     <div className="relative">
                         <Lottie
                             animationData={statusConfig.animation}
-                            loop={isTimerRunning ? statusConfig.loop : false}
+                            loop={isTimerRunning}
                             style={{ width: 40, height: 40 }}
-                            {...(shouldShowStatic && !isTimerRunning && {
+                            {...(shouldShowStatic && {
                                 initialSegment: [statusConfig.staticFrame, statusConfig.staticFrame]
                             })}
                         />
@@ -119,7 +122,7 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                         </span>
                         {isTimerRunning && remaining !== null && (
                             <span className="text-xs text-gray-500">
-                                {Math.ceil(remaining / 60)}m {remaining % 60}s remaining
+                                {Math.floor(remaining / 60)}m {(remaining % 60)}s remaining
                             </span>
                         )}
                     </div>
@@ -133,7 +136,7 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                 }}
             >
                 {isTimerRunning && remaining !== null
-                    ? `${Math.ceil(remaining / 60)} min ${remaining % 60} sec remaining`
+                    ? `${Math.floor(remaining / 60)} min ${remaining % 60} sec remaining`
                     : displayStatus === "COMPLETED"
                       ? "Complete"
                       : "Ready for next step"}

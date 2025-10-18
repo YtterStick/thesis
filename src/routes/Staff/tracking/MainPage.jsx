@@ -65,68 +65,83 @@ export default function ServiceTrackingPage() {
         }
     }, [jobs, currentPage, totalPages]);
 
-    // Fetch timer status from backend for all active loads
-    const fetchTimerStatuses = useCallback(async () => {
-        if (!hasActiveJobs) return;
+   // Fetch timer status from backend for all active loads
+const fetchTimerStatuses = useCallback(async () => {
+    if (!hasActiveJobs) return;
 
-        try {
-            const timerPromises = [];
-            
-            jobs.forEach(job => {
-                job.loads.forEach(load => {
-                    if (load.status === "WASHING" || load.status === "DRYING") {
-                        timerPromises.push(
-                            api.get(`api/laundry-jobs/${job.transactionId}/load/${load.loadNumber}/timer-status`)
-                                .then(timerStatus => ({
-                                    jobId: job.id,
-                                    loadNumber: load.loadNumber,
-                                    timerStatus
-                                }))
-                                .catch(error => {
-                                    console.error(`Failed to fetch timer status for load ${load.loadNumber}:`, error);
-                                    return null;
-                                })
-                        );
-                    }
-                });
+    try {
+        const timerPromises = [];
+        
+        jobs.forEach(job => {
+            job.loads.forEach(load => {
+                if (load.status === "WASHING" || load.status === "DRYING") {
+                    timerPromises.push(
+                        api.get(`api/laundry-jobs/${job.transactionId}/load/${load.loadNumber}/timer-status`)
+                            .then(timerStatus => ({
+                                jobId: job.id,
+                                transactionId: job.transactionId,
+                                loadNumber: load.loadNumber,
+                                timerStatus
+                            }))
+                            .catch(error => {
+                                console.error(`Failed to fetch timer status for load ${load.loadNumber}:`, error);
+                                return null;
+                            })
+                    );
+                }
             });
+        });
 
-            const timerResults = await Promise.all(timerPromises);
-            
-            // Update jobs with real timer status from backend
-            setJobs(prevJobs => prevJobs.map(job => {
-                const jobTimerResults = timerResults.filter(result => 
-                    result && result.jobId === job.id
-                );
+        const timerResults = await Promise.all(timerPromises);
+        
+        // Update jobs with real timer status from backend
+        setJobs(prevJobs => prevJobs.map(job => {
+            const jobTimerResults = timerResults.filter(result => 
+                result && (result.jobId === job.id || result.transactionId === job.transactionId)
+            );
 
-                if (jobTimerResults.length === 0) return job;
+            if (jobTimerResults.length === 0) return job;
 
-                return {
-                    ...job,
-                    loads: job.loads.map(load => {
-                        const timerResult = jobTimerResults.find(result => 
-                            result.loadNumber === load.loadNumber
-                        );
+            return {
+                ...job,
+                loads: job.loads.map(load => {
+                    const timerResult = jobTimerResults.find(result => 
+                        result.loadNumber === load.loadNumber
+                    );
 
-                        if (!timerResult) return load;
+                    if (!timerResult) return load;
 
-                        return {
-                            ...load,
-                            // Update with real backend timer data
-                            startTime: timerResult.timerStatus.startTime,
-                            endTime: timerResult.timerStatus.endTime,
-                            duration: timerResult.timerStatus.durationMinutes,
-                            // Status might have changed if timer expired
-                            status: timerResult.timerStatus.status || load.status
-                        };
-                    })
-                };
-            }));
+                    const timerData = timerResult.timerStatus;
+                    
+                    console.log(`🔄 Updating timer for load ${load.loadNumber}:`, {
+                        previousStatus: load.status,
+                        newStatus: timerData.status,
+                        isRunning: timerData.isRunning,
+                        remaining: timerData.remainingSeconds
+                    });
 
-        } catch (error) {
-            console.error("Error fetching timer statuses:", error);
-        }
-    }, [jobs, hasActiveJobs]);
+                    // If timer expired in backend, update status
+                    if (!timerData.isRunning && (load.status === "WASHING" || load.status === "DRYING")) {
+                        console.log(`🔄 Timer expired in backend for load ${load.loadNumber}, updating status`);
+                    }
+
+                    return {
+                        ...load,
+                        // Update with real backend timer data
+                        startTime: timerData.startTime,
+                        endTime: timerData.endTime,
+                        duration: timerData.durationMinutes,
+                        // Status might have changed if timer expired
+                        status: timerData.status || load.status
+                    };
+                })
+            };
+        }));
+
+    } catch (error) {
+        console.error("Error fetching timer statuses:", error);
+    }
+}, [jobs, hasActiveJobs]);
 
     // Sync timers with backend periodically
     useEffect(() => {
@@ -147,20 +162,21 @@ export default function ServiceTrackingPage() {
 
             const jobsWithLoads = data.map((job) => {
                 console.log("🔄 Processing job:", job.transactionId, job.customerName);
-                
-                const loads = (job.loadAssignments?.length
-                    ? job.loadAssignments
-                    : Array.from({ length: job.totalLoads || 1 }, (_, i) => ({
-                          loadNumber: i + 1,
-                          machineId: null,
-                          durationMinutes: null,
-                          status: "NOT_STARTED",
-                          startTime: null,
-                          endTime: null,
-                      }))
+
+                const loads = (
+                    job.loadAssignments?.length
+                        ? job.loadAssignments
+                        : Array.from({ length: job.totalLoads || 1 }, (_, i) => ({
+                              loadNumber: i + 1,
+                              machineId: null,
+                              durationMinutes: null,
+                              status: "NOT_STARTED",
+                              startTime: null,
+                              endTime: null,
+                          }))
                 ).map((l, index) => {
                     let status = l.status?.toUpperCase() || "NOT_STARTED";
-                    
+
                     if (status === "NOT_STARTED") {
                         status = "UNWASHED";
                     }
@@ -175,11 +191,11 @@ export default function ServiceTrackingPage() {
                         duration: duration,
                         startTime: startTime,
                         endTime: endTime,
-                        hasTimerData: !!(startTime && duration)
+                        hasTimerData: !!(startTime && duration),
                     });
 
                     return {
-                        loadNumber: l.loadNumber || (index + 1),
+                        loadNumber: l.loadNumber || index + 1,
                         machineId: l.machineId || null,
                         duration: duration,
                         status: status,
@@ -230,23 +246,21 @@ export default function ServiceTrackingPage() {
 
         setIsPolling(true);
         try {
-            const [jobsResponse, machinesResponse] = await Promise.allSettled([
-                api.get("api/laundry-jobs/with-synced-timers"),
-                fetchMachines()
-            ]);
+            const [jobsResponse, machinesResponse] = await Promise.allSettled([api.get("api/laundry-jobs/with-synced-timers"), fetchMachines()]);
 
             if (jobsResponse.status === "fulfilled" && jobsResponse.value) {
                 const jobsWithLoads = jobsResponse.value.map((job) => {
-                    const loads = (job.loadAssignments?.length
-                        ? job.loadAssignments
-                        : Array.from({ length: job.totalLoads || 1 }, (_, i) => ({
-                              loadNumber: i + 1,
-                              machineId: null,
-                              durationMinutes: null,
-                              status: "NOT_STARTED",
-                              startTime: null,
-                              endTime: null,
-                          }))
+                    const loads = (
+                        job.loadAssignments?.length
+                            ? job.loadAssignments
+                            : Array.from({ length: job.totalLoads || 1 }, (_, i) => ({
+                                  loadNumber: i + 1,
+                                  machineId: null,
+                                  durationMinutes: null,
+                                  status: "NOT_STARTED",
+                                  startTime: null,
+                                  endTime: null,
+                              }))
                     ).map((l) => {
                         let status = l.status?.toUpperCase() || "NOT_STARTED";
                         if (status === "NOT_STARTED") {
@@ -374,30 +388,35 @@ export default function ServiceTrackingPage() {
     const getJobKey = (job) => job.id ?? `${job.customerName}-${job.issueDate}`;
 
     const getRemainingTime = (load) => {
-    // Always calculate from backend data - this is the source of truth
-    if (!load.startTime || !load.duration) {
-        return null;
-    }
-    
-    try {
-        const start = new Date(load.startTime).getTime();
-        const end = start + load.duration * 60000;
-        const remaining = Math.max(Math.floor((end - now) / 1000), 0);
-        
-        console.log(`⏰ Timer calculation for load ${load.loadNumber}:`, {
-            start: new Date(load.startTime),
-            duration: load.duration,
-            calculatedEnd: new Date(end),
-            now: new Date(now),
-            remainingSeconds: remaining
-        });
-        
-        return remaining;
-    } catch (error) {
-        console.error(`Error calculating remaining time for load ${load.loadNumber}:`, error);
-        return null;
-    }
-};
+        // Always calculate from backend data - this is the source of truth
+        if (!load.startTime || !load.duration) {
+            return null;
+        }
+
+        try {
+            // Convert backend datetime strings to timestamps
+            const start = new Date(load.startTime).getTime();
+            const end = new Date(load.endTime).getTime(); // Use the actual endTime from backend
+            const currentTime = new Date().getTime(); // Use current time, not the 'now' state
+
+            const remaining = Math.max(Math.floor((end - currentTime) / 1000), 0);
+
+            console.log(`⏰ Timer calculation for load ${load.loadNumber}:`, {
+                start: new Date(load.startTime),
+                startTime: load.startTime,
+                endTime: load.endTime,
+                duration: load.duration,
+                calculatedEnd: new Date(end),
+                now: new Date(currentTime),
+                remainingSeconds: remaining,
+            });
+
+            return remaining > 0 ? remaining : null;
+        } catch (error) {
+            console.error(`Error calculating remaining time for load ${load.loadNumber}:`, error);
+            return null;
+        }
+    };
 
     const sendSmsNotification = async (job, serviceType) => {
         const jobKey = getJobKey(job);
@@ -468,135 +487,128 @@ export default function ServiceTrackingPage() {
     };
 
     const startAction = async (jobKey, loadIndex) => {
-    const job = jobs.find((j) => getJobKey(j) === jobKey);
-    if (!job?.id) return;
-    const load = job.loads[loadIndex];
+        const job = jobs.find((j) => getJobKey(j) === jobKey);
+        if (!job?.id) return;
+        const load = job.loads[loadIndex];
 
-    // Normalize service type
-    const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
+        // Normalize service type
+        const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
 
-    let status = load.status;
+        let status = load.status;
 
-    // Determine next status based on current status and service type
-    if (normalizedServiceType === "Wash") {
-        if (load.status === "UNWASHED" || load.status === "NOT_STARTED") status = "WASHING";
-    } else if (normalizedServiceType === "Dry") {
-        if (load.status === "UNWASHED" || load.status === "NOT_STARTED") status = "DRYING";
-    } else if (normalizedServiceType === "Wash & Dry") {
-        if (load.status === "UNWASHED" || load.status === "NOT_STARTED") status = "WASHING";
-        else if (load.status === "WASHED") status = "DRYING";
-    }
-
-    console.log(`🚀 Starting action for load ${load.loadNumber}: ${load.status} -> ${status}`);
-
-    // Get the required machine type for the NEXT step
-    const requiredMachineType = getMachineTypeForStep(status, normalizedServiceType);
-
-    // Check if the assigned machine matches the required type
-    if (requiredMachineType) {
-        const assignedMachine = machines.find((m) => m.id === load.machineId);
-        const isCorrectMachineType = assignedMachine && (assignedMachine.type || "").toUpperCase() === requiredMachineType;
-
-        if (!isCorrectMachineType) {
-            const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
-            return alert(`Please assign a ${machineTypeName} machine first.`);
+        // Determine next status based on current status and service type
+        if (normalizedServiceType === "Wash") {
+            if (load.status === "UNWASHED" || load.status === "NOT_STARTED") status = "WASHING";
+        } else if (normalizedServiceType === "Dry") {
+            if (load.status === "UNWASHED" || load.status === "NOT_STARTED") status = "DRYING";
+        } else if (normalizedServiceType === "Wash & Dry") {
+            if (load.status === "UNWASHED" || load.status === "NOT_STARTED") status = "WASHING";
+            else if (load.status === "WASHED") status = "DRYING";
         }
-    }
 
-    const duration =
-        load.duration && load.duration > 0
-            ? load.duration
-            : status === "WASHING"
-              ? DEFAULT_DURATION.washing
-              : status === "DRYING"
-                ? DEFAULT_DURATION.drying
-                : null;
+        console.log(`🚀 Starting action for load ${load.loadNumber}: ${load.status} -> ${status}`);
 
-    // Update UI immediately with pending state
-    setJobs((prev) =>
-        prev.map((j) =>
-            getJobKey(j) === jobKey
-                ? {
-                      ...j,
-                      loads: j.loads.map((l, idx) => 
-                          idx === loadIndex ? { ...l, status, duration, pending: true } : l
-                      ),
-                  }
-                : j,
-        ),
-    );
+        // Get the required machine type for the NEXT step
+        const requiredMachineType = getMachineTypeForStep(status, normalizedServiceType);
 
-    try {
-        // This will save the timer to backend and start the scheduled task
-        const response = await api.patch(`api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`);
+        // Check if the assigned machine matches the required type
+        if (requiredMachineType) {
+            const assignedMachine = machines.find((m) => m.id === load.machineId);
+            const isCorrectMachineType = assignedMachine && (assignedMachine.type || "").toUpperCase() === requiredMachineType;
 
-        console.log(`✅ Started ${status} for load ${load.loadNumber} - backend response:`, response);
-
-        // Wait a moment for backend to process, then fetch updated timer data
-        setTimeout(async () => {
-            try {
-                // Get the actual timer details from backend
-                const timerDetails = await api.get(`api/laundry-jobs/${job.id}/load/${load.loadNumber}/timer-details`);
-                console.log(`⏰ Backend timer details:`, timerDetails);
-
-                // Update the job with real backend data
-                setJobs((prev) =>
-                    prev.map((j) =>
-                        getJobKey(j) === jobKey
-                            ? {
-                                  ...j,
-                                  loads: j.loads.map((l, idx) =>
-                                      idx === loadIndex
-                                          ? {
-                                                ...l,
-                                                status: timerDetails.status,
-                                                startTime: timerDetails.startTime,
-                                                endTime: timerDetails.endTime,
-                                                duration: timerDetails.durationMinutes,
-                                                pending: false,
-                                            }
-                                          : l
-                                  ),
-                              }
-                            : j,
-                    ),
-                );
-            } catch (error) {
-                console.error("Failed to fetch timer details:", error);
-                // If we can't get timer details, just mark as not pending
-                setJobs((prev) =>
-                    prev.map((j) =>
-                        getJobKey(j) === jobKey
-                            ? {
-                                  ...j,
-                                  loads: j.loads.map((l, idx) => 
-                                      idx === loadIndex ? { ...l, pending: false } : l
-                                  ),
-                              }
-                            : j,
-                    ),
-                );
+            if (!isCorrectMachineType) {
+                const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
+                return alert(`Please assign a ${machineTypeName} machine first.`);
             }
-        }, 1000);
-        
-    } catch (err) {
-        console.error("Failed to start load:", err);
-        // Revert on error
+        }
+
+        const duration =
+            load.duration && load.duration > 0
+                ? load.duration
+                : status === "WASHING"
+                  ? DEFAULT_DURATION.washing
+                  : status === "DRYING"
+                    ? DEFAULT_DURATION.drying
+                    : null;
+
+        // Update UI immediately with pending state
         setJobs((prev) =>
             prev.map((j) =>
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => 
-                              idx === loadIndex ? { ...l, pending: false } : l
-                          ),
+                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status, duration, pending: true } : l)),
                       }
                     : j,
             ),
         );
-        fetchData(true);
-    }
-};
+
+        try {
+            // This will save the timer to backend and start the scheduled task
+            const response = await api.patch(`api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`);
+
+            console.log(`✅ Started ${status} for load ${load.loadNumber} - backend response:`, response);
+
+            // Wait a moment for backend to process, then fetch updated timer data
+            setTimeout(async () => {
+                try {
+                    // Get the actual timer details from backend
+                    const timerDetails = await api.get(`api/laundry-jobs/${job.id}/load/${load.loadNumber}/timer-details`);
+                    console.log(`⏰ Backend timer details:`, timerDetails);
+
+                    // Update the job with real backend data
+                    setJobs((prev) =>
+                        prev.map((j) =>
+                            getJobKey(j) === jobKey
+                                ? {
+                                      ...j,
+                                      loads: j.loads.map((l, idx) =>
+                                          idx === loadIndex
+                                              ? {
+                                                    ...l,
+                                                    status: timerDetails.status,
+                                                    startTime: timerDetails.startTime,
+                                                    endTime: timerDetails.endTime,
+                                                    duration: timerDetails.durationMinutes,
+                                                    pending: false,
+                                                }
+                                              : l,
+                                      ),
+                                  }
+                                : j,
+                        ),
+                    );
+                } catch (error) {
+                    console.error("Failed to fetch timer details:", error);
+                    // If we can't get timer details, just mark as not pending
+                    setJobs((prev) =>
+                        prev.map((j) =>
+                            getJobKey(j) === jobKey
+                                ? {
+                                      ...j,
+                                      loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false } : l)),
+                                  }
+                                : j,
+                        ),
+                    );
+                }
+            }, 1000);
+        } catch (err) {
+            console.error("Failed to start load:", err);
+            // Revert on error
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false } : l)),
+                          }
+                        : j,
+                ),
+            );
+            fetchData(true);
+        }
+    };
 
     const advanceStatus = async (jobKey, loadIndex) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
@@ -690,12 +702,11 @@ export default function ServiceTrackingPage() {
 
         try {
             await api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`);
-            
+
             // Refresh to get the new timer data from backend
             setTimeout(() => {
                 fetchData(true);
             }, 1000);
-            
         } catch (err) {
             console.error("Failed to start drying again:", err);
             fetchData(true);
@@ -885,7 +896,10 @@ export default function ServiceTrackingPage() {
                     },
                     {
                         label: "Pending",
-                        value: jobs.reduce((acc, job) => acc + job.loads.filter((load) => load.status === "UNWASHED" || load.status === "NOT_STARTED").length, 0),
+                        value: jobs.reduce(
+                            (acc, job) => acc + job.loads.filter((load) => load.status === "UNWASHED" || load.status === "NOT_STARTED").length,
+                            0,
+                        ),
                         color: "#FB923C",
                         description: "Waiting to start",
                     },
