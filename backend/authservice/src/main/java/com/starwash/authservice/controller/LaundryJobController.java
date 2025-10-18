@@ -170,4 +170,27 @@ public class LaundryJobController {
         List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
         return ResponseEntity.ok(jobs);
     }
+
+    // Sync timer states - call this periodically from frontend
+@PostMapping("/{transactionId}/sync-timer")
+public ResponseEntity<LaundryJobDto> syncTimerState(@PathVariable String transactionId) {
+    LaundryJob job = laundryJobService.findSingleJobByTransaction(transactionId);
+    laundryJobService.syncTimerStates(job);
+    LaundryJob updatedJob = laundryJobService.updateJob(job, "system");
+    return ResponseEntity.ok(toDto(updatedJob));
+}
+
+// Get all jobs with synced timer states
+@GetMapping("/with-synced-timers")
+public ResponseEntity<List<LaundryJobDto>> getAllJobsWithSyncedTimers() {
+    List<LaundryJobDto> jobs = laundryJobService.getAllJobs();
+    
+    // Sync timer states for all jobs
+    for (LaundryJobDto jobDto : jobs) {
+        LaundryJob job = laundryJobService.findSingleJobByTransaction(jobDto.getTransactionId());
+        laundryJobService.syncTimerStates(job);
+    }
+    
+    return ResponseEntity.ok(jobs);
+}
 }
