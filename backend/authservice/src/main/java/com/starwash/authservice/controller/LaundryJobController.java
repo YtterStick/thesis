@@ -2,11 +2,14 @@ package com.starwash.authservice.controller;
 
 import com.starwash.authservice.dto.LaundryJobDto;
 import com.starwash.authservice.model.LaundryJob;
+import com.starwash.authservice.model.LaundryJob.LoadAssignment;
 import com.starwash.authservice.service.LaundryJobService;
 import com.starwash.authservice.security.JwtUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -198,6 +201,38 @@ public class LaundryJobController {
         List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
         return ResponseEntity.ok(jobs);
     }
+    // In LaundryJobController.java - Add this endpoint
+@GetMapping("/{transactionId}/load/{loadNumber}/timer-details")
+public ResponseEntity<Map<String, Object>> getTimerDetails(
+        @PathVariable String transactionId,
+        @PathVariable int loadNumber) {
+    
+    LaundryJob job = laundryJobService.findSingleJobByTransaction(transactionId);
+    
+    LoadAssignment load = job.getLoadAssignments().stream()
+            .filter(l -> l.getLoadNumber() == loadNumber)
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+    
+    Map<String, Object> timerDetails = new HashMap<>();
+    timerDetails.put("status", load.getStatus());
+    timerDetails.put("startTime", load.getStartTime());
+    timerDetails.put("endTime", load.getEndTime());
+    timerDetails.put("durationMinutes", load.getDurationMinutes());
+    timerDetails.put("machineId", load.getMachineId());
+    
+    if (load.getStartTime() != null && load.getEndTime() != null) {
+        LocalDateTime now = LocalDateTime.now();
+        long remainingSeconds = java.time.Duration.between(now, load.getEndTime()).getSeconds();
+        timerDetails.put("remainingSeconds", Math.max(0, remainingSeconds));
+        timerDetails.put("isRunning", remainingSeconds > 0);
+    } else {
+        timerDetails.put("remainingSeconds", 0);
+        timerDetails.put("isRunning", false);
+    }
+    
+    return ResponseEntity.ok(timerDetails);
+}
 
     // ========== DTO Conversion ==========
     private LaundryJobDto toDto(LaundryJob job) {

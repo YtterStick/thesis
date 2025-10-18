@@ -189,6 +189,7 @@ public class LaundryJobService {
         if (STATUS_WASHING.equals(nextStatus) || STATUS_DRYING.equals(nextStatus)) {
             scheduler.schedule(() -> {
                 try {
+                    System.out.println("⏰ Scheduled task executing for load " + loadNumber);
                     autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber);
                 } catch (Exception e) {
                     System.err.println("❌ Error in scheduled auto-advance: " + e.getMessage());
@@ -202,60 +203,58 @@ public class LaundryJobService {
         return saved;
     }
 
-    // Update the syncTimerStates to be more aggressive
     public void syncTimerStates(LaundryJob job) {
-        LocalDateTime now = LocalDateTime.now();
-        boolean jobChanged = false;
+    LocalDateTime now = LocalDateTime.now();
+    boolean jobChanged = false;
 
-        for (LoadAssignment load : job.getLoadAssignments()) {
-            // Check if timer should be completed immediately
-            if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
-                    && load.getEndTime() != null) {
+    for (LoadAssignment load : job.getLoadAssignments()) {
+        // Check if timer should be completed immediately
+        if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
+                && load.getEndTime() != null) {
 
-                boolean isExpired = now.isAfter(load.getEndTime());
+            boolean isExpired = now.isAfter(load.getEndTime()) || now.isEqual(load.getEndTime());
 
-                System.out.println("⏰ Checking timer for load " + load.getLoadNumber() +
-                        ", status: " + load.getStatus() +
-                        ", endTime: " + load.getEndTime() +
-                        ", currentTime: " + now +
-                        ", expired: " + isExpired);
+            System.out.println("⏰ Checking timer for load " + load.getLoadNumber() +
+                    ", status: " + load.getStatus() +
+                    ", endTime: " + load.getEndTime() +
+                    ", currentTime: " + now +
+                    ", expired: " + isExpired);
 
-                if (isExpired) {
-                    String previousStatus = load.getStatus();
+            if (isExpired) {
+                String previousStatus = load.getStatus();
 
-                    // Timer has expired, auto-advance immediately
-                    switch (load.getStatus()) {
-                        case STATUS_WASHING:
-                            load.setStatus(STATUS_WASHED);
-                            releaseMachine(load);
-                            System.out.println("✅ Auto-advanced from WASHING to WASHED");
-                            break;
-                        case STATUS_DRYING:
-                            load.setStatus(STATUS_DRIED);
-                            releaseMachine(load);
-                            System.out.println("✅ Auto-advanced from DRYING to DRIED");
-                            break;
-                    }
-                    jobChanged = true;
-
-                    // Send notifications for automatic status changes
-                    sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
-
-                    // Clear timer data since step is completed
-                    load.setStartTime(null);
-                    load.setEndTime(null);
-                    load.setDurationMinutes(null);
+                // Timer has expired, auto-advance immediately
+                switch (load.getStatus()) {
+                    case STATUS_WASHING:
+                        load.setStatus(STATUS_WASHED);
+                        releaseMachine(load);
+                        System.out.println("✅ Auto-advanced from WASHING to WASHED");
+                        break;
+                    case STATUS_DRYING:
+                        load.setStatus(STATUS_DRIED);
+                        releaseMachine(load);
+                        System.out.println("✅ Auto-advanced from DRYING to DRIED");
+                        break;
                 }
-            }
-        }
+                jobChanged = true;
 
-        // Save the job if any changes were made
-        if (jobChanged) {
-            laundryJobRepository.save(job);
-            System.out.println("💾 Saved job changes due to timer completion");
+                // Send notifications for automatic status changes
+                sendStatusChangeNotifications(job, load, previousStatus, load.getStatus());
+
+                // Clear timer data since step is completed
+                load.setStartTime(null);
+                load.setEndTime(null);
+                load.setDurationMinutes(null);
+            }
         }
     }
 
+    // Save the job if any changes were made
+    if (jobChanged) {
+        laundryJobRepository.save(job);
+        System.out.println("💾 Saved job changes due to timer completion");
+    }
+}
     // Add a new method to get real-time timer status
     public Map<String, Object> getTimerStatus(String transactionId, int loadNumber) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
@@ -345,26 +344,32 @@ public class LaundryJobService {
         }
 
         String normalizedType = serviceType.toLowerCase().trim();
+        String currentStatus = load.getStatus();
+
+        System.out.println(
+                "🔄 Determining next status for service: " + normalizedType + ", current status: " + currentStatus);
 
         switch (normalizedType) {
             case "wash":
             case "wash only":
-                if (STATUS_NOT_STARTED.equals(load.getStatus()))
+                if (STATUS_NOT_STARTED.equals(currentStatus) || "UNWASHED".equals(currentStatus))
                     return STATUS_WASHING;
                 break;
             case "dry":
             case "dry only":
-                if (STATUS_NOT_STARTED.equals(load.getStatus()))
+                if (STATUS_NOT_STARTED.equals(currentStatus) || "UNWASHED".equals(currentStatus))
                     return STATUS_DRYING;
                 break;
             case "wash & dry":
-                if (STATUS_NOT_STARTED.equals(load.getStatus()))
+                if (STATUS_NOT_STARTED.equals(currentStatus) || "UNWASHED".equals(currentStatus))
                     return STATUS_WASHING;
-                if (STATUS_WASHED.equals(load.getStatus()))
+                if (STATUS_WASHED.equals(currentStatus))
                     return STATUS_DRYING;
                 break;
         }
-        return load.getStatus();
+
+        System.out.println("➡️ Next status determined as: " + currentStatus);
+        return currentStatus;
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
