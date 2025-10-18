@@ -138,7 +138,8 @@ public class LaundryJobService {
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, String processedBy) {
+    public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, 
+                               String processedBy, LocalDateTime frontendTime) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
         LoadAssignment load = job.getLoadAssignments().stream()
@@ -164,7 +165,8 @@ public class LaundryJobService {
 
         int finalDuration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : defaultDuration;
 
-        LocalDateTime now = LocalDateTime.now();
+        // Use frontend time if provided, otherwise use backend time
+        LocalDateTime now = (frontendTime != null) ? frontendTime : LocalDateTime.now();
         LocalDateTime endTime = now.plusMinutes(finalDuration);
 
         load.setStatus(nextStatus);
@@ -185,6 +187,7 @@ public class LaundryJobService {
                 ", duration: " + finalDuration + " minutes" +
                 ", startTime: " + now +
                 ", endTime: " + endTime +
+                ", timeSource: " + (frontendTime != null ? "FRONTEND" : "BACKEND") +
                 ", currentYear: " + now.getYear() +
                 ", endTimeYear: " + endTime.getYear());
 
@@ -235,11 +238,64 @@ public class LaundryJobService {
         return laundryJobRepository.save(job);
     }
 
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob correctTime(String transactionId, int loadNumber, LocalDateTime correctTime) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        if (load.getStartTime() != null && load.getDurationMinutes() != null) {
+            LocalDateTime newEnd = correctTime.plusMinutes(load.getDurationMinutes());
+            load.setStartTime(correctTime);
+            load.setEndTime(newEnd);
+            
+            System.out.println("🔄 Corrected time for load " + loadNumber + 
+                    " to: " + correctTime + " -> " + newEnd);
+        }
+
+        return laundryJobRepository.save(job);
+    }
+
+    public String emergencyFixAllTimers() {
+        try {
+            List<LaundryJob> allJobs = laundryJobRepository.findAll();
+            int fixedCount = 0;
+            
+            for (LaundryJob job : allJobs) {
+                for (LoadAssignment load : job.getLoadAssignments()) {
+                    if (load.getStartTime() != null && load.getEndTime() != null) {
+                        // Check if dates are in 2025
+                        if (load.getStartTime().getYear() == 125) { // 125 = 2025 in Java LocalDateTime
+                            LocalDateTime now = LocalDateTime.now();
+                            LocalDateTime newStart = now;
+                            LocalDateTime newEnd = now.plusMinutes(load.getDurationMinutes() != null ? load.getDurationMinutes() : 30);
+                            
+                            load.setStartTime(newStart);
+                            load.setEndTime(newEnd);
+                            fixedCount++;
+                            
+                            System.out.println("🔄 Fixed timer for load " + load.getLoadNumber() + 
+                                    " from " + load.getStartTime() + " to " + newStart);
+                        }
+                    }
+                }
+            }
+            
+            laundryJobRepository.saveAll(allJobs);
+            return "Fixed " + fixedCount + " timers with correct dates";
+        } catch (Exception e) {
+            return "Error fixing timers: " + e.getMessage();
+        }
+    }
+
     public Map<String, Object> getDebugTimeInfo() {
         Map<String, Object> timeInfo = new HashMap<>();
-        timeInfo.put("currentTime", LocalDateTime.now());
-        timeInfo.put("currentYear", LocalDateTime.now().getYear());
-        timeInfo.put("systemTime", new Date());
+        timeInfo.put("backendTime", LocalDateTime.now());
+        timeInfo.put("backendTimeFormatted", LocalDateTime.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        timeInfo.put("backendYear", LocalDateTime.now().getYear());
         timeInfo.put("timezone", TimeZone.getDefault().getID());
         return timeInfo;
     }

@@ -4,10 +4,12 @@ import com.starwash.authservice.dto.LaundryJobDto;
 import com.starwash.authservice.model.LaundryJob;
 import com.starwash.authservice.service.LaundryJobService;
 import com.starwash.authservice.security.JwtUtil;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -100,14 +102,15 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
-    // Start load
+    // Start load with frontend time
     @PatchMapping("/{transactionId}/start-load")
     public ResponseEntity<LaundryJobDto> startLoad(@PathVariable String transactionId,
             @RequestParam int loadNumber,
             @RequestParam(required = false) Integer durationMinutes,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime frontendTime,
             @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
-        LaundryJob job = laundryJobService.startLoad(transactionId, loadNumber, durationMinutes, username);
+        LaundryJob job = laundryJobService.startLoad(transactionId, loadNumber, durationMinutes, username, frontendTime);
         return ResponseEntity.ok(toDto(job));
     }
 
@@ -220,9 +223,26 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
+    // Correct time for a specific load
+    @PostMapping("/{transactionId}/correct-time")
+    public ResponseEntity<LaundryJobDto> correctTime(@PathVariable String transactionId,
+            @RequestParam int loadNumber,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime correctTime) {
+        
+        LaundryJob job = laundryJobService.correctTime(transactionId, loadNumber, correctTime);
+        return ResponseEntity.ok(toDto(job));
+    }
+
+    // Emergency fix all timers
+    @PostMapping("/emergency-fix-timers")
+    public ResponseEntity<String> emergencyFixAllTimers() {
+        String result = laundryJobService.emergencyFixAllTimers();
+        return ResponseEntity.ok(result);
+    }
+
     // Debug endpoint to check current time
-    @GetMapping("/debug-time")
-    public ResponseEntity<Map<String, Object>> getDebugTime() {
+    @GetMapping("/sync-time")
+    public ResponseEntity<Map<String, Object>> getSyncTime() {
         Map<String, Object> timeInfo = laundryJobService.getDebugTimeInfo();
         return ResponseEntity.ok(timeInfo);
     }
