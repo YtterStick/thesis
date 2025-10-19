@@ -127,40 +127,6 @@ export default function AdminDashboardPage() {
         );
     };
 
-    // Calculate unclaimed loads the same way as AdminRecordTable
-    const calculateUnclaimedLoads = (records) => {
-        const unclaimedRecords = records.filter((r) => 
-            r.pickupStatus === "UNCLAIMED" && 
-            r.laundryStatus === "Completed" &&
-            !r.expired && 
-            !r.disposed
-        );
-        
-        const totalUnclaimed = unclaimedRecords.length;
-        const unclaimedList = unclaimedRecords.map(record => ({
-            id: record.id,
-            customerName: record.name,
-            serviceType: record.service,
-            loadCount: record.loads,
-            date: record.createdAt ? new Date(record.createdAt).toLocaleDateString() : 'N/A',
-            invoiceNumber: record.invoiceNumber
-        }));
-
-        return { totalUnclaimed, unclaimedList };
-    };
-
-    // Calculate unwashed loads (same as AdminRecordTable)
-    const calculateUnwashedLoads = (records) => {
-        return records.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
-    };
-
-    // Calculate total income and loads
-    const calculateTotals = (records) => {
-        const totalIncome = records.reduce((acc, r) => acc + r.price, 0);
-        const totalLoads = records.reduce((acc, r) => acc + r.loads, 0);
-        return { totalIncome, totalLoads };
-    };
-
     const fetchDashboardData = useCallback(
         async (forceRefresh = false) => {
             if (!isMountedRef.current || !isAuthenticated || !isAdmin) {
@@ -232,54 +198,15 @@ export default function AdminDashboardPage() {
 
             console.log("🔐 User authenticated, proceeding to dashboard data...");
 
-            // Fetch records from the same endpoint as AdminRecordTable
-            const recordsData = await api.get("api/admin/records");
-            console.log("📊 Raw records data:", recordsData);
-
-            // Map the records to match AdminRecordTable structure
-            const mappedRecords = recordsData.map((r) => ({
-                id: r.id,
-                invoiceNumber: r.invoiceNumber,
-                name: r.customerName,
-                service: r.serviceName,
-                loads: r.loads,
-                detergent: r.detergent,
-                fabric: r.fabric || "—",
-                price: r.totalPrice,
-                paymentMethod: r.paymentMethod || "—",
-                pickupStatus: r.pickupStatus,
-                laundryStatus: r.laundryStatus,
-                laundryProcessedBy: r.laundryProcessedBy || "—",
-                claimProcessedBy: r.claimProcessedBy || "—",
-                createdAt: r.createdAt,
-                paid: r.paid || false,
-                expired: r.expired,
-                disposed: r.disposed || false,
-                disposedBy: r.disposedBy || "—",
-                gcashReference: r.gcashReference || "—",
-                unwashedLoadsCount: r.unwashedLoadsCount || 0,
-            }));
-
-            // Calculate metrics using the same logic as AdminRecordTable
-            const { totalIncome, totalLoads } = calculateTotals(mappedRecords);
-            const unwashedCount = calculateUnwashedLoads(mappedRecords);
-            const { totalUnclaimed, unclaimedList } = calculateUnclaimedLoads(mappedRecords);
-
-            console.log("📈 Calculated metrics:", {
-                totalIncome,
-                totalLoads,
-                unwashedCount,
-                totalUnclaimed,
-                unclaimedListCount: unclaimedList.length
-            });
+            const data = await api.get("/api/dashboard/admin");
 
             const newDashboardData = {
-                totalIncome: totalIncome || 0,
-                totalLoads: totalLoads || 0,
-                unwashedCount: unwashedCount || 0,
-                totalUnclaimed: totalUnclaimed || 0,
-                overviewData: [], // Keep existing overview data logic
-                unclaimedList: unclaimedList || [],
+                totalIncome: data.totalIncome || 0,
+                totalLoads: data.totalLoads || 0,
+                unwashedCount: data.unwashedCount || 0,
+                totalUnclaimed: data.totalUnclaimed || 0,
+                overviewData: data.overviewData || [],
+                unclaimedList: data.unclaimedList || [],
             };
 
             const currentTime = Date.now();
@@ -716,7 +643,7 @@ export default function AdminDashboardPage() {
             icon: <PackageX size={26} />,
             value: displayData.totalUnclaimed.toLocaleString(),
             color: "#F87171",
-            description: "Completed but not picked up",
+            description: "Not picked up",
         },
     ];
 
@@ -750,6 +677,7 @@ export default function AdminDashboardPage() {
                         style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
                     >
                         Real-time business overview and analytics
+                        {dashboardData.lastUpdated && <span> • Last updated: {dashboardData.lastUpdated.toLocaleTimeString()}</span>}
                     </p>
                 </div>
             </motion.div>
@@ -998,7 +926,7 @@ export default function AdminDashboardPage() {
                                     className="text-sm"
                                     style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
                                 >
-                                    All completed laundry has been picked up
+                                    All laundry has been picked up
                                 </p>
                             </motion.div>
                         ) : (
@@ -1033,12 +961,6 @@ export default function AdminDashboardPage() {
                                                     style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/80" }}
                                                 >
                                                     {transaction.serviceType} • {transaction.loadCount || 0} loads
-                                                </p>
-                                                <p
-                                                    className="text-xs"
-                                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/60" }}
-                                                >
-                                                    Invoice: {transaction.invoiceNumber}
                                                 </p>
                                                 <p
                                                     className="text-xs"

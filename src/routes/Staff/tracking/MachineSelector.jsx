@@ -1,41 +1,21 @@
 import React from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { motion } from "framer-motion";
 
-const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkMode }) => {
-    // For DRIED status, show current machine but disable selection
-    // Machine will only be released when advancing to FOLDING
-    const isDriedStatus = load.status === "DRIED";
-    const currentMachine = load.machineId ? options.find((m) => m.id === load.machineId) : null;
-    
+const MachineSelector = ({ load, options, jobs, assignMachine, disabled }) => {
     return (
         <Select
             value={load.machineId ?? ""}
-            onValueChange={isDriedStatus ? undefined : assignMachine} // Disable changes for DRIED status
-            disabled={disabled || isDriedStatus} // Disable selector for DRIED status
+            onValueChange={assignMachine}
+            disabled={disabled}
         >
-            <SelectTrigger className="w-[160px] transition-all"
-                style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
-                    opacity: isDriedStatus ? 0.7 : 1, // Slightly dim when disabled
-                }}
-            >
+            <SelectTrigger className="w-[160px] border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950">
                 <SelectValue placeholder="Select machine">
-                    {currentMachine 
-                        ? currentMachine.name
+                    {load.machineId
+                        ? options.find((m) => m.id === load.machineId)?.name || "Select machine"
                         : "Select machine"}
                 </SelectValue>
             </SelectTrigger>
-            <SelectContent 
-                className="transition-all"
-                style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
-                }}
-            >
+            <SelectContent className="border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                 {options.map((m) => {
                     const assignedElsewhere = jobs.some((j) =>
                         j.loads.some(
@@ -48,20 +28,11 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                             value={m.id}
                             disabled={
                                 (m.status || "").toLowerCase() !== "available" ||
-                                assignedElsewhere ||
-                                isDriedStatus // Disable all options for DRIED status
+                                assignedElsewhere
                             }
-                            className="cursor-pointer transition-colors"
-                            style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            }}
+                            className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
-                            <motion.span
-                                whileHover={isDriedStatus ? {} : { scale: 1.02 }} // No hover effect when disabled
-                                className="block"
-                            >
-                                {m.name}
-                            </motion.span>
+                            {m.name}
                         </SelectItem>
                     );
                 })}
