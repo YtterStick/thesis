@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react"; // Add useRef import here
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, CheckCircle2, Bell, AlertTriangle, Clock, Phone } from "lucide-react";
+import { Search, Loader2, CheckCircle2, Bell, AlertTriangle, Clock, Phone, Eye, QrCode, X } from "lucide-react";
 
 // Import components
 import ViewReceipt from "./ViewReceipt";
@@ -36,7 +36,7 @@ const ServiceTracking = ({
     const [error, setError] = useState(null);
     const [trackingData, setTrackingData] = useState(null);
 
-    const mainCardRef = useRef(null); // This was causing the error
+    const mainCardRef = useRef(null);
 
     // Auto-search when component mounts with autoSearchId
     useEffect(() => {
@@ -333,6 +333,7 @@ const ServiceTracking = ({
                                 </div>
 
                                 <div className="flex w-full gap-2 sm:w-auto">
+                                    {/* View Button - Updated with Eye icon */}
                                     <motion.button
                                         type="submit"
                                         disabled={isLoading}
@@ -351,10 +352,11 @@ const ServiceTracking = ({
                                             borderColor: isDarkMode ? "#18442AF5" : "#F3EDE3",
                                         }}
                                     >
-                                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                                         {isLoading ? "Loading..." : "View"}
                                     </motion.button>
 
+                                    {/* Scan QR Button - Updated with QrCode icon */}
                                     <motion.button
                                         type="button"
                                         onClick={handleScanQR}
@@ -375,9 +377,9 @@ const ServiceTracking = ({
                                         }}
                                     >
                                         {isScanning ? (
-                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                                         ) : (
-                                            <Search className="h-4 w-4" />
+                                            <QrCode className="h-4 w-4" />
                                         )}
                                         <span>{isScanning ? "Scanning..." : "Scan QR"}</span>
                                     </motion.button>
@@ -414,7 +416,7 @@ const ServiceTracking = ({
                                 className="border-t pt-4"
                                 style={{ borderColor: isDarkMode ? "#2A524C" : "#F3EDE3" }}
                             >
-                                {/* Close Tracking Button */}
+                                {/* Close Tracking Button - Updated with X icon */}
                                 <div className="mb-4 flex justify-end">
                                     <motion.button
                                         onClick={handleCloseTracking}
@@ -429,7 +431,7 @@ const ServiceTracking = ({
                                             backgroundColor: isDarkMode ? "#DC2626" : "#EF4444",
                                         }}
                                     >
-                                        <Search className="h-4 w-4" />
+                                        <X className="h-4 w-4" />
                                         Close Tracking
                                     </motion.button>
                                 </div>
@@ -511,7 +513,7 @@ const ServiceTracking = ({
                                         {
                                             icon: Bell,
                                             text: "3-Day Reminder",
-                                            description: "Reminder notification if unclaimed after 3 days",
+                                            description: "Reminder if unclaimed after 3 days",
                                             time: "72 hours",
                                             color: "yellow",
                                         },
@@ -692,20 +694,6 @@ const ServiceTracking = ({
                                         >
                                             Ensure your contact number is accurate to receive service updates and notifications.
                                         </p>
-                                        <motion.div
-                                            whileHover={{ scale: 1.02 }}
-                                            className="mt-3 rounded-lg p-2 text-center"
-                                            style={{
-                                                backgroundColor: isDarkMode ? "rgba(0,0,0,0.1)" : "rgba(24, 61, 61, 0.1)",
-                                            }}
-                                        >
-                                            <p
-                                                className="text-xs font-semibold"
-                                                style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
-                                            >
-                                                📱 Keep your phone active for updates
-                                            </p>
-                                        </motion.div>
                                     </motion.div>
                                 </div>
                             </div>
