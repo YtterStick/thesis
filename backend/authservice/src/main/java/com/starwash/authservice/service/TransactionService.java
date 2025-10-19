@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -15,7 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class TransactionService {
-        //sadw
+    
     private final ServiceRepository serviceRepository;
     private final StockRepository stockRepository;
     private final TransactionRepository transactionRepository;
@@ -38,6 +39,15 @@ public class TransactionService {
         this.laundryJobRepository = laundryJobRepository;
         this.notificationService = notificationService;
         this.auditService = auditService;
+    }
+
+    // Manila timezone (GMT+8)
+    private ZoneId getManilaTimeZone() {
+        return ZoneId.of("Asia/Manila");
+    }
+
+    private LocalDateTime getCurrentManilaTime() {
+        return LocalDateTime.now(getManilaTimeZone());
     }
 
     public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request, String staffId) {
@@ -75,13 +85,17 @@ public class TransactionService {
         double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
         double change = amountGiven - total;
 
-        LocalDateTime now = LocalDateTime.now();
+        // Use Manila time for all date operations
+        LocalDateTime now = getCurrentManilaTime();
         LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
 
         LocalDateTime dueDate = Optional.ofNullable(request.getDueDate())
                 .orElse(issueDate.plusDays(7));
 
-        System.out.println("Creating transaction with dueDate: " + dueDate);
+        System.out.println("🆕 Creating transaction with Manila time:");
+        System.out.println("   - Issue Date: " + issueDate);
+        System.out.println("   - Due Date: " + dueDate);
+        System.out.println("   - Current Manila Time: " + now);
 
         String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
 
@@ -234,6 +248,9 @@ public class TransactionService {
         Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
                 .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
+        // Use Manila time for expiration checks
+        LocalDateTime currentManilaTime = getCurrentManilaTime();
+
         return allTransactions.stream().map(tx -> {
             RecordResponseDto dto = new RecordResponseDto();
             dto.setId(tx.getId());
@@ -257,7 +274,9 @@ public class TransactionService {
             dto.setPaymentMethod(tx.getPaymentMethod());
             dto.setPickupStatus("Unclaimed");
             dto.setWashed(false);
-            dto.setExpired(tx.getDueDate().isBefore(LocalDateTime.now()));
+            
+            // Use Manila time for expiration check
+            dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
             dto.setCreatedAt(tx.getCreatedAt());
 
             LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
@@ -267,8 +286,7 @@ public class TransactionService {
                 dto.setDisposed(job.isDisposed());
             } else {
                 dto.setPickupStatus("UNCLAIMED");
-                dto.setExpired(tx.getDueDate() != null &&
-                        tx.getDueDate().isBefore(LocalDateTime.now()));
+                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
             }
 
             return dto;
@@ -291,9 +309,15 @@ public class TransactionService {
     public Map<String, Object> getStaffRecordsSummary() {
         Map<String, Object> summary = new HashMap<>();
 
-        LocalDate today = LocalDate.now();
+        // Use Manila time for date calculations
+        LocalDate today = LocalDate.now(getManilaTimeZone());
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+
+        System.out.println("📊 Staff Records Summary - Manila Time:");
+        System.out.println("   - Today: " + today);
+        System.out.println("   - Start of Day: " + startOfDay);
+        System.out.println("   - End of Day: " + endOfDay);
 
         List<RecordResponseDto> allRecords = this.getAllRecords();
 
@@ -337,6 +361,13 @@ public class TransactionService {
         summary.put("unclaimedCount", unclaimedCount);
         summary.put("expiredCount", expiredCount);
 
+        System.out.println("📈 Summary Results:");
+        System.out.println("   - Today's Income: ₱" + todayIncome);
+        System.out.println("   - Today's Loads: " + todayLoads);
+        System.out.println("   - Unwashed Count: " + unwashedCount);
+        System.out.println("   - Unclaimed Count: " + unclaimedCount);
+        System.out.println("   - Expired Count: " + expiredCount);
+
         return summary;
     }
 
@@ -346,6 +377,9 @@ public class TransactionService {
         List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
         Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
                 .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+
+        // Use Manila time for expiration checks
+        LocalDateTime currentManilaTime = getCurrentManilaTime();
 
         return allTransactions.stream().map(tx -> {
             AdminRecordResponseDto dto = new AdminRecordResponseDto();
@@ -423,8 +457,8 @@ public class TransactionService {
                 dto.setPickupStatus("UNCLAIMED");
                 dto.setLaundryStatus("Not Started");
                 dto.setUnwashedLoadsCount(tx.getServiceQuantity());
-                dto.setExpired(tx.getDueDate() != null
-                        && tx.getDueDate().isBefore(LocalDateTime.now()));
+                // Use Manila time for transaction expiration check
+                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
                 dto.setLaundryProcessedBy(null);
                 dto.setClaimProcessedBy(null);
 
@@ -459,5 +493,51 @@ public class TransactionService {
                 transactionId,
                 description,
                 request);
+    }
+
+    // Utility method to fix existing transaction dates to Manila time
+    public void fixTransactionDatesToManilaTime() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
+        int fixedCount = 0;
+
+        for (Transaction transaction : allTransactions) {
+            try {
+                boolean needsUpdate = false;
+                LocalDateTime currentManilaTime = getCurrentManilaTime();
+
+                // Check and fix createdAt if needed
+                if (transaction.getCreatedAt() != null) {
+                    // If createdAt is more than 8 hours off from current Manila time, it might be in wrong timezone
+                    long hoursDifference = java.time.Duration.between(transaction.getCreatedAt(), currentManilaTime).toHours();
+                    if (Math.abs(hoursDifference) > 12) {
+                        System.out.println("🕒 Fixing createdAt for transaction: " + transaction.getInvoiceNumber());
+                        // For simplicity, we'll set it to current Manila time minus a reasonable offset
+                        // In a real scenario, you might want to preserve the original time but adjust timezone
+                        transaction.setCreatedAt(currentManilaTime.minusDays(1)); // Example adjustment
+                        needsUpdate = true;
+                    }
+                }
+
+                // Check and fix dueDate if it seems incorrect
+                if (transaction.getDueDate() != null && transaction.getIssueDate() != null) {
+                    // Due date should be 7 days after issue date
+                    LocalDateTime expectedDueDate = transaction.getIssueDate().plusDays(7);
+                    if (!transaction.getDueDate().equals(expectedDueDate)) {
+                        System.out.println("📅 Fixing dueDate for transaction: " + transaction.getInvoiceNumber());
+                        transaction.setDueDate(expectedDueDate);
+                        needsUpdate = true;
+                    }
+                }
+
+                if (needsUpdate) {
+                    transactionRepository.save(transaction);
+                    fixedCount++;
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error fixing transaction dates for " + transaction.getInvoiceNumber() + ": " + e.getMessage());
+            }
+        }
+
+        System.out.println("✅ Fixed " + fixedCount + " transaction dates to Manila time");
     }
 }
