@@ -61,21 +61,14 @@ public class LaundryJobService {
             "wash & dry", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED,
                     STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED),
             "wash", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED, STATUS_COMPLETED),
-            "wash only", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED, STATUS_COMPLETED), // Add this
-            "dry", List.of(STATUS_NOT_STARTED, STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED),
-            "dry only", List.of(STATUS_NOT_STARTED, STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED)); // Add
-                                                                                                                     // this
+            "dry", List.of(STATUS_NOT_STARTED, STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED));
 
     private List<String> getFlowByServiceType(String serviceType) {
         if (serviceType == null) {
             return List.of(STATUS_NOT_STARTED, "IN_PROGRESS", STATUS_COMPLETED);
         }
-
-        // Normalize the service type for lookup
-        String normalizedType = serviceType.toLowerCase().trim();
-
         return SERVICE_FLOWS.getOrDefault(
-                normalizedType,
+                serviceType.toLowerCase(),
                 List.of(STATUS_NOT_STARTED, "IN_PROGRESS", STATUS_COMPLETED));
     }
 
@@ -98,11 +91,8 @@ public class LaundryJobService {
         job.setLoadAssignments(assignments);
         job.setDetergentQty(dto.getDetergentQty());
         job.setFabricQty(dto.getFabricQty());
-
-        // Use the service name from transaction directly
-        String serviceType = txn.getServiceName();
-        job.setServiceType(serviceType);
-        job.setStatusFlow(getFlowByServiceType(serviceType));
+        job.setServiceType(txn.getServiceName());
+        job.setStatusFlow(getFlowByServiceType(txn.getServiceName()));
         job.setCurrentStep(0);
         job.setPickupStatus("UNCLAIMED");
 
@@ -113,9 +103,10 @@ public class LaundryJobService {
         }
         job.setExpired(false);
 
-        System.out.println("Creating laundry job with serviceType: " + serviceType +
-                " and dueDate: " + job.getDueDate() +
+        System.out.println("Creating laundry job with dueDate: " + job.getDueDate() +
                 " for transaction: " + dto.getTransactionId());
+
+        
 
         return laundryJobRepository.save(job);
     }
@@ -241,21 +232,14 @@ public class LaundryJobService {
     }
 
     private String determineNextStatus(String serviceType, LoadAssignment load) {
-        if (serviceType == null) {
-            return load.getStatus();
-        }
+        serviceType = serviceType.toLowerCase();
 
-        // Normalize service type for comparison
-        String normalizedType = serviceType.toLowerCase().trim();
-
-        switch (normalizedType) {
+        switch (serviceType) {
             case "wash":
-            case "wash only":
                 if (STATUS_NOT_STARTED.equals(load.getStatus()))
                     return STATUS_WASHING;
                 break;
             case "dry":
-            case "dry only":
                 if (STATUS_NOT_STARTED.equals(load.getStatus()))
                     return STATUS_DRYING;
                 break;
@@ -401,59 +385,59 @@ public class LaundryJobService {
         return job;
     }
 
-    private void sendCompletionSmsNotification(LaundryJob job, int loadNumber) {
-        System.out.println("🎯 sendCompletionSmsNotification called!");
-        System.out.println("🎯 Job: " + job.getTransactionId());
-        System.out.println("🎯 Customer: " + job.getCustomerName());
-        System.out.println("🎯 Contact: " + job.getContact());
-        System.out.println("🎯 Load that triggered completion: " + loadNumber);
+   private void sendCompletionSmsNotification(LaundryJob job, int loadNumber) {
+    System.out.println("🎯 sendCompletionSmsNotification called!");
+    System.out.println("🎯 Job: " + job.getTransactionId());
+    System.out.println("🎯 Customer: " + job.getCustomerName());
+    System.out.println("🎯 Contact: " + job.getContact());
+    System.out.println("🎯 Load that triggered completion: " + loadNumber);
+    
+    try {
+        boolean allLoadsCompleted = job.getLoadAssignments().stream()
+            .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
 
-        try {
-            boolean allLoadsCompleted = job.getLoadAssignments().stream()
-                    .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
+        System.out.println("🎯 All loads completed: " + allLoadsCompleted);
+        
+        // Log all load statuses
+        System.out.println("🎯 Load statuses:");
+        job.getLoadAssignments().forEach(load -> {
+            System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus() + 
+                             " (Machine: " + load.getMachineId() + ")");
+        });
+        
+        if (allLoadsCompleted) {
+            System.out.println("🚀 ALL LOADS COMPLETED! Sending SMS notification...");
+            
+            Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
+                    .orElse(null);
 
-            System.out.println("🎯 All loads completed: " + allLoadsCompleted);
-
-            // Log all load statuses
-            System.out.println("🎯 Load statuses:");
-            job.getLoadAssignments().forEach(load -> {
-                System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus() +
-                        " (Machine: " + load.getMachineId() + ")");
-            });
-
-            if (allLoadsCompleted) {
-                System.out.println("🚀 ALL LOADS COMPLETED! Sending SMS notification...");
-
-                Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
-                        .orElse(null);
-
-                String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
-
-                System.out.println("📱 SMS Details:");
-                System.out.println("   📞 Phone: " + job.getContact());
-                System.out.println("   👤 Customer: " + job.getCustomerName());
-                System.out.println("   🛠️ Service: " + serviceType);
-
-                // Send SMS notification
-                smsService.sendLoadCompletedNotification(
-                        job.getContact(),
-                        job.getCustomerName(),
-                        serviceType);
-
-                System.out.println("✅ SMS notification process completed for job: " + job.getTransactionId());
-
-            } else {
-                System.out.println("⏳ Not all loads completed yet. Skipping SMS.");
-                int completedCount = (int) job.getLoadAssignments().stream()
-                        .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-                        .count();
-                System.out.println("⏳ Completed: " + completedCount + "/" + job.getLoadAssignments().size());
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Error in sendCompletionSmsNotification: " + e.getMessage());
-            e.printStackTrace();
+            String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
+            
+            System.out.println("📱 SMS Details:");
+            System.out.println("   📞 Phone: " + job.getContact());
+            System.out.println("   👤 Customer: " + job.getCustomerName());
+            System.out.println("   🛠️ Service: " + serviceType);
+            
+            // Send SMS notification
+            smsService.sendLoadCompletedNotification(
+                    job.getContact(),
+                    job.getCustomerName(),
+                    serviceType);
+                    
+            System.out.println("✅ SMS notification process completed for job: " + job.getTransactionId());
+            
+        } else {
+            System.out.println("⏳ Not all loads completed yet. Skipping SMS.");
+            int completedCount = (int) job.getLoadAssignments().stream()
+                .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
+                .count();
+            System.out.println("⏳ Completed: " + completedCount + "/" + job.getLoadAssignments().size());
         }
+    } catch (Exception e) {
+        System.err.println("❌ Error in sendCompletionSmsNotification: " + e.getMessage());
+        e.printStackTrace();
     }
+}
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob updateLoadDuration(String transactionId, int loadNumber, int durationMinutes,
@@ -559,8 +543,7 @@ public class LaundryJobService {
 
             if (tx != null) {
                 issueDate = tx.getIssueDate();
-                // Use transaction's service name, but fall back to job's service type
-                serviceType = tx.getServiceName() != null ? tx.getServiceName() : job.getServiceType();
+                serviceType = tx.getServiceName(); // Use transaction's service name
 
                 if (tx.getConsumables() != null) {
                     detergentQty = tx.getConsumables().stream()
@@ -575,11 +558,6 @@ public class LaundryJobService {
                 }
             }
 
-            // Debug logging
-            System.out.println("Processing job - Transaction: " + job.getTransactionId() +
-                    ", Service Type: " + serviceType +
-                    ", Job Service Type: " + job.getServiceType());
-
             // Create and populate the DTO
             LaundryJobDto dto = new LaundryJobDto();
             dto.setTransactionId(job.getTransactionId());
@@ -591,7 +569,7 @@ public class LaundryJobService {
             dto.setStatusFlow(job.getStatusFlow());
             dto.setCurrentStep(job.getCurrentStep());
             dto.setIssueDate(issueDate);
-            dto.setServiceType(serviceType); // This will be sent to frontend
+            dto.setServiceType(serviceType);
             dto.setTotalLoads(job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0);
 
             result.add(dto);
