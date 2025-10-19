@@ -4,13 +4,15 @@ import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle } from "lucide-react";
 import TrackingTable from "./TrackingTable";
-import { maskContact } from "./utils";
+import { fetchWithTimeout, isTokenExpired, maskContact } from "./utils";
 import SkeletonLoader from "./SkeletonLoader";
-import { api } from "@/lib/api-config"; // Your API utility
 
 const POLLING_INTERVAL = 10000;
 const ACTIVE_POLLING_INTERVAL = 5000;
 const TIMER_CHECK_INTERVAL = 1000; // Check timers every second
+
+// Base URL for Render backend
+const BASE_URL = "https://thesis-g0pr.onrender.com";
 
 export default function ServiceTrackingPage() {
     const [jobs, setJobs] = useState([]);
@@ -63,7 +65,17 @@ export default function ServiceTrackingPage() {
 
     const fetchJobs = useCallback(async () => {
         try {
-            const data = await api.get("api/laundry-jobs");
+            const res = await fetchWithTimeout(`${BASE_URL}/api/laundry-jobs`);
+            if (!res.ok) {
+                if (res.status === 403) {
+                    throw new Error("Access forbidden - please check your permissions");
+                } else if (res.status === 401) {
+                    throw new Error("Unauthorized - please login again");
+                } else {
+                    throw new Error(`Failed to fetch jobs: ${res.status} ${res.statusText}`);
+                }
+            }
+            const data = await res.json();
 
             const jobsWithLoads = data.map((job) => ({
                 id: job.id ?? job.transactionId,
@@ -106,7 +118,11 @@ export default function ServiceTrackingPage() {
 
     const fetchMachines = async () => {
         try {
-            const data = await api.get("api/machines");
+            const res = await fetchWithTimeout(`${BASE_URL}/api/machines`);
+            if (!res.ok) {
+                throw new Error(`Failed to fetch machines: ${res.status} ${res.statusText}`);
+            }
+            const data = await res.json();
             setMachines(data);
             return true;
         } catch (err) {
@@ -136,6 +152,8 @@ export default function ServiceTrackingPage() {
         }
     };
 
+    // Improved timer completion detection
+    // Replace the checkTimerCompletions function with this improved version:
     const checkTimerCompletions = useCallback(() => {
         let needsRefresh = false;
         const currentTime = Date.now();
@@ -149,12 +167,14 @@ export default function ServiceTrackingPage() {
                         const endTime = new Date(load.startTime).getTime() + load.duration * 60000;
                         const timeRemaining = endTime - currentTime;
 
+                        // If timer completed (with 1-second buffer) but not yet marked as completed
                         if (timeRemaining <= 1000 && !completedTimersRef.current.has(timerKey)) {
                             completedTimersRef.current.add(timerKey);
                             needsRefresh = true;
                             console.log(`Timer completed for ${job.customerName} load ${load.loadNumber}, refreshing in 1 second...`);
                         }
 
+                        // If timer is still running but was marked as completed, remove it
                         if (timeRemaining > 1000 && completedTimersRef.current.has(timerKey)) {
                             completedTimersRef.current.delete(timerKey);
                         }
@@ -164,9 +184,10 @@ export default function ServiceTrackingPage() {
         });
 
         if (needsRefresh) {
+            // Wait 1 second before refreshing to ensure backend has processed the status change
             setTimeout(() => {
                 console.log("Refreshing data after timer completion...");
-                fetchData(true);
+                fetchData(true); // Force refresh
             }, 1000);
         }
     }, [jobs]);
@@ -212,6 +233,12 @@ export default function ServiceTrackingPage() {
 
     // Setup clock and initial data fetch
     useEffect(() => {
+        const token = localStorage.getItem("authToken");
+        if (!token || isTokenExpired(token)) {
+            window.location.href = "/login";
+            return;
+        }
+
         fetchData();
 
         clockRef.current = setInterval(() => setNow(Date.now()), 1000);
@@ -237,17 +264,27 @@ export default function ServiceTrackingPage() {
         setSmsStatus((prev) => ({ ...prev, [jobKey]: "sending" }));
 
         try {
-            await api.post("api/send-completion-sms", {
-                transactionId: job.id,
-                customerName: job.customerName,
-                phoneNumber: job.contact,
-                serviceType: serviceType,
+            const response = await fetchWithTimeout(`${BASE_URL}/api/send-completion-sms`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    transactionId: job.id,
+                    customerName: job.customerName,
+                    phoneNumber: job.contact,
+                    serviceType: serviceType,
+                }),
             });
 
-            setSmsStatus((prev) => ({ ...prev, [jobKey]: "sent" }));
-            setTimeout(() => {
-                setSmsStatus((prev) => ({ ...prev, [jobKey]: null }));
-            }, 3000);
+            if (response.ok) {
+                setSmsStatus((prev) => ({ ...prev, [jobKey]: "sent" }));
+                setTimeout(() => {
+                    setSmsStatus((prev) => ({ ...prev, [jobKey]: null }));
+                }, 3000);
+            } else {
+                setSmsStatus((prev) => ({ ...prev, [jobKey]: "failed" }));
+            }
         } catch (error) {
             console.error("Error sending SMS:", error);
             setSmsStatus((prev) => ({ ...prev, [jobKey]: "failed" }));
@@ -270,12 +307,14 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            await api.patch(
-                `api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`
+            await fetchWithTimeout(
+                `${BASE_URL}/api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`,
+                { method: "PATCH" },
             );
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to assign machine:", err);
-            fetchData(true);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -295,12 +334,14 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            await api.patch(
-                `api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`
+            await fetchWithTimeout(
+                `${BASE_URL}/api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`,
+                { method: "PATCH" },
             );
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to update duration:", err);
-            fetchData(true);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -347,6 +388,7 @@ export default function ServiceTrackingPage() {
 
         const timerKey = `${job.id}-${load.loadNumber}`;
         activeTimersRef.current.set(timerKey, startTime);
+        // Remove from completed timers if it was there
         completedTimersRef.current.delete(timerKey);
 
         setJobs((prev) =>
@@ -361,12 +403,16 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            await api.patch(
-                `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
+            await fetchWithTimeout(
+                `${BASE_URL}/api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`,
+                {
+                    method: "PATCH",
+                },
             );
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to start load:", err);
-            fetchData(true);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -402,8 +448,9 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            await api.patch(
-                `api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`
+            await fetchWithTimeout(
+                `${BASE_URL}/api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`,
+                { method: "PATCH" },
             );
 
             setJobs((prev) =>
@@ -419,7 +466,9 @@ export default function ServiceTrackingPage() {
 
             if (nextStatus === "FOLDING" && load.machineId) {
                 try {
-                    await api.patch(`api/machines/${load.machineId}/release`);
+                    await fetchWithTimeout(`${BASE_URL}/api/machines/${load.machineId}/release`, {
+                        method: "PATCH",
+                    });
                 } catch (err) {
                     console.error("Failed to release machine:", err);
                 }
@@ -430,9 +479,11 @@ export default function ServiceTrackingPage() {
                 console.log("🎯 Load completed, triggering SMS for job:", job);
                 sendSmsNotification(job, job.serviceType);
             }
+
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to advance load status:", err);
-            fetchData(true);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -459,10 +510,11 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            await api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`);
+            await fetchWithTimeout(`${BASE_URL}/api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`, { method: "PATCH" });
+            // Don't immediately fetch data - let polling handle it
         } catch (err) {
             console.error("Failed to start drying again:", err);
-            fetchData(true);
+            fetchData(true); // Force refresh on error
         }
     };
 
@@ -565,6 +617,7 @@ export default function ServiceTrackingPage() {
                 />
             </TooltipProvider>
 
+            {/* Rest of your component remains the same */}
             {jobs.length > 0 && (
                 <div className="flex flex-col items-center justify-between border-t border-slate-300 p-4 dark:border-slate-700 sm:flex-row">
                     <div className="mb-4 flex items-center space-x-2 sm:mb-0">

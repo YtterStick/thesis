@@ -15,7 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class TransactionService {
-
+        //sadw
     private final ServiceRepository serviceRepository;
     private final StockRepository stockRepository;
     private final TransactionRepository transactionRepository;
