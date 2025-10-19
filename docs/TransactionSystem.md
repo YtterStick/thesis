@@ -30,10 +30,12 @@ Designed a system where receipts are dynamically generated using existing backen
 
 ### **MainPage Component**
 
+```javascript
 // Core transaction flow controller
 // - Manages form state and invoice generation
 // - Handles print functionality with browser events
 // - Controls transaction submission and UI states
+```
 
 ## 🚀 Key Features
 
@@ -51,14 +53,17 @@ Designed a system where receipts are dynamically generated using existing backen
 
 # TransactionForm Component
 
+```javascript
 // Complex form handling with multiple data sources
 // - Customer information validation
 // - Service and consumable selection
 // - Payment method handling
 // - Dynamic data caching
+```
 
 # Where I Struggled
 
+```javascript
 // Data caching implementation was challenging
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
 const POLLING_INTERVAL = 60000; // 1 minute polling
@@ -73,16 +78,20 @@ const fetchFreshData = async () => {
 
     // Ensuring cache consistency across different data types was complex
 };
+```
 
 # ConsumablesSection Component
 
+```javascript
 // Dynamic consumable management
 // - Plastic items auto-sync with load counts
 // - Supply source-based UI rendering
 // - Real-time quantity validation
+```
 
 # Learning Challenge
 
+```javascript
 // Managing plastic overrides while maintaining auto-sync
 useEffect(() => {
   const expected = parseInt(loads) || 1;
@@ -97,19 +106,20 @@ useEffect(() => {
     }
   });
 }, [loads, stockItems, plasticOverrides, consumables]);
-
+```
 # ServiceInvoiceCard Component
 
+```javascript
 // Dynamic receipt generation
 // - QR code integration for tracking
 // - Print-optimized styling
 // - Backend data mapping to receipt format
-
+```
 # Backend Services
 
 ## TransactionService (Java/Spring Boot)
 
-
+```java
 @Service
 public class TransactionService {
     // Manila timezone handling for consistent dates
@@ -124,7 +134,7 @@ public class TransactionService {
         // Create transaction record without storing receipt
     }
 }
-
+```
 
 # 🎓 Learning Challenges & Solutions
 
@@ -134,9 +144,11 @@ public class TransactionService {
 
 **Solution:** Implemented layered state management:
 
+```javascript
 const [form, setForm] = useState({ /* form fields */ });
 const [previewData, setPreviewData] = useState({ /* calculations */ });
 const [invoice, setInvoice] = useState(null); // Final transaction
+```
 
 ## 2. Real-time Data Synchronization
 
@@ -144,6 +156,7 @@ const [invoice, setInvoice] = useState(null); // Final transaction
 
 **Solution:** Hybrid caching strategy:
 
+```javascript
 // Cache with periodic refresh
 useEffect(() => {
   pollingIntervalRef.current = setInterval(() => {
@@ -152,6 +165,7 @@ useEffect(() => {
   
   return () => clearInterval(pollingIntervalRef.current);
 }, [fetchData]);
+```
 
 Here’s your section properly formatted as a Markdown (.md) file:
 
@@ -161,12 +175,14 @@ Here’s your section properly formatted as a Markdown (.md) file:
 
 **Solution:** Backend data mapping pattern:
 
+```java
 private ServiceInvoiceDto buildInvoice(Transaction tx) {
     // Map transaction data to receipt format
     // Calculate consumable totals dynamically
     // Apply formatting settings
     return new ServiceInvoiceDto(/* mapped data */);
 }
+```
 
 ## 4. Form Validation Complexity
 
@@ -174,6 +190,7 @@ private ServiceInvoiceDto buildInvoice(Transaction tx) {
 
 **Solution:** Conditional validation pipeline:
 
+```javascript
 const handleSubmit = async (e) => {
   // Name validation (no numbers)
   const nameHasNumbers = /[0-9]/.test(form.name);
@@ -188,12 +205,13 @@ const handleSubmit = async (e) => {
     }
   }
 };
-
+```
 
 # 🔧 Technical Implementation Details
 
 ## Cache Strategy
 
+```javascript
 const initializeCache = () => {
   try {
     const stored = localStorage.getItem('transactionFormCache');
@@ -208,10 +226,11 @@ const initializeCache = () => {
   }
   return null;
 };
-
+```
 
 ## Print Functionality
 
+```javascript
 useEffect(() => {
   const handlePrintStart = () => document.body.classList.add("print-mode");
   const handlePrintEnd = () => {
@@ -227,15 +246,18 @@ useEffect(() => {
     window.removeEventListener("afterprint", handlePrintEnd);
   };
 }, []);
+```
 
 ## QR Code Integration
 
-Dynamic QR code generation for laundry tracking
+```javascript
+// Dynamic QR code generation for laundry tracking
 const trackingId = invoiceNumber || transactionId;
 const qrValue = trackingId 
   ? `https://starwashph.com/home?search=${encodeURIComponent(trackingId)}#service_tracking`
   : null;
 
+```
 
 # 🚀 Performance Optimizations
 
