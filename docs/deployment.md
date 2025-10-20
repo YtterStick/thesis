@@ -122,7 +122,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://your-backend.onrender.com',
+        target: 'https://{secret}.onrender.com',
         changeOrigin: true,
         secure: false,
       }
