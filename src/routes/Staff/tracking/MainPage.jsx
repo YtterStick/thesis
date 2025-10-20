@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package, Calendar } from "lucide-react";
+import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package, Calendar, Users } from "lucide-react";
 import TrackingTable from "./TrackingTable";
 import SkeletonLoader from "./SkeletonLoader";
 import { maskContact } from "./utils";
@@ -13,48 +13,17 @@ const POLLING_INTERVAL = 10000;
 const ACTIVE_POLLING_INTERVAL = 5000;
 const TIMER_CHECK_INTERVAL = 1000;
 
-// Helper function to get PH time
-const getPHTime = () => {
-  return new Date().toLocaleString("en-US", { 
-    timeZone: "Asia/Manila",
-    hour12: false 
-  });
-};
-
-// Helper function to check if a date is today in PH time
-const isTodayInPH = (dateString) => {
-  if (!dateString) return false;
-  
-  try {
-    const phDate = new Date(dateString).toLocaleString("en-US", { 
-      timeZone: "Asia/Manila" 
-    });
-    const today = new Date().toLocaleString("en-US", { 
-      timeZone: "Asia/Manila" 
-    });
-    
-    return new Date(phDate).toDateString() === new Date(today).toDateString();
-  } catch (error) {
-    console.error("Error checking date:", error);
-    return false;
-  }
-};
-
-// Helper function to check if date is within last N days in PH time
-const isWithinLastDaysInPH = (dateString, days) => {
+// Helper function to check if a date is today
+const isToday = (dateString) => {
   if (!dateString) return false;
   
   try {
     const date = new Date(dateString);
-    const now = new Date();
-    const daysAgo = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+    const today = new Date();
     
-    const datePH = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-    const daysAgoPH = new Date(daysAgo.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-    
-    return datePH >= daysAgoPH;
+    return date.toDateString() === today.toDateString();
   } catch (error) {
-    console.error("Error checking date range:", error);
+    console.error("Error checking date:", error);
     return false;
   }
 };
@@ -73,11 +42,8 @@ export default function ServiceTrackingPage() {
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [smsStatus, setSmsStatus] = useState({});
     const [completionSummary, setCompletionSummary] = useState({
-      today: 0,
-      yesterday: 0,
-      week: 0
+      today: 0
     });
-    const [phTime, setPhTime] = useState(getPHTime());
     
     const pollRef = useRef(null);
     const clockRef = useRef(null);
@@ -95,52 +61,25 @@ export default function ServiceTrackingPage() {
     // Calculate completion statistics
     const calculateCompletionStats = useCallback((jobsData) => {
       let todayCompleted = 0;
-      let yesterdayCompleted = 0;
-      let weekCompleted = 0;
-      
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const weekAgo = new Date(today);
-      weekAgo.setDate(weekAgo.getDate() - 7);
 
+      // Count all completed loads for today
       jobsData.forEach(job => {
         job.loads.forEach(load => {
-          if (load.status === "COMPLETED" && load.endTime) {
-            // Check if completed today
-            if (isTodayInPH(load.endTime)) {
+          if (load.status === "COMPLETED") {
+            // If endTime exists and it's today, count it
+            if (load.endTime && isToday(load.endTime)) {
               todayCompleted++;
             }
-            
-            // Check if completed yesterday
-            const yesterdayStart = new Date(yesterday);
-            yesterdayStart.setHours(0, 0, 0, 0);
-            const yesterdayEnd = new Date(yesterday);
-            yesterdayEnd.setHours(23, 59, 59, 999);
-            
-            if (isTodayInPH(load.endTime)) {
-              // For yesterday, we need to check if it was completed on the previous day in PH time
-              const loadDate = new Date(load.endTime);
-              const loadDatePH = new Date(loadDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-              const yesterdayPH = new Date(yesterday.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-              
-              if (loadDatePH.toDateString() === yesterdayPH.toDateString()) {
-                yesterdayCompleted++;
-              }
-            }
-            
-            // Check if completed in the last 7 days
-            if (isWithinLastDaysInPH(load.endTime, 7)) {
-              weekCompleted++;
+            // If no endTime but the load is completed, still count it for today
+            else if (!load.endTime) {
+              todayCompleted++;
             }
           }
         });
       });
 
       return {
-        today: todayCompleted,
-        yesterday: yesterdayCompleted,
-        week: weekCompleted
+        today: todayCompleted
       };
     }, []);
 
@@ -327,17 +266,11 @@ export default function ServiceTrackingPage() {
         fetchData();
 
         clockRef.current = setInterval(() => setNow(Date.now()), 1000);
-        
-        // PH time updater
-        const timeInterval = setInterval(() => {
-            setPhTime(getPHTime());
-        }, 1000);
 
         return () => {
             clearInterval(clockRef.current);
             if (pollRef.current) clearInterval(pollRef.current);
             if (timerCheckRef.current) clearInterval(timerCheckRef.current);
-            clearInterval(timeInterval);
         };
     }, []);
 
@@ -740,7 +673,7 @@ export default function ServiceTrackingPage() {
                             className="text-sm"
                             style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
                         >
-                            Track and manage laundry service progress • PH Time: {phTime}
+                            Track and manage laundry service progress
                         </p>
                     </div>
                 </div>
@@ -775,13 +708,14 @@ export default function ServiceTrackingPage() {
             </motion.div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     {
-                        label: "Total Jobs",
+                        label: "Total Customer",
                         value: jobs.length,
                         color: "#3DD9B6",
-                        description: "Active laundry jobs",
+                        description: "Active laundry customers",
+                        icon: Users
                     },
                     {
                         label: "Active Loads",
@@ -791,26 +725,21 @@ export default function ServiceTrackingPage() {
                         ),
                         color: "#60A5FA",
                         description: "Currently processing",
+                        icon: Package
                     },
                     {
                         label: "Pending",
                         value: jobs.reduce((acc, job) => acc + job.loads.filter((load) => load.status === "UNWASHED").length, 0),
                         color: "#FB923C",
                         description: "Waiting to start",
+                        icon: Package
                     },
                     {
                         label: "Completed Today",
                         value: completionSummary.today,
                         color: "#10B981",
-                        description: "Finished today (PH Time)",
+                        description: "Finished today",
                         icon: Calendar
-                    },
-                    {
-                        label: "Weekly Total",
-                        value: completionSummary.week,
-                        color: "#8B5CF6",
-                        description: "Last 7 days completion",
-                        icon: CheckCircle
                     },
                 ].map(({ label, value, color, description, icon: Icon }, index) => (
                     <motion.div
@@ -838,7 +767,7 @@ export default function ServiceTrackingPage() {
                                     color: color,
                                 }}
                             >
-                                {Icon ? <Icon size={26} /> : <Package size={26} />}
+                                <Icon size={26} />
                             </motion.div>
                             <motion.div
                                 initial={{ scale: 0 }}
