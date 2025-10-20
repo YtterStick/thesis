@@ -19,7 +19,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -64,33 +64,13 @@ public class LaundryJobService {
             "wash", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED, STATUS_COMPLETED),
             "dry", List.of(STATUS_NOT_STARTED, STATUS_DRYING, STATUS_DRIED, STATUS_FOLDING, STATUS_COMPLETED));
 
-    // Get completion statistics - count all COMPLETED loads for today
-    public Map<String, Object> getCompletionStatistics() {
-        Map<String, Object> stats = new HashMap<>();
-        
-        List<LaundryJob> allJobs = laundryJobRepository.findAll();
-        
-        // Count completed loads for today
-        long todayCompleted = allJobs.stream()
-            .flatMap(job -> job.getLoadAssignments().stream())
-            .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-            .filter(load -> isCompletedToday(load.getEndTime()))
-            .count();
-        
-        stats.put("today", todayCompleted);
-        stats.put("lastUpdated", LocalDateTime.now());
-        
-        return stats;
+    // Manila timezone (GMT+8)
+    private ZoneId getManilaTimeZone() {
+        return ZoneId.of("Asia/Manila");
     }
 
-    // Helper method to check if completion was today
-    private boolean isCompletedToday(LocalDateTime completionTime) {
-        if (completionTime == null) return false;
-        
-        LocalDate today = LocalDate.now();
-        LocalDate completionDate = completionTime.toLocalDate();
-        
-        return completionDate.equals(today);
+    private LocalDateTime getCurrentManilaTime() {
+        return LocalDateTime.now(getManilaTimeZone());
     }
 
     private List<String> getFlowByServiceType(String serviceType) {
@@ -129,7 +109,7 @@ public class LaundryJobService {
         if (txn.getDueDate() != null) {
             job.setDueDate(txn.getDueDate());
         } else {
-            job.setDueDate(LocalDateTime.now().plusDays(3));
+            job.setDueDate(getCurrentManilaTime().plusDays(3));
         }
         job.setExpired(false);
 
@@ -187,7 +167,8 @@ public class LaundryJobService {
 
         int finalDuration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : defaultDuration;
 
-        LocalDateTime now = LocalDateTime.now();
+        // Use Manila time instead of system default time
+        LocalDateTime now = getCurrentManilaTime();
         load.setStatus(nextStatus);
         load.setStartTime(now);
         load.setDurationMinutes(finalDuration);
@@ -207,8 +188,10 @@ public class LaundryJobService {
         System.out.println("   Load: " + loadNumber);
         System.out.println("   Status: " + nextStatus);
         System.out.println("   Duration: " + finalDuration + " minutes");
-        System.out.println("   Start Time: " + now);
-        System.out.println("   End Time: " + load.getEndTime());
+        System.out.println("   Start Time (Manila): " + now);
+        System.out.println("   End Time (Manila): " + load.getEndTime());
+        System.out.println("   Current System Time: " + LocalDateTime.now());
+        System.out.println("   Manila Zone: " + getManilaTimeZone());
 
         // Schedule the auto-advance task
         System.out.println("⏰ Scheduled auto-advance for " + transactionId + " load " + loadNumber + 
@@ -237,7 +220,8 @@ public class LaundryJobService {
 
         load.setStatus(STATUS_DRYING);
         
-        LocalDateTime now = LocalDateTime.now();
+        // Use Manila time
+        LocalDateTime now = getCurrentManilaTime();
         load.setStartTime(now);
 
         int duration = (load.getDurationMinutes() != null && load.getDurationMinutes() > 0)
@@ -275,8 +259,8 @@ public class LaundryJobService {
         System.out.println("   Transaction: " + transactionId);
         System.out.println("   Load: " + loadNumber);
         System.out.println("   Duration: " + duration + " minutes");
-        System.out.println("   Start Time: " + now);
-        System.out.println("   End Time: " + load.getEndTime());
+        System.out.println("   Start Time (Manila): " + now);
+        System.out.println("   End Time (Manila): " + load.getEndTime());
 
         scheduler.schedule(() -> {
             System.out.println("🏃‍♂️ Executing scheduled drying task for " + transactionId + " load " + loadNumber);
@@ -324,12 +308,6 @@ public class LaundryJobService {
         String previousStatus = load.getStatus();
         load.setStatus(newStatus);
 
-        // Set completion time when status changes to COMPLETED
-        if (STATUS_COMPLETED.equalsIgnoreCase(newStatus) && load.getEndTime() == null) {
-            load.setEndTime(LocalDateTime.now());
-            System.out.println("✅ Set completion time for " + transactionId + " load " + loadNumber + ": " + load.getEndTime());
-        }
-
         // Send notifications for status changes
         sendStatusChangeNotifications(job, load, previousStatus, newStatus);
 
@@ -338,14 +316,7 @@ public class LaundryJobService {
         }
 
         job.setLaundryProcessedBy(processedBy);
-        LaundryJob saved = laundryJobRepository.save(job);
-
-        // Log completion for tracking
-        if (STATUS_COMPLETED.equalsIgnoreCase(newStatus)) {
-            System.out.println("🎯 Load completed: " + transactionId + " load " + loadNumber + " at " + load.getEndTime());
-        }
-
-        return saved;
+        return laundryJobRepository.save(job);
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
@@ -376,12 +347,12 @@ public class LaundryJobService {
             }
 
             // Only auto-advance if the current time is actually past the endTime
-            LocalDateTime currentTime = LocalDateTime.now();
+            LocalDateTime currentManilaTime = getCurrentManilaTime();
             boolean shouldAdvance = false;
             
             if (load.getEndTime() != null) {
-                boolean isPastEndTime = currentTime.isAfter(load.getEndTime());
-                System.out.println("⏰ Time Check - Current: " + currentTime + 
+                boolean isPastEndTime = currentManilaTime.isAfter(load.getEndTime());
+                System.out.println("⏰ Time Check - Current: " + currentManilaTime + 
                                  ", EndTime: " + load.getEndTime() + 
                                  ", IsPastEndTime: " + isPastEndTime);
                 
@@ -425,7 +396,7 @@ public class LaundryJobService {
                 
                 // Reschedule check if we're close to the end time but not past it yet
                 if (load.getEndTime() != null) {
-                    long secondsUntilEnd = java.time.Duration.between(currentTime, load.getEndTime()).getSeconds();
+                    long secondsUntilEnd = java.time.Duration.between(currentManilaTime, load.getEndTime()).getSeconds();
                     if (secondsUntilEnd > 0 && secondsUntilEnd <= 300) { // Within 5 minutes
                         System.out.println("🔄 Rescheduling check in " + (secondsUntilEnd + 10) + " seconds");
                         scheduler.schedule(() -> autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber),
@@ -739,7 +710,7 @@ public class LaundryJobService {
 
         job.setDisposed(true);
         job.setDisposedBy(processedBy);
-        job.setDisposedDate(LocalDateTime.now());
+        job.setDisposedDate(getCurrentManilaTime());
         return laundryJobRepository.save(job);
     }
 
@@ -749,7 +720,7 @@ public class LaundryJobService {
 
     @Scheduled(fixedRate = 3600000)
     public void checkForExpiredJobs() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = getCurrentManilaTime();
         List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
 
         for (LaundryJob job : unclaimedJobs) {
@@ -800,18 +771,14 @@ public class LaundryJobService {
                 break;
             case STATUS_FOLDING:
                 newStatus = STATUS_COMPLETED;
-                // Set completion time for forced completion
-                load.setEndTime(LocalDateTime.now());
                 break;
             default:
                 throw new RuntimeException("Cannot force advance from status: " + currentStatus);
         }
 
         load.setStatus(newStatus);
-        if (!STATUS_COMPLETED.equals(newStatus)) {
-            load.setStartTime(null);
-            load.setEndTime(null);
-        }
+        load.setStartTime(null);
+        load.setEndTime(null);
 
         job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
@@ -821,7 +788,7 @@ public class LaundryJobService {
     public void checkAndFixTimerStates(String transactionId) {
         try {
             LaundryJob job = findSingleJobByTransaction(transactionId);
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = getCurrentManilaTime();
             
             for (LoadAssignment load : job.getLoadAssignments()) {
                 if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus())) 
@@ -834,16 +801,5 @@ public class LaundryJobService {
         } catch (Exception e) {
             System.err.println("❌ Error checking timer states: " + e.getMessage());
         }
-    }
-
-    // Method to get all completed loads for today (for debugging)
-    public List<LoadAssignment> getTodayCompletedLoads() {
-        List<LaundryJob> allJobs = laundryJobRepository.findAll();
-        
-        return allJobs.stream()
-            .flatMap(job -> job.getLoadAssignments().stream())
-            .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-            .filter(load -> isCompletedToday(load.getEndTime()))
-            .collect(Collectors.toList());
     }
 }
