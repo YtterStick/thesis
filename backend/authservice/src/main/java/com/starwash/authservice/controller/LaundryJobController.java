@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/laundry-jobs")
@@ -143,6 +144,13 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
+    // Get completion statistics
+    @GetMapping("/completion-stats")
+    public ResponseEntity<Map<String, Object>> getCompletionStats() {
+        Map<String, Object> stats = laundryJobService.getCompletionStatistics();
+        return ResponseEntity.ok(stats);
+    }
+
     // ========== DTO Conversion ==========
     private LaundryJobDto toDto(LaundryJob job) {
         LaundryJobDto dto = new LaundryJobDto();
@@ -163,7 +171,7 @@ public class LaundryJobController {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
-    // missing item
+    // Search by customer name
     @GetMapping("/search-by-customer")
     public ResponseEntity<List<LaundryJob>> searchLaundryJobsByCustomerName(
             @RequestParam String customerName) {

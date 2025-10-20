@@ -3,15 +3,61 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package } from "lucide-react";
+import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package, Calendar } from "lucide-react";
 import TrackingTable from "./TrackingTable";
 import SkeletonLoader from "./SkeletonLoader";
 import { maskContact } from "./utils";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 const POLLING_INTERVAL = 10000;
 const ACTIVE_POLLING_INTERVAL = 5000;
 const TIMER_CHECK_INTERVAL = 1000;
+
+// Helper function to get PH time
+const getPHTime = () => {
+  return new Date().toLocaleString("en-US", { 
+    timeZone: "Asia/Manila",
+    hour12: false 
+  });
+};
+
+// Helper function to check if a date is today in PH time
+const isTodayInPH = (dateString) => {
+  if (!dateString) return false;
+  
+  try {
+    const phDate = new Date(dateString).toLocaleString("en-US", { 
+      timeZone: "Asia/Manila" 
+    });
+    const today = new Date().toLocaleString("en-US", { 
+      timeZone: "Asia/Manila" 
+    });
+    
+    return new Date(phDate).toDateString() === new Date(today).toDateString();
+  } catch (error) {
+    console.error("Error checking date:", error);
+    return false;
+  }
+};
+
+// Helper function to check if date is within last N days in PH time
+const isWithinLastDaysInPH = (dateString, days) => {
+  if (!dateString) return false;
+  
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const daysAgo = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+    
+    const datePH = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    const daysAgoPH = new Date(daysAgo.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    
+    return datePH >= daysAgoPH;
+  } catch (error) {
+    console.error("Error checking date range:", error);
+    return false;
+  }
+};
 
 export default function ServiceTrackingPage() {
     const { theme } = useTheme();
@@ -26,6 +72,13 @@ export default function ServiceTrackingPage() {
     const [isPolling, setIsPolling] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [smsStatus, setSmsStatus] = useState({});
+    const [completionSummary, setCompletionSummary] = useState({
+      today: 0,
+      yesterday: 0,
+      week: 0
+    });
+    const [phTime, setPhTime] = useState(getPHTime());
+    
     const pollRef = useRef(null);
     const clockRef = useRef(null);
     const timerCheckRef = useRef(null);
@@ -38,6 +91,58 @@ export default function ServiceTrackingPage() {
     const hasActiveJobs = useMemo(() => {
         return jobs.some((job) => job.loads.some((load) => load.status === "WASHING" || load.status === "DRYING"));
     }, [jobs]);
+
+    // Calculate completion statistics
+    const calculateCompletionStats = useCallback((jobsData) => {
+      let todayCompleted = 0;
+      let yesterdayCompleted = 0;
+      let weekCompleted = 0;
+      
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      jobsData.forEach(job => {
+        job.loads.forEach(load => {
+          if (load.status === "COMPLETED" && load.endTime) {
+            // Check if completed today
+            if (isTodayInPH(load.endTime)) {
+              todayCompleted++;
+            }
+            
+            // Check if completed yesterday
+            const yesterdayStart = new Date(yesterday);
+            yesterdayStart.setHours(0, 0, 0, 0);
+            const yesterdayEnd = new Date(yesterday);
+            yesterdayEnd.setHours(23, 59, 59, 999);
+            
+            if (isTodayInPH(load.endTime)) {
+              // For yesterday, we need to check if it was completed on the previous day in PH time
+              const loadDate = new Date(load.endTime);
+              const loadDatePH = new Date(loadDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+              const yesterdayPH = new Date(yesterday.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+              
+              if (loadDatePH.toDateString() === yesterdayPH.toDateString()) {
+                yesterdayCompleted++;
+              }
+            }
+            
+            // Check if completed in the last 7 days
+            if (isWithinLastDaysInPH(load.endTime, 7)) {
+              weekCompleted++;
+            }
+          }
+        });
+      });
+
+      return {
+        today: todayCompleted,
+        yesterday: yesterdayCompleted,
+        week: weekCompleted
+      };
+    }, []);
 
     const getPollingInterval = () => {
         if (!autoRefresh) return null;
@@ -67,7 +172,6 @@ export default function ServiceTrackingPage() {
 
     const fetchJobs = useCallback(async () => {
         try {
-            // Use the api utility instead of fetchWithTimeout
             const data = await api.get("api/laundry-jobs");
 
             const jobsWithLoads = data.map((job) => ({
@@ -100,6 +204,11 @@ export default function ServiceTrackingPage() {
             }));
 
             setJobs(jobsWithLoads);
+            
+            // Update completion statistics
+            const stats = calculateCompletionStats(jobsWithLoads);
+            setCompletionSummary(stats);
+            
             setError(null);
             return true;
         } catch (err) {
@@ -107,11 +216,10 @@ export default function ServiceTrackingPage() {
             setError(err.message);
             return false;
         }
-    }, []);
+    }, [calculateCompletionStats]);
 
     const fetchMachines = async () => {
         try {
-            // Use the api utility instead of fetchWithTimeout
             const data = await api.get("api/machines");
             setMachines(data);
             return true;
@@ -219,11 +327,17 @@ export default function ServiceTrackingPage() {
         fetchData();
 
         clockRef.current = setInterval(() => setNow(Date.now()), 1000);
+        
+        // PH time updater
+        const timeInterval = setInterval(() => {
+            setPhTime(getPHTime());
+        }, 1000);
 
         return () => {
             clearInterval(clockRef.current);
             if (pollRef.current) clearInterval(pollRef.current);
             if (timerCheckRef.current) clearInterval(timerCheckRef.current);
+            clearInterval(timeInterval);
         };
     }, []);
 
@@ -240,7 +354,6 @@ export default function ServiceTrackingPage() {
         setSmsStatus((prev) => ({ ...prev, [jobKey]: "sending" }));
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.post("api/send-completion-sms", {
                 transactionId: job.id,
                 customerName: job.customerName,
@@ -274,7 +387,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`
             );
@@ -300,7 +412,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`
             );
@@ -370,7 +481,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
             );
@@ -427,7 +537,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`
             );
@@ -446,6 +555,11 @@ export default function ServiceTrackingPage() {
             // Send SMS notification when job is completed
             if (nextStatus === "COMPLETED") {
                 sendSmsNotification(job, normalizedServiceType);
+                
+                // Update completion stats after a load is completed
+                setTimeout(() => {
+                    fetchData(true);
+                }, 1000);
             }
         } catch (err) {
             console.error("Failed to advance load status:", err);
@@ -489,7 +603,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`);
         } catch (err) {
             console.error("Failed to start drying again:", err);
@@ -627,7 +740,7 @@ export default function ServiceTrackingPage() {
                             className="text-sm"
                             style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
                         >
-                            Track and manage laundry service progress
+                            Track and manage laundry service progress • PH Time: {phTime}
                         </p>
                     </div>
                 </div>
@@ -662,7 +775,7 @@ export default function ServiceTrackingPage() {
             </motion.div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-5">
                 {[
                     {
                         label: "Total Jobs",
@@ -687,11 +800,19 @@ export default function ServiceTrackingPage() {
                     },
                     {
                         label: "Completed Today",
-                        value: jobs.reduce((acc, job) => acc + job.loads.filter((load) => load.status === "COMPLETED").length, 0),
+                        value: completionSummary.today,
                         color: "#10B981",
-                        description: "Finished loads",
+                        description: "Finished today (PH Time)",
+                        icon: Calendar
                     },
-                ].map(({ label, value, color, description }, index) => (
+                    {
+                        label: "Weekly Total",
+                        value: completionSummary.week,
+                        color: "#8B5CF6",
+                        description: "Last 7 days completion",
+                        icon: CheckCircle
+                    },
+                ].map(({ label, value, color, description, icon: Icon }, index) => (
                     <motion.div
                         key={label}
                         initial={{ opacity: 0, y: 20 }}
@@ -717,7 +838,7 @@ export default function ServiceTrackingPage() {
                                     color: color,
                                 }}
                             >
-                                <Package size={26} />
+                                {Icon ? <Icon size={26} /> : <Package size={26} />}
                             </motion.div>
                             <motion.div
                                 initial={{ scale: 0 }}

@@ -43,7 +43,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
   // Updated QR code logic - Use URL parameters before the hash
   const trackingId = invoiceNumber || transactionId;
   const qrValue = trackingId 
-    ? `https://starwashph.com/home?search=${encodeURIComponent(trackingId)}#service_tracking`
+    ? `https://www.starwashph.com/?search=${encodeURIComponent(trackingId)}#service_tracking`
     : null;
 
   if (qrValue) {
