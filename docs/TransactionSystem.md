@@ -167,8 +167,6 @@ useEffect(() => {
 }, [fetchData]);
 ```
 
-Here’s your section properly formatted as a Markdown (.md) file:
-
 ## 3. Dynamic Receipt Generation
 
 **Problem:** Generating consistent receipts without storage  
