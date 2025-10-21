@@ -8,7 +8,6 @@ import CustomerInfo from "./CustomerInfo";
 import LaundryProgress from "./LaundryProgress";
 import QRScanner from "./QRScanner";
 import RecentSearches from "./RecentSearches";
-import PrintableReceipt from "./PrintableReceipt"; // Add this import
 
 // Import Lottie animations
 import washingMachine from "@/assets/lottie/washing-machine.json";
@@ -22,7 +21,7 @@ const ServiceTracking = ({
     isVisible,
     isDarkMode,
     isMobile: propIsMobile,
-    autoSearchId, // Add this prop for auto-searching
+    autoSearchId,
 }) => {
     const [receiptNumber, setReceiptNumber] = useState("");
     const [showStatus, setShowStatus] = useState(false);
@@ -32,12 +31,11 @@ const ServiceTracking = ({
     const [showFullCustomerInfo, setShowFullCustomerInfo] = useState(false);
     const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
     const [showReceiptOptions, setShowReceiptOptions] = useState(false);
-    const [showPrintableReceipt, setShowPrintableReceipt] = useState(false); // New state for printable receipt
     const [recentSearches, setRecentSearches] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [trackingData, setTrackingData] = useState(null);
-    const [receiptData, setReceiptData] = useState(null); // New state for receipt data
+    const [receiptData, setReceiptData] = useState(null);
     const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
 
     const mainCardRef = useRef(null);
@@ -163,7 +161,7 @@ const ServiceTracking = ({
             issueDate: trackingData.createdAt,
             dueDate: trackingData.dueDate,
             staffId: trackingData.staffId,
-            totalPrice: trackingData.totalPrice,
+            total: trackingData.totalPrice, // Use 'total' instead of 'totalPrice'
             paymentMethod: trackingData.paymentMethod,
             service: {
                 name: trackingData.serviceName,
@@ -173,12 +171,12 @@ const ServiceTracking = ({
             consumables: [
                 {
                     name: "Detergent",
-                    price: 15, // Default price, adjust as needed
+                    price: 15,
                     quantity: trackingData.detergentQty || 0
                 },
                 {
                     name: "Fabric Conditioner",
-                    price: 10, // Default price, adjust as needed
+                    price: 10,
                     quantity: trackingData.fabricQty || 0
                 }
             ],
@@ -188,8 +186,8 @@ const ServiceTracking = ({
                 phone: "Tel: (123) 456-7890",
                 footerNote: "Thank you for your business!"
             },
-            amountGiven: trackingData.totalPrice, // Default to total price
-            change: 0 // Default change
+            amountGiven: trackingData.totalPrice,
+            change: 0
         };
     };
 
@@ -290,22 +288,19 @@ const ServiceTracking = ({
         }
     };
 
-    // Updated handlePrintReceipt to show printable receipt
+    // Simplified handlePrintReceipt - ViewReceipt now handles printing internally
     const handlePrintReceipt = async () => {
         if (!trackingData?.invoiceNumber) return;
         
         try {
             const receiptData = await fetchReceiptData(trackingData.invoiceNumber);
             setReceiptData(receiptData);
-            setShowReceiptOptions(false);
-            setShowPrintableReceipt(true);
+            setShowReceiptOptions(true);
         } catch (error) {
             console.error("Error handling print receipt:", error);
-            // Fallback to tracking data
             const fallbackData = createReceiptDataFromTracking(trackingData);
             setReceiptData(fallbackData);
-            setShowReceiptOptions(false);
-            setShowPrintableReceipt(true);
+            setShowReceiptOptions(true);
         }
     };
 
@@ -317,11 +312,6 @@ const ServiceTracking = ({
 
     const closeReceiptOptions = () => {
         setShowReceiptOptions(false);
-    };
-
-    const closePrintableReceipt = () => {
-        setShowPrintableReceipt(false);
-        setReceiptData(null);
     };
 
     const handleRecentSearchClick = (receiptNum) => {
@@ -614,7 +604,7 @@ const ServiceTracking = ({
                     </AnimatePresence>
                 </motion.div>
 
-                {/* View Receipt Modal */}
+                {/* View Receipt Modal - Now includes printable receipt functionality */}
                 <ViewReceipt
                     isVisible={isVisible}
                     isDarkMode={isDarkMode}
@@ -624,18 +614,6 @@ const ServiceTracking = ({
                     handleDownloadReceipt={handleDownloadReceipt}
                     receiptData={receiptData}
                 />
-
-                {/* Printable Receipt Modal */}
-                {showPrintableReceipt && receiptData && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-                        <div className="mx-auto w-full max-w-sm">
-                            <PrintableReceipt
-                                invoiceData={receiptData}
-                                onClose={closePrintableReceipt}
-                            />
-                        </div>
-                    </div>
-                )}
 
                 {/* Bottom Section - 3 Columns (Recent Searches: 1, Reminder: 2) */}
                 <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-3">
