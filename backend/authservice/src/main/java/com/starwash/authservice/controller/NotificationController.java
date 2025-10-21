@@ -60,6 +60,16 @@ public class NotificationController {
         return ResponseEntity.ok(count);
     }
 
+    @PostMapping("/trigger-stock-check")
+    public ResponseEntity<Void> triggerStockCheck() {
+        try {
+            notificationService.triggerStockCheck();
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
     private String getUserIdFromToken(String token) {
         try {
             String cleanToken = token.replace("Bearer ", "");

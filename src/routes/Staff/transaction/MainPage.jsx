@@ -5,7 +5,8 @@ import TotalPreviewCard from "@/components/TotalPreviewCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { RotateCcw, XCircle } from "lucide-react";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
+import { useToast } from "@/hooks/use-toast";
 
 const MainPage = () => {
     const formRef = useRef();
@@ -19,6 +20,7 @@ const MainPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState(null);
     const [isLocked, setIsLocked] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         const handlePrintStart = () => document.body.classList.add("print-mode");
@@ -48,7 +50,6 @@ const MainPage = () => {
         setErrorMessage(null);
 
         try {
-            // Use the api utility directly for the POST request
             const response = await api.post("api/transactions", payload);
             console.log("🧾 Invoice saved:", response.invoiceNumber);
 
@@ -68,9 +69,34 @@ const MainPage = () => {
             });
             setShowActions(false);
             setIsLocked(true);
+            
+            toast({
+                title: "Transaction Successful",
+                description: `Invoice ${response.invoiceNumber} created successfully`,
+                variant: "default",
+            });
         } catch (error) {
             console.error("❌ Transaction failed:", error);
-            setErrorMessage(error.message || "Transaction failed");
+            
+            // Handle insufficient stock errors specifically
+            if (error.message && error.message.includes("Insufficient stock")) {
+                setErrorMessage(error.message);
+                toast({
+                    title: "Insufficient Stock",
+                    description: error.message,
+                    variant: "destructive",
+                });
+            } else {
+                setErrorMessage(error.message || "Transaction failed");
+                toast({
+                    title: "Transaction Failed",
+                    description: error.message || "Please try again",
+                    variant: "destructive",
+                });
+            }
+            
+            // Re-throw the error so TransactionForm can handle it specifically
+            throw error;
         } finally {
             setIsSubmitting(false);
         }

@@ -61,6 +61,9 @@ public class TransactionService {
         List<ServiceEntryDto> consumableDtos = new ArrayList<>();
         List<ServiceEntry> consumables = new ArrayList<>();
 
+        // Check stock availability first before processing
+        List<String> insufficientStockItems = new ArrayList<>();
+        
         for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
             String itemName = entry.getKey();
             int quantity = entry.getValue();
@@ -69,9 +72,33 @@ public class TransactionService {
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
 
             if (item.getQuantity() < quantity) {
-                throw new RuntimeException("Insufficient stock for: " + itemName);
+                insufficientStockItems.add(String.format("%s (Requested: %d, Available: %d)", 
+                    itemName, quantity, item.getQuantity()));
+                
+                // Send notification about stock issue instead of throwing error immediately
+                notificationService.notifyTransactionStockIssue(
+                    itemName, quantity, item.getQuantity(), "pending-transaction");
             }
+        }
 
+        // If there are insufficient stock items, throw a business exception with details
+        if (!insufficientStockItems.isEmpty()) {
+            String errorMessage = "Insufficient stock for: " + String.join(", ", insufficientStockItems);
+            throw new InsufficientStockException(errorMessage, insufficientStockItems);
+        }
+
+        // Process stock deduction only if all items are available
+        for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
+            String itemName = entry.getKey();
+            int quantity = entry.getValue();
+
+            StockItem item = stockRepository.findByName(itemName)
+                    .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
+
+            // Store previous quantity for notification
+            Integer previousQuantity = item.getQuantity();
+
+            // Deduct stock
             item.setQuantity(item.getQuantity() - quantity);
             stockRepository.save(item);
 
@@ -80,6 +107,9 @@ public class TransactionService {
 
             consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
             consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
+
+            // Notify about stock level change after transaction
+            notificationService.checkAndNotifyStockLevel(item, previousQuantity);
         }
 
         double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
@@ -165,6 +195,20 @@ public class TransactionService {
                 plasticQty,
                 loads,
                 staffId);
+    }
+
+    // Custom exception for insufficient stock
+    public static class InsufficientStockException extends RuntimeException {
+        private final List<String> insufficientItems;
+        
+        public InsufficientStockException(String message, List<String> insufficientItems) {
+            super(message);
+            this.insufficientItems = insufficientItems;
+        }
+        
+        public List<String> getInsufficientItems() {
+            return insufficientItems;
+        }
     }
 
     private void createNewLaundryServiceNotification(Transaction transaction) {
