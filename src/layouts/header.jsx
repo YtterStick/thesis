@@ -587,12 +587,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                                         >
                                                             {formatTimeAgo(notification.createdAt)}
                                                         </p>
-                                                        <p
-                                                            className="mt-0.5 text-xs italic"
-                                                            style={{ color: isDarkMode ? "#F3EDE3/40" : "#0B2B26/40" }}
-                                                        >
-                                                            PH Time: {formatPHTime(notification.createdAt)}
-                                                        </p>
                                                     </div>
                                                     {!notification.read && (
                                                         <div 

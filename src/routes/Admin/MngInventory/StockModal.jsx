@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 
-const StockModal = ({ item, onClose, onSubmit }) => {
+const StockModal = ({ item, onClose, onSubmit, loading = false }) => {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     
@@ -11,6 +11,9 @@ const StockModal = ({ item, onClose, onSubmit }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        
+        if (loading) return; // Prevent submission while loading
+        
         const parsed = parseInt(amount, 10);
         if (!isNaN(parsed) && parsed > 0) {
             onSubmit(parsed);
@@ -47,7 +50,7 @@ const StockModal = ({ item, onClose, onSubmit }) => {
                             type="number"
                             min={1}
                             placeholder="Enter amount to add"
-                            className="w-full rounded-lg border-2 px-3 py-2 text-sm transition-all [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            className="w-full rounded-lg border-2 px-3 py-2 text-sm transition-all [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50"
                             style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -56,16 +59,18 @@ const StockModal = ({ item, onClose, onSubmit }) => {
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                             required
+                            disabled={loading}
                         />
                     </div>
 
                     <div className="flex justify-end gap-2 pt-2">
                         <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: loading ? 1 : 1.05 }}
+                            whileTap={{ scale: loading ? 1 : 0.95 }}
                             type="button"
                             onClick={onClose}
-                            className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
+                            disabled={loading}
+                            className="rounded-lg px-4 py-2 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{
                                 backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
                                 color: isDarkMode ? '#13151B' : '#0B2B26',
@@ -74,15 +79,23 @@ const StockModal = ({ item, onClose, onSubmit }) => {
                             Cancel
                         </motion.button>
                         <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: loading ? 1 : 1.05 }}
+                            whileTap={{ scale: loading ? 1 : 0.95 }}
                             type="submit"
-                            className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-all"
+                            disabled={loading}
+                            className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{
                                 backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
                             }}
                         >
-                            Add Stock
+                            {loading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    Adding...
+                                </div>
+                            ) : (
+                                "Add Stock"
+                            )}
                         </motion.button>
                     </div>
                 </form>
@@ -95,6 +108,7 @@ StockModal.propTypes = {
     item: PropTypes.object.isRequired,
     onClose: PropTypes.func.isRequired,
     onSubmit: PropTypes.func.isRequired,
+    loading: PropTypes.bool,
 };
 
 export default StockModal;

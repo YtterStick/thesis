@@ -18,7 +18,8 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
+import { useToast } from "@/hooks/use-toast";
 
 const getStockStatusCounts = (items) => {
   let out = 0, low = 0, adequate = 0;
@@ -38,6 +39,7 @@ const getStockStatusCounts = (items) => {
 
 const MainPage = () => {
   const { theme } = useTheme();
+  const { toast } = useToast();
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   const [items, setItems] = useState([]);
@@ -46,6 +48,8 @@ const MainPage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showStockModal, setShowStockModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [addingStock, setAddingStock] = useState(false);
 
   useEffect(() => {
     fetchInventory();
@@ -53,41 +57,74 @@ const MainPage = () => {
 
   const fetchInventory = async () => {
     try {
-      // Use the api utility instead of secureFetch
       const data = await api.get("api/stock");
       const safeItems = Array.isArray(data) ? data : (data.items ?? []);
       setItems(safeItems);
     } catch (error) {
       console.error("Error loading inventory:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load inventory items",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleSave = async (data) => {
+    if (saving) return; // Prevent double click
+    
+    setSaving(true);
     try {
       if (editingItem) {
-        // Use api utility for PUT request
         await api.put(`api/stock/${editingItem.id}`, data);
+        toast({
+          title: "Success",
+          description: "Item updated successfully",
+        });
       } else {
-        // Use api utility for POST request
         await api.post("api/stock", data);
+        toast({
+          title: "Success",
+          description: "Item added successfully",
+        });
       }
       setShowForm(false);
       setEditingItem(null);
       await fetchInventory();
     } catch (error) {
       console.error("Error saving item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save item",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (item) => {
+    if (saving) return; // Prevent double click
+    
+    setSaving(true);
     try {
-      // Use api utility for DELETE request
       await api.delete(`api/stock/${item.id}`);
+      toast({
+        title: "Success",
+        description: "Item deleted successfully",
+      });
       await fetchInventory();
     } catch (error) {
       console.error("Error deleting item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete item",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -97,14 +134,27 @@ const MainPage = () => {
   };
 
   const handleAddStock = async (amount) => {
+    if (addingStock) return; // Prevent double click
+    
+    setAddingStock(true);
     try {
-      // Use api utility for PUT request
       await api.put(`api/stock/${selectedItem.id}/restock?amount=${amount}`);
+      toast({
+        title: "Success",
+        description: `Added ${amount} stock to ${selectedItem.name}`,
+      });
       setSelectedItem(null);
       setShowStockModal(false);
       await fetchInventory();
     } catch (error) {
       console.error("Error adding stock:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add stock",
+        variant: "destructive",
+      });
+    } finally {
+      setAddingStock(false);
     }
   };
 
@@ -287,14 +337,24 @@ const MainPage = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={openAddForm}
-                  className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
+                  disabled={saving}
+                  className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
                     color: "#F3EDE3",
                   }}
                 >
-                  <Plus size={18} />
-                  <span className="text-sm font-medium">Add Item</span>
+                  {saving ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span className="text-sm font-medium">Adding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={18} />
+                      <span className="text-sm font-medium">Add Item</span>
+                    </>
+                  )}
                 </motion.button>
               )}
             </div>
@@ -412,7 +472,8 @@ const MainPage = () => {
                                       whileHover={{ scale: 1.1 }}
                                       whileTap={{ scale: 0.9 }}
                                       onClick={() => openStockModal(item)}
-                                      className="rounded-lg p-2 transition-colors hover:opacity-80"
+                                      disabled={saving || addingStock}
+                                      className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                                       style={{
                                         backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
                                       }}
@@ -430,7 +491,8 @@ const MainPage = () => {
                                       whileHover={{ scale: 1.1 }}
                                       whileTap={{ scale: 0.9 }}
                                       onClick={() => handleEdit(item)}
-                                      className="rounded-lg p-2 transition-colors hover:opacity-80"
+                                      disabled={saving}
+                                      className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                                       style={{
                                         backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
                                       }}
@@ -461,14 +523,24 @@ const MainPage = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={openAddForm}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
+                    disabled={saving}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
                       color: "#F3EDE3",
                     }}
                   >
-                    <Plus size={18} />
-                    <span className="text-sm font-medium">Add Your First Item</span>
+                    {saving ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <span className="text-sm font-medium">Adding...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={18} />
+                        <span className="text-sm font-medium">Add Your First Item</span>
+                      </>
+                    )}
                   </motion.button>
                 </div>
               </div>
@@ -484,6 +556,7 @@ const MainPage = () => {
           onAdd={handleSave}
           onClose={closeForm}
           existingItems={items}
+          loading={saving}
         />
       )}
 
@@ -493,6 +566,7 @@ const MainPage = () => {
           item={selectedItem}
           onClose={closeStockModal}
           onSubmit={handleAddStock}
+          loading={addingStock}
         />
       )}
     </div>

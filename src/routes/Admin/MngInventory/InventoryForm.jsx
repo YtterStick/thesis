@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
+const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = false }) => {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     
@@ -44,6 +44,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        
+        if (loading) return; // Prevent submission while loading
 
         const { name, quantity, unit, price, lowStockThreshold, adequateStockThreshold } = form;
 
@@ -132,7 +134,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={onClose}
-                        className="rounded-lg p-1 transition-colors hover:opacity-80"
+                        disabled={loading}
+                        className="rounded-lg p-1 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
                             backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
                         }}
@@ -156,7 +159,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             value={form.name}
                             onChange={(e) => handleChange("name", e.target.value)}
                             required
-                            className="rounded-lg border-2 transition-all"
+                            disabled={loading}
+                            className="rounded-lg border-2 transition-all disabled:opacity-50"
                             style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -182,7 +186,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             required
                             min="0"
                             step="1"
-                            className="rounded-lg border-2 transition-all"
+                            disabled={loading}
+                            className="rounded-lg border-2 transition-all disabled:opacity-50"
                             style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -199,7 +204,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                         >
                             Price
                         </label>
-                        <div className="flex items-center rounded-lg border-2 transition-all"
+                        <div className="flex items-center rounded-lg border-2 transition-all disabled:opacity-50"
                              style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -214,7 +219,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                                 required
                                 min="0"
                                 step="0.01"
-                                className="flex-1 border-none bg-transparent transition-all focus-visible:ring-0 focus-visible:ring-offset-0"
+                                disabled={loading}
+                                className="flex-1 border-none bg-transparent transition-all focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-50"
                                 style={{
                                     color: isDarkMode ? "#13151B" : "#0B2B26",
                                 }}
@@ -233,10 +239,11 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                         <Select
                             value={form.unit}
                             onValueChange={(value) => handleChange("unit", value)}
+                            disabled={loading}
                         >
                             <SelectTrigger
                                 id="unit"
-                                className="rounded-lg border-2 transition-all"
+                                className="rounded-lg border-2 transition-all disabled:opacity-50"
                                 style={{
                                     backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -285,7 +292,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             onChange={(e) => handleChange("lowStockThreshold", e.target.value)}
                             min="1"
                             step="1"
-                            className="rounded-lg border-2 transition-all"
+                            disabled={loading}
+                            className="rounded-lg border-2 transition-all disabled:opacity-50"
                             style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -310,7 +318,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                             onChange={(e) => handleChange("adequateStockThreshold", e.target.value)}
                             min="1"
                             step="1"
-                            className="rounded-lg border-2 transition-all"
+                            disabled={loading}
+                            className="rounded-lg border-2 transition-all disabled:opacity-50"
                             style={{
                                 backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
                                 borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
@@ -320,18 +329,26 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [] }) => {
                     </div>
 
                     <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={{ scale: loading ? 1 : 1.02 }}
+                        whileTap={{ scale: loading ? 1 : 0.98 }}
                         className="pt-2"
                     >
                         <Button
                             type="submit"
-                            className="w-full rounded-lg px-4 py-2 text-white transition-all"
+                            disabled={loading}
+                            className="w-full rounded-lg px-4 py-2 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{
                                 backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
                             }}
                         >
-                            {isEditMode ? "Update Item" : "Save Item"}
+                            {loading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    {isEditMode ? "Updating..." : "Saving..."}
+                                </div>
+                            ) : (
+                                isEditMode ? "Update Item" : "Save Item"
+                            )}
                         </Button>
                     </motion.div>
                 </form>
@@ -345,6 +362,7 @@ InventoryForm.propTypes = {
     onAdd: PropTypes.func.isRequired,
     onClose: PropTypes.func.isRequired,
     existingItems: PropTypes.array,
+    loading: PropTypes.bool,
 };
 
 export default InventoryForm;
