@@ -15,7 +15,7 @@ import {
     RefreshCw,
 } from "lucide-react";
 import PropTypes from "prop-types";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchResultClick }) => {
     const { theme, setTheme } = useTheme();
@@ -26,12 +26,12 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [showNewNotification, setShowNewNotification] = useState(false);
-    const [latestNotification, setLatestNotification] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [notificationsLoading, setNotificationsLoading] = useState(false);
     const notificationRef = useRef(null);
     const searchRef = useRef(null);
 
-    // Calculate isDarkMode based on theme - matching User side
+    // Calculate isDarkMode based on theme
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     const toggleTheme = () => {
@@ -39,7 +39,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         setTheme(newTheme);
     };
 
-    // Search functionality
+    // Search functionality (unchanged)
     const performSearch = (query) => {
         if (!query.trim() || !sidebarLinks.length) {
             setSearchResults([]);
@@ -129,24 +129,68 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         };
     }, [searchActive, showSearchResults]);
 
-    // Fetch notifications
+    // Format time ago in PH Time (GMT+8)
+    const formatTimeAgo = (dateString) => {
+        try {
+            // Parse the date string and convert to PH time
+            const date = new Date(dateString);
+            const phDate = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            
+            const diffInSeconds = Math.floor((now - phDate) / 1000);
+
+            if (diffInSeconds < 60) {
+                return `${diffInSeconds} seconds ago`;
+            } else if (diffInSeconds < 3600) {
+                return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+            } else if (diffInSeconds < 86400) {
+                return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+            } else {
+                return `${Math.floor(diffInSeconds / 86400)} days ago`;
+            }
+        } catch (error) {
+            console.error("Error formatting time:", error);
+            return "Recently";
+        }
+    };
+
+    // Format date in PH Time for display
+    const formatPHTime = (dateString) => {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleString("en-PH", { 
+                timeZone: "Asia/Manila",
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            console.error("Error formatting PH time:", error);
+            return dateString;
+        }
+    };
+
+    // Fetch notifications with skeleton loader
     const fetchNotifications = async () => {
         try {
+            setNotificationsLoading(true);
             console.log("Fetching notifications...");
 
-            // Use the api utility instead of direct fetch
             const data = await api.get("api/notifications");
             console.log("Fetched notifications:", data);
             setNotifications(data);
         } catch (error) {
             console.error("Error fetching notifications:", error);
+        } finally {
+            setNotificationsLoading(false);
         }
     };
 
     // Fetch unread count
     const fetchUnreadCount = async () => {
         try {
-            // Use the api utility instead of direct fetch
             const count = await api.get("api/notifications/unread-count");
             setUnreadCount(count);
             return count;
@@ -159,7 +203,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     // Mark notification as read
     const markAsRead = async (id) => {
         try {
-            // Use the api utility instead of direct fetch
             await api.post(`api/notifications/${id}/read`);
             
             // Refresh notifications and count
@@ -173,7 +216,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     // Mark all as read
     const markAllAsRead = async () => {
         try {
-            // Use the api utility instead of direct fetch
             await api.post("api/notifications/read-all");
             
             // Refresh notifications and count
@@ -181,23 +223,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
             fetchUnreadCount();
         } catch (error) {
             console.error("Error marking all notifications as read:", error);
-        }
-    };
-
-    // Format time ago
-    const formatTimeAgo = (dateString) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffInSeconds = Math.floor((now - date) / 1000);
-
-        if (diffInSeconds < 60) {
-            return `${diffInSeconds} seconds ago`;
-        } else if (diffInSeconds < 3600) {
-            return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-        } else if (diffInSeconds < 86400) {
-            return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-        } else {
-            return `${Math.floor(diffInSeconds / 86400)} days ago`;
         }
     };
 
@@ -242,35 +267,37 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }
     }, [notificationOpen]);
 
-    // New useEffect for real-time notification handling
+    // Real-time notification checking (without animation)
     useEffect(() => {
         const checkForNewNotifications = async () => {
-            const previousUnreadCount = unreadCount;
-            const newUnreadCount = await fetchUnreadCount();
-            
-            // If unread count increased, show notification
-            if (newUnreadCount > previousUnreadCount && previousUnreadCount >= 0) {
-                // Fetch the latest notification to show
-                await fetchNotifications();
-                const latestUnread = notifications.find(n => !n.read);
-                if (latestUnread) {
-                    setLatestNotification(latestUnread);
-                    setShowNewNotification(true);
-                    
-                    // Auto-hide after 5 seconds
-                    setTimeout(() => {
-                        setShowNewNotification(false);
-                    }, 5000);
-                }
-            }
+            await fetchUnreadCount();
         };
 
         const interval = setInterval(() => {
             checkForNewNotifications();
-        }, 10000); // Check every 10 seconds
+        }, 30000); // Check every 30 seconds
 
         return () => clearInterval(interval);
-    }, [unreadCount, notifications]);
+    }, []);
+
+    // Skeleton loader component for notifications
+    const NotificationSkeleton = () => (
+        <div className="animate-pulse">
+            {[...Array(3)].map((_, index) => (
+                <div key={index} className="flex items-start gap-3 border-b p-3"
+                    style={{ borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26" }}>
+                    <div className="mt-0.5 flex-shrink-0">
+                        <div className={`w-4 h-4 rounded-full ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                        <div className={`h-4 rounded ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} style={{ width: '70%' }}></div>
+                        <div className={`h-3 rounded ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} style={{ width: '90%' }}></div>
+                        <div className={`h-2 rounded ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} style={{ width: '40%' }}></div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
 
     return (
         <header
@@ -453,9 +480,9 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                         </AnimatePresence>
                     </motion.button>
 
-                    {/* 🔔 Enhanced Notification System with Animation */}
+                    {/* 🔔 Enhanced Notification System without Animation */}
                     <div className="relative" ref={notificationRef}>
-                        <motion.button
+                        <button
                             className="group relative size-10 rounded-md transition-colors hover:opacity-80 flex items-center justify-center"
                             style={{
                                 backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
@@ -464,92 +491,18 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                             title="Notifications"
                             onClick={() => {
                                 setNotificationOpen(!notificationOpen);
-                                setShowNewNotification(false);
-                            }}
-                            whileHover={{ 
-                                scale: 1.1,
-                                rotate: [0, -5, 5, 0],
-                                transition: { 
-                                    rotate: { duration: 0.5, ease: "easeInOut" },
-                                    scale: { duration: 0.2 }
+                                if (!notificationOpen) {
+                                    fetchNotifications();
                                 }
                             }}
-                            whileTap={{ scale: 0.9 }}
                         >
-                            <motion.div
-                                animate={
-                                    showNewNotification 
-                                    ? {
-                                        scale: [1, 1.2, 1],
-                                        transition: { duration: 0.5, repeat: 1 }
-                                    }
-                                    : {}
-                                }
-                                className="flex items-center justify-center"
-                            >
-                                <Bell size={20} />
-                            </motion.div>
+                            <Bell size={20} />
                             {unreadCount > 0 && (
-                                <motion.span 
-                                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white"
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                                >
+                                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                                     {unreadCount}
-                                </motion.span>
+                                </span>
                             )}
-                        </motion.button>
-
-                        {/* Toast Notification for new alerts */}
-                        <AnimatePresence>
-                            {showNewNotification && latestNotification && (
-                                <motion.div
-                                    className="absolute right-0 top-12 z-50 w-80 rounded-md border shadow-lg cursor-pointer"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#0B2B26" : "white",
-                                        borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
-                                        borderLeft: `4px solid ${getNotificationColor(latestNotification.type)}`
-                                    }}
-                                    initial={{ opacity: 0, y: -20, scale: 0.9 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                                    transition={{ duration: 0.3 }}
-                                    onClick={() => {
-                                        setNotificationOpen(true);
-                                        setShowNewNotification(false);
-                                        markAsRead(latestNotification.id);
-                                    }}
-                                >
-                                    <div className="p-3">
-                                        <div className="flex items-start gap-3">
-                                            <div className="mt-0.5">
-                                                {getNotificationIcon(latestNotification.type)}
-                                            </div>
-                                            <div className="flex-1">
-                                                <h4 className="text-sm font-medium"
-                                                    style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
-                                                    {latestNotification.title}
-                                                </h4>
-                                                <p className="mt-1 text-sm"
-                                                   style={{ color: isDarkMode ? '#F3EDE3/80' : '#0B2B26/80' }}>
-                                                    {latestNotification.message}
-                                                </p>
-                                            </div>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setShowNewNotification(false);
-                                                }}
-                                                className={isDarkMode ? "text-[#F3EDE3]/60 hover:text-[#F3EDE3]" : "text-[#0B2B26]/60 hover:text-[#0B2B26]"}
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        </button>
 
                         {/* Notification dropdown */}
                         <AnimatePresence>
@@ -563,7 +516,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                    transition={{ duration: 0.2, type: "spring", stiffness: 300, damping: 20 }}
+                                    transition={{ duration: 0.2 }}
                                 >
                                     {/* Header */}
                                     <div
@@ -586,15 +539,14 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                         </div>
                                     </div>
 
-                                    {/* Notifications List */}
+                                    {/* Notifications List with Skeleton Loader */}
                                     <div className="max-h-96 overflow-y-auto">
-                                        {notifications.length > 0 ? (
+                                        {notificationsLoading ? (
+                                            <NotificationSkeleton />
+                                        ) : notifications.length > 0 ? (
                                             notifications.map((notification, index) => (
-                                                <motion.div
+                                                <div
                                                     key={notification.id}
-                                                    initial={{ opacity: 0, x: 20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: index * 0.05 }}
                                                     className={`flex cursor-pointer items-start gap-3 border-b p-3 transition-all ${
                                                         !notification.read
                                                             ? "border-l-2"
@@ -608,9 +560,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                                             (isDarkMode ? 'rgba(243, 237, 227, 0.1)' : 'rgba(11, 43, 38, 0.1)') : 'transparent'
                                                     }}
                                                     onClick={() => markAsRead(notification.id)}
-                                                    whileHover={{ 
-                                                        scale: 1.02,
-                                                    }}
                                                 >
                                                     <div className="mt-0.5 flex-shrink-0">
                                                         {getNotificationIcon(notification.type)}
@@ -638,53 +587,49 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                                         >
                                                             {formatTimeAgo(notification.createdAt)}
                                                         </p>
+                                                        <p
+                                                            className="mt-0.5 text-xs italic"
+                                                            style={{ color: isDarkMode ? "#F3EDE3/40" : "#0B2B26/40" }}
+                                                        >
+                                                            PH Time: {formatPHTime(notification.createdAt)}
+                                                        </p>
                                                     </div>
                                                     {!notification.read && (
-                                                        <motion.div 
+                                                        <div 
                                                             className="mt-2 h-2 w-2 rounded-full flex-shrink-0"
                                                             style={{ backgroundColor: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
-                                                            initial={{ scale: 0 }}
-                                                            animate={{ scale: 1 }}
-                                                            transition={{ type: "spring", stiffness: 500, damping: 15 }}
                                                         />
                                                     )}
-                                                </motion.div>
+                                                </div>
                                             ))
                                         ) : (
-                                            <motion.div
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
+                                            <div
                                                 className="p-6 text-center"
                                                 style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}
                                             >
                                                 <Bell size={32} className="mx-auto mb-2 opacity-50" />
                                                 <p className="text-sm">No notifications</p>
                                                 <p className="text-xs mt-1 opacity-70">You're all caught up!</p>
-                                            </motion.div>
+                                            </div>
                                         )}
                                     </div>
 
                                     {/* Footer */}
-                                    {notifications.length > 0 && (
-                                        <motion.div
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ delay: 0.1 }}
+                                    {notifications.length > 0 && !notificationsLoading && (
+                                        <div
                                             className="border-t p-2"
                                             style={{ borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26" }}
                                         >
-                                            <motion.button
+                                            <button
                                                 className="w-full rounded-md py-2 text-sm transition-all hover:opacity-80"
                                                 style={{ 
                                                     color: isDarkMode ? "#F3EDE3" : "#0B2B26",
                                                 }}
                                                 onClick={markAllAsRead}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
                                             >
                                                 Mark all as read
-                                            </motion.button>
-                                        </motion.div>
+                                            </button>
+                                        </div>
                                     )}
                                 </motion.div>
                             )}

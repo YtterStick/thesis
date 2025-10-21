@@ -5,6 +5,7 @@ import com.starwash.authservice.repository.StockRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,9 +15,17 @@ public class StockService {
     private final StockRepository stockRepository;
     private final NotificationService notificationService;
 
+    // Manila timezone (GMT+8)
+    private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
+
     public StockService(StockRepository stockRepository, NotificationService notificationService) {
         this.stockRepository = stockRepository;
         this.notificationService = notificationService;
+    }
+
+    // Get current time in Manila timezone
+    private LocalDateTime getCurrentManilaTime() {
+        return LocalDateTime.now(MANILA_ZONE);
     }
 
     public List<StockItem> getAllItems() {
@@ -29,18 +38,18 @@ public class StockService {
 
     public StockItem createItem(StockItem newItem) {
         validateThresholds(newItem);
-        newItem.setCreatedAt(LocalDateTime.now());
-        newItem.setLastUpdated(LocalDateTime.now());
-        newItem.setLastRestock(newItem.getLastRestock() != null ? newItem.getLastRestock() : LocalDateTime.now());
+        LocalDateTime manilaTime = getCurrentManilaTime();
+        newItem.setCreatedAt(manilaTime);
+        newItem.setLastUpdated(manilaTime);
+        newItem.setLastRestock(newItem.getLastRestock() != null ? newItem.getLastRestock() : manilaTime);
 
         StockItem savedItem = stockRepository.save(newItem);
 
-        // Notify about initial stock status
+        // Notify about initial stock status - both ADMIN and STAFF will receive
         notificationService.notifyCurrentStockStatus(savedItem);
         return savedItem;
     }
 
-    // In StockService.java - Update the updateItem method
     public Optional<StockItem> updateItem(String id, StockItem updatedItem) {
         validateThresholds(updatedItem);
 
@@ -59,11 +68,12 @@ public class StockService {
             }
 
             existing.setLastRestockAmount(updatedItem.getLastRestockAmount());
-            existing.setLastUpdated(LocalDateTime.now());
+            existing.setLastUpdated(getCurrentManilaTime());
 
             StockItem savedItem = stockRepository.save(existing);
 
             // Always check stock level, not just on transitions
+            // This will notify both ADMIN and STAFF
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
             return savedItem;
         });
@@ -83,8 +93,9 @@ public class StockService {
 
             item.setQuantity(item.getQuantity() + amount);
             item.setLastRestockAmount(amount);
-            item.setLastRestock(LocalDateTime.now());
-            item.setLastUpdated(LocalDateTime.now());
+            LocalDateTime manilaTime = getCurrentManilaTime();
+            item.setLastRestock(manilaTime);
+            item.setLastUpdated(manilaTime);
             item.setUpdatedBy(updatedBy);
 
             StockItem savedItem = stockRepository.save(item);
@@ -92,9 +103,11 @@ public class StockService {
             String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s",
                     item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
 
+            // Notify both ADMIN and STAFF about restock
             notificationService.notifyAllUsers("inventory_update",
                     "Restock Completed", message, item.getId());
 
+            // Check stock level after restock - will notify both ADMIN and STAFF
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
 
             return savedItem;

@@ -3,6 +3,7 @@ package com.starwash.authservice.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Document(collection = "notifications")
 public class Notification {
@@ -25,8 +26,12 @@ public class Notification {
     public static final String TYPE_NEW_LAUNDRY_SERVICE = "new_laundry_service";
     public static final String TYPE_LOAD_COMPLETED = "load_completed";
 
+    // Manila timezone (GMT+8)
+    private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
+
     public Notification() {
-        this.createdAt = LocalDateTime.now();
+        // Set createdAt to Manila time by default
+        this.createdAt = LocalDateTime.now(MANILA_ZONE);
         this.read = false;
     }
 

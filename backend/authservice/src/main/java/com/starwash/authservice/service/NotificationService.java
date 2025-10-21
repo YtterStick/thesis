@@ -6,6 +6,8 @@ import com.starwash.authservice.repository.NotificationRepository;
 import com.starwash.authservice.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -13,18 +15,28 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
+    // Manila timezone (GMT+8)
+    private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
+
     public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
     }
 
+    // Get current time in Manila timezone
+    private LocalDateTime getCurrentManilaTime() {
+        return LocalDateTime.now(MANILA_ZONE);
+    }
+
     // Enhanced notification method for different types
     public Notification createNotification(String userId, String type, String title, String message, String relatedEntityId) {
         Notification notification = new Notification(userId, type, title, message, relatedEntityId);
+        // Override createdAt with Manila time
+        notification.setCreatedAt(getCurrentManilaTime());
         return notificationRepository.save(notification);
     }
 
-    // Notify both admin and staff for laundry services
+    // Notify both admin and staff for all notifications including inventory
     public void notifyAllUsers(String type, String title, String message, String relatedEntityId) {
         userRepository.findAll().forEach(user -> {
             if ("ADMIN".equals(user.getRole()) || "STAFF".equals(user.getRole())) {
@@ -45,11 +57,11 @@ public class NotificationService {
         });
     }
 
-    // Add these specific laundry status notification methods (Focus on Washed/Dried)
+    // Add these specific laundry status notification methods
     public void notifyLoadWashed(String customerName, String transactionId, int loadNumber) {
         String title = "Load Washed - Ready for Drying";
         String message = String.format("Load %d for %s has been washed and is ready for drying.", 
-            loadNumber, customerName, transactionId);
+            loadNumber, customerName);
         
         notifyAllUsers(Notification.TYPE_LOAD_WASHED, title, message, transactionId);
         System.out.println("📢 Load washed notification sent: " + message);
@@ -58,7 +70,7 @@ public class NotificationService {
     public void notifyLoadDried(String customerName, String transactionId, int loadNumber) {
         String title = "Load Dried - Ready for Folding";
         String message = String.format("Load %d for %s has been dried and is ready for folding.", 
-            loadNumber, customerName, transactionId);
+            loadNumber, customerName);
         
         notifyAllUsers(Notification.TYPE_LOAD_DRIED, title, message, transactionId);
         System.out.println("📢 Load dried notification sent: " + message);
@@ -67,42 +79,10 @@ public class NotificationService {
     public void notifyLoadCompleted(String customerName, String transactionId, int loadNumber) {
         String title = "Load Completed";
         String message = String.format("Load %d for %s has been completed.", 
-            loadNumber, customerName, transactionId);
+            loadNumber, customerName);
         
         notifyAllUsers(Notification.TYPE_LOAD_COMPLETED, title, message, transactionId);
         System.out.println("📢 Load completed notification sent: " + message);
-    }
-
-    // Keep the generic laundry status change method for backward compatibility
-    public void notifyLaundryStatusChange(String type, String customerName, String serviceType, 
-                                        String transactionId, int loadNumber, String status) {
-        String title = "";
-        String message = "";
-
-        switch (type) {
-            case "load_washed":
-                title = "Load Washed - Ready for Drying";
-                message = String.format("Load %d for %s has been washed and is ready for drying.", 
-                    loadNumber, customerName, transactionId);
-                break;
-            case "load_dried":
-                title = "Load Dried - Ready for Folding";
-                message = String.format("Load %d for %s has been dried and is ready for folding.", 
-                    loadNumber, customerName, transactionId);
-                break;
-            case "new_laundry_service":
-                title = "New Laundry Service Created";
-                message = String.format("New laundry service created for %s. Service: %s.", 
-                    customerName, serviceType, transactionId);
-                break;
-            case "load_completed":
-                title = "Load Completed";
-                message = String.format("Load %d for %s has been completed.", 
-                    loadNumber, customerName, transactionId);
-                break;
-        }
-
-        notifyAllUsers(type, title, message, transactionId);
     }
 
     // Enhanced stock level notification logic - UPDATED VERSION
