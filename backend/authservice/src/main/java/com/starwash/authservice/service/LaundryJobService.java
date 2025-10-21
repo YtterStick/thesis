@@ -19,7 +19,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -72,39 +71,6 @@ public class LaundryJobService {
 
     private LocalDateTime getCurrentManilaTime() {
         return LocalDateTime.now(getManilaTimeZone());
-    }
-
-    // Get completion statistics - count all COMPLETED loads for today in PH time
-    public Map<String, Object> getCompletionStatistics() {
-        Map<String, Object> stats = new HashMap<>();
-        
-        List<LaundryJob> allJobs = laundryJobRepository.findAll();
-        
-        // Count completed loads for today in PH time
-        long todayCompleted = allJobs.stream()
-            .flatMap(job -> job.getLoadAssignments().stream())
-            .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-            .filter(load -> isCompletedTodayInPH(load.getEndTime()))
-            .count();
-        
-        stats.put("today", todayCompleted);
-        stats.put("lastUpdated", getCurrentManilaTime());
-        stats.put("timezone", "Asia/Manila");
-        
-        return stats;
-    }
-
-    // Helper method to check if completion was today in PH time
-    private boolean isCompletedTodayInPH(LocalDateTime completionTime) {
-        if (completionTime == null) return false;
-        
-        ZoneId manilaZone = ZoneId.of("Asia/Manila");
-        LocalDateTime nowManila = LocalDateTime.now(manilaZone);
-        LocalDateTime completionManila = completionTime.atZone(ZoneId.systemDefault())
-                .withZoneSameInstant(manilaZone)
-                .toLocalDateTime();
-        
-        return completionManila.toLocalDate().equals(nowManila.toLocalDate());
     }
 
     private List<String> getFlowByServiceType(String serviceType) {
@@ -342,12 +308,6 @@ public class LaundryJobService {
         String previousStatus = load.getStatus();
         load.setStatus(newStatus);
 
-        // Set completion time when status changes to COMPLETED
-        if (STATUS_COMPLETED.equalsIgnoreCase(newStatus) && load.getEndTime() == null) {
-            load.setEndTime(getCurrentManilaTime());
-            System.out.println("✅ Set completion time for " + transactionId + " load " + loadNumber + ": " + load.getEndTime());
-        }
-
         // Send notifications for status changes
         sendStatusChangeNotifications(job, load, previousStatus, newStatus);
 
@@ -356,14 +316,7 @@ public class LaundryJobService {
         }
 
         job.setLaundryProcessedBy(processedBy);
-        LaundryJob saved = laundryJobRepository.save(job);
-
-        // Log completion for tracking
-        if (STATUS_COMPLETED.equalsIgnoreCase(newStatus)) {
-            System.out.println("🎯 Load completed: " + transactionId + " load " + loadNumber + " at " + load.getEndTime());
-        }
-
-        return saved;
+        return laundryJobRepository.save(job);
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
@@ -818,18 +771,14 @@ public class LaundryJobService {
                 break;
             case STATUS_FOLDING:
                 newStatus = STATUS_COMPLETED;
-                // Set completion time for forced completion
-                load.setEndTime(getCurrentManilaTime());
                 break;
             default:
                 throw new RuntimeException("Cannot force advance from status: " + currentStatus);
         }
 
         load.setStatus(newStatus);
-        if (!STATUS_COMPLETED.equals(newStatus)) {
-            load.setStartTime(null);
-            load.setEndTime(null);
-        }
+        load.setStartTime(null);
+        load.setEndTime(null);
 
         job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
@@ -852,16 +801,5 @@ public class LaundryJobService {
         } catch (Exception e) {
             System.err.println("❌ Error checking timer states: " + e.getMessage());
         }
-    }
-
-    // Method to get all completed loads for today (for debugging)
-    public List<LoadAssignment> getTodayCompletedLoads() {
-        List<LaundryJob> allJobs = laundryJobRepository.findAll();
-        
-        return allJobs.stream()
-            .flatMap(job -> job.getLoadAssignments().stream())
-            .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-            .filter(load -> isCompletedTodayInPH(load.getEndTime()))
-            .collect(Collectors.toList());
     }
 }

@@ -3,23 +3,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package, Calendar, Users } from "lucide-react";
+import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package } from "lucide-react";
 import TrackingTable from "./TrackingTable";
 import SkeletonLoader from "./SkeletonLoader";
 import { maskContact } from "./utils";
-import { api } from "@/lib/api-config";
+import { api } from "@/lib/api-config"; // Import the api utility
 
 const POLLING_INTERVAL = 10000;
 const ACTIVE_POLLING_INTERVAL = 5000;
 const TIMER_CHECK_INTERVAL = 1000;
-
-// Helper function to get PH time
-const getPHTime = () => {
-  return new Date().toLocaleString("en-US", { 
-    timeZone: "Asia/Manila",
-    hour12: false 
-  });
-};
 
 export default function ServiceTrackingPage() {
     const { theme } = useTheme();
@@ -34,11 +26,6 @@ export default function ServiceTrackingPage() {
     const [isPolling, setIsPolling] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [smsStatus, setSmsStatus] = useState({});
-    const [completionSummary, setCompletionSummary] = useState({
-      today: 0
-    });
-    const [phTime, setPhTime] = useState(getPHTime());
-    
     const pollRef = useRef(null);
     const clockRef = useRef(null);
     const timerCheckRef = useRef(null);
@@ -51,24 +38,6 @@ export default function ServiceTrackingPage() {
     const hasActiveJobs = useMemo(() => {
         return jobs.some((job) => job.loads.some((load) => load.status === "WASHING" || load.status === "DRYING"));
     }, [jobs]);
-
-    // Calculate completion statistics - SIMPLE COUNT of COMPLETED loads
-    const calculateCompletionStats = useCallback((jobsData) => {
-      let todayCompleted = 0;
-
-      // Count all completed loads (ignore timestamp, just count COMPLETED status)
-      jobsData.forEach(job => {
-        job.loads.forEach(load => {
-          if (load.status === "COMPLETED") {
-            todayCompleted++;
-          }
-        });
-      });
-
-      return {
-        today: todayCompleted
-      };
-    }, []);
 
     const getPollingInterval = () => {
         if (!autoRefresh) return null;
@@ -98,6 +67,7 @@ export default function ServiceTrackingPage() {
 
     const fetchJobs = useCallback(async () => {
         try {
+            // Use the api utility instead of fetchWithTimeout
             const data = await api.get("api/laundry-jobs");
 
             const jobsWithLoads = data.map((job) => ({
@@ -130,11 +100,6 @@ export default function ServiceTrackingPage() {
             }));
 
             setJobs(jobsWithLoads);
-            
-            // Update completion statistics
-            const stats = calculateCompletionStats(jobsWithLoads);
-            setCompletionSummary(stats);
-            
             setError(null);
             return true;
         } catch (err) {
@@ -142,10 +107,11 @@ export default function ServiceTrackingPage() {
             setError(err.message);
             return false;
         }
-    }, [calculateCompletionStats]);
+    }, []);
 
     const fetchMachines = async () => {
         try {
+            // Use the api utility instead of fetchWithTimeout
             const data = await api.get("api/machines");
             setMachines(data);
             return true;
@@ -253,17 +219,11 @@ export default function ServiceTrackingPage() {
         fetchData();
 
         clockRef.current = setInterval(() => setNow(Date.now()), 1000);
-        
-        // PH time updater
-        const timeInterval = setInterval(() => {
-            setPhTime(getPHTime());
-        }, 1000);
 
         return () => {
             clearInterval(clockRef.current);
             if (pollRef.current) clearInterval(pollRef.current);
             if (timerCheckRef.current) clearInterval(timerCheckRef.current);
-            clearInterval(timeInterval);
         };
     }, []);
 
@@ -280,6 +240,7 @@ export default function ServiceTrackingPage() {
         setSmsStatus((prev) => ({ ...prev, [jobKey]: "sending" }));
 
         try {
+            // Use the api utility instead of fetchWithTimeout
             await api.post("api/send-completion-sms", {
                 transactionId: job.id,
                 customerName: job.customerName,
@@ -313,6 +274,7 @@ export default function ServiceTrackingPage() {
         );
 
         try {
+            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`
             );
@@ -338,6 +300,7 @@ export default function ServiceTrackingPage() {
         );
 
         try {
+            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`
             );
@@ -407,6 +370,7 @@ export default function ServiceTrackingPage() {
         );
 
         try {
+            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
             );
@@ -463,6 +427,7 @@ export default function ServiceTrackingPage() {
         );
 
         try {
+            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`
             );
@@ -481,11 +446,6 @@ export default function ServiceTrackingPage() {
             // Send SMS notification when job is completed
             if (nextStatus === "COMPLETED") {
                 sendSmsNotification(job, normalizedServiceType);
-                
-                // Update completion stats after a load is completed
-                setTimeout(() => {
-                    fetchData(true);
-                }, 1000);
             }
         } catch (err) {
             console.error("Failed to advance load status:", err);
@@ -529,6 +489,7 @@ export default function ServiceTrackingPage() {
         );
 
         try {
+            // Use the api utility instead of fetchWithTimeout
             await api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`);
         } catch (err) {
             console.error("Failed to start drying again:", err);
@@ -666,7 +627,7 @@ export default function ServiceTrackingPage() {
                             className="text-sm"
                             style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
                         >
-                            Track and manage laundry service progress • PH Time: {phTime}
+                            Track and manage laundry service progress
                         </p>
                     </div>
                 </div>
@@ -704,11 +665,10 @@ export default function ServiceTrackingPage() {
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     {
-                        label: "Total Customer",
+                        label: "Total Jobs",
                         value: jobs.length,
                         color: "#3DD9B6",
-                        description: "Active laundry customers",
-                        icon: Users
+                        description: "Active laundry jobs",
                     },
                     {
                         label: "Active Loads",
@@ -718,23 +678,20 @@ export default function ServiceTrackingPage() {
                         ),
                         color: "#60A5FA",
                         description: "Currently processing",
-                        icon: Package
                     },
                     {
                         label: "Pending",
                         value: jobs.reduce((acc, job) => acc + job.loads.filter((load) => load.status === "UNWASHED").length, 0),
                         color: "#FB923C",
                         description: "Waiting to start",
-                        icon: Package
                     },
                     {
                         label: "Completed Today",
-                        value: completionSummary.today,
+                        value: jobs.reduce((acc, job) => acc + job.loads.filter((load) => load.status === "COMPLETED").length, 0),
                         color: "#10B981",
-                        description: "Finished today",
-                        icon: Calendar
+                        description: "Finished loads",
                     },
-                ].map(({ label, value, color, description, icon: Icon }, index) => (
+                ].map(({ label, value, color, description }, index) => (
                     <motion.div
                         key={label}
                         initial={{ opacity: 0, y: 20 }}
@@ -760,7 +717,7 @@ export default function ServiceTrackingPage() {
                                     color: color,
                                 }}
                             >
-                                <Icon size={26} />
+                                <Package size={26} />
                             </motion.div>
                             <motion.div
                                 initial={{ scale: 0 }}
