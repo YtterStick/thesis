@@ -21,25 +21,6 @@ const getPHTime = () => {
   });
 };
 
-// Helper function to check if a date is today in PH time
-const isTodayInPH = (dateString) => {
-  if (!dateString) return false;
-  
-  try {
-    const phDate = new Date(dateString).toLocaleString("en-US", { 
-      timeZone: "Asia/Manila" 
-    });
-    const today = new Date().toLocaleString("en-US", { 
-      timeZone: "Asia/Manila" 
-    });
-    
-    return new Date(phDate).toDateString() === new Date(today).toDateString();
-  } catch (error) {
-    console.error("Error checking date:", error);
-    return false;
-  }
-};
-
 export default function ServiceTrackingPage() {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -71,22 +52,15 @@ export default function ServiceTrackingPage() {
         return jobs.some((job) => job.loads.some((load) => load.status === "WASHING" || load.status === "DRYING"));
     }, [jobs]);
 
-    // Calculate completion statistics using PH time
+    // Calculate completion statistics - SIMPLE COUNT of COMPLETED loads
     const calculateCompletionStats = useCallback((jobsData) => {
       let todayCompleted = 0;
 
-      // Count all completed loads for today in PH time
+      // Count all completed loads (ignore timestamp, just count COMPLETED status)
       jobsData.forEach(job => {
         job.loads.forEach(load => {
           if (load.status === "COMPLETED") {
-            // If endTime exists and it's today in PH time, count it
-            if (load.endTime && isTodayInPH(load.endTime)) {
-              todayCompleted++;
-            }
-            // If no endTime but the load is completed, still count it for today
-            else if (!load.endTime) {
-              todayCompleted++;
-            }
+            todayCompleted++;
           }
         });
       });
