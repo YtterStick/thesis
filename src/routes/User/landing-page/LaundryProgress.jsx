@@ -289,25 +289,6 @@ const LaundryProgress = ({ isVisible, isDarkMode, isMobile, currentLoadIndex, la
                         </div>
                     </div>
 
-                    {/* Desktop message for NOT_STARTED state */}
-                    {currentLoad.statusSteps.every((step) => !step.active) && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="mt-4 rounded-lg border p-4 text-center"
-                            style={{
-                                backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(24, 61, 61, 0.05)",
-                                borderColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(24, 61, 61, 0.1)",
-                                color: isDarkMode ? "#F3EDE3" : "#183D3D",
-                            }}
-                        >
-                            <div className="mb-2 flex items-center justify-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                <span className="text-sm font-semibold">Laundry Not Started Yet</span>
-                            </div>
-                            <p className="text-sm opacity-75">Your laundry is in queue and will begin processing soon</p>
-                        </motion.div>
-                    )}
                 </>
             )}
         </motion.div>

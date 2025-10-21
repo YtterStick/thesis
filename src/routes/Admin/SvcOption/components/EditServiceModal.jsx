@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Save, X, AlertCircle, Lock } from "lucide-react";
 
-// Permanent services that cannot be modified
+// Permanent services that cannot have their names modified
 const PERMANENT_SERVICES = ["Wash & Dry", "Wash", "Dry"];
 
 export default function EditServiceModal({ service, onClose, onSave }) {
@@ -44,26 +44,6 @@ export default function EditServiceModal({ service, onClose, onSave }) {
     if (!isPermanentService) {
       if (!form.name.trim()) {
         newErrors.name = "Service name is required";
-      } else {
-        const name = form.name.trim();
-        const normalized = name.toLowerCase();
-        
-        // Prevent variations of Wash and Dry
-        if (normalized === "washes" || normalized === "washs") {
-          newErrors.name = "Service name must be exactly 'Wash'";
-        } else if (normalized === "drys" || normalized === "dries") {
-          newErrors.name = "Service name must be exactly 'Dry'";
-        } else if (normalized === "wash" && name !== "Wash") {
-          newErrors.name = "Service name must be exactly 'Wash'";
-        } else if (normalized === "dry" && name !== "Dry") {
-          newErrors.name = "Service name must be exactly 'Dry'";
-        }
-        
-        // Prevent any variations containing wash/dry
-        if ((normalized.includes("wash") || normalized.includes("dry")) && 
-            !PERMANENT_SERVICES.map(s => s.toLowerCase()).includes(normalized)) {
-          newErrors.name = "Service name cannot contain variations of 'Wash' or 'Dry'";
-        }
       }
     }
 
@@ -203,14 +183,9 @@ export default function EditServiceModal({ service, onClose, onSave }) {
                   {errors.name}
                 </p>
               )}
-              {!isEditing && !isPermanentService && (
-                <p className="text-xs mt-1" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                  Note: Cannot use names containing "Wash", "Dry", or their variations
-                </p>
-              )}
             </div>
 
-            {/* Description */}
+            {/* Description - Always Editable */}
             <div>
               <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                 Description
@@ -228,7 +203,7 @@ export default function EditServiceModal({ service, onClose, onSave }) {
               />
             </div>
 
-            {/* Price with Peso Sign */}
+            {/* Price with Peso Sign - Always Editable */}
             <div>
               <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
                 Price
