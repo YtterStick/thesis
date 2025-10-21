@@ -108,7 +108,7 @@ public class TransactionService {
             consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
             consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
 
-            // Notify about stock level change after transaction
+            // Notify about stock level change after transaction - this will only notify if status actually changed
             notificationService.checkAndNotifyStockLevel(item, previousQuantity);
         }
 

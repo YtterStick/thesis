@@ -22,7 +22,7 @@ public class NotificationService {
     // Manila timezone (GMT+8)
     private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
     
-    // Track last notified status to avoid duplicate notifications
+    // Track last notified status to only notify on state changes
     private final ConcurrentHashMap<String, String> lastStockStatus = new ConcurrentHashMap<>();
 
     public NotificationService(NotificationRepository notificationRepository, 
@@ -74,21 +74,24 @@ public class NotificationService {
             System.out.println("🔄 Auto-checking stock levels at: " + getCurrentManilaTime());
             
             List<StockItem> allItems = stockRepository.findAll();
+            int statusChanges = 0;
             
             for (StockItem item : allItems) {
-                checkAndNotifyStockStatus(item);
+                if (checkAndNotifyStockStatus(item)) {
+                    statusChanges++;
+                }
             }
             
-            System.out.println("✅ Auto stock check completed. Items checked: " + allItems.size());
+            System.out.println("✅ Auto stock check completed. Items checked: " + allItems.size() + ", Status changes: " + statusChanges);
         } catch (Exception e) {
             System.err.println("❌ Error in auto stock check: " + e.getMessage());
         }
     }
 
-    // Check and notify stock status (called by both manual and auto checks)
-    private void checkAndNotifyStockStatus(StockItem item) {
+    // Check and notify stock status - returns true if status changed and notification was sent
+    private boolean checkAndNotifyStockStatus(StockItem item) {
         if (item.getLowStockThreshold() == null || item.getAdequateStockThreshold() == null) {
-            return;
+            return false;
         }
 
         int currentQuantity = item.getQuantity();
@@ -99,14 +102,14 @@ public class NotificationService {
         String itemKey = item.getId();
         String lastStatus = lastStockStatus.get(itemKey);
 
-        // Only notify if status changed or if it's a critical status (out of stock or low stock)
-        if (!currentStatus.equals(lastStatus) || 
-            "OUT_OF_STOCK".equals(currentStatus) || 
-            "LOW_STOCK".equals(currentStatus)) {
-            
-            sendStockStatusNotification(item, currentQuantity, currentStatus);
+        // Only notify if status actually changed
+        if (lastStatus == null || !currentStatus.equals(lastStatus)) {
+            sendStockStatusNotification(item, currentQuantity, currentStatus, lastStatus);
             lastStockStatus.put(itemKey, currentStatus);
+            return true;
         }
+        
+        return false;
     }
 
     private String determineStockStatus(int quantity, int lowThreshold, int adequateThreshold) {
@@ -121,28 +124,45 @@ public class NotificationService {
         }
     }
 
-    private void sendStockStatusNotification(StockItem item, int currentQuantity, String status) {
+    private void sendStockStatusNotification(StockItem item, int currentQuantity, String currentStatus, String previousStatus) {
         String message;
         String title;
         String type;
 
-        switch (status) {
+        // Determine if this is an improvement or deterioration
+        boolean isImprovement = isStatusImprovement(previousStatus, currentStatus);
+        
+        switch (currentStatus) {
             case "OUT_OF_STOCK":
                 title = "🚨 Out of Stock Alert";
                 message = String.format("%s is completely out of stock. Please restock immediately!", item.getName());
                 type = "stock_alert";
                 break;
             case "LOW_STOCK":
-                title = "⚠️ Low Stock Warning";
-                message = String.format("%s is running low. Current quantity: %d %s. Low threshold: %d %s", 
-                    item.getName(), currentQuantity, item.getUnit(), item.getLowStockThreshold(), item.getUnit());
-                type = "stock_alert";
+                if (isImprovement && "OUT_OF_STOCK".equals(previousStatus)) {
+                    title = "🔄 Stock Restocked";
+                    message = String.format("%s has been restocked from out of stock. Current quantity: %d %s", 
+                        item.getName(), currentQuantity, item.getUnit());
+                    type = "inventory_update";
+                } else {
+                    title = "⚠️ Low Stock Warning";
+                    message = String.format("%s is running low. Current quantity: %d %s. Low threshold: %d %s", 
+                        item.getName(), currentQuantity, item.getUnit(), item.getLowStockThreshold(), item.getUnit());
+                    type = "stock_alert";
+                }
                 break;
             case "ADEQUATE_STOCK":
-                title = "ℹ️ Adequate Stock Level";
-                message = String.format("%s is at adequate level. Current quantity: %d %s.", 
-                    item.getName(), currentQuantity, item.getUnit());
-                type = "stock_info";
+                if (isImprovement) {
+                    title = "📈 Stock Level Improved";
+                    message = String.format("%s is now at adequate level. Current quantity: %d %s.", 
+                        item.getName(), currentQuantity, item.getUnit());
+                    type = "stock_info";
+                } else {
+                    title = "ℹ️ Adequate Stock Level";
+                    message = String.format("%s is at adequate level. Current quantity: %d %s.", 
+                        item.getName(), currentQuantity, item.getUnit());
+                    type = "stock_info";
+                }
                 break;
             case "FULLY_STOCKED":
                 title = "✅ Fully Stocked";
@@ -155,7 +175,29 @@ public class NotificationService {
         }
 
         notifyAllUsers(type, title, message, item.getId());
-        System.out.println("📢 Auto stock notification sent: " + title + " - " + message);
+        System.out.println("📢 Stock status change notification: " + title + " - " + message);
+        System.out.println("   Previous status: " + previousStatus + " → Current status: " + currentStatus);
+    }
+
+    private boolean isStatusImprovement(String previousStatus, String currentStatus) {
+        if (previousStatus == null) return false;
+        
+        // Define status hierarchy (worst to best)
+        String[] statusHierarchy = {"OUT_OF_STOCK", "LOW_STOCK", "ADEQUATE_STOCK", "FULLY_STOCKED"};
+        
+        int previousIndex = -1;
+        int currentIndex = -1;
+        
+        for (int i = 0; i < statusHierarchy.length; i++) {
+            if (statusHierarchy[i].equals(previousStatus)) {
+                previousIndex = i;
+            }
+            if (statusHierarchy[i].equals(currentStatus)) {
+                currentIndex = i;
+            }
+        }
+        
+        return currentIndex > previousIndex;
     }
 
     // Enhanced stock level notification logic for manual operations
@@ -168,104 +210,71 @@ public class NotificationService {
         int lowThreshold = item.getLowStockThreshold();
         int adequateThreshold = item.getAdequateStockThreshold();
 
-        // Always check current status regardless of previous quantity
-        checkCurrentStockStatus(item, currentQuantity, lowThreshold, adequateThreshold);
+        String currentStatus = determineStockStatus(currentQuantity, lowThreshold, adequateThreshold);
+        String itemKey = item.getId();
+        String lastStatus = lastStockStatus.get(itemKey);
+
+        // Only notify if status changed
+        if (lastStatus == null || !currentStatus.equals(lastStatus)) {
+            sendStockStatusNotification(item, currentQuantity, currentStatus, lastStatus);
+            lastStockStatus.put(itemKey, currentStatus);
+        }
         
-        // Also check transitions if we have previous quantity
+        // Also check transitions if we have previous quantity (for restock notifications)
         if (previousQuantity != null) {
             handleStockLevelTransitions(item, previousQuantity, currentQuantity, lowThreshold, adequateThreshold);
         }
-
-        // Update the last known status
-        String currentStatus = determineStockStatus(currentQuantity, lowThreshold, adequateThreshold);
-        lastStockStatus.put(item.getId(), currentStatus);
-    }
-
-    private void checkCurrentStockStatus(StockItem item, int currentQuantity, int lowThreshold, int adequateThreshold) {
-        String message;
-        String title;
-        String type;
-        
-        if (currentQuantity == 0) {
-            title = "🚨 Out of Stock Alert";
-            message = String.format("%s is out of stock. Please restock immediately.", item.getName());
-            type = "stock_alert";
-        } else if (currentQuantity <= lowThreshold) {
-            title = "⚠️ Low Stock Alert";
-            message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
-                item.getName(), currentQuantity, item.getUnit(), lowThreshold, item.getUnit());
-            type = "stock_alert";
-        } else if (currentQuantity <= adequateThreshold) {
-            title = "ℹ️ Adequate Stock";
-            message = String.format("%s is at adequate level. Current quantity: %d %s.", 
-                item.getName(), currentQuantity, item.getUnit());
-            type = "stock_info";
-        } else {
-            title = "✅ Fully Stocked";
-            message = String.format("%s is fully stocked. Current quantity: %d %s.", 
-                item.getName(), currentQuantity, item.getUnit());
-            type = "stock_info";
-        }
-        
-        // Only notify if this is a meaningful state change
-        notifyAllUsers(type, title, message, item.getId());
     }
 
     private void handleStockLevelTransitions(StockItem item, int previousQuantity, int currentQuantity, 
                                            int lowThreshold, int adequateThreshold) {
-        // Out of stock notification
-        if (previousQuantity > 0 && currentQuantity == 0) {
-            String message = String.format("%s is now out of stock. Please restock immediately.", item.getName());
-            notifyAllUsers("stock_alert", "🚨 Out of Stock Alert", message, item.getId());
-        }
-        // Low stock notification (crossed from above to below low threshold)
-        else if (previousQuantity > lowThreshold && currentQuantity <= lowThreshold && currentQuantity > 0) {
-            String message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
-                item.getName(), currentQuantity, item.getUnit(), lowThreshold, item.getUnit());
-            notifyAllUsers("stock_alert", "⚠️ Low Stock Alert", message, item.getId());
-        }
-        // Adequate stock notification (crossed from low to adequate or from stocked to adequate)
-        else if ((previousQuantity <= lowThreshold || previousQuantity > adequateThreshold) && 
-                 currentQuantity > lowThreshold && currentQuantity <= adequateThreshold) {
-            String message = String.format("%s is at adequate level. Current quantity: %d %s.", 
-                item.getName(), currentQuantity, item.getUnit());
-            notifyAllUsers("stock_info", "ℹ️ Adequate Stock", message, item.getId());
-        }
-        // Fully stocked notification (crossed from adequate to stocked)
-        else if (previousQuantity <= adequateThreshold && currentQuantity > adequateThreshold) {
-            String message = String.format("%s is fully stocked. Current quantity: %d %s.", 
-                item.getName(), currentQuantity, item.getUnit());
-            notifyAllUsers("stock_info", "✅ Fully Stocked", message, item.getId());
-        }
         // Restock notification (significant quantity increase)
-        else if (currentQuantity > previousQuantity && (currentQuantity - previousQuantity) >= 10) {
+        if (currentQuantity > previousQuantity && (currentQuantity - previousQuantity) >= 10) {
             String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s", 
                 item.getName(), (currentQuantity - previousQuantity), item.getUnit(), currentQuantity, item.getUnit());
             notifyAllUsers("inventory_update", "📦 Restock Completed", message, item.getId());
         }
     }
 
-    // Simple stock status check without transitions
+    // Simple stock status check without transitions - only notifies on state changes
     public void notifyCurrentStockStatus(StockItem item) {
         int currentQuantity = item.getQuantity();
         int lowThreshold = item.getLowStockThreshold();
         int adequateThreshold = item.getAdequateStockThreshold();
 
-        if (currentQuantity == 0) {
-            String message = String.format("%s is out of stock. Please restock immediately.", item.getName());
-            notifyAllUsers("stock_alert", "🚨 Out of Stock Alert", message, item.getId());
-        } else if (currentQuantity <= lowThreshold) {
-            String message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
-                item.getName(), currentQuantity, item.getUnit(), lowThreshold, item.getUnit());
-            notifyAllUsers("stock_alert", "⚠️ Low Stock Alert", message, item.getId());
-        } else if (currentQuantity <= adequateThreshold) {
-            String message = String.format("%s is at adequate level. Current quantity: %d %s.", 
-                item.getName(), currentQuantity, item.getUnit());
-            notifyAllUsers("stock_info", "ℹ️ Adequate Stock", message, item.getId());
-        } else {
-            String message = String.format("%s is fully stocked. Current quantity: %d %s.", 
-                item.getName(), currentQuantity, item.getUnit());
-            notifyAllUsers("stock_info", "✅ Fully Stocked", message, item.getId());
+        String currentStatus = determineStockStatus(currentQuantity, lowThreshold, adequateThreshold);
+        String itemKey = item.getId();
+        String lastStatus = lastStockStatus.get(itemKey);
+
+        // Only notify if status changed
+        if (lastStatus == null || !currentStatus.equals(lastStatus)) {
+            String message;
+            String title;
+            String type;
+
+            if (currentQuantity == 0) {
+                title = "🚨 Out of Stock Alert";
+                message = String.format("%s is out of stock. Please restock immediately.", item.getName());
+                type = "stock_alert";
+            } else if (currentQuantity <= lowThreshold) {
+                title = "⚠️ Low Stock Alert";
+                message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
+                    item.getName(), currentQuantity, item.getUnit(), lowThreshold, item.getUnit());
+                type = "stock_alert";
+            } else if (currentQuantity <= adequateThreshold) {
+                title = "ℹ️ Adequate Stock";
+                message = String.format("%s is at adequate level. Current quantity: %d %s.", 
+                    item.getName(), currentQuantity, item.getUnit());
+                type = "stock_info";
+            } else {
+                title = "✅ Fully Stocked";
+                message = String.format("%s is fully stocked. Current quantity: %d %s.", 
+                    item.getName(), currentQuantity, item.getUnit());
+                type = "stock_info";
+            }
+            
+            notifyAllUsers(type, title, message, item.getId());
+            lastStockStatus.put(itemKey, currentStatus);
         }
     }
 
@@ -273,6 +282,34 @@ public class NotificationService {
     public void triggerStockCheck() {
         System.out.println("🔍 Manual stock check triggered at: " + getCurrentManilaTime());
         autoCheckStockLevels();
+    }
+
+    // Initialize stock status tracking on application start
+    @Scheduled(fixedRate = 300000) // Run every 5 minutes to initialize any missing statuses
+    public void initializeStockStatusTracking() {
+        try {
+            List<StockItem> allItems = stockRepository.findAll();
+            int initialized = 0;
+            
+            for (StockItem item : allItems) {
+                String itemKey = item.getId();
+                if (!lastStockStatus.containsKey(itemKey)) {
+                    int currentQuantity = item.getQuantity();
+                    int lowThreshold = item.getLowStockThreshold() != null ? item.getLowStockThreshold() : 0;
+                    int adequateThreshold = item.getAdequateStockThreshold() != null ? item.getAdequateStockThreshold() : 0;
+                    
+                    String currentStatus = determineStockStatus(currentQuantity, lowThreshold, adequateThreshold);
+                    lastStockStatus.put(itemKey, currentStatus);
+                    initialized++;
+                }
+            }
+            
+            if (initialized > 0) {
+                System.out.println("📊 Initialized stock status tracking for " + initialized + " items");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error initializing stock status tracking: " + e.getMessage());
+        }
     }
 
     // Add these specific laundry status notification methods
@@ -334,5 +371,13 @@ public class NotificationService {
 
     public long getUnreadCount(String userId) {
         return notificationRepository.countByUserIdAndRead(userId, false);
+    }
+
+    // Method to get current stock status tracking (for debugging)
+    public void printStockStatusTracking() {
+        System.out.println("📊 Current Stock Status Tracking:");
+        lastStockStatus.forEach((itemId, status) -> {
+            System.out.println("   Item: " + itemId + " → Status: " + status);
+        });
     }
 }
