@@ -8,7 +8,9 @@ import com.starwash.authservice.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -25,48 +27,112 @@ public class NotificationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Notification>> getUserNotifications(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> getUserNotifications(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        
         String userId = getUserIdFromToken(token);
         if (userId == null) {
             return ResponseEntity.badRequest().build();
         }
-        List<Notification> notifications = notificationService.getUserNotifications(userId);
-        return ResponseEntity.ok(notifications);
+        
+        try {
+            List<Notification> notifications = notificationService.getUserNotifications(userId);
+            
+            // For backward compatibility, check if pagination parameters are provided
+            if (page > 1 || limit != 10) {
+                // Apply pagination
+                int skip = (page - 1) * limit;
+                int total = notifications.size();
+                int start = Math.min(skip, total);
+                int end = Math.min(skip + limit, total);
+                boolean hasMore = end < total;
+                
+                List<Notification> paginatedNotifications = notifications.subList(start, end);
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("notifications", paginatedNotifications);
+                response.put("hasMore", hasMore);
+                response.put("total", total);
+                response.put("page", page);
+                response.put("limit", limit);
+                
+                return ResponseEntity.ok(response);
+            } else {
+                // Return plain array for backward compatibility
+                return ResponseEntity.ok(notifications);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new HashMap<String, String>() {{
+                put("error", "Failed to fetch notifications");
+                put("message", e.getMessage());
+            }});
+        }
     }
 
     @PostMapping("/{id}/read")
-    public ResponseEntity<Notification> markAsRead(@PathVariable String id) {
-        Notification notification = notificationService.markAsRead(id);
-        return notification != null ? ResponseEntity.ok(notification) : ResponseEntity.notFound().build();
+    public ResponseEntity<?> markAsRead(@PathVariable String id) {
+        try {
+            Notification notification = notificationService.markAsRead(id);
+            return notification != null ? ResponseEntity.ok(notification) : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new HashMap<String, String>() {{
+                put("error", "Failed to mark notification as read");
+                put("message", e.getMessage());
+            }});
+        }
     }
 
     @PostMapping("/read-all")
-    public ResponseEntity<Void> markAllAsRead(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> markAllAsRead(@RequestHeader("Authorization") String token) {
         String userId = getUserIdFromToken(token);
         if (userId == null) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(new HashMap<String, String>() {{
+                put("error", "Invalid token");
+            }});
         }
-        notificationService.markAllAsRead(userId);
-        return ResponseEntity.ok().build();
+        try {
+            notificationService.markAllAsRead(userId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new HashMap<String, String>() {{
+                put("error", "Failed to mark all notifications as read");
+                put("message", e.getMessage());
+            }});
+        }
     }
 
     @GetMapping("/unread-count")
-    public ResponseEntity<Long> getUnreadCount(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> getUnreadCount(@RequestHeader("Authorization") String token) {
         String userId = getUserIdFromToken(token);
         if (userId == null) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(new HashMap<String, String>() {{
+                put("error", "Invalid token");
+            }});
         }
-        long count = notificationService.getUnreadCount(userId);
-        return ResponseEntity.ok(count);
+        try {
+            long count = notificationService.getUnreadCount(userId);
+            // Return as simple number for backward compatibility
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new HashMap<String, String>() {{
+                put("error", "Failed to get unread count");
+                put("message", e.getMessage());
+            }});
+        }
     }
 
     @PostMapping("/trigger-stock-check")
-    public ResponseEntity<Void> triggerStockCheck() {
+    public ResponseEntity<?> triggerStockCheck() {
         try {
             notificationService.triggerStockCheck();
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.status(500).body(new HashMap<String, String>() {{
+                put("error", "Failed to trigger stock check");
+                put("message", e.getMessage());
+            }});
         }
     }
 
@@ -81,7 +147,7 @@ public class NotificationController {
             Optional<User> user = userRepository.findByUsername(username);
             
             if (user.isPresent()) {
-                return user.get().getId(); // This returns the MongoDB ID like "68d05165bd1c24e8d7b9b170"
+                return user.get().getId();
             } else {
                 throw new SecurityException("User not found");
             }

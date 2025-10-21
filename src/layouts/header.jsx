@@ -177,39 +177,83 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }
     };
 
-    // Fetch notifications with pagination
+    // Fetch notifications with pagination - FIXED VERSION
     const fetchNotifications = async (pageNum = 1, append = false) => {
         try {
             setNotificationsLoading(true);
             console.log(`Fetching notifications page ${pageNum}...`);
 
-            const data = await api.get(`api/notifications?page=${pageNum}&limit=10`);
-            console.log(`Fetched ${data.notifications.length} notifications for page ${pageNum}`, data);
-
-            if (append) {
-                setNotifications(prev => [...prev, ...data.notifications]);
+            const response = await api.get(`api/notifications?page=${pageNum}&limit=10`);
+            console.log('Full API response:', response);
+            
+            // Handle different response structures
+            let notificationsData = [];
+            let hasMoreData = false;
+            
+            if (Array.isArray(response)) {
+                // If response is directly an array
+                notificationsData = response;
+                hasMoreData = response.length === 10; // If we got 10 items, there might be more
+            } else if (response && response.notifications) {
+                // If response has notifications property
+                notificationsData = response.notifications;
+                hasMoreData = response.hasMore || false;
+            } else if (response && Array.isArray(response.data)) {
+                // If response has data property with array
+                notificationsData = response.data;
+                hasMoreData = response.hasMore || false;
             } else {
-                setNotifications(data.notifications);
+                // Fallback - try to use response as array
+                notificationsData = Array.isArray(response) ? response : [];
+                hasMoreData = false;
             }
             
-            setHasMore(data.hasMore);
+            console.log(`Processed ${notificationsData.length} notifications for page ${pageNum}`, notificationsData);
+
+            if (append) {
+                setNotifications(prev => [...prev, ...notificationsData]);
+            } else {
+                setNotifications(notificationsData);
+            }
+            
+            setHasMore(hasMoreData);
             setPage(pageNum);
         } catch (error) {
             console.error("Error fetching notifications:", error);
+            // Set empty array on error
+            if (!append) {
+                setNotifications([]);
+            }
+            setHasMore(false);
         } finally {
             setNotificationsLoading(false);
         }
     };
 
-    // Fetch unread count
+    // Fetch unread count - FIXED VERSION
     const fetchUnreadCount = async () => {
         try {
-            const count = await api.get("api/notifications/unread-count");
+            const response = await api.get("api/notifications/unread-count");
+            console.log('Unread count response:', response);
+            
+            // Handle different response structures
+            let count = 0;
+            if (typeof response === 'number') {
+                count = response;
+            } else if (response && typeof response.count === 'number') {
+                count = response.count;
+            } else if (response && typeof response.data === 'number') {
+                count = response.data;
+            } else if (response && typeof response.unreadCount === 'number') {
+                count = response.unreadCount;
+            }
+            
             setUnreadCount(count);
             return count;
         } catch (error) {
             console.error("Error fetching unread count:", error);
-            return unreadCount;
+            setUnreadCount(0);
+            return 0;
         }
     };
 
@@ -361,25 +405,38 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }
     }, [notificationOpen]);
 
-    // Real-time notification checking with auto-display
+    // Real-time notification checking with auto-display - FIXED VERSION
     useEffect(() => {
         const checkForNewNotifications = async () => {
-            const previousCount = unreadCount;
-            const newCount = await fetchUnreadCount();
-            
-            // If there are new notifications, fetch and show them
-            if (newCount > previousCount && newCount > 0) {
-                try {
-                    const newNotifications = await api.get("api/notifications?page=1&limit=5");
-                    const unreadNotifications = newNotifications.notifications.filter(notif => !notif.read);
+            try {
+                const previousCount = unreadCount;
+                const newCount = await fetchUnreadCount();
+                
+                // If there are new notifications, fetch and show them
+                if (newCount > previousCount && newCount > 0) {
+                    const response = await api.get("api/notifications?page=1&limit=5");
+                    console.log('New notifications check response:', response);
+                    
+                    let newNotificationsData = [];
+                    
+                    // Handle different response structures
+                    if (Array.isArray(response)) {
+                        newNotificationsData = response;
+                    } else if (response && response.notifications) {
+                        newNotificationsData = response.notifications;
+                    } else if (response && Array.isArray(response.data)) {
+                        newNotificationsData = response.data;
+                    }
+                    
+                    const unreadNotifications = newNotificationsData.filter(notif => !notif.read);
                     
                     // Show the latest unread notification
                     if (unreadNotifications.length > 0) {
                         showAutoNotification(unreadNotifications[0]);
                     }
-                } catch (error) {
-                    console.error("Error fetching new notifications:", error);
                 }
+            } catch (error) {
+                console.error("Error checking for new notifications:", error);
             }
         };
 
@@ -712,7 +769,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                             <>
                                                 {notifications.map((notification, index) => (
                                                     <div
-                                                        key={notification.id}
+                                                        key={notification.id || index}
                                                         className={`flex cursor-pointer items-start gap-3 border-b p-3 transition-all ${
                                                             !notification.read
                                                                 ? "border-l-2"
@@ -735,19 +792,19 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                                                 className="text-sm font-medium truncate"
                                                                 style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
                                                             >
-                                                                {notification.title}
+                                                                {notification.title || 'No Title'}
                                                             </h4>
                                                             <p
                                                                 className="mt-1 text-sm line-clamp-2"
                                                                 style={{ color: isDarkMode ? "#F3EDE3/80" : "#0B2B26/80" }}
                                                             >
-                                                                {notification.message}
+                                                                {notification.message || 'No message'}
                                                             </p>
                                                             <p
                                                                 className="mt-1 text-xs"
                                                                 style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}
                                                             >
-                                                                {formatTimeAgo(notification.createdAt)}
+                                                                {notification.createdAt ? formatTimeAgo(notification.createdAt) : 'Recently'}
                                                             </p>
                                                         </div>
                                                         {!notification.read && (
