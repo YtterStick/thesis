@@ -1,6 +1,9 @@
 package com.starwash.authservice.controller;
 
 import com.starwash.authservice.dto.ServiceTrackingDto;
+import com.starwash.authservice.dto.ServiceInvoiceDto;
+import com.starwash.authservice.dto.ServiceEntryDto;
+import com.starwash.authservice.dto.FormatSettingsDto;
 import com.starwash.authservice.model.LaundryJob;
 import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.repository.LaundryJobRepository;
@@ -65,6 +68,35 @@ public class ServiceTrackingController {
 
         } catch (Exception e) {
             log.error("❌ Error fetching service tracking for {}: {}", invoiceNumber, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get receipt data for service tracking (for printing receipts)
+     */
+    @GetMapping("/{invoiceNumber}/receipt")
+    public ResponseEntity<ServiceInvoiceDto> getReceiptForTracking(@PathVariable String invoiceNumber) {
+        log.info("📄 Fetching receipt for invoice: {}", invoiceNumber);
+
+        try {
+            // Find transaction by invoice number
+            Optional<Transaction> transactionOpt = transactionRepository.findByInvoiceNumber(invoiceNumber);
+            if (transactionOpt.isEmpty()) {
+                log.warn("❌ Transaction not found for invoice: {}", invoiceNumber);
+                return ResponseEntity.notFound().build();
+            }
+
+            Transaction transaction = transactionOpt.get();
+            
+            // Convert to ServiceInvoiceDto
+            ServiceInvoiceDto invoiceDto = convertToServiceInvoiceDto(transaction);
+            
+            log.info("✅ Receipt data retrieved for: {}", invoiceNumber);
+            return ResponseEntity.ok(invoiceDto);
+
+        } catch (Exception e) {
+            log.error("❌ Error fetching receipt for {}: {}", invoiceNumber, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -185,6 +217,84 @@ public class ServiceTrackingController {
             dto.setDisposed(false);
         }
 
+        return dto;
+    }
+
+    /**
+     * Convert Transaction to ServiceInvoiceDto for receipt printing
+     */
+    private ServiceInvoiceDto convertToServiceInvoiceDto(Transaction transaction) {
+        ServiceInvoiceDto dto = new ServiceInvoiceDto();
+        
+        // Basic transaction info
+        dto.setInvoiceNumber(transaction.getInvoiceNumber());
+        dto.setCustomerName(transaction.getCustomerName());
+        dto.setContact(transaction.getContact());
+        dto.setStaffId(transaction.getStaffId());
+        dto.setIssueDate(transaction.getIssueDate());
+        dto.setDueDate(transaction.getDueDate());
+        dto.setPaymentMethod(transaction.getPaymentMethod());
+        
+        // Use total instead of totalPrice to match your ServiceInvoiceDto
+        dto.setTotal(transaction.getTotalPrice());
+        
+        // Service information
+        ServiceEntryDto serviceEntry = new ServiceEntryDto();
+        serviceEntry.setName(transaction.getServiceName());
+        serviceEntry.setPrice(transaction.getServicePrice());
+        serviceEntry.setQuantity(transaction.getServiceQuantity());
+        dto.setService(serviceEntry);
+        
+        // Consumables
+        if (transaction.getConsumables() != null) {
+            List<ServiceEntryDto> consumableEntries = transaction.getConsumables().stream()
+                .map(consumable -> {
+                    ServiceEntryDto entry = new ServiceEntryDto();
+                    entry.setName(consumable.getName());
+                    entry.setPrice(consumable.getPrice());
+                    entry.setQuantity(consumable.getQuantity());
+                    return entry;
+                })
+                .collect(Collectors.toList());
+            dto.setConsumables(consumableEntries);
+        }
+        
+        // Format settings
+        FormatSettingsDto formatSettings = new FormatSettingsDto();
+        formatSettings.setStoreName("STARWASH LAUNDRY");
+        formatSettings.setAddress("123 Laundry Street, City, State 12345");
+        formatSettings.setPhone("Tel: (123) 456-7890");
+        formatSettings.setFooterNote("Thank you for your business!");
+        dto.setFormatSettings(formatSettings);
+        
+        // Calculate consumable quantities for display
+        if (transaction.getConsumables() != null) {
+            int detergentQty = transaction.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                    .mapToInt(c -> c.getQuantity())
+                    .sum();
+            int fabricQty = transaction.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                    .mapToInt(c -> c.getQuantity())
+                    .sum();
+            
+            dto.setDetergentQty(detergentQty);
+            dto.setFabricQty(fabricQty);
+            dto.setLoads(transaction.getServiceQuantity());
+        }
+        
+        // Set amount given and change
+        dto.setAmountGiven(transaction.getTotalPrice()); // Default to total price
+        dto.setChange(0.0); // Default change
+        
+        // Set subtotal, tax, discount
+        dto.setSubtotal(transaction.getTotalPrice());
+        dto.setTax(0.0); // Adjust based on your tax calculation
+        dto.setDiscount(0.0); // Adjust if you have discounts
+        
+        // Set plasticQty to 0 (adjust if you track plastic usage)
+        dto.setPlasticQty(0);
+        
         return dto;
     }
 }

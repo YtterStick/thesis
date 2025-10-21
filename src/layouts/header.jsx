@@ -44,7 +44,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         setTheme(newTheme);
     };
 
-    // Search functionality (unchanged)
+    // Search functionality
     const performSearch = (query) => {
         if (!query.trim() || !sidebarLinks.length) {
             setSearchResults([]);
@@ -137,7 +137,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     // Format time ago in PH Time (GMT+8)
     const formatTimeAgo = (dateString) => {
         try {
-            // Parse the date string and convert to PH time
             const date = new Date(dateString);
             const phDate = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
             const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
@@ -159,25 +158,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }
     };
 
-    // Format date in PH Time for display
-    const formatPHTime = (dateString) => {
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleString("en-PH", { 
-                timeZone: "Asia/Manila",
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (error) {
-            console.error("Error formatting PH time:", error);
-            return dateString;
-        }
-    };
-
-    // Fetch notifications with pagination - FIXED VERSION
+    // Fetch notifications with pagination
     const fetchNotifications = async (pageNum = 1, append = false) => {
         try {
             setNotificationsLoading(true);
@@ -186,24 +167,19 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
             const response = await api.get(`api/notifications?page=${pageNum}&limit=10`);
             console.log('Full API response:', response);
             
-            // Handle different response structures
             let notificationsData = [];
             let hasMoreData = false;
             
             if (Array.isArray(response)) {
-                // If response is directly an array
                 notificationsData = response;
-                hasMoreData = response.length === 10; // If we got 10 items, there might be more
+                hasMoreData = response.length === 10;
             } else if (response && response.notifications) {
-                // If response has notifications property
                 notificationsData = response.notifications;
                 hasMoreData = response.hasMore || false;
             } else if (response && Array.isArray(response.data)) {
-                // If response has data property with array
                 notificationsData = response.data;
                 hasMoreData = response.hasMore || false;
             } else {
-                // Fallback - try to use response as array
                 notificationsData = Array.isArray(response) ? response : [];
                 hasMoreData = false;
             }
@@ -220,7 +196,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
             setPage(pageNum);
         } catch (error) {
             console.error("Error fetching notifications:", error);
-            // Set empty array on error
             if (!append) {
                 setNotifications([]);
             }
@@ -230,13 +205,12 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }
     };
 
-    // Fetch unread count - FIXED VERSION
+    // Fetch unread count
     const fetchUnreadCount = async () => {
         try {
             const response = await api.get("api/notifications/unread-count");
             console.log('Unread count response:', response);
             
-            // Handle different response structures
             let count = 0;
             if (typeof response === 'number') {
                 count = response;
@@ -262,7 +236,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         try {
             await api.post(`api/notifications/${id}/read`);
             
-            // Update local state
             setNotifications(prev => 
                 prev.map(notif => 
                     notif.id === id ? { ...notif, read: true } : notif
@@ -275,7 +248,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                 )
             );
             
-            // Refresh count
             fetchUnreadCount();
         } catch (error) {
             console.error("Error marking notification as read:", error);
@@ -287,7 +259,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         try {
             await api.post("api/notifications/read-all");
             
-            // Update local state
             setNotifications(prev => 
                 prev.map(notif => ({ ...notif, read: true }))
             );
@@ -296,7 +267,6 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                 prev.map(notif => ({ ...notif, read: true }))
             );
             
-            // Refresh count
             fetchUnreadCount();
         } catch (error) {
             console.error("Error marking all notifications as read:", error);
@@ -305,18 +275,28 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
 
     // Show auto notification for 5 seconds
     const showAutoNotification = (notification) => {
+        const isAlreadyShowing = autoNotifications.some(
+            notif => notif.id === notification.id && notif.autoShow
+        );
+        
+        if (isAlreadyShowing) {
+            console.log('Notification already showing, skipping:', notification.id);
+            return;
+        }
+
         const newNotification = {
             ...notification,
-            id: `auto-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            autoShow: true
+            autoShow: true,
+            showTime: new Date()
         };
+        
+        console.log('Showing auto notification:', newNotification);
         
         setAutoNotifications(prev => [newNotification, ...prev]);
         
-        // Auto remove after 5 seconds
         setTimeout(() => {
             setAutoNotifications(prev => 
-                prev.filter(notif => notif.id !== newNotification.id)
+                prev.filter(notif => notif.id !== notification.id)
             );
         }, 5000);
     };
@@ -327,10 +307,8 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
             markAsRead(notification.id);
         }
         
-        // You can add additional click handling here
         console.log("Notification clicked:", notification);
         
-        // Close auto notification immediately when clicked
         if (notification.autoShow) {
             setAutoNotifications(prev => 
                 prev.filter(notif => notif.id !== notification.id)
@@ -341,13 +319,13 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     // Helper functions for notification styling
     const getNotificationColor = (type) => {
         switch (type) {
-            case "stock_alert": return "#ef4444"; // red
-            case "inventory_update": return "#10b981"; // green
-            case "stock_info": return "#3b82f6"; // blue
-            case "load_washed": return "#3b82f6"; // blue
-            case "load_dried": return "#f59e0b"; // orange
-            case "load_completed": return "#10b981"; // green
-            default: return "#6b7280"; // gray
+            case "stock_alert": return "#ef4444";
+            case "inventory_update": return "#10b981";
+            case "stock_info": return "#3b82f6";
+            case "load_washed": return "#3b82f6";
+            case "load_dried": return "#f59e0b";
+            case "load_completed": return "#10b981";
+            default: return "#6b7280";
         }
     };
 
@@ -397,7 +375,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         };
     }, [hasMore, notificationsLoading, page]);
 
-    // Enhanced useEffect for notifications
+    // Fetch notifications when dropdown opens
     useEffect(() => {
         if (notificationOpen) {
             fetchNotifications(1, false);
@@ -405,21 +383,58 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }
     }, [notificationOpen]);
 
-    // Real-time notification checking with auto-display - FIXED VERSION
+    // Initialize notifications and check for recent ones on component mount
     useEffect(() => {
+        const initializeNotifications = async () => {
+            try {
+                console.log('Initializing notifications...');
+                await fetchUnreadCount();
+                
+                const response = await api.get("api/notifications?page=1&limit=5");
+                let recentNotifications = [];
+                
+                if (Array.isArray(response)) {
+                    recentNotifications = response;
+                } else if (response && response.notifications) {
+                    recentNotifications = response.notifications;
+                } else if (response && Array.isArray(response.data)) {
+                    recentNotifications = response.data;
+                }
+                
+                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+                const newUnreadNotifications = recentNotifications.filter(notif => 
+                    !notif.read && new Date(notif.createdAt) > fiveMinutesAgo
+                );
+                
+                if (newUnreadNotifications.length > 0) {
+                    console.log('Found recent unread notifications:', newUnreadNotifications.length);
+                    showAutoNotification(newUnreadNotifications[0]);
+                }
+            } catch (error) {
+                console.error('Error initializing notifications:', error);
+            }
+        };
+
+        initializeNotifications();
+    }, []);
+
+    // Real-time notification checking with auto-display
+    useEffect(() => {
+        let previousUnreadCount = unreadCount;
+
         const checkForNewNotifications = async () => {
             try {
-                const previousCount = unreadCount;
-                const newCount = await fetchUnreadCount();
+                console.log(`Checking for new notifications...`);
                 
-                // If there are new notifications, fetch and show them
-                if (newCount > previousCount && newCount > 0) {
-                    const response = await api.get("api/notifications?page=1&limit=5");
-                    console.log('New notifications check response:', response);
+                const currentUnreadCount = await fetchUnreadCount();
+                console.log(`Previous count: ${previousUnreadCount}, Current count: ${currentUnreadCount}`);
+                
+                if (currentUnreadCount > previousUnreadCount) {
+                    console.log(`New notification detected! Count increased from ${previousUnreadCount} to ${currentUnreadCount}`);
                     
+                    const response = await api.get("api/notifications?page=1&limit=5");
                     let newNotificationsData = [];
                     
-                    // Handle different response structures
                     if (Array.isArray(response)) {
                         newNotificationsData = response;
                     } else if (response && response.notifications) {
@@ -428,24 +443,50 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                         newNotificationsData = response.data;
                     }
                     
-                    const unreadNotifications = newNotificationsData.filter(notif => !notif.read);
+                    const unreadNotifications = newNotificationsData
+                        .filter(notif => !notif.read)
+                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                     
-                    // Show the latest unread notification
                     if (unreadNotifications.length > 0) {
-                        showAutoNotification(unreadNotifications[0]);
+                        const newestNotification = unreadNotifications[0];
+                        console.log('Showing newest notification:', newestNotification);
+                        showAutoNotification(newestNotification);
                     }
+                    
+                    previousUnreadCount = currentUnreadCount;
+                } else {
+                    console.log('No new notifications found');
                 }
+                
             } catch (error) {
                 console.error("Error checking for new notifications:", error);
             }
         };
 
-        const interval = setInterval(() => {
-            checkForNewNotifications();
-        }, 30000); // Check every 30 seconds
+        const interval = setInterval(checkForNewNotifications, 30000);
+        
+        setTimeout(checkForNewNotifications, 2000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            console.log('Cleaned up notification checker');
+        };
     }, [unreadCount]);
+
+    // Periodic refresh of unread count
+    useEffect(() => {
+        const refreshNotifications = async () => {
+            if (!notificationOpen) {
+                await fetchUnreadCount();
+            }
+        };
+
+        const refreshInterval = setInterval(refreshNotifications, 60000);
+
+        return () => {
+            clearInterval(refreshInterval);
+        };
+    }, [notificationOpen]);
 
     // Skeleton loader component for notifications
     const NotificationSkeleton = () => (
@@ -490,15 +531,15 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                 <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium truncate"
                         style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}>
-                        {notification.title}
+                        {notification.title || 'No Title'}
                     </h4>
                     <p className="mt-1 text-sm line-clamp-2"
                         style={{ color: isDarkMode ? "#F3EDE3/80" : "#0B2B26/80" }}>
-                        {notification.message}
+                        {notification.message || 'No message'}
                     </p>
                     <p className="mt-1 text-xs"
                         style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}>
-                        {formatTimeAgo(notification.createdAt)}
+                        {notification.createdAt ? formatTimeAgo(notification.createdAt) : 'Recently'}
                     </p>
                 </div>
                 {!notification.read && (
@@ -521,7 +562,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
             <AnimatePresence>
                 {autoNotifications.map((notification) => (
                     <AutoNotification 
-                        key={notification.id} 
+                        key={notification.id || `auto-${Date.now()}`} 
                         notification={notification} 
                     />
                 ))}

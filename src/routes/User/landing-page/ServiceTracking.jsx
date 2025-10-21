@@ -8,6 +8,7 @@ import CustomerInfo from "./CustomerInfo";
 import LaundryProgress from "./LaundryProgress";
 import QRScanner from "./QRScanner";
 import RecentSearches from "./RecentSearches";
+import PrintableReceipt from "./PrintableReceipt"; // Add this import
 
 // Import Lottie animations
 import washingMachine from "@/assets/lottie/washing-machine.json";
@@ -17,11 +18,11 @@ import unwashed from "@/assets/lottie/unwashed.json";
 
 const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
 
-const ServiceTracking = ({ 
-  isVisible, 
-  isDarkMode, 
-  isMobile: propIsMobile,
-  autoSearchId // Add this prop for auto-searching
+const ServiceTracking = ({
+    isVisible,
+    isDarkMode,
+    isMobile: propIsMobile,
+    autoSearchId, // Add this prop for auto-searching
 }) => {
     const [receiptNumber, setReceiptNumber] = useState("");
     const [showStatus, setShowStatus] = useState(false);
@@ -31,10 +32,13 @@ const ServiceTracking = ({
     const [showFullCustomerInfo, setShowFullCustomerInfo] = useState(false);
     const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
     const [showReceiptOptions, setShowReceiptOptions] = useState(false);
+    const [showPrintableReceipt, setShowPrintableReceipt] = useState(false); // New state for printable receipt
     const [recentSearches, setRecentSearches] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [trackingData, setTrackingData] = useState(null);
+    const [receiptData, setReceiptData] = useState(null); // New state for receipt data
+    const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
 
     const mainCardRef = useRef(null);
 
@@ -122,6 +126,73 @@ const ServiceTracking = ({
         }
     };
 
+    // Fetch receipt data
+    const fetchReceiptData = async (invoiceNumber) => {
+        setIsLoadingReceipt(true);
+        try {
+            console.log(`📄 Fetching receipt data for: ${invoiceNumber}`);
+            const response = await fetch(`${API_BASE_URL}/api/track/${invoiceNumber}/receipt`);
+            
+            if (!response.ok) {
+                throw new Error("Failed to fetch receipt data");
+            }
+
+            const data = await response.json();
+            console.log("✅ Receipt data received:", data);
+            setReceiptData(data);
+            return data;
+        } catch (error) {
+            console.error("❌ Error fetching receipt data:", error);
+            // Fallback: create receipt data from tracking data
+            const fallbackReceiptData = createReceiptDataFromTracking(trackingData);
+            setReceiptData(fallbackReceiptData);
+            return fallbackReceiptData;
+        } finally {
+            setIsLoadingReceipt(false);
+        }
+    };
+
+    // Create fallback receipt data from tracking data
+    const createReceiptDataFromTracking = (trackingData) => {
+        if (!trackingData) return null;
+
+        return {
+            invoiceNumber: trackingData.invoiceNumber,
+            customerName: trackingData.customerName,
+            contact: trackingData.contact,
+            issueDate: trackingData.createdAt,
+            dueDate: trackingData.dueDate,
+            staffId: trackingData.staffId,
+            totalPrice: trackingData.totalPrice,
+            paymentMethod: trackingData.paymentMethod,
+            service: {
+                name: trackingData.serviceName,
+                price: trackingData.servicePrice,
+                quantity: trackingData.loads
+            },
+            consumables: [
+                {
+                    name: "Detergent",
+                    price: 15, // Default price, adjust as needed
+                    quantity: trackingData.detergentQty || 0
+                },
+                {
+                    name: "Fabric Conditioner",
+                    price: 10, // Default price, adjust as needed
+                    quantity: trackingData.fabricQty || 0
+                }
+            ],
+            formatSettings: {
+                storeName: "STARWASH LAUNDRY",
+                address: "123 Laundry Street, City, State 12345",
+                phone: "Tel: (123) 456-7890",
+                footerNote: "Thank you for your business!"
+            },
+            amountGiven: trackingData.totalPrice, // Default to total price
+            change: 0 // Default change
+        };
+    };
+
     // Add to recent searches
     const addToRecentSearches = (receiptNum) => {
         if (!receiptNum?.trim()) return;
@@ -179,6 +250,7 @@ const ServiceTracking = ({
         setError(null);
         setCurrentLoadIndex(0);
         setShowFullCustomerInfo(false);
+        setReceiptData(null);
     };
 
     const toggleFullCustomerInfo = () => {
@@ -201,18 +273,44 @@ const ServiceTracking = ({
         setCurrentLoadIndex(index);
     };
 
-    const handleViewReceipt = () => {
-        setShowReceiptOptions(true);
+    // Updated handleViewReceipt to fetch receipt data
+    const handleViewReceipt = async () => {
+        if (!trackingData?.invoiceNumber) return;
+        
+        try {
+            const receiptData = await fetchReceiptData(trackingData.invoiceNumber);
+            setReceiptData(receiptData);
+            setShowReceiptOptions(true);
+        } catch (error) {
+            console.error("Error handling receipt view:", error);
+            // Fallback to tracking data
+            const fallbackData = createReceiptDataFromTracking(trackingData);
+            setReceiptData(fallbackData);
+            setShowReceiptOptions(true);
+        }
     };
 
-    const handlePrintReceipt = () => {
-        console.log("🖨️ Printing receipt:", trackingData);
-        alert("Printing receipt...");
-        setShowReceiptOptions(false);
+    // Updated handlePrintReceipt to show printable receipt
+    const handlePrintReceipt = async () => {
+        if (!trackingData?.invoiceNumber) return;
+        
+        try {
+            const receiptData = await fetchReceiptData(trackingData.invoiceNumber);
+            setReceiptData(receiptData);
+            setShowReceiptOptions(false);
+            setShowPrintableReceipt(true);
+        } catch (error) {
+            console.error("Error handling print receipt:", error);
+            // Fallback to tracking data
+            const fallbackData = createReceiptDataFromTracking(trackingData);
+            setReceiptData(fallbackData);
+            setShowReceiptOptions(false);
+            setShowPrintableReceipt(true);
+        }
     };
 
     const handleDownloadReceipt = () => {
-        console.log("💾 Downloading receipt:", trackingData);
+        console.log("💾 Downloading receipt:", receiptData);
         alert("Downloading receipt as PDF...");
         setShowReceiptOptions(false);
     };
@@ -221,37 +319,89 @@ const ServiceTracking = ({
         setShowReceiptOptions(false);
     };
 
+    const closePrintableReceipt = () => {
+        setShowPrintableReceipt(false);
+        setReceiptData(null);
+    };
+
     const handleRecentSearchClick = (receiptNum) => {
         setReceiptNumber(receiptNum);
         fetchTrackingData(receiptNum);
     };
 
-    // Convert backend data to frontend format for laundry progress
-    const convertToLaundryLoads = (trackingData) => {
+    const convertToLaundryLoads = (trackingData, isMobile) => {
         if (!trackingData?.loadAssignments) return [];
 
         return trackingData.loadAssignments.map((load, index) => {
             const status = load.status || "NOT_STARTED";
 
+            if (isMobile) {
+                const statusSteps = [
+                    {
+                        lottie: washingMachine,
+                        title: "Not Started",
+                        description: "Your laundry is waiting to be processed",
+                        active: status === "NOT_STARTED",
+                        estimatedTime: "Waiting",
+                    },
+                    {
+                        lottie: washingMachine,
+                        title: "Washing",
+                        description: "Your laundry is now being washed",
+                        active: status === "WASHING",
+                        estimatedTime: "35 min",
+                    },
+                    {
+                        lottie: dryerMachine,
+                        title: "Drying",
+                        description: "Your laundry is now being dried",
+                        active: status === "DRYING",
+                        estimatedTime: "40-60 min",
+                    },
+                    {
+                        lottie: clothes,
+                        title: "Folding",
+                        description: "Your laundry is now being folded",
+                        active: status === "FOLDING",
+                        estimatedTime: "20-30 min",
+                    },
+                    {
+                        lottie: unwashed,
+                        title: "Ready",
+                        description: "Ready for pickup at the counter",
+                        active: status === "COMPLETED",
+                        estimatedTime: "5 min",
+                    },
+                ];
+
+                return {
+                    loadNumber: load.loadNumber || index + 1,
+                    statusSteps,
+                    fabricType: trackingData.fabricQty || 1,
+                    detergent: trackingData.detergentQty || 1,
+                    weight: "5 kg",
+                };
+            }
+
             const statusSteps = [
                 {
                     lottie: washingMachine,
                     title: "Washing",
-                    description: "Your laundry is now being washed",
+                    description: "Your laundry will be washed soon",
                     active: status === "WASHING",
                     estimatedTime: "35 min",
                 },
                 {
                     lottie: dryerMachine,
                     title: "Drying",
-                    description: "Your laundry is now being dried",
+                    description: "Your laundry will be dried after washing",
                     active: status === "DRYING",
                     estimatedTime: "40-60 min",
                 },
                 {
                     lottie: clothes,
                     title: "Folding",
-                    description: "Your laundry is now being folded",
+                    description: "Your laundry will be folded after drying",
                     active: status === "FOLDING",
                     estimatedTime: "20-30 min",
                 },
@@ -274,7 +424,8 @@ const ServiceTracking = ({
         });
     };
 
-    const laundryLoads = convertToLaundryLoads(trackingData);
+    // Update the laundryLoads call
+    const laundryLoads = convertToLaundryLoads(trackingData, isMobile);
 
     return (
         <motion.section
@@ -337,10 +488,10 @@ const ServiceTracking = ({
                                     <motion.button
                                         type="submit"
                                         disabled={isLoading}
-                                        whileHover={{ 
+                                        whileHover={{
                                             scale: 1.05,
                                             backgroundColor: isDarkMode ? "#2A524C" : "#D5DCDB",
-                                            transition: { duration: 0.2 }
+                                            transition: { duration: 0.2 },
                                         }}
                                         whileTap={{ scale: 0.95 }}
                                         className={`flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-4 py-3 text-sm font-semibold shadow sm:flex-shrink-0 sm:py-2 ${
@@ -361,10 +512,10 @@ const ServiceTracking = ({
                                         type="button"
                                         onClick={handleScanQR}
                                         disabled={isLoading || isScanning}
-                                        whileHover={{ 
+                                        whileHover={{
                                             scale: 1.05,
                                             backgroundColor: isDarkMode ? "#3A635C" : "#E8F0EF",
-                                            transition: { duration: 0.2 }
+                                            transition: { duration: 0.2 },
                                         }}
                                         whileTap={{ scale: 0.95 }}
                                         className={`flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-4 py-3 text-sm font-semibold shadow sm:flex-shrink-0 sm:py-2 ${
@@ -420,10 +571,10 @@ const ServiceTracking = ({
                                 <div className="mb-4 flex justify-end">
                                     <motion.button
                                         onClick={handleCloseTracking}
-                                        whileHover={{ 
+                                        whileHover={{
                                             scale: 1.05,
                                             backgroundColor: isDarkMode ? "#EF4444" : "#DC2626",
-                                            transition: { duration: 0.2 }
+                                            transition: { duration: 0.2 },
                                         }}
                                         whileTap={{ scale: 0.95 }}
                                         className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg"
@@ -471,8 +622,20 @@ const ServiceTracking = ({
                     closeReceiptOptions={closeReceiptOptions}
                     handlePrintReceipt={handlePrintReceipt}
                     handleDownloadReceipt={handleDownloadReceipt}
-                    receiptData={trackingData}
+                    receiptData={receiptData}
                 />
+
+                {/* Printable Receipt Modal */}
+                {showPrintableReceipt && receiptData && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+                        <div className="mx-auto w-full max-w-sm">
+                            <PrintableReceipt
+                                invoiceData={receiptData}
+                                onClose={closePrintableReceipt}
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* Bottom Section - 3 Columns (Recent Searches: 1, Reminder: 2) */}
                 <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-3">
@@ -483,25 +646,234 @@ const ServiceTracking = ({
                         onRecentSearchClick={handleRecentSearchClick}
                     />
 
-                    {/* Reminder Card - Takes 2 columns (wider) */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.5, delay: 2.6 }}
-                        className="rounded-2xl border-2 p-4 md:p-6 lg:col-span-2"
-                        style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
-                            borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                            color: isDarkMode ? "#13151B" : "#F3EDE3",
-                        }}
-                    >
-                        <h3 className="mb-4 text-lg font-bold md:text-xl">Reminder & Information</h3>
+                    {/* Desktop: Combined Reminder Card - Takes 2 columns */}
+                    {!isMobile && (
+                        <motion.div
+                            initial={{ opacity: 0, x: 30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5, delay: 2.6 }}
+                            className="rounded-2xl border-2 p-4 md:p-6 lg:col-span-2"
+                            style={{
+                                backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
+                                borderColor: isDarkMode ? "#2A524C" : "#183D3D",
+                                color: isDarkMode ? "#13151B" : "#F3EDE3",
+                            }}
+                        >
+                            <h3 className="mb-4 text-lg font-bold md:text-xl">Reminder & Information</h3>
 
-                        <div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-                            {/* Notification System */}
-                            <div className="flex flex-col">
-                                <h4 className="mb-3 text-sm font-semibold md:text-base">Notification System:</h4>
-                                <div className="flex-1 space-y-3">
+                            <div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+                                <div className="flex flex-col">
+                                    <h4 className="mb-3 text-sm font-semibold md:text-base">Notification System:</h4>
+                                    <div className="space-y-3">
+                                        {[
+                                            {
+                                                icon: CheckCircle2,
+                                                text: "Ready for Pickup",
+                                                description: "SMS notification when your laundry is ready",
+                                                time: "Immediate",
+                                                color: "green",
+                                            },
+                                            {
+                                                icon: Bell,
+                                                text: "3-Day Reminder",
+                                                description: "Reminder if unclaimed after 3 days",
+                                                time: "72 hours",
+                                                color: "yellow",
+                                            },
+                                            {
+                                                icon: AlertTriangle,
+                                                text: "Final Notice",
+                                                description: "Final notice before disposal after 7 days",
+                                                time: "7 days",
+                                                color: "red",
+                                            },
+                                        ].map((item, index) => (
+                                            <motion.div
+                                                key={index}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.1 }}
+                                                whileHover={{
+                                                    scale: 1.02,
+                                                    y: -2,
+                                                    transition: { duration: 0.2 },
+                                                }}
+                                                className={`rounded-xl border p-3 transition-all ${
+                                                    isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
+                                                }`}
+                                                style={{
+                                                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
+                                                    color: isDarkMode ? "#13151B" : "#183D3D",
+                                                }}
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <motion.div
+                                                        whileHover={{ scale: 1.1 }}
+                                                        className={`flex-shrink-0 rounded-full p-2 ${
+                                                            item.color === "green"
+                                                                ? isDarkMode
+                                                                    ? "bg-green-100 text-green-600"
+                                                                    : "bg-green-50 text-green-700"
+                                                                : item.color === "yellow"
+                                                                  ? isDarkMode
+                                                                      ? "bg-yellow-100 text-yellow-600"
+                                                                      : "bg-yellow-50 text-yellow-700"
+                                                                  : isDarkMode
+                                                                    ? "bg-red-100 text-red-600"
+                                                                    : "bg-red-50 text-red-700"
+                                                        }`}
+                                                    >
+                                                        <item.icon className="h-4 w-4" />
+                                                    </motion.div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <h5
+                                                                className="break-words text-sm font-bold md:text-base"
+                                                                style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                            >
+                                                                {item.text}
+                                                            </h5>
+                                                            <motion.span
+                                                                whileHover={{ scale: 1.05 }}
+                                                                className="flex-shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium"
+                                                                style={{
+                                                                    backgroundColor: isDarkMode ? "rgba(0,0,0,0.1)" : "rgba(24, 61, 61, 0.1)",
+                                                                    color: isDarkMode ? "#13151B" : "#183D3D",
+                                                                }}
+                                                            >
+                                                                {item.time}
+                                                            </motion.span>
+                                                        </div>
+                                                        <p
+                                                            className="mt-1 break-words text-xs leading-relaxed md:text-sm"
+                                                            style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
+                                                        >
+                                                            {item.description}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col">
+                                    <h4 className="mb-3 text-sm font-semibold md:text-base">Store Information:</h4>
+                                    <div className="space-y-4">
+                                        <motion.div
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.2 }}
+                                            whileHover={{
+                                                scale: 1.02,
+                                                y: -2,
+                                                transition: { duration: 0.2 },
+                                            }}
+                                            className={`rounded-xl border p-4 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
+                                            style={{
+                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                                borderColor: isDarkMode ? "#2A524C" : "#183D3D",
+                                                color: isDarkMode ? "#13151B" : "#183D3D",
+                                            }}
+                                        >
+                                            <div className="mb-3 flex items-center gap-2">
+                                                <motion.div
+                                                    whileHover={{ scale: 1.1, rotate: 5 }}
+                                                    className={`rounded-full p-2 ${
+                                                        isDarkMode ? "bg-blue-100 text-blue-600" : "bg-blue-50 text-blue-700"
+                                                    }`}
+                                                >
+                                                    <Clock className="h-4 w-4" />
+                                                </motion.div>
+                                                <h5
+                                                    className="text-sm font-bold md:text-base"
+                                                    style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                >
+                                                    Operating Hours
+                                                </h5>
+                                            </div>
+                                            <div className="text-sm">
+                                                <div className="flex items-center justify-between py-1">
+                                                    <span
+                                                        className="font-medium"
+                                                        style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                    >
+                                                        Mon - Sun
+                                                    </span>
+                                                    <motion.span
+                                                        whileHover={{ scale: 1.05 }}
+                                                        className="font-semibold"
+                                                        style={{ color: isDarkMode ? "#18442A" : "#18442A" }}
+                                                    >
+                                                        7:00 AM - 7:00 PM
+                                                    </motion.span>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+
+                                        <motion.div
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.3 }}
+                                            whileHover={{
+                                                scale: 1.02,
+                                                y: -2,
+                                                transition: { duration: 0.2 },
+                                            }}
+                                            className={`rounded-xl border p-4 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
+                                            style={{
+                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                                borderColor: isDarkMode ? "#2A524C" : "#183D3D",
+                                                color: isDarkMode ? "#13151B" : "#183D3D",
+                                            }}
+                                        >
+                                            <div className="mb-3 flex items-center gap-2">
+                                                <motion.div
+                                                    whileHover={{ scale: 1.1, rotate: -5 }}
+                                                    className={`rounded-full p-2 ${
+                                                        isDarkMode ? "bg-purple-100 text-purple-600" : "bg-purple-50 text-purple-700"
+                                                    }`}
+                                                >
+                                                    <Phone className="h-4 w-4" />
+                                                </motion.div>
+                                                <h5
+                                                    className="text-sm font-bold md:text-base"
+                                                    style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                >
+                                                    Contact Information
+                                                </h5>
+                                            </div>
+                                            <p
+                                                className="break-words text-sm leading-relaxed"
+                                                style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
+                                            >
+                                                Ensure your contact number is accurate to receive service updates and notifications.
+                                            </p>
+                                        </motion.div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Mobile: Separate Cards */}
+                    {isMobile && (
+                        <>
+                            {/* Notification System Card */}
+                            <motion.div
+                                initial={{ opacity: 0, x: 30 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.5, delay: 2.6 }}
+                                className="rounded-2xl border-2 p-4"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
+                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
+                                    color: isDarkMode ? "#13151B" : "#F3EDE3",
+                                }}
+                            >
+                                <h3 className="mb-4 text-lg font-bold">Notification System</h3>
+                                <div className="space-y-3">
                                     {[
                                         {
                                             icon: CheckCircle2,
@@ -530,10 +902,10 @@ const ServiceTracking = ({
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
-                                            whileHover={{ 
+                                            whileHover={{
                                                 scale: 1.02,
                                                 y: -2,
-                                                transition: { duration: 0.2 }
+                                                transition: { duration: 0.2 },
                                             }}
                                             className={`rounded-xl border p-3 transition-all ${
                                                 isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
@@ -544,10 +916,10 @@ const ServiceTracking = ({
                                                 color: isDarkMode ? "#13151B" : "#183D3D",
                                             }}
                                         >
-                                            <div className="flex items-start space-x-3">
+                                            <div className="flex items-start gap-3">
                                                 <motion.div
                                                     whileHover={{ scale: 1.1 }}
-                                                    className={`rounded-full p-2 ${
+                                                    className={`flex-shrink-0 rounded-full p-2 ${
                                                         item.color === "green"
                                                             ? isDarkMode
                                                                 ? "bg-green-100 text-green-600"
@@ -563,17 +935,17 @@ const ServiceTracking = ({
                                                 >
                                                     <item.icon className="h-4 w-4" />
                                                 </motion.div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center justify-between">
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-start justify-between gap-2">
                                                         <h5
-                                                            className="text-sm font-bold md:text-base"
+                                                            className="break-words text-sm font-bold"
                                                             style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
                                                         >
                                                             {item.text}
                                                         </h5>
                                                         <motion.span
                                                             whileHover={{ scale: 1.05 }}
-                                                            className="rounded-full px-2 py-1 text-xs font-medium"
+                                                            className="flex-shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium"
                                                             style={{
                                                                 backgroundColor: isDarkMode ? "rgba(0,0,0,0.1)" : "rgba(24, 61, 61, 0.1)",
                                                                 color: isDarkMode ? "#13151B" : "#183D3D",
@@ -583,7 +955,7 @@ const ServiceTracking = ({
                                                         </motion.span>
                                                     </div>
                                                     <p
-                                                        className="mt-1 text-xs leading-relaxed md:text-sm"
+                                                        className="mt-1 break-words text-xs leading-relaxed"
                                                         style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
                                                     >
                                                         {item.description}
@@ -593,32 +965,39 @@ const ServiceTracking = ({
                                         </motion.div>
                                     ))}
                                 </div>
-                            </div>
+                            </motion.div>
 
-                            {/* Operating Hours & Contact */}
-                            <div className="flex flex-col">
-                                <h4 className="mb-3 text-sm font-semibold md:text-base">Store Information:</h4>
-                                <div className="flex-1 space-y-4">
-                                    {/* Operating Hours */}
+                            {/* Store Information Card */}
+                            <motion.div
+                                initial={{ opacity: 0, x: 30 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.5, delay: 2.8 }}
+                                className="rounded-2xl border-2 p-4"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
+                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
+                                    color: isDarkMode ? "#13151B" : "#F3EDE3",
+                                }}
+                            >
+                                <h3 className="mb-4 text-lg font-bold">Store Information</h3>
+                                <div className="space-y-4">
                                     <motion.div
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.2 }}
-                                        whileHover={{ 
+                                        whileHover={{
                                             scale: 1.02,
                                             y: -2,
-                                            transition: { duration: 0.2 }
+                                            transition: { duration: 0.2 },
                                         }}
-                                        className={`rounded-xl border p-4 transition-all ${
-                                            isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                                        }`}
+                                        className={`rounded-xl border p-4 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
                                         style={{
                                             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
                                             borderColor: isDarkMode ? "#2A524C" : "#183D3D",
                                             color: isDarkMode ? "#13151B" : "#183D3D",
                                         }}
                                     >
-                                        <div className="mb-3 flex items-center space-x-2">
+                                        <div className="mb-3 flex items-center gap-2">
                                             <motion.div
                                                 whileHover={{ scale: 1.1, rotate: 5 }}
                                                 className={`rounded-full p-2 ${
@@ -628,13 +1007,13 @@ const ServiceTracking = ({
                                                 <Clock className="h-4 w-4" />
                                             </motion.div>
                                             <h5
-                                                className="text-sm font-bold md:text-base"
+                                                className="text-sm font-bold"
                                                 style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
                                             >
                                                 Operating Hours
                                             </h5>
                                         </div>
-                                        <div className="space-y-2 text-sm">
+                                        <div className="text-sm">
                                             <div className="flex items-center justify-between py-1">
                                                 <span
                                                     className="font-medium"
@@ -653,26 +1032,23 @@ const ServiceTracking = ({
                                         </div>
                                     </motion.div>
 
-                                    {/* Contact Info */}
                                     <motion.div
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.3 }}
-                                        whileHover={{ 
+                                        whileHover={{
                                             scale: 1.02,
                                             y: -2,
-                                            transition: { duration: 0.2 }
+                                            transition: { duration: 0.2 },
                                         }}
-                                        className={`rounded-xl border p-4 transition-all ${
-                                            isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                                        }`}
+                                        className={`rounded-xl border p-4 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
                                         style={{
                                             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
                                             borderColor: isDarkMode ? "#2A524C" : "#183D3D",
                                             color: isDarkMode ? "#13151B" : "#183D3D",
                                         }}
                                     >
-                                        <div className="mb-3 flex items-center space-x-2">
+                                        <div className="mb-3 flex items-center gap-2">
                                             <motion.div
                                                 whileHover={{ scale: 1.1, rotate: -5 }}
                                                 className={`rounded-full p-2 ${
@@ -682,23 +1058,23 @@ const ServiceTracking = ({
                                                 <Phone className="h-4 w-4" />
                                             </motion.div>
                                             <h5
-                                                className="text-sm font-bold md:text-base"
+                                                className="text-sm font-bold"
                                                 style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
                                             >
                                                 Contact Information
                                             </h5>
                                         </div>
                                         <p
-                                            className="text-sm leading-relaxed"
+                                            className="break-words text-sm leading-relaxed"
                                             style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
                                         >
                                             Ensure your contact number is accurate to receive service updates and notifications.
                                         </p>
                                     </motion.div>
                                 </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                            </motion.div>
+                        </>
+                    )}
                 </div>
             </div>
         </motion.section>

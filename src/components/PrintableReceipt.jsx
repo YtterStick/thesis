@@ -7,7 +7,7 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
     const [qrImage, setQrImage] = useState(null);
 
     if (!invoiceData) {
-        return <div className="flex items-center justify-center p-4 text-gray-600 dark:text-gray-300">Loading receipt data...</div>;
+        return <div className="flex items-center justify-center p-4 text-gray-600">Loading receipt data...</div>;
     }
 
     // Use actual settings from backend or fallback to defaults
@@ -77,7 +77,7 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
     };
 
     // FIXED: Simple tracking URL using invoice number
-    const qrValue = invoiceNumber ? `http://localhost:3000/track/${invoiceNumber}` : null;
+    const qrValue = invoiceNumber ? `https://www.starwashph.com/?search=${encodeURIComponent(invoiceNumber)}#service_tracking` : null;
 
     useEffect(() => {
         if (qrValue) {
@@ -114,64 +114,64 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
             </div>
 
             {/* Compact Receipt */}
-            <div className="mx-auto max-w-sm space-y-2 rounded border border-dashed border-gray-300 bg-white p-3 font-mono text-xs shadow-md dark:border-gray-600 dark:bg-slate-900">
+            <div className="mx-auto max-w-sm space-y-2 rounded border border-dashed border-gray-300 bg-white p-3 font-mono text-xs shadow-md">
                 {/* Store Header - Using actual settings */}
                 <div className="text-center">
-                    <div className="text-base font-bold uppercase text-gray-900 dark:text-white">{settings.storeName}</div>
-                    <div className="text-[10px] text-gray-600 dark:text-gray-300">{settings.address}</div>
-                    <div className="text-[10px] text-gray-600 dark:text-gray-300">{settings.phone}</div>
+                    <div className="text-base font-bold uppercase text-gray-900">{settings.storeName}</div>
+                    <div className="text-[10px] text-gray-600">{settings.address}</div>
+                    <div className="text-[10px] text-gray-600">{settings.phone}</div>
                 </div>
 
-                <hr className="my-1 border-gray-300 dark:border-gray-600" />
+                <hr className="my-1 border-gray-300" />
 
                 {/* Invoice Meta */}
                 <div className="grid grid-cols-2 gap-1 text-[10px]">
-                    <div className="text-gray-700 dark:text-gray-300">
-                        Invoice #: <span className="font-bold text-gray-900 dark:text-white">{invoiceNumber}</span>
+                    <div className="text-gray-700">
+                        Invoice #: <span className="font-bold text-gray-900">{invoiceNumber}</span>
                     </div>
-                    <div className="text-right text-gray-700 dark:text-gray-300">
-                        Date: <span className="font-bold text-gray-900 dark:text-white">{formatDate(issueDate)}</span>
+                    <div className="text-right text-gray-700">
+                        Date: <span className="font-bold text-gray-900">{formatDate(issueDate)}</span>
                     </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                        Customer: <span className="font-bold text-gray-900 dark:text-white">{customerName}</span>
+                    <div className="text-gray-700">
+                        Customer: <span className="font-bold text-gray-900">{customerName}</span>
                     </div>
-                    <div className="text-right text-gray-700 dark:text-gray-300">
-                        Contact: <span className="font-bold text-gray-900 dark:text-white">{contact || "—"}</span>
+                    <div className="text-right text-gray-700">
+                        Contact: <span className="font-bold text-gray-900">{contact || "—"}</span>
                     </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                        Staff: <span className="font-bold text-gray-900 dark:text-white">{staffId || "—"}</span>
+                    <div className="text-gray-700">
+                        Staff: <span className="font-bold text-gray-900">{staffId || "—"}</span>
                     </div>
-                    <div className="text-right text-gray-700 dark:text-gray-300">
-                        Payment: <span className="font-bold text-gray-900 dark:text-white">{paymentMethod}</span>
+                    <div className="text-right text-gray-700">
+                        Payment: <span className="font-bold text-gray-900">{paymentMethod}</span>
                     </div>
 
                     {paymentMethod === "GCash" && gcashReference && (
-                        <div className="col-span-2 flex justify-between rounded bg-yellow-50 px-1 py-0.5 text-[9px] dark:bg-yellow-900/20">
-                            <span className="text-gray-700 dark:text-gray-300">GCash Ref:</span>
-                            <span className="font-mono text-gray-900 dark:text-white">{gcashReference}</span>
+                        <div className="col-span-2 flex justify-between rounded bg-yellow-50 px-1 py-0.5 text-[9px]">
+                            <span className="text-gray-700">GCash Ref:</span>
+                            <span className="font-mono text-gray-900">{gcashReference}</span>
                         </div>
                     )}
 
-                    <div className="col-span-2 flex justify-between text-[10px] font-bold text-red-600 dark:text-red-400">
+                    <div className="col-span-2 flex justify-between text-[10px] font-bold text-red-600">
                         <span>Due Date:</span>
                         <span>{formatDate(dueDate)}</span>
                     </div>
                 </div>
 
-                <hr className="my-1 border-gray-300 dark:border-gray-600" />
+                <hr className="my-1 border-gray-300" />
 
                 {/* Service Details */}
                 <div>
-                    <div className="mb-0.5 text-[10px] font-bold uppercase text-gray-900 dark:text-white">Service Details</div>
+                    <div className="mb-0.5 text-[10px] font-bold uppercase text-gray-900">Service Details</div>
                     <div className="space-y-0.5">
-                        <div className="flex justify-between text-gray-700 dark:text-gray-300">
+                        <div className="flex justify-between text-gray-700">
                             <span>
-                                {serviceName} × {loads}
+                                {serviceName}: {loads}
                             </span>
-                            <span className="text-gray-900 dark:text-white">{formatCurrency(loadsTotal)}</span>
+                            <span className="text-gray-900">{formatCurrency(loadsTotal)}</span>
                         </div>
                         {servicePrice > 0 && (
-                            <div className="pl-1 text-[9px] text-gray-600 dark:text-gray-400">Rate: {formatCurrency(servicePrice)} per load</div>
+                            <div className="pl-1 text-[9px] text-gray-600">Rate: {formatCurrency(servicePrice)} per load</div>
                         )}
                     </div>
                 </div>
@@ -179,45 +179,45 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                 {/* Consumables */}
                 {consumables.length > 0 && (
                     <div>
-                        <div className="mb-0.5 text-[10px] font-bold uppercase text-gray-900 dark:text-white">Consumables</div>
+                        <div className="mb-0.5 text-[10px] font-bold uppercase text-gray-900">Consumables</div>
                         <div className="space-y-0.5">
                             {consumables.map((item, index) => (
                                 <div
                                     key={index}
-                                    className="flex justify-between text-gray-700 dark:text-gray-300"
+                                    className="flex justify-between text-gray-700"
                                 >
                                     <span>
-                                        {item.name} × {item.quantity}
+                                        {item.name}: {item.quantity}
                                     </span>
-                                    <span className="text-gray-900 dark:text-white">{formatCurrency((item.price || 0) * (item.quantity || 0))}</span>
+                                    <span className="text-gray-900">{formatCurrency((item.price || 0) * (item.quantity || 0))}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
 
-                <hr className="my-1 border-gray-300 dark:border-gray-600" />
+                <hr className="my-1 border-gray-300" />
 
                 {/* Totals */}
                 <div className="space-y-0.5">
-                    <div className="flex justify-between font-bold text-gray-900 dark:text-white">
+                    <div className="flex justify-between font-bold text-gray-900">
                         <span>Total Amount:</span>
                         <span>{formatCurrency(finalTotal)}</span>
                     </div>
-                    <div className="flex justify-between text-[10px] text-gray-700 dark:text-gray-300">
+                    <div className="flex justify-between text-[10px] text-gray-700">
                         <span>Amount Given:</span>
                         <span>{formatCurrency(amountGiven)}</span>
                     </div>
-                    <div className="flex justify-between text-[10px] text-gray-700 dark:text-gray-300">
+                    <div className="flex justify-between text-[10px] text-gray-700">
                         <span>Change:</span>
                         <span>{formatCurrency(change)}</span>
                     </div>
                 </div>
 
                 {/* Terms & Conditions */}
-                <div className="mt-1 rounded bg-gray-100 p-1 text-[9px] dark:bg-slate-700">
-                    <div className="mb-0.5 font-bold text-gray-900 dark:text-white">Terms & Conditions</div>
-                    <p className="text-gray-700 dark:text-gray-300">
+                <div className="mt-1 rounded bg-gray-100 p-1 text-[9px]">
+                    <div className="mb-0.5 font-bold text-gray-900">Terms & Conditions</div>
+                    <p className="text-gray-700">
                         Laundry must be claimed within 7 days. Unclaimed items may be subject to disposal. Please retain your invoice for
                         verification.
                     </p>
@@ -227,7 +227,7 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                 {qrValue && (
                     <div className="mt-1 text-center">
                         <div className="flex justify-center">
-                            <div className="rounded border border-gray-300 bg-white p-1 dark:border-gray-600">
+                            <div className="rounded border border-gray-300 bg-white p-1">
                                 {/* Screen QR Code */}
                                 <div className="print:hidden">
                                     <QRCode
@@ -247,19 +247,14 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                                 )}
                             </div>
                         </div>
-                        <div className="mt-0.5 text-[9px] text-gray-600 dark:text-gray-400">
+                        <div className="mt-0.5 text-[9px] text-gray-600">
                             Scan to track your laundry status
                         </div>
                     </div>
                 )}
 
-                {/* Barcode */}
-                <div className="mt-1 text-center">
-                    <div className="barcode font-mono text-sm font-bold tracking-widest text-gray-900 dark:text-white">*{invoiceNumber}*</div>
-                </div>
-
                 {/* Footer - Using actual footer note from settings */}
-                <div className="mt-1 border-t border-gray-300 pt-1 text-center text-[9px] text-gray-600 dark:border-gray-600 dark:text-gray-400">
+                <div className="mt-1 border-t border-gray-300 pt-1 text-center text-[9px] text-gray-600">
                     {settings.footerNote}
                 </div>
             </div>
@@ -275,7 +270,7 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                 </button>
             </div>
 
-            {/* Print Styles */}
+            {/* Print Styles - Kept exactly as before */}
             <style jsx>{`
                 @media print {
                     @page {
@@ -299,16 +294,6 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                         width: 100%;
                         margin: 0;
                         padding: 0;
-                    }
-
-                    /* Reset all dark mode styles for printing */
-                    .dark\\:bg-slate-900,
-                    .dark\\:text-white,
-                    .dark\\:text-gray-300,
-                    .dark\\:border-gray-600 {
-                        background: white !important;
-                        color: black !important;
-                        border-color: #d1d5db !important;
                     }
 
                     /* Make sure everything fits on one page */
@@ -335,22 +320,17 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
 
                     /* Ensure proper contrast for print */
                     .text-gray-600,
-                    .text-gray-700,
-                    .dark\\:text-gray-300,
-                    .dark\\:text-gray-400 {
+                    .text-gray-700 {
                         color: #4b5563 !important;
                     }
 
-                    .text-gray-900,
-                    .dark\\:text-white {
+                    .text-gray-900 {
                         color: #000 !important;
                     }
 
                     /* Remove background colors for print */
                     .bg-yellow-50,
-                    .dark\\:bg-yellow-900\\/20,
-                    .bg-gray-100,
-                    .dark\\:bg-slate-700 {
+                    .bg-gray-100 {
                         background: #f9fafb !important;
                     }
 

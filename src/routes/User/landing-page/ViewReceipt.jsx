@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { X, Printer, FileText } from "lucide-react";
+import PrintableReceipt from "./PrintableReceipt"; // Adjust path as needed
 
 const ViewReceipt = ({ 
   isVisible, 
@@ -67,53 +68,12 @@ const ViewReceipt = ({
           </button>
         </div>
 
-        <div 
-          className="mt-4 p-4 rounded-lg border"
-          style={{
-            backgroundColor: isDarkMode ? '#FFFFFF' : '#2A524C',
-            borderColor: isDarkMode ? '#2A524C' : '#F3EDE3'
-          }}
-        >
-          <h4 
-            className="font-semibold text-center mb-2"
-            style={{ color: isDarkMode ? '#13151B' : '#F3EDE3' }}
-          >
-            Receipt Preview
-          </h4>
-          <div className="text-xs space-y-1">
-            <p>
-              <strong style={{ color: isDarkMode ? '#13151B' : '#F3EDE3' }}>
-                Receipt #:
-              </strong> 
-              <span style={{ color: isDarkMode ? '#6B7280' : '#F3EDE3' }}>
-                {" "}{receiptData.receiptNumber}
-              </span>
-            </p>
-            <p>
-              <strong style={{ color: isDarkMode ? '#13151B' : '#F3EDE3' }}>
-                Date:
-              </strong> 
-              <span style={{ color: isDarkMode ? '#6B7280' : '#F3EDE3' }}>
-                {" "}{receiptData.dateCreated}
-              </span>
-            </p>
-            <p>
-              <strong style={{ color: isDarkMode ? '#13151B' : '#F3EDE3' }}>
-                Customer:
-              </strong> 
-              <span style={{ color: isDarkMode ? '#6B7280' : '#F3EDE3' }}>
-                {" "}{receiptData.customerName}
-              </span>
-            </p>
-            <p>
-              <strong style={{ color: isDarkMode ? '#13151B' : '#F3EDE3' }}>
-                Total:
-              </strong> 
-              <span style={{ color: isDarkMode ? '#6B7280' : '#F3EDE3' }}>
-                {" "}${receiptData.total.toFixed(2)}
-              </span>
-            </p>
-          </div>
+        {/* Receipt Preview using PrintableReceipt */}
+        <div className="mt-4">
+          <PrintableReceipt 
+            invoiceData={receiptData}
+            onClose={closeReceiptOptions}
+          />
         </div>
       </div>
     </motion.div>
