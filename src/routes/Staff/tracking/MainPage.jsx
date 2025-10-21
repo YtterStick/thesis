@@ -7,7 +7,7 @@ import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, Chev
 import TrackingTable from "./TrackingTable";
 import SkeletonLoader from "./SkeletonLoader";
 import { maskContact } from "./utils";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 const POLLING_INTERVAL = 10000;
 const ACTIVE_POLLING_INTERVAL = 5000;
@@ -26,6 +26,8 @@ export default function ServiceTrackingPage() {
     const [isPolling, setIsPolling] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [smsStatus, setSmsStatus] = useState({});
+    const [completedTodayCount, setCompletedTodayCount] = useState(0);
+    
     const pollRef = useRef(null);
     const clockRef = useRef(null);
     const timerCheckRef = useRef(null);
@@ -50,6 +52,16 @@ export default function ServiceTrackingPage() {
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = jobs.slice(startIndex, endIndex);
 
+    const fetchCompletedTodayCount = useCallback(async () => {
+        try {
+            const count = await api.get("api/laundry-jobs/completed-today-count");
+            setCompletedTodayCount(count);
+        } catch (err) {
+            console.error("Failed to fetch completed today count:", err);
+            setCompletedTodayCount(0);
+        }
+    }, []);
+
     const handlePageChange = (newPage) => {
         setCurrentPage(Math.max(1, Math.min(newPage, totalPages)));
     };
@@ -67,7 +79,6 @@ export default function ServiceTrackingPage() {
 
     const fetchJobs = useCallback(async () => {
         try {
-            // Use the api utility instead of fetchWithTimeout
             const data = await api.get("api/laundry-jobs");
 
             const jobsWithLoads = data.map((job) => ({
@@ -111,7 +122,6 @@ export default function ServiceTrackingPage() {
 
     const fetchMachines = async () => {
         try {
-            // Use the api utility instead of fetchWithTimeout
             const data = await api.get("api/machines");
             setMachines(data);
             return true;
@@ -126,7 +136,11 @@ export default function ServiceTrackingPage() {
 
         setIsPolling(true);
         try {
-            const [jobsSuccess, machinesSuccess] = await Promise.allSettled([fetchJobs(), fetchMachines()]);
+            const [jobsSuccess, machinesSuccess, completedCountSuccess] = await Promise.allSettled([
+                fetchJobs(), 
+                fetchMachines(),
+                fetchCompletedTodayCount()
+            ]);
 
             if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
                 setLoading(false);
@@ -175,7 +189,6 @@ export default function ServiceTrackingPage() {
         }
     }, [jobs]);
 
-    // Setup polling interval
     useEffect(() => {
         const interval = getPollingInterval();
 
@@ -197,7 +210,6 @@ export default function ServiceTrackingPage() {
         };
     }, [autoRefresh, hasActiveJobs, fetchData]);
 
-    // Setup timer check interval
     useEffect(() => {
         if (timerCheckRef.current) {
             clearInterval(timerCheckRef.current);
@@ -214,7 +226,6 @@ export default function ServiceTrackingPage() {
         };
     }, [checkTimerCompletions]);
 
-    // Setup clock and initial data fetch
     useEffect(() => {
         fetchData();
 
@@ -240,7 +251,6 @@ export default function ServiceTrackingPage() {
         setSmsStatus((prev) => ({ ...prev, [jobKey]: "sending" }));
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.post("api/send-completion-sms", {
                 transactionId: job.id,
                 customerName: job.customerName,
@@ -274,7 +284,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`
             );
@@ -300,7 +309,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`
             );
@@ -315,7 +323,6 @@ export default function ServiceTrackingPage() {
         if (!job?.id) return;
         const load = job.loads[loadIndex];
 
-        // Normalize service type - treat "Wash Only" as "Wash" and "Dry Only" as "Dry"
         const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
 
         let status = load.status;
@@ -329,10 +336,8 @@ export default function ServiceTrackingPage() {
             else if (load.status === "WASHED") status = "DRYING";
         }
 
-        // Get the required machine type for the NEXT step
         const requiredMachineType = getMachineTypeForStep(status, normalizedServiceType);
 
-        // Check if the assigned machine matches the required type
         if (requiredMachineType) {
             const assignedMachine = machines.find((m) => m.id === load.machineId);
             const isCorrectMachineType = assignedMachine && (assignedMachine.type || "").toUpperCase() === requiredMachineType;
@@ -370,7 +375,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
             );
@@ -386,10 +390,8 @@ export default function ServiceTrackingPage() {
 
         const load = job.loads[loadIndex];
 
-        // Normalize service type - treat "Wash Only" as "Wash" and "Dry Only" as "Dry"
         const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
 
-        // Get the appropriate flow based on normalized service type
         let flow;
         if (normalizedServiceType === "Wash") {
             flow = SERVICE_FLOWS.Wash;
@@ -427,7 +429,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(
                 `api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`
             );
@@ -443,13 +444,11 @@ export default function ServiceTrackingPage() {
                 ),
             );
 
-            // Send SMS notification when job is completed
             if (nextStatus === "COMPLETED") {
                 sendSmsNotification(job, normalizedServiceType);
             }
         } catch (err) {
             console.error("Failed to advance load status:", err);
-            // Revert the local state on error
             setJobs((prev) =>
                 prev.map((j) =>
                     getJobKey(j) === jobKey
@@ -489,7 +488,6 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Use the api utility instead of fetchWithTimeout
             await api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`);
         } catch (err) {
             console.error("Failed to start drying again:", err);
@@ -498,7 +496,6 @@ export default function ServiceTrackingPage() {
     };
 
     const getMachineTypeForStep = (status, serviceType) => {
-        // Normalize service type - treat "Wash Only" as "Wash" and "Dry Only" as "Dry"
         const normalizedServiceType = serviceType?.replace(" Only", "") || serviceType;
 
         if (normalizedServiceType === "Wash") return "WASHER";
@@ -599,7 +596,6 @@ export default function ServiceTrackingPage() {
 
     return (
         <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
-            {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -661,7 +657,6 @@ export default function ServiceTrackingPage() {
                 </div>
             </motion.div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     {
@@ -687,9 +682,9 @@ export default function ServiceTrackingPage() {
                     },
                     {
                         label: "Completed Today",
-                        value: jobs.reduce((acc, job) => acc + job.loads.filter((load) => load.status === "COMPLETED").length, 0),
+                        value: completedTodayCount,
                         color: "#10B981",
-                        description: "Finished loads",
+                        description: "Finished loads today",
                     },
                 ].map(({ label, value, color, description }, index) => (
                     <motion.div
@@ -752,7 +747,6 @@ export default function ServiceTrackingPage() {
                 ))}
             </div>
 
-            {/* Tracking Table */}
             <TooltipProvider>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -782,7 +776,6 @@ export default function ServiceTrackingPage() {
                 </motion.div>
             </TooltipProvider>
 
-            {/* Pagination */}
             {jobs.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

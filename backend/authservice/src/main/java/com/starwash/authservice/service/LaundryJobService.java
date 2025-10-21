@@ -603,6 +603,29 @@ public class LaundryJobService {
         return processJobsToDtos(nonCompletedJobs);
     }
 
+    // NEW METHOD: Get completed today count
+    @Cacheable(value = "completedCount", key = "'today'")
+    public int getCompletedTodayCount() {
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
+        LocalDateTime todayStart = getCurrentManilaTime().toLocalDate().atStartOfDay();
+        LocalDateTime tomorrowStart = todayStart.plusDays(1);
+        
+        int count = allJobs.stream()
+                .filter(job -> job.getLoadAssignments() != null)
+                .mapToInt(job -> (int) job.getLoadAssignments().stream()
+                        .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
+                        .filter(load -> {
+                            if (load.getEndTime() == null) return false;
+                            return !load.getEndTime().isBefore(todayStart) && 
+                                   load.getEndTime().isBefore(tomorrowStart);
+                        })
+                        .count())
+                .sum();
+        
+        System.out.println("📊 Completed today count: " + count + " (as of " + getCurrentManilaTime() + ")");
+        return count;
+    }
+
     private List<LaundryJobDto> processJobsToDtos(List<LaundryJob> jobs) {
         if (jobs.isEmpty()) {
             return Collections.emptyList();

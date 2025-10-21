@@ -143,6 +143,18 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
+    // NEW ENDPOINT: Get completed today count
+    @GetMapping("/completed-today-count")
+    public ResponseEntity<Integer> getCompletedTodayCount() {
+        try {
+            int count = laundryJobService.getCompletedTodayCount();
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            System.err.println("❌ Error getting completed today count: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(0);
+        }
+    }
+
     // ========== DTO Conversion ==========
     private LaundryJobDto toDto(LaundryJob job) {
         LaundryJobDto dto = new LaundryJobDto();
