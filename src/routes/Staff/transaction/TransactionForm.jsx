@@ -10,7 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import PaymentSection from "./PaymentSection";
 import ServiceSelector from "./ServiceSelector";
 import ConsumablesSection from "./ConsumablesSection";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
 const POLLING_INTERVAL = 60000; // 1 minute polling
@@ -434,7 +434,12 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             staffId: localStorage.getItem("staffId"),
         };
 
-        onSubmit(payload);
+        try {
+            await onSubmit(payload);
+        } catch (error) {
+            // Error is handled in MainPage component
+            throw error;
+        }
     };
 
     return (
