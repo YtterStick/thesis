@@ -74,33 +74,20 @@ public class LaundryJobService {
         return LocalDateTime.now(getManilaTimeZone());
     }
 
-    // Get completion statistics - optimized for performance
+    // Get completion statistics - count all COMPLETED loads for today in PH time
     public Map<String, Object> getCompletionStatistics() {
         Map<String, Object> stats = new HashMap<>();
         
-        // Get today's date range in Manila time
-        ZoneId manilaZone = getManilaTimeZone();
-        LocalDateTime nowManila = LocalDateTime.now(manilaZone);
-        LocalDateTime startOfDay = nowManila.toLocalDate().atStartOfDay();
-        LocalDateTime startOfNextDay = startOfDay.plusDays(1);
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
         
-        // Count completed loads for today using optimized query
-        List<LaundryJob> todayJobs = laundryJobRepository.findJobsWithCompletedLoadsByDateRange(startOfDay, startOfNextDay);
-        long todayCompleted = todayJobs.stream()
+        // Count completed loads for today in PH time
+        long todayCompleted = allJobs.stream()
             .flatMap(job -> job.getLoadAssignments().stream())
             .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
             .filter(load -> isCompletedTodayInPH(load.getEndTime()))
             .count();
         
-        // Count total completed loads (all time)
-        List<LaundryJob> allJobs = laundryJobRepository.findAllForCompletionStats();
-        long totalCompleted = allJobs.stream()
-            .flatMap(job -> job.getLoadAssignments().stream())
-            .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-            .count();
-        
         stats.put("today", todayCompleted);
-        stats.put("total", totalCompleted);
         stats.put("lastUpdated", getCurrentManilaTime());
         stats.put("timezone", "Asia/Manila");
         
@@ -633,32 +620,34 @@ public class LaundryJobService {
         return true;
     }
 
-    // Updated to use active jobs only (exclude jobs where ALL loads are completed)
     @Cacheable(value = "laundryJobs", key = "'allJobs-' + #page + '-' + #size")
     public List<LaundryJobDto> getAllJobs(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("dueDate").ascending());
-        
-        // Get all active jobs (jobs that have at least one load not completed)
-        List<LaundryJob> allActiveJobs = laundryJobRepository.findActiveJobs();
-        
-        // Manual pagination since we're using custom query
-        int start = page * size;
-        int end = Math.min(start + size, allActiveJobs.size());
-        
-        if (start >= allActiveJobs.size()) {
-            return Collections.emptyList();
-        }
-        
-        List<LaundryJob> paginatedJobs = allActiveJobs.subList(start, end);
-        return processJobsToDtos(paginatedJobs);
+        Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
+        List<LaundryJob> jobs = jobPage.getContent();
+
+        // Filter out jobs where all loads are completed
+        List<LaundryJob> nonCompletedJobs = jobs.stream()
+                .filter(job -> job.getLoadAssignments() != null)
+                .filter(job -> !job.getLoadAssignments().stream()
+                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                .collect(Collectors.toList());
+
+        return processJobsToDtos(nonCompletedJobs);
     }
 
-    // Updated to use active jobs only
     @Cacheable(value = "laundryJobs", key = "'allJobs'")
     public List<LaundryJobDto> getAllJobs() {
-        // Get only active jobs (jobs that have at least one load not completed)
-        List<LaundryJob> jobs = laundryJobRepository.findActiveJobs();
-        return processJobsToDtos(jobs);
+        List<LaundryJob> jobs = laundryJobRepository.findAll();
+
+        // Filter out jobs where all loads are completed
+        List<LaundryJob> nonCompletedJobs = jobs.stream()
+                .filter(job -> job.getLoadAssignments() != null)
+                .filter(job -> !job.getLoadAssignments().stream()
+                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                .collect(Collectors.toList());
+
+        return processJobsToDtos(nonCompletedJobs);
     }
 
     private List<LaundryJobDto> processJobsToDtos(List<LaundryJob> jobs) {
@@ -867,15 +856,9 @@ public class LaundryJobService {
 
     // Method to get all completed loads for today (for debugging)
     public List<LoadAssignment> getTodayCompletedLoads() {
-        // Get today's date range in Manila time
-        ZoneId manilaZone = getManilaTimeZone();
-        LocalDateTime nowManila = LocalDateTime.now(manilaZone);
-        LocalDateTime startOfDay = nowManila.toLocalDate().atStartOfDay();
-        LocalDateTime startOfNextDay = startOfDay.plusDays(1);
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
         
-        List<LaundryJob> todayJobs = laundryJobRepository.findJobsWithCompletedLoadsByDateRange(startOfDay, startOfNextDay);
-        
-        return todayJobs.stream()
+        return allJobs.stream()
             .flatMap(job -> job.getLoadAssignments().stream())
             .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
             .filter(load -> isCompletedTodayInPH(load.getEndTime()))

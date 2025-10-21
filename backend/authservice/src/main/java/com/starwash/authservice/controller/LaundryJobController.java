@@ -2,7 +2,6 @@ package com.starwash.authservice.controller;
 
 import com.starwash.authservice.dto.LaundryJobDto;
 import com.starwash.authservice.model.LaundryJob;
-import com.starwash.authservice.model.LaundryJob.LoadAssignment;
 import com.starwash.authservice.service.LaundryJobService;
 import com.starwash.authservice.security.JwtUtil;
 import org.springframework.http.ResponseEntity;
@@ -24,12 +23,10 @@ public class LaundryJobController {
         this.jwtUtil = jwtUtil;
     }
 
-    // GET all laundry jobs (only active jobs - excludes jobs where ALL loads are COMPLETED)
+    // GET all laundry jobs
     @GetMapping
-    public ResponseEntity<List<LaundryJobDto>> getAllJobs(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(laundryJobService.getAllJobs(page, size));
+    public ResponseEntity<List<LaundryJobDto>> getAllJobs() {
+        return ResponseEntity.ok(laundryJobService.getAllJobs());
     }
 
     // GET single job by transactionId
@@ -147,18 +144,11 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
-    // Get completion statistics - optimized for summary cards
+    // Get completion statistics
     @GetMapping("/completion-stats")
     public ResponseEntity<Map<String, Object>> getCompletionStats() {
         Map<String, Object> stats = laundryJobService.getCompletionStatistics();
         return ResponseEntity.ok(stats);
-    }
-
-    // Debug endpoint to see completed loads for today
-    @GetMapping("/completed-today")
-    public ResponseEntity<List<LoadAssignment>> getTodayCompletedLoads() {
-        List<LoadAssignment> completedLoads = laundryJobService.getTodayCompletedLoads();
-        return ResponseEntity.ok(completedLoads);
     }
 
     // ========== DTO Conversion ==========
@@ -187,12 +177,5 @@ public class LaundryJobController {
             @RequestParam String customerName) {
         List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
         return ResponseEntity.ok(jobs);
-    }
-
-    // Check and fix timer states
-    @PostMapping("/{transactionId}/fix-timers")
-    public ResponseEntity<String> fixTimerStates(@PathVariable String transactionId) {
-        laundryJobService.checkAndFixTimerStates(transactionId);
-        return ResponseEntity.ok("Timer states checked and fixed if necessary");
     }
 }
