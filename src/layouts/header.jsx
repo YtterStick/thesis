@@ -28,8 +28,13 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
+    const [autoNotifications, setAutoNotifications] = useState([]);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
     const notificationRef = useRef(null);
     const searchRef = useRef(null);
+    const notificationsEndRef = useRef(null);
+    const observerRef = useRef(null);
 
     // Calculate isDarkMode based on theme
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -172,15 +177,23 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }
     };
 
-    // Fetch notifications with skeleton loader
-    const fetchNotifications = async () => {
+    // Fetch notifications with pagination
+    const fetchNotifications = async (pageNum = 1, append = false) => {
         try {
             setNotificationsLoading(true);
-            console.log("Fetching notifications...");
+            console.log(`Fetching notifications page ${pageNum}...`);
 
-            const data = await api.get("api/notifications");
-            console.log("Fetched notifications:", data);
-            setNotifications(data);
+            const data = await api.get(`api/notifications?page=${pageNum}&limit=10`);
+            console.log(`Fetched ${data.notifications.length} notifications for page ${pageNum}`, data);
+
+            if (append) {
+                setNotifications(prev => [...prev, ...data.notifications]);
+            } else {
+                setNotifications(data.notifications);
+            }
+            
+            setHasMore(data.hasMore);
+            setPage(pageNum);
         } catch (error) {
             console.error("Error fetching notifications:", error);
         } finally {
@@ -205,8 +218,20 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         try {
             await api.post(`api/notifications/${id}/read`);
             
-            // Refresh notifications and count
-            fetchNotifications();
+            // Update local state
+            setNotifications(prev => 
+                prev.map(notif => 
+                    notif.id === id ? { ...notif, read: true } : notif
+                )
+            );
+            
+            setAutoNotifications(prev => 
+                prev.map(notif => 
+                    notif.id === id ? { ...notif, read: true } : notif
+                )
+            );
+            
+            // Refresh count
             fetchUnreadCount();
         } catch (error) {
             console.error("Error marking notification as read:", error);
@@ -218,11 +243,54 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         try {
             await api.post("api/notifications/read-all");
             
-            // Refresh notifications and count
-            fetchNotifications();
+            // Update local state
+            setNotifications(prev => 
+                prev.map(notif => ({ ...notif, read: true }))
+            );
+            
+            setAutoNotifications(prev => 
+                prev.map(notif => ({ ...notif, read: true }))
+            );
+            
+            // Refresh count
             fetchUnreadCount();
         } catch (error) {
             console.error("Error marking all notifications as read:", error);
+        }
+    };
+
+    // Show auto notification for 5 seconds
+    const showAutoNotification = (notification) => {
+        const newNotification = {
+            ...notification,
+            id: `auto-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            autoShow: true
+        };
+        
+        setAutoNotifications(prev => [newNotification, ...prev]);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            setAutoNotifications(prev => 
+                prev.filter(notif => notif.id !== newNotification.id)
+            );
+        }, 5000);
+    };
+
+    // Handle notification click
+    const handleNotificationClick = (notification) => {
+        if (!notification.read) {
+            markAsRead(notification.id);
+        }
+        
+        // You can add additional click handling here
+        console.log("Notification clicked:", notification);
+        
+        // Close auto notification immediately when clicked
+        if (notification.autoShow) {
+            setAutoNotifications(prev => 
+                prev.filter(notif => notif.id !== notification.id)
+            );
         }
     };
 
@@ -259,18 +327,60 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }
     };
 
+    // Infinite scroll setup
+    useEffect(() => {
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+        }
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !notificationsLoading) {
+                    fetchNotifications(page + 1, true);
+                }
+            },
+            { threshold: 1.0 }
+        );
+
+        if (notificationsEndRef.current) {
+            observerRef.current.observe(notificationsEndRef.current);
+        }
+
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+            }
+        };
+    }, [hasMore, notificationsLoading, page]);
+
     // Enhanced useEffect for notifications
     useEffect(() => {
         if (notificationOpen) {
-            fetchNotifications();
+            fetchNotifications(1, false);
             fetchUnreadCount();
         }
     }, [notificationOpen]);
 
-    // Real-time notification checking (without animation)
+    // Real-time notification checking with auto-display
     useEffect(() => {
         const checkForNewNotifications = async () => {
-            await fetchUnreadCount();
+            const previousCount = unreadCount;
+            const newCount = await fetchUnreadCount();
+            
+            // If there are new notifications, fetch and show them
+            if (newCount > previousCount && newCount > 0) {
+                try {
+                    const newNotifications = await api.get("api/notifications?page=1&limit=5");
+                    const unreadNotifications = newNotifications.notifications.filter(notif => !notif.read);
+                    
+                    // Show the latest unread notification
+                    if (unreadNotifications.length > 0) {
+                        showAutoNotification(unreadNotifications[0]);
+                    }
+                } catch (error) {
+                    console.error("Error fetching new notifications:", error);
+                }
+            }
         };
 
         const interval = setInterval(() => {
@@ -278,7 +388,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         }, 30000); // Check every 30 seconds
 
         return () => clearInterval(interval);
-    }, []);
+    }, [unreadCount]);
 
     // Skeleton loader component for notifications
     const NotificationSkeleton = () => (
@@ -299,12 +409,67 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         </div>
     );
 
+    // Auto Notification Component
+    const AutoNotification = ({ notification }) => (
+        <motion.div
+            className="fixed top-20 right-4 w-80 rounded-md border shadow-lg z-50 cursor-pointer"
+            style={{
+                backgroundColor: isDarkMode ? "#0B2B26" : "white",
+                borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
+                borderLeft: `4px solid ${getNotificationColor(notification.type)}`
+            }}
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
+            transition={{ duration: 0.3 }}
+            onClick={() => handleNotificationClick(notification)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+        >
+            <div className="flex items-start gap-3 p-4">
+                <div className="mt-0.5 flex-shrink-0">
+                    {getNotificationIcon(notification.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium truncate"
+                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}>
+                        {notification.title}
+                    </h4>
+                    <p className="mt-1 text-sm line-clamp-2"
+                        style={{ color: isDarkMode ? "#F3EDE3/80" : "#0B2B26/80" }}>
+                        {notification.message}
+                    </p>
+                    <p className="mt-1 text-xs"
+                        style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}>
+                        {formatTimeAgo(notification.createdAt)}
+                    </p>
+                </div>
+                {!notification.read && (
+                    <div 
+                        className="mt-2 h-2 w-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: getNotificationColor(notification.type) }}
+                    />
+                )}
+            </div>
+        </motion.div>
+    );
+
     return (
         <header
             className={`relative z-10 flex h-[60px] items-center justify-between border-b px-4 shadow-sm transition-colors ${
                 isDarkMode ? "border-[#1C3F3A] bg-[#0B2B26]" : "border-[#0B2B26] bg-[#E0EAE8]"
             }`}
         >
+            {/* Auto Notifications */}
+            <AnimatePresence>
+                {autoNotifications.map((notification) => (
+                    <AutoNotification 
+                        key={notification.id} 
+                        notification={notification} 
+                    />
+                ))}
+            </AnimatePresence>
+
             {/* 🔧 Sidebar toggle + Search */}
             <div className="relative flex flex-1 items-center gap-x-3">
                 {!searchActive && (
@@ -480,7 +645,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                         </AnimatePresence>
                     </motion.button>
 
-                    {/* 🔔 Enhanced Notification System without Animation */}
+                    {/* 🔔 Enhanced Notification System */}
                     <div className="relative" ref={notificationRef}>
                         <button
                             className="group relative size-10 rounded-md transition-colors hover:opacity-80 flex items-center justify-center"
@@ -492,7 +657,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                             onClick={() => {
                                 setNotificationOpen(!notificationOpen);
                                 if (!notificationOpen) {
-                                    fetchNotifications();
+                                    fetchNotifications(1, false);
                                 }
                             }}
                         >
@@ -539,63 +704,76 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                         </div>
                                     </div>
 
-                                    {/* Notifications List with Skeleton Loader */}
+                                    {/* Notifications List with Infinite Scroll */}
                                     <div className="max-h-96 overflow-y-auto">
-                                        {notificationsLoading ? (
+                                        {notificationsLoading && page === 1 ? (
                                             <NotificationSkeleton />
                                         ) : notifications.length > 0 ? (
-                                            notifications.map((notification, index) => (
-                                                <div
-                                                    key={notification.id}
-                                                    className={`flex cursor-pointer items-start gap-3 border-b p-3 transition-all ${
-                                                        !notification.read
-                                                            ? "border-l-2"
-                                                            : "hover:opacity-80"
-                                                    }`}
-                                                    style={{ 
-                                                        borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
-                                                        borderLeftColor: !notification.read ? 
-                                                            (isDarkMode ? '#F3EDE3' : '#0B2B26') : 'transparent',
-                                                        backgroundColor: !notification.read ? 
-                                                            (isDarkMode ? 'rgba(243, 237, 227, 0.1)' : 'rgba(11, 43, 38, 0.1)') : 'transparent'
-                                                    }}
-                                                    onClick={() => markAsRead(notification.id)}
-                                                >
-                                                    <div className="mt-0.5 flex-shrink-0">
-                                                        {getNotificationIcon(notification.type)}
+                                            <>
+                                                {notifications.map((notification, index) => (
+                                                    <div
+                                                        key={notification.id}
+                                                        className={`flex cursor-pointer items-start gap-3 border-b p-3 transition-all ${
+                                                            !notification.read
+                                                                ? "border-l-2"
+                                                                : "hover:opacity-80"
+                                                        }`}
+                                                        style={{ 
+                                                            borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
+                                                            borderLeftColor: !notification.read ? 
+                                                                getNotificationColor(notification.type) : 'transparent',
+                                                            backgroundColor: !notification.read ? 
+                                                                (isDarkMode ? 'rgba(243, 237, 227, 0.1)' : 'rgba(11, 43, 38, 0.1)') : 'transparent'
+                                                        }}
+                                                        onClick={() => handleNotificationClick(notification)}
+                                                    >
+                                                        <div className="mt-0.5 flex-shrink-0">
+                                                            {getNotificationIcon(notification.type)}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h4
+                                                                className="text-sm font-medium truncate"
+                                                                style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                                                            >
+                                                                {notification.title}
+                                                            </h4>
+                                                            <p
+                                                                className="mt-1 text-sm line-clamp-2"
+                                                                style={{ color: isDarkMode ? "#F3EDE3/80" : "#0B2B26/80" }}
+                                                            >
+                                                                {notification.message}
+                                                            </p>
+                                                            <p
+                                                                className="mt-1 text-xs"
+                                                                style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}
+                                                            >
+                                                                {formatTimeAgo(notification.createdAt)}
+                                                            </p>
+                                                        </div>
+                                                        {!notification.read && (
+                                                            <div 
+                                                                className="mt-2 h-2 w-2 rounded-full flex-shrink-0"
+                                                                style={{ backgroundColor: getNotificationColor(notification.type) }}
+                                                            />
+                                                        )}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4
-                                                            className={`text-sm font-medium truncate ${
-                                                                !notification.read
-                                                                    ? ""
-                                                                    : ""
-                                                            }`}
-                                                            style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
-                                                        >
-                                                            {notification.title}
-                                                        </h4>
-                                                        <p
-                                                            className="mt-1 text-sm line-clamp-2"
-                                                            style={{ color: isDarkMode ? "#F3EDE3/80" : "#0B2B26/80" }}
-                                                        >
-                                                            {notification.message}
-                                                        </p>
-                                                        <p
-                                                            className="mt-1 text-xs"
-                                                            style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}
-                                                        >
-                                                            {formatTimeAgo(notification.createdAt)}
-                                                        </p>
-                                                    </div>
-                                                    {!notification.read && (
-                                                        <div 
-                                                            className="mt-2 h-2 w-2 rounded-full flex-shrink-0"
-                                                            style={{ backgroundColor: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
-                                                        />
+                                                ))}
+                                                
+                                                {/* Infinite scroll trigger */}
+                                                <div ref={notificationsEndRef} className="p-2">
+                                                    {notificationsLoading && page > 1 && (
+                                                        <div className="flex justify-center">
+                                                            <RefreshCw size={16} className="animate-spin" />
+                                                        </div>
+                                                    )}
+                                                    {!hasMore && notifications.length > 0 && (
+                                                        <div className="text-center text-xs py-2"
+                                                             style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}>
+                                                            No more notifications
+                                                        </div>
                                                     )}
                                                 </div>
-                                            ))
+                                            </>
                                         ) : (
                                             <div
                                                 className="p-6 text-center"

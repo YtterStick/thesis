@@ -350,6 +350,7 @@ public class NotificationService {
         System.out.println("📢 Transaction stock issue notification sent: " + message);
     }
 
+    // Get user notifications with pagination support
     public List<Notification> getUserNotifications(String userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
