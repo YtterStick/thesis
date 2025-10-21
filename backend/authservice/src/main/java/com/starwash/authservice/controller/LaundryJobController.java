@@ -55,7 +55,7 @@ public class LaundryJobController {
         existing.setStatusFlow(dto.getStatusFlow());
         existing.setCurrentStep(dto.getCurrentStep());
         existing.setLoadAssignments(dto.getLoadAssignments());
-        existing.setContact(dto.getContact()); // ✅ added contact
+        existing.setContact(dto.getContact());
 
         LaundryJob updated = laundryJobService.updateJob(existing, username);
         return ResponseEntity.ok(toDto(updated));
@@ -155,12 +155,24 @@ public class LaundryJobController {
         }
     }
 
+    // NEW ENDPOINT: Get all completed count
+    @GetMapping("/all-completed-count")
+    public ResponseEntity<Integer> getAllCompletedCount() {
+        try {
+            int count = laundryJobService.getAllCompletedCount();
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            System.err.println("❌ Error getting all completed count: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(0);
+        }
+    }
+
     // ========== DTO Conversion ==========
     private LaundryJobDto toDto(LaundryJob job) {
         LaundryJobDto dto = new LaundryJobDto();
         dto.setTransactionId(job.getTransactionId());
         dto.setCustomerName(job.getCustomerName());
-        dto.setContact(job.getContact()); // ✅ include contact in DTO response
+        dto.setContact(job.getContact());
         dto.setLoadAssignments(job.getLoadAssignments());
         dto.setDetergentQty(job.getDetergentQty());
         dto.setFabricQty(job.getFabricQty());
@@ -175,7 +187,6 @@ public class LaundryJobController {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
-    // missing item
     @GetMapping("/search-by-customer")
     public ResponseEntity<List<LaundryJob>> searchLaundryJobsByCustomerName(
             @RequestParam String customerName) {

@@ -410,7 +410,6 @@ public class LaundryJobService {
         }
     }
 
-    // In LaundryJobService, update the sendStatusChangeNotifications method:
     private void sendStatusChangeNotifications(LaundryJob job, LoadAssignment load, String previousStatus,
             String newStatus) {
         try {
@@ -603,6 +602,27 @@ public class LaundryJobService {
         return processJobsToDtos(nonCompletedJobs);
     }
 
+    // NEW METHOD: Get ALL completed loads count (including completed jobs that are filtered out from table)
+    @Cacheable(value = "completedCount", key = "'allCompleted'")
+    public int getAllCompletedCount() {
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
+        
+        int count = 0;
+        
+        for (LaundryJob job : allJobs) {
+            if (job.getLoadAssignments() != null) {
+                for (LoadAssignment load : job.getLoadAssignments()) {
+                    if (STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())) {
+                        count++;
+                    }
+                }
+            }
+        }
+        
+        System.out.println("📊 ALL Completed loads count: " + count + " (scanned " + allJobs.size() + " total jobs)");
+        return count;
+    }
+
     // NEW METHOD: Get completed today count
     @Cacheable(value = "completedCount", key = "'today'")
     public int getCompletedTodayCount() {
@@ -610,17 +630,28 @@ public class LaundryJobService {
         LocalDateTime todayStart = getCurrentManilaTime().toLocalDate().atStartOfDay();
         LocalDateTime tomorrowStart = todayStart.plusDays(1);
         
-        int count = allJobs.stream()
-                .filter(job -> job.getLoadAssignments() != null)
-                .mapToInt(job -> (int) job.getLoadAssignments().stream()
-                        .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-                        .filter(load -> {
-                            if (load.getEndTime() == null) return false;
-                            return !load.getEndTime().isBefore(todayStart) && 
-                                   load.getEndTime().isBefore(tomorrowStart);
-                        })
-                        .count())
-                .sum();
+        int count = 0;
+        
+        for (LaundryJob job : allJobs) {
+            if (job.getLoadAssignments() != null) {
+                for (LoadAssignment load : job.getLoadAssignments()) {
+                    if (STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())) {
+                        // Check if completed today
+                        if (load.getEndTime() != null) {
+                            if (!load.getEndTime().isBefore(todayStart) && 
+                                load.getEndTime().isBefore(tomorrowStart)) {
+                                count++;
+                                System.out.println("✅ Counted today: " + job.getTransactionId() + " load " + load.getLoadNumber() + " completed at " + load.getEndTime());
+                            }
+                        } else {
+                            // No endTime - count it (fallback for loads without endTime)
+                            count++;
+                            System.out.println("✅ Counted today (no endTime): " + job.getTransactionId() + " load " + load.getLoadNumber());
+                        }
+                    }
+                }
+            }
+        }
         
         System.out.println("📊 Completed today count: " + count + " (as of " + getCurrentManilaTime() + ")");
         return count;
@@ -763,7 +794,6 @@ public class LaundryJobService {
         return laundryJobRepository.findByCustomerName(customerName);
     }
 
-    // Add to LaundryJobService.java
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob forceAdvanceLoad(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
@@ -807,7 +837,6 @@ public class LaundryJobService {
         return laundryJobRepository.save(job);
     }
 
-    // Add a method to manually check and fix timer states
     public void checkAndFixTimerStates(String transactionId) {
         try {
             LaundryJob job = findSingleJobByTransaction(transactionId);

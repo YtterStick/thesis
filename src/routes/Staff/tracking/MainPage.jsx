@@ -52,6 +52,7 @@ export default function ServiceTrackingPage() {
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = jobs.slice(startIndex, endIndex);
 
+    // NEW: Function to fetch completed today count
     const fetchCompletedTodayCount = useCallback(async () => {
         try {
             const count = await api.get("api/laundry-jobs/completed-today-count");
@@ -131,6 +132,7 @@ export default function ServiceTrackingPage() {
         }
     };
 
+    // UPDATED: Fetch completed count along with other data
     const fetchData = async (force = false) => {
         if ((isPolling && !force) || !autoRefresh) return;
 
@@ -139,7 +141,7 @@ export default function ServiceTrackingPage() {
             const [jobsSuccess, machinesSuccess, completedCountSuccess] = await Promise.allSettled([
                 fetchJobs(), 
                 fetchMachines(),
-                fetchCompletedTodayCount()
+                fetchCompletedTodayCount() // Fetch completed count
             ]);
 
             if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
@@ -189,6 +191,7 @@ export default function ServiceTrackingPage() {
         }
     }, [jobs]);
 
+    // Setup polling interval
     useEffect(() => {
         const interval = getPollingInterval();
 
@@ -210,6 +213,7 @@ export default function ServiceTrackingPage() {
         };
     }, [autoRefresh, hasActiveJobs, fetchData]);
 
+    // Setup timer check interval
     useEffect(() => {
         if (timerCheckRef.current) {
             clearInterval(timerCheckRef.current);
@@ -226,6 +230,7 @@ export default function ServiceTrackingPage() {
         };
     }, [checkTimerCompletions]);
 
+    // Setup clock and initial data fetch
     useEffect(() => {
         fetchData();
 
@@ -657,6 +662,7 @@ export default function ServiceTrackingPage() {
                 </div>
             </motion.div>
 
+            {/* Summary Cards - UPDATED: Uses separate completed count API */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     {
@@ -682,7 +688,7 @@ export default function ServiceTrackingPage() {
                     },
                     {
                         label: "Completed Today",
-                        value: completedTodayCount,
+                        value: completedTodayCount, // Uses the separate API count
                         color: "#10B981",
                         description: "Finished loads today",
                     },
@@ -747,6 +753,7 @@ export default function ServiceTrackingPage() {
                 ))}
             </div>
 
+            {/* Tracking Table - This remains unchanged (only shows incomplete jobs) */}
             <TooltipProvider>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -776,6 +783,7 @@ export default function ServiceTrackingPage() {
                 </motion.div>
             </TooltipProvider>
 
+            {/* Pagination */}
             {jobs.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
