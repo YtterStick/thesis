@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import ClaimingTable from "./ClaimingTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Package } from "lucide-react";
+import { Search, Package, Bell, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const MainPage = () => {
     const { theme } = useTheme();
@@ -20,12 +22,15 @@ const MainPage = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [activeTab, setActiveTab] = useState("unclaimed");
     const [hasFetched, setHasFetched] = useState(false);
+    const [pendingWarnings, setPendingWarnings] = useState(0);
+    const [isSendingWarnings, setIsSendingWarnings] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
         if (!hasFetched) {
             fetchCompletedTransactions();
             fetchExpiredTransactions();
+            fetchPendingWarnings();
         }
     }, [hasFetched]);
 
@@ -36,7 +41,6 @@ const MainPage = () => {
     const fetchCompletedTransactions = async () => {
         try {
             setIsLoading(true);
-            // Use the api utility instead of direct fetch
             const data = await api.get("api/claiming/completed-unclaimed");
 
             const filteredData = data.filter((transaction) => {
@@ -78,7 +82,6 @@ const MainPage = () => {
     const fetchExpiredTransactions = async () => {
         try {
             setIsLoadingExpired(true);
-            // Use the api utility instead of direct fetch
             const data = await api.get("api/expired");
 
             const sortedData = data.sort((a, b) => {
@@ -100,6 +103,39 @@ const MainPage = () => {
         }
     };
 
+    const fetchPendingWarnings = async () => {
+        try {
+            const response = await api.get("api/disposal-warnings/pending");
+            setPendingWarnings(response.count || 0);
+        } catch (error) {
+            console.error("Failed to fetch pending warnings:", error);
+        }
+    };
+
+    const sendManualWarnings = async () => {
+        try {
+            setIsSendingWarnings(true);
+            const response = await api.post("api/disposal-warnings/send-manual");
+            
+            toast({
+                title: "Success",
+                description: `Sent ${response.data.warningsSent} disposal warnings`,
+            });
+            
+            // Refresh the pending warnings count
+            fetchPendingWarnings();
+        } catch (error) {
+            console.error(error);
+            toast({ 
+                title: "Error", 
+                description: "Failed to send disposal warnings", 
+                variant: "destructive" 
+            });
+        } finally {
+            setIsSendingWarnings(false);
+        }
+    };
+
     const filterTransactions = () => {
         let filtered = activeTab === "unclaimed" ? transactions : expiredTransactions;
 
@@ -118,7 +154,6 @@ const MainPage = () => {
 
     const handleClaim = async (transactionId) => {
         try {
-            // Use the api utility instead of direct fetch
             const claimedTransaction = await api.patch(`api/claiming/${transactionId}/claim`);
 
             toast({
@@ -128,6 +163,7 @@ const MainPage = () => {
 
             setTransactions((prev) => prev.filter((t) => t.id !== transactionId));
             setExpiredTransactions((prev) => prev.filter((t) => t.id !== transactionId));
+            fetchPendingWarnings();
 
             return claimedTransaction;
         } catch (error) {
@@ -151,7 +187,6 @@ const MainPage = () => {
 
     const handleDispose = async (transactionId) => {
         try {
-            // Use the api utility instead of direct fetch
             await api.patch(`api/expired/${transactionId}/dispose`);
 
             toast({
@@ -160,6 +195,7 @@ const MainPage = () => {
             });
 
             setExpiredTransactions((prev) => prev.filter((t) => t.id !== transactionId));
+            fetchPendingWarnings();
         } catch (error) {
             console.error(error);
             toast({
@@ -174,6 +210,7 @@ const MainPage = () => {
         setHasFetched(false);
         fetchCompletedTransactions();
         fetchExpiredTransactions();
+        fetchPendingWarnings();
     };
 
     return (
@@ -182,26 +219,54 @@ const MainPage = () => {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 mb-3"
+                className="flex items-center justify-between gap-3 mb-3"
             >
-                <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="rounded-lg p-2"
-                    style={{
-                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                        color: "#F3EDE3",
-                    }}
-                >
-                    <Package size={22} />
-                </motion.div>
-                <div>
-                    <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
-                        Laundry Claiming & Disposing
-                    </p>
-                    <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
-                        Manage completed and past due laundry
-                    </p>
+                <div className="flex items-center gap-3">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="rounded-lg p-2"
+                        style={{
+                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                            color: "#F3EDE3",
+                        }}
+                    >
+                        <Package size={22} />
+                    </motion.div>
+                    <div>
+                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                            Laundry Claiming & Disposing
+                        </p>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                            Manage completed and past due laundry
+                        </p>
+                    </div>
                 </div>
+
+                {/* Disposal Warning Button */}
+                {pendingWarnings > 0 && (
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        whileHover={{ scale: 1.05 }}
+                    >
+                        <Button
+                            onClick={sendManualWarnings}
+                            disabled={isSendingWarnings}
+                            className="flex items-center gap-2"
+                            style={{
+                                backgroundColor: isDarkMode ? "#EF4444" : "#DC2626",
+                                color: "white",
+                            }}
+                        >
+                            <Bell size={16} />
+                            {isSendingWarnings ? (
+                                <RefreshCw size={16} className="animate-spin" />
+                            ) : (
+                                `Send Warnings (${pendingWarnings})`
+                            )}
+                        </Button>
+                    </motion.div>
+                )}
             </motion.div>
 
             <motion.div
@@ -236,6 +301,7 @@ const MainPage = () => {
                                 >
                                     {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""}{" "}
                                     {activeTab === "unclaimed" ? "ready for pickup" : "past due and need disposal"}
+                                    {pendingWarnings > 0 && ` • ${pendingWarnings} need disposal warnings`}
                                 </CardDescription>
                             </div>
                             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
@@ -275,22 +341,36 @@ const MainPage = () => {
                                         Past Due ({expiredTransactions.length})
                                     </motion.button>
                                 </div>
-                                <div className="relative">
-                                    <Search 
-                                        className="absolute left-2 top-2.5 h-4 w-4" 
-                                        style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
-                                    />
-                                    <Input
-                                        placeholder="Search customers..."
-                                        className="w-full border-2 pl-8 transition-all sm:w-64"
+                                <div className="flex items-center gap-2">
+                                    <div className="relative">
+                                        <Search 
+                                            className="absolute left-2 top-2.5 h-4 w-4" 
+                                            style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                                        />
+                                        <Input
+                                            placeholder="Search customers..."
+                                            className="w-full border-2 pl-8 transition-all sm:w-64"
+                                            style={{
+                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                color: isDarkMode ? '#13151B' : '#0B2B26',
+                                            }}
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={refreshData}
+                                        className="rounded-lg p-2 transition-all"
                                         style={{
-                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            color: isDarkMode ? '#13151B' : '#0B2B26',
+                                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)",
+                                            color: isDarkMode ? '#F3EDE3' : '#0B2B26',
                                         }}
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
+                                    >
+                                        <RefreshCw size={18} />
+                                    </motion.button>
                                 </div>
                             </div>
                         </div>
@@ -306,6 +386,23 @@ const MainPage = () => {
                             isExpiredTab={activeTab === "expired"}
                             hasUnfilteredData={activeTab === "unclaimed" ? transactions.length > 0 : expiredTransactions.length > 0}
                             isDarkMode={isDarkMode}
+                            onSendWarning={(transactionId) => {
+                                api.post(`api/disposal-warnings/send-for-job/${transactionId}`)
+                                    .then(() => {
+                                        toast({
+                                            title: "Success",
+                                            description: "Disposal warning sent successfully",
+                                        });
+                                        fetchPendingWarnings();
+                                    })
+                                    .catch(error => {
+                                        toast({
+                                            title: "Error",
+                                            description: "Failed to send disposal warning",
+                                            variant: "destructive",
+                                        });
+                                    });
+                            }}
                         />
                     </CardContent>
                 </Card>

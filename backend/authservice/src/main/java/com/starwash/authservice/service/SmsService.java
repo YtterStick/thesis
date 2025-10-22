@@ -33,6 +33,36 @@ public class SmsService {
         sendSms(phoneNumber, message);
     }
     
+    // NEW METHOD: Send disposal warning notification
+    public void sendDisposalWarningNotification(String phoneNumber, String customerName, String transactionId, int daysUntilDisposal) {
+        String message;
+        
+        if (daysUntilDisposal == 1) {
+            message = String.format(
+                "Hi %s! URGENT: Your laundry (Order: %s) will be DISPOSED TOMORROW if not claimed. Please claim immediately at StarWash!",
+                customerName, transactionId
+            );
+        } else if (daysUntilDisposal == 0) {
+            message = String.format(
+                "Hi %s! FINAL WARNING: Your laundry (Order: %s) will be DISPOSED TODAY if not claimed. Please claim immediately at StarWash!",
+                customerName, transactionId
+            );
+        } else {
+            message = String.format(
+                "Hi %s! REMINDER: Your laundry (Order: %s) will be disposed in %d days if not claimed. Please claim at StarWash!",
+                customerName, transactionId, daysUntilDisposal
+            );
+        }
+        
+        System.out.println("⚠️ DISPOSAL WARNING SMS Triggered!");
+        System.out.println("📞 Phone: " + phoneNumber);
+        System.out.println("👤 Customer: " + customerName);
+        System.out.println("📦 Transaction: " + transactionId);
+        System.out.println("📅 Days until disposal: " + daysUntilDisposal);
+        
+        sendSms(phoneNumber, message);
+    }
+    
     private void sendSms(String phoneNumber, String message) {
         Map<String, String> request = new HashMap<>();
         request.put("phone", phoneNumber);

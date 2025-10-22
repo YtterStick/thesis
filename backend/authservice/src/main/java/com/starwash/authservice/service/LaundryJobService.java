@@ -772,10 +772,65 @@ public class LaundryJobService {
         return laundryJobRepository.findByDisposedTrue();
     }
 
-    @Scheduled(fixedRate = 3600000)
+    // DISPOSAL WARNING SYSTEM - RUNS AT 7:00 AM MANILA TIME
+    @Scheduled(cron = "0 0 7 * * ?", zone = "Asia/Manila") // Run daily at 7:00 AM Manila time
+    public void checkAndSendDisposalWarnings() {
+        LocalDateTime now = getCurrentManilaTime();
+        List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
+        
+        System.out.println("⏰ [7:00 AM] Checking disposal warnings for " + unclaimedJobs.size() + " unclaimed jobs");
+        System.out.println("📍 Current Manila Time: " + now);
+        
+        int warningsSent = 0;
+        
+        for (LaundryJob job : unclaimedJobs) {
+            if (job.isDisposed() || job.isExpired()) {
+                continue;
+            }
+            
+            if (job.getDueDate() != null) {
+                long daysUntilDue = java.time.Duration.between(now, job.getDueDate()).toDays();
+                
+                // Also calculate hours for more precise logging
+                long hoursUntilDue = java.time.Duration.between(now, job.getDueDate()).toHours();
+                
+                System.out.println("📅 Job: " + job.getTransactionId() + 
+                                 " | Customer: " + job.getCustomerName() +
+                                 " | Due: " + job.getDueDate() + 
+                                 " | Days until due: " + daysUntilDue +
+                                 " | Hours until due: " + hoursUntilDue);
+                
+                // Send warnings at 3 days, 1 day, and on due date (0 days left)
+                if (daysUntilDue == 3 || daysUntilDue == 1 || daysUntilDue == 0) {
+                    try {
+                        smsService.sendDisposalWarningNotification(
+                            job.getContact(),
+                            job.getCustomerName(),
+                            job.getTransactionId(),
+                            (int) daysUntilDue
+                        );
+                        warningsSent++;
+                        System.out.println("✅ Sent disposal warning for: " + job.getTransactionId() + 
+                                         " | Days left: " + daysUntilDue);
+                    } catch (Exception e) {
+                        System.err.println("❌ Failed to send disposal warning for " + job.getTransactionId() + 
+                                         ": " + e.getMessage());
+                    }
+                }
+            }
+        }
+        
+        System.out.println("📊 Disposal Warning Summary: " + warningsSent + " warnings sent out of " + unclaimedJobs.size() + " unclaimed jobs");
+    }
+
+    // Updated expiration check method
+    @Scheduled(fixedRate = 3600000) // Run every hour
     public void checkForExpiredJobs() {
         LocalDateTime now = getCurrentManilaTime();
         List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
+
+        System.out.println("⏰ Hourly expiration check running at: " + now);
+        int expiredCount = 0;
 
         for (LaundryJob job : unclaimedJobs) {
             if (job.isDisposed()) {
@@ -785,9 +840,106 @@ public class LaundryJobService {
             if (job.getDueDate() != null && now.isAfter(job.getDueDate()) && !job.isExpired()) {
                 job.setExpired(true);
                 laundryJobRepository.save(job);
+                expiredCount++;
                 System.out.println("⏰ Job expired: " + job.getTransactionId() + " - " + job.getCustomerName());
+                
+                // Send final expiration notification
+                try {
+                    smsService.sendDisposalWarningNotification(
+                        job.getContact(),
+                        job.getCustomerName(),
+                        job.getTransactionId(),
+                        0 // 0 days left - being disposed today
+                    );
+                    System.out.println("✅ Sent final expiration notice for: " + job.getTransactionId());
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to send final expiration notice for " + job.getTransactionId() + 
+                                     ": " + e.getMessage());
+                }
             }
         }
+        
+        if (expiredCount > 0) {
+            System.out.println("📊 Expiration Check Summary: " + expiredCount + " jobs marked as expired");
+        }
+    }
+
+    // Method to get jobs that need disposal warnings (for manual triggering if needed)
+    public List<LaundryJob> getJobsNeedingDisposalWarnings() {
+        LocalDateTime now = getCurrentManilaTime();
+        List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
+        
+        return unclaimedJobs.stream()
+                .filter(job -> !job.isDisposed() && !job.isExpired())
+                .filter(job -> job.getDueDate() != null)
+                .filter(job -> {
+                    long daysUntilDue = java.time.Duration.between(now, job.getDueDate()).toDays();
+                    return daysUntilDue <= 3 && daysUntilDue >= 0;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // Helper method for manual triggering
+    public void checkAndSendDisposalWarningsForJob(LaundryJob job) {
+        LocalDateTime now = getCurrentManilaTime();
+        
+        if (job.isDisposed() || job.isExpired() || job.getDueDate() == null) {
+            return;
+        }
+        
+        long daysUntilDue = java.time.Duration.between(now, job.getDueDate()).toDays();
+        
+        System.out.println("📅 Manual Check - Job: " + job.getTransactionId() + 
+                         " | Due: " + job.getDueDate() + 
+                         " | Days until due: " + daysUntilDue);
+        
+        // Send warnings at 3 days, 1 day, and on due date
+        if (daysUntilDue == 3 || daysUntilDue == 1 || daysUntilDue == 0) {
+            try {
+                smsService.sendDisposalWarningNotification(
+                    job.getContact(),
+                    job.getCustomerName(),
+                    job.getTransactionId(),
+                    (int) daysUntilDue
+                );
+                System.out.println("✅ Sent disposal warning for: " + job.getTransactionId() + 
+                                 " | Days left: " + daysUntilDue);
+            } catch (Exception e) {
+                System.err.println("❌ Failed to send disposal warning for " + job.getTransactionId() + 
+                                 ": " + e.getMessage());
+            }
+        }
+    }
+
+    // Method to manually trigger disposal warnings for all eligible jobs
+    public Map<String, Object> manuallyTriggerDisposalWarnings() {
+        LocalDateTime now = getCurrentManilaTime();
+        List<LaundryJob> jobsNeedingWarnings = getJobsNeedingDisposalWarnings();
+        int warningsSent = 0;
+        int errors = 0;
+        
+        System.out.println("🔔 MANUAL TRIGGER: Checking " + jobsNeedingWarnings.size() + " jobs for disposal warnings");
+        System.out.println("📍 Current Manila Time: " + now);
+        
+        for (LaundryJob job : jobsNeedingWarnings) {
+            try {
+                checkAndSendDisposalWarningsForJob(job);
+                warningsSent++;
+            } catch (Exception e) {
+                errors++;
+                System.err.println("❌ Failed to send warning for job " + job.getTransactionId() + ": " + e.getMessage());
+            }
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalJobsChecked", jobsNeedingWarnings.size());
+        result.put("warningsSent", warningsSent);
+        result.put("errors", errors);
+        result.put("timestamp", now.toString());
+        
+        System.out.println("📊 Manual Trigger Summary: " + warningsSent + " warnings sent, " + errors + " errors");
+        
+        return result;
     }
 
     public List<LaundryJob> searchLaundryJobsByCustomerName(String customerName) {

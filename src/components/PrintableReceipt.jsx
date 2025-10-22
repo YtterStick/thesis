@@ -82,7 +82,15 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
     useEffect(() => {
         if (qrValue) {
             console.log("📱 QR Code will direct to:", qrValue);
-            QR.toDataURL(qrValue, { width: 80 }, (err, url) => {
+            // Generate ultra high quality QR for printing
+            QR.toDataURL(qrValue, { 
+                width: 400, // Ultra high resolution for massive print
+                margin: 3,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, (err, url) => {
                 if (!err) {
                     setQrImage(url);
                 } else {
@@ -103,7 +111,7 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
     return (
         <div className="printable-area">
             {/* Close Button - Above the receipt */}
-            <div className="mb-2 flex justify-end print:hidden">
+            <div className="mb-2 flex justify-end print-hidden">
                 <button
                     onClick={onClose}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-600 text-white transition-colors hover:bg-gray-700"
@@ -113,154 +121,158 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                 </button>
             </div>
 
-            {/* Compact Receipt */}
-            <div className="mx-auto max-w-sm space-y-2 rounded border border-dashed border-gray-300 bg-white p-3 font-mono text-xs shadow-md">
+            {/* Compact Receipt - UI Card remains exactly the same */}
+            <div className="mx-auto max-w-sm space-y-2 rounded border border-dashed border-gray-300 bg-white p-3 font-mono text-xs shadow-md receipt-optimized">
                 {/* Store Header - Using actual settings */}
-                <div className="text-center">
-                    <div className="text-base font-bold uppercase text-gray-900">{settings.storeName}</div>
-                    <div className="text-[10px] text-gray-600">{settings.address}</div>
-                    <div className="text-[10px] text-gray-600">{settings.phone}</div>
+                <div className="text-center store-header">
+                    <div className="text-base font-bold uppercase text-gray-900 header-title">{settings.storeName}</div>
+                    <div className="text-[10px] text-gray-600 header-info">{settings.address}</div>
+                    <div className="text-[10px] text-gray-600 header-info">{settings.phone}</div>
                 </div>
 
-                <hr className="my-1 border-gray-300" />
+                <hr className="my-1 border-gray-300 divider" />
 
                 {/* Invoice Meta */}
-                <div className="grid grid-cols-2 gap-1 text-[10px]">
-                    <div className="text-gray-700">
-                        Invoice #: <span className="font-bold text-gray-900">{invoiceNumber}</span>
+                <div className="grid grid-cols-2 gap-1 text-[10px] invoice-meta">
+                    <div className="text-gray-700 label">
+                        Invoice #: <span className="font-bold text-gray-900 value-bold">{invoiceNumber}</span>
                     </div>
-                    <div className="text-right text-gray-700">
-                        Date: <span className="font-bold text-gray-900">{formatDate(issueDate)}</span>
+                    <div className="text-right text-gray-700 label">
+                        Date: <span className="font-bold text-gray-900 value-bold">{formatDate(issueDate)}</span>
                     </div>
-                    <div className="text-gray-700">
-                        Customer: <span className="font-bold text-gray-900">{customerName}</span>
+                    <div className="text-gray-700 label">
+                        Customer: <span className="font-bold text-gray-900 value-bold">{customerName}</span>
                     </div>
-                    <div className="text-right text-gray-700">
-                        Contact: <span className="font-bold text-gray-900">{contact || "—"}</span>
+                    <div className="text-right text-gray-700 label">
+                        Contact: <span className="font-bold text-gray-900 value-bold">{contact || "—"}</span>
                     </div>
-                    <div className="text-gray-700">
-                        Staff: <span className="font-bold text-gray-900">{staffId || "—"}</span>
+                    <div className="text-gray-700 label">
+                        Staff: <span className="font-bold text-gray-900 value-bold">{staffId || "—"}</span>
                     </div>
-                    <div className="text-right text-gray-700">
-                        Payment: <span className="font-bold text-gray-900">{paymentMethod}</span>
+                    <div className="text-right text-gray-700 label">
+                        Payment: <span className="font-bold text-gray-900 value-bold">{paymentMethod}</span>
                     </div>
 
                     {paymentMethod === "GCash" && gcashReference && (
-                        <div className="col-span-2 flex justify-between rounded bg-yellow-50 px-1 py-0.5 text-[9px]">
-                            <span className="text-gray-700">GCash Ref:</span>
-                            <span className="font-mono text-gray-900">{gcashReference}</span>
+                        <div className="col-span-2 flex justify-between rounded bg-yellow-50 px-1 py-0.5 text-[9px] gcash-ref">
+                            <span className="text-gray-700 label-bold">GCash Ref:</span>
+                            <span className="font-mono text-gray-900 value-bold">{gcashReference}</span>
                         </div>
                     )}
 
-                    <div className="col-span-2 flex justify-between text-[10px] font-bold text-red-600">
+                    <div className="col-span-2 flex justify-between text-[10px] font-bold text-red-600 due-date">
                         <span>Due Date:</span>
                         <span>{formatDate(dueDate)}</span>
                     </div>
                 </div>
 
-                <hr className="my-1 border-gray-300" />
+                <hr className="my-1 border-gray-300 divider" />
 
                 {/* Service Details */}
-                <div>
-                    <div className="mb-0.5 text-[10px] font-bold uppercase text-gray-900">Service Details</div>
+                <div className="service-section">
+                    <div className="mb-0.5 text-[10px] font-bold uppercase text-gray-900 section-title">Service Details</div>
                     <div className="space-y-0.5">
-                        <div className="flex justify-between text-gray-700">
-                            <span>
+                        <div className="flex justify-between text-gray-700 service-item">
+                            <span className="label">
                                 {serviceName}: {loads}
                             </span>
-                            <span className="text-gray-900">{formatCurrency(loadsTotal)}</span>
+                            <span className="text-gray-900 value-bold">{formatCurrency(loadsTotal)}</span>
                         </div>
                         {servicePrice > 0 && (
-                            <div className="pl-1 text-[9px] text-gray-600">Rate: {formatCurrency(servicePrice)} per load</div>
+                            <div className="pl-1 text-[9px] text-gray-600 rate-info">Rate: {formatCurrency(servicePrice)} per load</div>
                         )}
                     </div>
                 </div>
 
                 {/* Consumables */}
                 {consumables.length > 0 && (
-                    <div>
-                        <div className="mb-0.5 text-[10px] font-bold uppercase text-gray-900">Consumables</div>
+                    <div className="consumables-section">
+                        <div className="mb-0.5 text-[10px] font-bold uppercase text-gray-900 section-title">Consumables</div>
                         <div className="space-y-0.5">
                             {consumables.map((item, index) => (
                                 <div
                                     key={index}
-                                    className="flex justify-between text-gray-700"
+                                    className="flex justify-between text-gray-700 consumable-item"
                                 >
-                                    <span>
+                                    <span className="label">
                                         {item.name}: {item.quantity}
                                     </span>
-                                    <span className="text-gray-900">{formatCurrency((item.price || 0) * (item.quantity || 0))}</span>
+                                    <span className="text-gray-900 value-bold">{formatCurrency((item.price || 0) * (item.quantity || 0))}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
 
-                <hr className="my-1 border-gray-300" />
+                <hr className="my-1 border-gray-300 divider" />
 
                 {/* Totals */}
-                <div className="space-y-0.5">
-                    <div className="flex justify-between font-bold text-gray-900">
+                <div className="space-y-0.5 totals-section">
+                    <div className="flex justify-between font-bold text-gray-900 total-amount">
                         <span>Total Amount:</span>
                         <span>{formatCurrency(finalTotal)}</span>
                     </div>
-                    <div className="flex justify-between text-[10px] text-gray-700">
-                        <span>Amount Given:</span>
-                        <span>{formatCurrency(amountGiven)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] text-gray-700">
-                        <span>Change:</span>
-                        <span>{formatCurrency(change)}</span>
-                    </div>
+                    {amountGiven > 0 && (
+                        <>
+                            <div className="flex justify-between text-[10px] text-gray-700 payment-info">
+                                <span>Amount Given:</span>
+                                <span className="value-bold">{formatCurrency(amountGiven)}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] text-gray-700 payment-info">
+                                <span>Change:</span>
+                                <span className="value-bold">{formatCurrency(change)}</span>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Terms & Conditions */}
-                <div className="mt-1 rounded bg-gray-100 p-1 text-[9px]">
-                    <div className="mb-0.5 font-bold text-gray-900">Terms & Conditions</div>
-                    <p className="text-gray-700">
+                <div className="mt-1 rounded bg-gray-100 p-1 text-[9px] terms-section">
+                    <div className="mb-0.5 font-bold text-gray-900 section-title">Terms & Conditions</div>
+                    <p className="text-gray-700 terms-text">
                         Laundry must be claimed within 7 days. Unclaimed items may be subject to disposal. Please retain your invoice for
                         verification.
                     </p>
                 </div>
 
-                {/* FIXED QR Code Section - Simple tracking URL */}
+                {/* MASSIVE QR Code Section - Dominates the receipt */}
                 {qrValue && (
-                    <div className="mt-1 text-center">
+                    <div className="mt-2 text-center qr-section">
                         <div className="flex justify-center">
-                            <div className="rounded border border-gray-300 bg-white p-1">
-                                {/* Screen QR Code */}
-                                <div className="print:hidden">
+                            <div className="rounded border border-gray-300 bg-white p-2 qr-container">
+                                {/* Screen QR Code - Normal size */}
+                                <div className="print-hidden">
                                     <QRCode
                                         value={qrValue}
                                         size={60}
                                     />
                                 </div>
-                                {/* Print QR Code */}
+                                {/* Print QR Code - MASSIVE SIZE */}
                                 {qrImage && (
-                                    <div className="hidden print:block">
+                                    <div className="hidden print-block">
                                         <img 
                                             src={qrImage} 
                                             alt="QR Code" 
-                                            className="h-[60px] w-[60px]"
+                                            className="h-[180px] w-[180px] qr-optimized"
                                         />
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <div className="mt-0.5 text-[9px] text-gray-600">
+                        <div className="mt-1 text-[9px] text-gray-600 qr-label">
                             Scan to track your laundry status
                         </div>
                     </div>
                 )}
 
                 {/* Footer - Using actual footer note from settings */}
-                <div className="mt-1 border-t border-gray-300 pt-1 text-center text-[9px] text-gray-600">
+                <div className="mt-2 border-t border-gray-300 pt-1 text-center text-[9px] text-gray-600 footer">
                     {settings.footerNote}
                 </div>
             </div>
 
             {/* Print Button */}
-            <div className="mt-4 text-center print:hidden">
+            <div className="mt-4 text-center print-hidden">
                 <button
                     onClick={handlePrint}
                     className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700"
@@ -269,80 +281,6 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                     Print Receipt
                 </button>
             </div>
-
-            {/* Print Styles - Kept exactly as before */}
-            <style jsx>{`
-                @media print {
-                    @page {
-                        margin: 0.1in;
-                        size: auto;
-                    }
-
-                    body * {
-                        visibility: hidden;
-                    }
-
-                    .printable-area,
-                    .printable-area * {
-                        visibility: visible;
-                    }
-
-                    .printable-area {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                        margin: 0;
-                        padding: 0;
-                    }
-
-                    /* Make sure everything fits on one page */
-                    .max-w-sm {
-                        max-width: 100% !important;
-                        margin: 0 auto;
-                    }
-
-                    /* Hide buttons when printing */
-                    .print\\:hidden {
-                        display: none !important;
-                    }
-
-                    /* Increase text size slightly for print */
-                    .text-xs {
-                        font-size: 11px;
-                    }
-                    .text-\\[10px\\] {
-                        font-size: 10px;
-                    }
-                    .text-\\[9px\\] {
-                        font-size: 9px;
-                    }
-
-                    /* Ensure proper contrast for print */
-                    .text-gray-600,
-                    .text-gray-700 {
-                        color: #4b5563 !important;
-                    }
-
-                    .text-gray-900 {
-                        color: #000 !important;
-                    }
-
-                    /* Remove background colors for print */
-                    .bg-yellow-50,
-                    .bg-gray-100 {
-                        background: #f9fafb !important;
-                    }
-
-                    /* Ensure QR code is visible in print */
-                    .hidden.print\\:block {
-                        display: block !important;
-                    }
-                    .print\\:hidden {
-                        display: none !important;
-                    }
-                }
-            `}</style>
         </div>
     );
 };
