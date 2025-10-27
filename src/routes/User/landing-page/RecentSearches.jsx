@@ -1,6 +1,13 @@
 import { motion } from "framer-motion";
 
 const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => {
+    // Scrollbar colors - use card color for scrollbar thumb in both modes
+    const scrollbarThumbColor = isDarkMode ? "#2A524C" : "#F3EDE3"; // Green for dark, card color for light
+    const scrollbarThumbHover = isDarkMode ? "#1E3D38" : "#E8E0D0"; // Darker green for dark, slightly darker cream for light
+
+    // Card hover colors - better combinations
+    const cardHoverColor = isDarkMode ? "#F8F5F0" : "#E8E0D0"; // Light cream for dark, slightly darker cream for light
+
     return (
         <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -14,7 +21,16 @@ const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => 
             }}
         >
             <h3 className="mb-4 text-lg font-bold md:text-xl">Recent Searches</h3>
-            <div className="max-h-80 space-y-3 overflow-y-auto pr-2 md:max-h-96 md:space-y-4">
+            
+            {/* Fixed height scrollable container with custom scrollbar */}
+            <div 
+                className="space-y-3 overflow-y-auto pr-2 md:space-y-4"
+                style={{ 
+                    height: '280px', // Fixed height to show exactly 2 cards
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: `${scrollbarThumbColor} ${isDarkMode ? "#F3EDE3" : "#183D3D"}`,
+                }}
+            >
                 {recentSearches.length > 0 ? (
                     recentSearches.map((item, index) => (
                         <motion.div
@@ -23,15 +39,11 @@ const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => 
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 }}
                             whileHover={{ 
-                                scale: 1.02,
-                                y: -2,
-                                transition: { duration: 0.2 }
+                                backgroundColor: cardHoverColor,
                             }}
-                            className={`cursor-pointer rounded-xl border p-3 transition-all md:p-4 ${
-                                isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
-                            }`}
+                            className={`cursor-pointer rounded-xl border p-3 transition-all md:p-4 min-h-[120px]`}
                             style={{
-                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3", // Card color
                                 borderColor: isDarkMode ? "#2A524C" : "#183D3D",
                                 color: isDarkMode ? "#13151B" : "#183D3D",
                             }}
@@ -63,9 +75,9 @@ const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => 
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="rounded-xl border p-4 text-center"
+                        className="rounded-xl border p-4 text-center flex flex-col justify-center items-center min-h-[120px]"
                         style={{
-                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3", // Card color
                             borderColor: isDarkMode ? "#2A524C" : "#183D3D",
                             color: isDarkMode ? "#13151B" : "#183D3D",
                         }}
@@ -75,6 +87,36 @@ const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => 
                     </motion.div>
                 )}
             </div>
+
+            {/* Dynamic scrollbar styles that update with theme */}
+            <style>{`
+                /* Scrollbar for Webkit browsers (Chrome, Safari, Edge) */
+                .overflow-y-auto::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .overflow-y-auto::-webkit-scrollbar-track {
+                    background: ${isDarkMode ? "#F3EDE3" : "#183D3D"};
+                    border-radius: 4px;
+                    margin: 4px 0;
+                }
+                .overflow-y-auto::-webkit-scrollbar-thumb {
+                    background: ${scrollbarThumbColor};
+                    border-radius: 4px;
+                    border: 2px solid ${isDarkMode ? "#F3EDE3" : "#183D3D"};
+                }
+                .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+                    background: ${scrollbarThumbHover};
+                }
+                .overflow-y-auto::-webkit-scrollbar-thumb:active {
+                    background: ${scrollbarThumbHover};
+                }
+                
+                /* Scrollbar for Firefox */
+                .overflow-y-auto {
+                    scrollbar-width: thin;
+                    scrollbar-color: ${scrollbarThumbColor} ${isDarkMode ? "#F3EDE3" : "#183D3D"};
+                }
+            `}</style>
         </motion.div>
     );
 };

@@ -39,7 +39,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
         });
   };
 
-  // Updated QR code logic - Use URL parameters before the hash
+  // Keep your original URL structure - this is correct for your app
   const trackingId = invoiceNumber || transactionId;
   const qrValue = trackingId 
     ? `https://www.starwashph.com/?search=${encodeURIComponent(trackingId)}#service_tracking`
@@ -54,12 +54,13 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
   useEffect(() => {
     if (qrValue) {
       QR.toDataURL(qrValue, { 
-        width: 400, // Ultra high resolution for printing
-        margin: 3,
+        width: 800, // Higher resolution for printing
+        margin: 4, // Increased margin for better scanning
         color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
+          dark: '#000000', // Pure black
+          light: '#FFFFFF' // Pure white
+        },
+        errorCorrectionLevel: 'H' // Highest error correction
       }, (err, url) => {
         if (!err) setQrImage(url);
       });
@@ -192,16 +193,22 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
           </p>
         </div>
 
-        {/* QR Code Section */}
+        {/* QR Code Section - Optimized for scanning */}
         {qrValue && (
           <div className="mt-2 text-center qr-section">
             <div className="flex justify-center">
               <div className="rounded border border-gray-300 bg-white p-2 qr-container">
-                {/* Screen QR Code - Normal size */}
+                {/* Screen QR Code - Optimized size and contrast */}
                 <div className="print-hidden">
-                  <QRCode value={qrValue} size={60} />
+                  <QRCode 
+                    value={qrValue} 
+                    size={80} // Larger for better mobile scanning
+                    bgColor="#FFFFFF"
+                    fgColor="#000000"
+                    level="H" // High error correction
+                  />
                 </div>
-                {/* Print QR Code - MASSIVE SIZE */}
+                {/* Print QR Code - Ultra high resolution */}
                 {qrImage && (
                   <div className="hidden print-block">
                     <img 
@@ -213,8 +220,12 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
                 )}
               </div>
             </div>
-            <div className="mt-1 text-[9px] text-gray-600 qr-label">
+            <div className="mt-1 text-[10px] text-gray-600 qr-label">
               Scan to track your laundry status
+            </div>
+            {/* Optional: Display tracking ID for manual entry */}
+            <div className="mt-1 text-[8px] text-gray-500">
+              Tracking ID: {trackingId}
             </div>
           </div>
         )}

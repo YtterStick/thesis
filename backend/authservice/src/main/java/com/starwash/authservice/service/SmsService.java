@@ -39,17 +39,17 @@ public class SmsService {
         
         if (daysUntilDisposal == 1) {
             message = String.format(
-                "Hi %s! URGENT: Your laundry (Order: %s) will be DISPOSED TOMORROW if not claimed. Please claim immediately at StarWash!",
+                "Hi %s! URGENT: Your laundry (Order: %s) will be DISPOSED TOMORROW if not claimed. Please claim immediately at Star Wash!",
                 customerName, transactionId
             );
         } else if (daysUntilDisposal == 0) {
             message = String.format(
-                "Hi %s! FINAL WARNING: Your laundry (Order: %s) will be DISPOSED TODAY if not claimed. Please claim immediately at StarWash!",
+                "Hi %s! FINAL WARNING: Your laundry (Order: %s) will be DISPOSED TODAY if not claimed. Please claim immediately at Star Wash!",
                 customerName, transactionId
             );
         } else {
             message = String.format(
-                "Hi %s! REMINDER: Your laundry (Order: %s) will be disposed in %d days if not claimed. Please claim at StarWash!",
+                "Hi %s! REMINDER: Your laundry (Order: %s) will be disposed in %d days if not claimed. Please claim at Star Wash!",
                 customerName, transactionId, daysUntilDisposal
             );
         }

@@ -14,36 +14,43 @@ const QRScanner = ({
     const [scanMethod, setScanMethod] = useState(null);
     const [qrLoading, setQrLoading] = useState(false);
     const [qrError, setQrError] = useState(null);
-    const [scannedUrl, setScannedUrl] = useState(null);
+    const [scannedData, setScannedData] = useState(null);
+    const [cameraReady, setCameraReady] = useState(false);
+    const [scanAttempts, setScanAttempts] = useState(0);
 
     const fileInputRef = useRef(null);
-    const scannerRef = useRef(null);
     const scannerInstanceRef = useRef(null);
+    const scanTimeoutRef = useRef(null);
 
-    // Clean up on unmount
     useEffect(() => {
         return () => {
             stopScanner();
+            if (scanTimeoutRef.current) {
+                clearTimeout(scanTimeoutRef.current);
+            }
         };
     }, []);
 
-    const handleScanQR = () => {
-        setShowScanner(true);
-        setScanMethod(null);
-        setQrError(null);
-        setScannedUrl(null);
-    };
+    useEffect(() => {
+        if (showScanner) {
+            setScanMethod(null);
+            setQrError(null);
+            setScannedData(null);
+            setCameraReady(false);
+            setScanAttempts(0);
+        }
+    }, [showScanner]);
 
-    // Camera Scanner with Html5Qrcode
     const startCameraScan = async () => {
         try {
             setIsScanning(true);
             setScanMethod("camera");
             setQrLoading(true);
             setQrError(null);
-            setScannedUrl(null);
+            setScannedData(null);
+            setCameraReady(false);
+            setScanAttempts(0);
 
-            // Wait for DOM to update
             await new Promise((resolve) => setTimeout(resolve, 100));
 
             try {
@@ -51,72 +58,90 @@ const QRScanner = ({
                 console.log("✅ Html5Qrcode loaded successfully");
 
                 const scannerElementId = "html5qr-code-scanner";
-                const scannerElement = document.getElementById(scannerElementId);
 
-                if (!scannerElement) {
-                    throw new Error("Scanner element not found");
-                }
-
-                console.log("🎥 Starting camera with Html5Qrcode...");
-
-                // Create scanner instance
                 const scanner = new Html5Qrcode(scannerElementId);
                 scannerInstanceRef.current = scanner;
 
+                // SIMPLIFIED CONFIGURATION - No undefined constants
+                const config = {
+                    fps: isMobile ? 10 : 5, // Lower FPS for better processing on desktop
+                    qrbox: isMobile ? { width: 250, height: 250 } : { width: 300, height: 300 },
+                    aspectRatio: 1.0,
+                    focusMode: "continuous",
+                    
+                    // Simple experimental features
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
+                };
+
+                // Simple camera constraints
+                const cameraConstraints = {
+                    facingMode: "environment"
+                };
+
                 await scanner
                     .start(
-                        {
-                            facingMode: "environment",
-                        },
-                        {
-                            fps: 10,
-                            qrbox: isMobile ? { width: 200, height: 200 } : { width: 250, height: 250 },
-                        },
+                        cameraConstraints,
+                        config,
                         (decodedText) => {
                             console.log("✅ QR Code detected:", decodedText);
                             handleScannedQRCode(decodedText);
                         },
                         (errorMessage) => {
-                            // This is normal - it's called when no QR code is found
-                            console.log("🔍 Scanning...", errorMessage);
+                            // Increment scan attempts for debugging
+                            setScanAttempts(prev => prev + 1);
                         },
                     )
+                    .then(() => {
+                        setCameraReady(true);
+                        setQrLoading(false);
+                        console.log("✅ Camera started successfully");
+                    })
                     .catch((error) => {
                         console.error("❌ Scanner start error:", error);
-                        setQrError("Failed to start camera: " + error.message);
-                        setQrLoading(false);
-                        setIsScanning(false);
+                        handleCameraError(error);
                     });
 
-                setQrLoading(false);
-                console.log("✅ Camera started successfully");
             } catch (error) {
                 console.error("❌ Camera error:", error);
-                setQrError("Cannot access camera. Please check permissions.");
-                setIsScanning(false);
-                setScanMethod(null);
-                setQrLoading(false);
+                handleCameraError(error);
             }
         } catch (error) {
             console.error("❌ Scanner setup error:", error);
-            setQrError("Cannot start QR scanner.");
-            setIsScanning(false);
-            setScanMethod(null);
-            setQrLoading(false);
+            handleCameraError(error);
         }
     };
 
-    // File Upload with Html5Qrcode
+    const handleCameraError = (error) => {
+        let errorMsg = "Camera failed to start";
+        
+        if (error.message?.includes("Permission") || error.includes("Permission")) {
+            errorMsg = "Camera permission denied. Please allow camera access.";
+        } else if (error.message?.includes("NotFound") || error.includes("NotFound")) {
+            errorMsg = "No camera found on this device.";
+        } else if (error.message?.includes("NotAllowed") || error.includes("NotAllowed")) {
+            errorMsg = "Camera access denied. Please check permissions.";
+        } else if (error.message?.includes("NotSupported") || error.includes("NotSupported")) {
+            errorMsg = "QR scanning not supported in this browser.";
+        }
+        
+        setQrError(errorMsg);
+        setIsScanning(false);
+        setScanMethod(null);
+        setQrLoading(false);
+    };
+
     const handleFileUpload = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        console.log("📁 Processing image with Html5Qrcode:", file.name);
+        console.log("📁 Processing image");
         setIsScanning(true);
         setScanMethod("file");
         setQrLoading(true);
         setQrError(null);
-        setScannedUrl(null);
+        setScannedData(null);
 
         try {
             event.target.value = "";
@@ -126,9 +151,7 @@ const QRScanner = ({
             }
 
             const { Html5Qrcode } = await import("html5-qrcode");
-            console.log("✅ Html5Qrcode loaded for file scan");
 
-            // Create a temporary hidden element for file scanning
             const tempScannerId = "temp-file-scanner-" + Date.now();
             const tempDiv = document.createElement("div");
             tempDiv.id = tempScannerId;
@@ -138,92 +161,114 @@ const QRScanner = ({
             try {
                 const scanner = new Html5Qrcode(tempScannerId);
 
-                console.log("🔍 Scanning file with Html5Qrcode...");
+                // Simple file scan
                 const decodedText = await scanner.scanFile(file, true);
 
                 if (decodedText) {
-                    console.log("🎉 QR CODE FOUND!", decodedText);
+                    console.log("✅ QR CODE FOUND:", decodedText);
                     handleScannedQRCode(decodedText);
                 } else {
-                    console.log("❌ No QR code found in image");
-                    setQrError("No QR code found. Please try a clearer image.");
-                    setIsScanning(false);
-                    setQrLoading(false);
+                    throw new Error("No QR code detected");
                 }
+
             } finally {
-                // Always clean up the temporary element
                 if (document.body.contains(tempDiv)) {
                     document.body.removeChild(tempDiv);
                 }
             }
         } catch (error) {
             console.error("❌ Upload/scan error:", error);
-
-            // Handle specific error cases
-            let errorMessage = "Scan failed: " + error.message;
-            if (error.message && typeof error.message === "string") {
-                if (error.message.includes("No MultiFormat Readers") || error.message.includes("NotFoundException")) {
-                    errorMessage = "No QR code found in the image. Please try a clearer image.";
-                } else if (error.message.includes("file format")) {
-                    errorMessage = "Unsupported image format. Please use JPG, PNG, or WebP.";
-                }
-            }
-
-            setQrError(errorMessage);
+            setQrError("Cannot read QR code from this image. Try a clearer photo.");
             setIsScanning(false);
             setQrLoading(false);
         }
     };
 
-    // Handle scanned QR code data
-    const handleScannedQRCode = (decodedText) => {
-        console.log("📱 Raw QR data:", decodedText);
+    // Validate if it's a StarWash invoice QR code
+    const isValidInvoiceQR = (decodedText) => {
+        if (!decodedText) return false;
+        
+        const text = decodedText.trim();
+        
+        // Check if it's a StarWash URL with invoice
+        if (text.includes("starwashph.com")) {
+            return true;
+        }
+        
+        // Check if it's just an invoice number starting with INV-
+        if (text.startsWith('INV-')) {
+            return true;
+        }
+        
+        // Not a valid StarWash invoice QR code
+        return false;
+    };
 
-        // Set the scanned URL for logging
-        setScannedUrl(decodedText);
-
-        // Log the URL to console so you can see if it's working
-        console.log("🎯 SCANNED URL:", decodedText);
-        console.log("🔗 URL Type:", typeof decodedText);
-        console.log("📏 URL Length:", decodedText.length);
-
-        // Extract receipt number from URL if it's a full URL, otherwise use raw data
-        let receiptNumber = decodedText.trim();
-
-        // If it's a URL, try to extract the invoice number
-        if (decodedText.includes("/")) {
+    // Extract invoice number from valid QR code
+    const extractInvoiceNumber = (decodedText) => {
+        const text = decodedText.trim();
+        
+        // If it's just the invoice number
+        if (text.startsWith('INV-')) {
+            return text;
+        }
+        
+        // If it's a URL, extract from search parameter
+        if (text.includes("starwashph.com")) {
             try {
-                const url = new URL(decodedText);
-                const pathParts = url.pathname.split("/");
+                const url = new URL(text);
+                if (url.searchParams.has('search')) {
+                    return url.searchParams.get('search');
+                }
+                // Extract from path like /track/INV-123
+                const pathParts = url.pathname.split('/');
+                for (let part of pathParts) {
+                    if (part.startsWith('INV-')) {
+                        return part;
+                    }
+                }
+                // Last resort: get last part of path
                 const lastPart = pathParts[pathParts.length - 1];
-
                 if (lastPart && lastPart !== "track") {
-                    receiptNumber = lastPart;
-                    console.log("📄 Extracted receipt number from URL:", receiptNumber);
+                    return lastPart;
                 }
             } catch (e) {
-                console.log("⚠️ Not a valid URL, using raw data as receipt number");
+                // If URL parsing fails, try to extract INV- from the text
+                const invMatch = text.match(/INV-\w+/);
+                return invMatch ? invMatch[0] : null;
             }
         }
+        
+        return null;
+    };
 
-        console.log("🎯 Final receipt number to use:", receiptNumber);
+    const handleScannedQRCode = (decodedText) => {
+        console.log("📱 PROCESSING SCANNED DATA:", decodedText);
 
-        if (receiptNumber && receiptNumber.length > 0) {
-            // Call the parent callback with the scanned data
-            onQRScanned(receiptNumber, decodedText);
+        // Validate if it's a StarWash invoice QR code
+        if (!isValidInvoiceQR(decodedText)) {
+            setQrError("This is not a valid StarWash laundry QR code. Please scan a laundry receipt QR code.");
+            setIsScanning(false);
+            setQrLoading(false);
+            return;
+        }
 
-            // Show success message with the scanned URL
-            console.log("✅ QR code scanned successfully!");
-            console.log("🔗 Full scanned URL:", decodedText);
-            console.log("📄 Receipt number extracted:", receiptNumber);
+        // Extract invoice number
+        const invoiceNumber = extractInvoiceNumber(decodedText);
+        
+        if (invoiceNumber) {
+            setScannedData(`Found: ${invoiceNumber}`);
+            console.log("✅ VALID INVOICE - AUTO SEARCHING:", invoiceNumber);
+            
+            // INSTANT callback
+            onQRScanned(invoiceNumber, decodedText);
 
-            // Close scanner after short delay to show success
+            // Close immediately
             setTimeout(() => {
                 closeScanner();
-            }, 1000);
+            }, 300);
         } else {
-            console.error("❌ Invalid QR code - empty data");
-            setQrError("Invalid QR code - no data found");
+            setQrError("Could not extract invoice number. Please try again.");
             setIsScanning(false);
             setQrLoading(false);
         }
@@ -235,17 +280,12 @@ const QRScanner = ({
 
     const stopScanner = () => {
         if (scannerInstanceRef.current) {
-            scannerInstanceRef.current
-                .stop()
-                .then(() => {
-                    console.log("✅ Scanner stopped successfully");
-                    scannerInstanceRef.current.clear();
-                    scannerInstanceRef.current = null;
-                })
-                .catch((error) => {
-                    console.warn("Scanner stop warning:", error);
-                    scannerInstanceRef.current = null;
-                });
+            scannerInstanceRef.current.stop().then(() => {
+                scannerInstanceRef.current.clear();
+                scannerInstanceRef.current = null;
+            }).catch(() => {
+                scannerInstanceRef.current = null;
+            });
         }
     };
 
@@ -256,7 +296,37 @@ const QRScanner = ({
         setScanMethod(null);
         setQrLoading(false);
         setQrError(null);
+        setScannedData(null);
+        setCameraReady(false);
+        setScanAttempts(0);
     };
+
+    const retryScan = () => {
+        setQrError(null);
+        if (scanMethod === "camera") {
+            stopScanner();
+            setTimeout(() => {
+                startCameraScan();
+            }, 500);
+        }
+    };
+
+    // Enhanced scanner dimensions for desktop
+    const getScannerDimensions = () => {
+        if (isMobile) {
+            return {
+                width: 280,
+                height: 280
+            };
+        }
+        // Larger scanner for desktop for better printed QR code reading
+        return {
+            width: 400,
+            height: 400
+        };
+    };
+
+    const scannerDimensions = getScannerDimensions();
 
     return (
         <AnimatePresence>
@@ -265,14 +335,14 @@ const QRScanner = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
                 >
                     <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
+                        initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="relative mx-4 w-full max-w-md rounded-xl border-2 p-4"
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                        className="relative w-full max-w-md rounded-xl border-2 p-4"
                         style={{
                             backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
                             borderColor: isDarkMode ? "#2A524C" : "#183D3D",
@@ -281,12 +351,12 @@ const QRScanner = ({
                     >
                         <motion.button
                             onClick={closeScanner}
-                            whileHover={{ scale: 1.1, rotate: 90 }}
+                            whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            className="absolute right-2 top-2 transition-colors hover:opacity-70"
-                            style={{ color: isDarkMode ? "#13151B" : "#F3EDE3" }}
+                            className="absolute right-3 top-3 z-10 rounded-full bg-black bg-opacity-50 p-1 transition-colors hover:bg-opacity-70"
+                            style={{ color: "#FFFFFF" }}
                         >
-                            <X className="h-5 w-5" />
+                            <X className="h-4 w-4" />
                         </motion.button>
 
                         <h3
@@ -302,19 +372,14 @@ const QRScanner = ({
                                     className="mb-3 text-center text-sm"
                                     style={{ color: isDarkMode ? "#6B7280" : "#F3EDE3" }}
                                 >
-                                    Choose how you want to scan the QR code:
+                                    Scan your laundry receipt QR code
                                 </p>
 
                                 <motion.button
                                     onClick={startCameraScan}
-                                    whileHover={{ 
-                                        scale: 1.02,
-                                        y: -2,
-                                        backgroundColor: isDarkMode ? "#2A524C" : "#D5DCDB",
-                                        transition: { duration: 0.2 }
-                                    }}
+                                    whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all shadow-lg`}
+                                    className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all`}
                                     style={{
                                         backgroundColor: isDarkMode ? "#18442A" : "#F3EDE3",
                                         color: isDarkMode ? "#D5DCDB" : "#183D3D",
@@ -327,14 +392,9 @@ const QRScanner = ({
                                 <div className="relative">
                                     <motion.button
                                         onClick={handleUploadClick}
-                                        whileHover={{ 
-                                            scale: 1.02,
-                                            y: -2,
-                                            backgroundColor: isDarkMode ? "#3A635C" : "#E8F0EF",
-                                            transition: { duration: 0.2 }
-                                        }}
+                                        whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
-                                        className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all shadow-lg`}
+                                        className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all`}
                                         style={{
                                             backgroundColor: isDarkMode ? "#2A524C" : "#F3EDE3",
                                             color: isDarkMode ? "#D5DCDB" : "#183D3D",
@@ -356,30 +416,66 @@ const QRScanner = ({
 
                         {scanMethod === "camera" && (
                             <>
-                                <div className="relative mb-3 h-64 w-full overflow-hidden rounded-lg bg-black">
-                                    <div
-                                        id="html5qr-code-scanner"
-                                        className="h-full w-full"
-                                    />
+                                <div className="relative mb-3 flex flex-col items-center">
+                                    <div 
+                                        className="relative overflow-hidden rounded-lg bg-black"
+                                        style={{
+                                            width: scannerDimensions.width,
+                                            height: scannerDimensions.height
+                                        }}
+                                    >
+                                        <div
+                                            id="html5qr-code-scanner"
+                                            className="h-full w-full"
+                                        />
 
-                                    {qrLoading && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                                            <div className="text-center text-white">
-                                                <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin" />
-                                                <p>Loading Camera...</p>
+                                        {/* Enhanced scanning frame */}
+                                        {cameraReady && (
+                                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                                <div className={`border-2 border-white border-opacity-70 rounded-lg ${isMobile ? 'w-48 h-48' : 'w-64 h-64'}`}>
+                                                    {/* Corner markers */}
+                                                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-green-400"></div>
+                                                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-green-400"></div>
+                                                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-green-400"></div>
+                                                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-green-400"></div>
+                                                    
+                                                    {/* Scanning animation */}
+                                                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-green-400 animate-pulse"></div>
+                                                </div>
                                             </div>
+                                        )}
+
+                                        {qrLoading && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 rounded-lg">
+                                                <div className="text-center text-white">
+                                                    <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                                                    <p className="text-xs">Starting camera...</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {cameraReady && !qrLoading && !scannedData && (
+                                        <div className="mt-2 text-center">
+                                            <p className="text-xs text-green-400">
+                                                Point at laundry QR code
+                                            </p>
                                         </div>
                                     )}
                                 </div>
 
-                                {scannedUrl && (
+                                {scannedData && (
                                     <motion.div 
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="mb-3 rounded border border-green-400 bg-green-100 p-2"
+                                        className="mb-3 rounded-lg border border-green-400 bg-green-100 p-2"
                                     >
-                                        <p className="text-xs font-medium text-green-700">QR Code Scanned Successfully!</p>
-                                        <p className="mt-1 break-all text-xs text-green-600">URL: {scannedUrl}</p>
+                                        <p className="text-xs font-medium text-green-700">
+                                            ✅ {scannedData}
+                                        </p>
+                                        <p className="text-xs text-green-600 mt-1">
+                                            Auto-searching...
+                                        </p>
                                     </motion.div>
                                 )}
 
@@ -387,21 +483,24 @@ const QRScanner = ({
                                     <motion.div 
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="mb-3 text-center"
+                                        className="mb-3 text-center space-y-2"
                                     >
-                                        <p className="text-sm text-red-500">{qrError}</p>
+                                        <p className="text-xs text-red-500">{qrError}</p>
+                                        <div className="flex gap-2 justify-center">
+                                            <button
+                                                onClick={retryScan}
+                                                className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                                            >
+                                                Try again
+                                            </button>
+                                            <button
+                                                onClick={() => setScanMethod(null)}
+                                                className="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600"
+                                            >
+                                                Switch method
+                                            </button>
+                                        </div>
                                     </motion.div>
-                                )}
-
-                                {isScanning && !qrLoading && !qrError && !scannedUrl && (
-                                    <div className="text-center">
-                                        <p
-                                            className="text-xs"
-                                            style={{ color: isDarkMode ? "#6B7280" : "#F3EDE3" }}
-                                        >
-                                            Position the QR code within the frame
-                                        </p>
-                                    </div>
                                 )}
                             </>
                         )}
@@ -412,28 +511,29 @@ const QRScanner = ({
                                     <motion.div 
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
-                                        className="flex h-64 items-center justify-center rounded-lg bg-gray-100"
+                                        className="flex h-40 flex-col items-center justify-center rounded-lg bg-gray-100"
                                     >
                                         <div className="text-center">
-                                            <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin" />
-                                            <p>Processing image...</p>
-                                            <p className="mt-1 text-xs text-gray-600">Checking for QR code</p>
+                                            <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                                            <p className="text-xs">Scanning image...</p>
                                         </div>
                                     </motion.div>
                                 ) : (
-                                    <div className="flex h-64 items-center justify-center rounded-lg bg-gray-100">
-                                        <p className="text-gray-600">Select an image containing QR code</p>
+                                    <div className="flex h-40 flex-col items-center justify-center rounded-lg bg-gray-100 border-2 border-dashed border-gray-300">
+                                        <Upload className="mb-2 h-6 w-6 text-gray-400" />
+                                        <p className="text-sm text-gray-600">Select QR code image</p>
                                     </div>
                                 )}
 
-                                {scannedUrl && (
+                                {scannedData && (
                                     <motion.div 
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="mt-3 rounded border border-green-400 bg-green-100 p-2"
+                                        className="mt-2 rounded-lg border border-green-400 bg-green-100 p-2"
                                     >
-                                        <p className="text-xs font-medium text-green-700">QR Code Scanned Successfully!</p>
-                                        <p className="mt-1 break-all text-xs text-green-600">URL: {scannedUrl}</p>
+                                        <p className="text-xs font-medium text-green-700">
+                                            ✅ {scannedData}
+                                        </p>
                                     </motion.div>
                                 )}
 
@@ -441,9 +541,23 @@ const QRScanner = ({
                                     <motion.div 
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="mt-2 text-center"
+                                        className="mt-2 text-center space-y-2"
                                     >
-                                        <p className="text-sm text-red-500">{qrError}</p>
+                                        <p className="text-xs text-red-500">{qrError}</p>
+                                        <div className="flex gap-2 justify-center">
+                                            <button
+                                                onClick={handleUploadClick}
+                                                className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                                            >
+                                                Try different image
+                                            </button>
+                                            <button
+                                                onClick={() => setScanMethod(null)}
+                                                className="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600"
+                                            >
+                                                Switch method
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 )}
                             </div>
@@ -452,19 +566,15 @@ const QRScanner = ({
                         {scanMethod && (
                             <motion.button
                                 onClick={closeScanner}
-                                whileHover={{ 
-                                    scale: 1.02,
-                                    backgroundColor: isDarkMode ? "#3A635C" : "#2A635C",
-                                    transition: { duration: 0.2 }
-                                }}
+                                whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`mt-3 w-full rounded-lg py-3 text-sm font-semibold transition-colors shadow-lg sm:py-2`}
+                                className={`w-full rounded-lg py-2 text-sm font-semibold transition-colors`}
                                 style={{
                                     backgroundColor: isDarkMode ? "#6B7280" : "#2A524C",
                                     color: "#FFFFFF",
                                 }}
                             >
-                                Cancel Scan
+                                Cancel
                             </motion.button>
                         )}
                     </motion.div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
-import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter, Clock8 } from "lucide-react";
+import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter } from "lucide-react";
 import { api } from "@/lib/api-config";
 
 const MainPage = () => {
@@ -53,8 +53,8 @@ const MainPage = () => {
                     name: r.customerName,
                     service: r.serviceName,
                     loads: r.loads,
-                    detergent: r.detergent,
-                    fabric: r.fabric || "—",
+                    detergent: r.detergent || "0",
+                    fabric: r.fabric || "0",
                     price: r.totalPrice,
                     paymentMethod: r.paymentMethod || "—",
                     pickupStatus: r.pickupStatus,
@@ -67,7 +67,6 @@ const MainPage = () => {
                     disposed: r.disposed || false,
                     disposedBy: r.disposedBy || "—",
                     gcashReference: r.gcashReference || "—",
-                    unwashedLoadsCount: r.unwashedLoadsCount || 0,
                 }));
                 setRecords(mapped);
             } catch (error) {
@@ -126,10 +125,17 @@ const MainPage = () => {
 
     const filteredRecords = filterRecordsByTime(records);
 
-    // Update metrics calculation - ADD BACK UNWASHED LOADS
+    // Update metrics calculation - REPLACE UNWASHED WITH FABRIC AND DETERGENT
     const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
     const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
-    const unwashed = filteredRecords.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
+    const totalFabric = filteredRecords.reduce((acc, r) => {
+        const fabricQty = parseInt(r.fabric) || 0;
+        return acc + fabricQty;
+    }, 0);
+    const totalDetergent = filteredRecords.reduce((acc, r) => {
+        const detergentQty = parseInt(r.detergent) || 0;
+        return acc + detergentQty;
+    }, 0);
     const expired = filteredRecords.filter((r) => r.expired && !r.disposed).length;
     const unclaimed = filteredRecords.filter((r) => 
         r.pickupStatus === "UNCLAIMED" && 
@@ -159,18 +165,18 @@ const MainPage = () => {
             tooltip: "Total number of laundry loads in filtered period",
         },
         {
-            label: "Unwashed Loads",
-            value: unwashed.toLocaleString(),
-            icon: <Clock8 size={26} />,
+            label: "Total Fabric",
+            value: totalFabric.toLocaleString(),
+            icon: <Package size={26} />,
             color: "#FB923C",
-            tooltip: "Individual loads that are not yet completed",
+            tooltip: "Total fabric conditioner used",
         },
         {
-            label: "Expired Loads",
-            value: expired.toLocaleString(),
-            icon: <TimerOff size={26} />,
+            label: "Total Detergent",
+            value: totalDetergent.toLocaleString(),
+            icon: <Package size={26} />,
             color: "#A78BFA",
-            tooltip: "Loads that exceeded their pickup window (excluding disposed loads)",
+            tooltip: "Total detergent used",
         },
         {
             label: "Unclaimed Loads",
@@ -631,7 +637,7 @@ const MainPage = () => {
                 </div>
             </motion.div>
 
-            {/* Summary Cards - RESTORED ORIGINAL DESIGN */}
+            {/* Summary Cards - UPDATED WITH FABRIC AND DETERGENT */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {loading ? (
                     [...Array(5)].map((_, index) => (

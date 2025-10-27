@@ -268,10 +268,10 @@ const ViewReceipt = ({
 
   // Settings for receipt
   const settings = receiptData?.formatSettings || {
-    storeName: "STARWASH LAUNDRY",
-    address: "123 Laundry Street, City, State 12345",
-    phone: "Tel: (123) 456-7890",
-    footerNote: "Thank you for your business!",
+    storeName: "STAR WASH",
+    address: "53 A Bonifacio Street, Sta Lucia, Novaliches",
+    phone: "09150475513",
+    footerNote: "Thank you for choosing Star Wash",
   };
 
   // Don't render anything if not visible
@@ -283,7 +283,7 @@ const ViewReceipt = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isVisible ? 1 : 0 }}
-        className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+        className="inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
       >
         <div 
           className="p-4 rounded-xl max-w-xs w-full mx-4 relative border-2 printable-area"
