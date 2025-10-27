@@ -32,6 +32,7 @@ const MainPage = () => {
                 // Make sure to include the id field for the print functionality
                 const mapped = recordsData.map((r) => ({
                     id: r.id, // This is crucial for the print API call
+                    invoice: r.invoiceNumber || "—", // Add invoice number
                     name: r.customerName,
                     service: r.serviceName,
                     loads: r.loads,
@@ -114,17 +115,17 @@ const MainPage = () => {
                      }} />
             </div>
 
-            {/* Table Header Skeleton */}
+            {/* Table Header Skeleton - Updated to 10 columns */}
             <div className="overflow-x-auto rounded-lg border-2 mb-4"
                  style={{
                      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
                  }}>
                 <div className="min-w-full">
-                    <div className="grid grid-cols-9 gap-4 p-4"
+                    <div className="grid grid-cols-10 gap-4 p-4"
                          style={{
                              backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
                          }}>
-                        {[...Array(9)].map((_, i) => (
+                        {[...Array(10)].map((_, i) => (
                             <div key={i} className="h-4 rounded"
                                  style={{
                                      backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
@@ -134,18 +135,20 @@ const MainPage = () => {
                 </div>
             </div>
 
-            {/* Table Rows Skeleton */}
+            {/* Table Rows Skeleton - Updated to 10 columns */}
             <div className="space-y-3">
                 {[...Array(5)].map((_, rowIndex) => (
-                    <div key={rowIndex} className="grid grid-cols-9 gap-4 p-4 rounded-lg border-2"
+                    <div key={rowIndex} className="grid grid-cols-10 gap-4 p-4 rounded-lg border-2"
                          style={{
                              backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
                              borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
                          }}>
-                        {[...Array(9)].map((_, colIndex) => (
+                        {[...Array(10)].map((_, colIndex) => (
                             <div key={colIndex} 
                                  className={`h-4 rounded ${
-                                     colIndex === 0 ? "w-4" : colIndex === 4 ? "w-16" : "w-full"
+                                     colIndex === 0 ? "w-20" : 
+                                     colIndex === 1 ? "w-4" : 
+                                     colIndex === 6 ? "w-16" : "w-full"
                                  }`}
                                  style={{
                                      backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",

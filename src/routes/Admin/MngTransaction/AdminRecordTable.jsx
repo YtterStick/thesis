@@ -9,7 +9,7 @@ import * as XLSX from "xlsx";
 import PrintableReceipt from "@/components/PrintableReceipt";
 import { api } from "@/lib/api-config";
 
-// Updated table headers - Removed "Laundry Status"
+// Updated table headers - REMOVED EXPIRED STATUS COLUMN
 const tableHeaders = [
     "Invoice",
     "Name",
@@ -73,7 +73,7 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
                 color: "gray"
             },
 
-            // Pickup Status
+            // Pickup Status - CHANGED "Expired" TO "Past Due"
             "Claimed": { 
                 icon: <CheckCircle2 className="h-4 w-4 text-green-600" />, 
                 tooltip: "Laundry has been picked up by customer",
@@ -94,7 +94,7 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
                 tooltip: "Laundry is ready but not yet claimed",
                 color: "orange"
             },
-            "Expired": { 
+            "Past Due": { 
                 icon: <AlertCircle className="h-4 w-4 text-red-500" />, 
                 tooltip: "Laundry pickup time has expired",
                 color: "red"
@@ -288,6 +288,13 @@ const AdminRecordTable = ({
         return "—";
     };
 
+    // Helper function to get pickup status - CHANGED "Expired" TO "Past Due"
+    const getPickupStatus = (record) => {
+        if (record.disposed) return "Disposed";
+        if (record.expired) return "Past Due"; // Changed from "Expired" to "Past Due"
+        return record.pickupStatus;
+    };
+
     // Apply filters
     const applyFilters = (records) => {
         let filtered = [...records];
@@ -428,7 +435,7 @@ const AdminRecordTable = ({
         // Apply active filters to export data as well
         const filteredExportItems = applyFilters(exportItems);
 
-        // Prepare data with updated columns - REMOVED LAUNDRY STATUS
+        // Prepare data with updated columns - CHANGED "Expired" TO "Past Due"
         const dataToExport = filteredExportItems.map((item) => ({
             "Invoice Number": item.invoiceNumber || "—",
             "Customer Name": item.name,
@@ -441,7 +448,7 @@ const AdminRecordTable = ({
             "Payment Method": item.paymentMethod || "—",
             "GCash Reference": getGcashReference(item), // Use the helper function
             "Payment Status": item.paid ? "Paid" : "Pending", // Updated to show Pending instead of Unpaid
-            "Pickup Status": item.disposed ? "Disposed" : item.expired ? "Expired" : item.pickupStatus,
+            "Pickup Status": getPickupStatus(item), // Use the helper function that shows "Past Due" instead of "Expired"
         }));
 
         // Create workbook and worksheet
@@ -513,6 +520,14 @@ const AdminRecordTable = ({
                             worksheet[cell].s.font = { color: { rgb: "D97706" }, bold: true }; // Orange color for Pending
                         }
                     }
+                    // Pickup Status column formatting
+                    if (C === 11) {
+                        if (worksheet[cell].v === "Past Due") {
+                            worksheet[cell].s.font = { color: { rgb: "DC2626" }, bold: true };
+                        } else if (worksheet[cell].v === "Active") {
+                            worksheet[cell].s.font = { color: { rgb: "059669" }, bold: true };
+                        }
+                    }
                 }
             }
         }
@@ -563,7 +578,7 @@ const AdminRecordTable = ({
             ["OPERATIONAL SUMMARY"],
             ["Total Loads Processed:", totalLoads],
             ["Average Loads per Transaction:", filteredExportItems.length > 0 ? (totalLoads / filteredExportItems.length).toFixed(1) : "0"],
-            ["Expired Records:", expiredCount],
+            ["Past Due Records:", expiredCount], // Changed from "Expired Records" to "Past Due Records"
             ["Disposed Records:", disposedCount],
         ];
 
@@ -786,6 +801,7 @@ const AdminRecordTable = ({
                                     paginated.map((record) => {
                                         const isExpanded = expandedRows.has(record.id);
                                         const gcashRef = getGcashReference(record);
+                                        const pickupStatus = getPickupStatus(record); // Use the helper function
 
                                         return (
                                             <>
@@ -886,10 +902,10 @@ const AdminRecordTable = ({
                                                     <td className="px-3 py-2 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
                                                             <span style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                                                                {record.disposed ? "Disposed" : record.expired ? "Expired" : record.pickupStatus}
+                                                                {pickupStatus}
                                                             </span>
                                                             <StatusBadge 
-                                                                status={record.disposed ? "Disposed" : record.expired ? "Expired" : record.pickupStatus} 
+                                                                status={pickupStatus} 
                                                                 type="pickup" 
                                                                 isDarkMode={isDarkMode} 
                                                             />

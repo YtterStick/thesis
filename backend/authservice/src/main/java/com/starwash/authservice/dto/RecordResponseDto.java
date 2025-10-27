@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class RecordResponseDto {
 
     private String id;
+    private String invoiceNumber;
     private String customerName;
     private String contact;
     private String serviceName;
@@ -12,9 +13,7 @@ public class RecordResponseDto {
     private String detergent;
     private String fabric; 
     private double totalPrice;
-
     private boolean disposed;
-
     private String paymentMethod;  
     private String pickupStatus;    
     private boolean washed;
@@ -23,11 +22,12 @@ public class RecordResponseDto {
 
     public RecordResponseDto() {}
 
-    public RecordResponseDto(String id, String customerName, String contact, String serviceName, int loads,
+    public RecordResponseDto(String id, String invoiceNumber, String customerName, String contact, String serviceName, int loads,
                              String detergent, String fabric, double totalPrice,
                              String paymentMethod, String pickupStatus, boolean washed,
                              boolean expired, LocalDateTime createdAt) {
         this.id = id;
+        this.invoiceNumber = invoiceNumber;
         this.customerName = customerName;
         this.contact = contact;
         this.serviceName = serviceName;
@@ -44,6 +44,9 @@ public class RecordResponseDto {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+
+    public String getInvoiceNumber() { return invoiceNumber; }
+    public void setInvoiceNumber(String invoiceNumber) { this.invoiceNumber = invoiceNumber; }
 
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }

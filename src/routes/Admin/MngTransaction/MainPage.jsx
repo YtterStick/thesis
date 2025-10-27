@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
-import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter } from "lucide-react";
+import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter, Droplets, Flower } from "lucide-react";
 import { api } from "@/lib/api-config";
 
 const MainPage = () => {
@@ -125,7 +125,7 @@ const MainPage = () => {
 
     const filteredRecords = filterRecordsByTime(records);
 
-    // Update metrics calculation - REPLACE UNWASHED WITH FABRIC AND DETERGENT
+    // Update metrics calculation - REPLACE ONLY UNWASHED WITH FABRIC AND DETERGENT, KEEP EXPIRED
     const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
     const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
     const totalFabric = filteredRecords.reduce((acc, r) => {
@@ -149,7 +149,8 @@ const MainPage = () => {
         return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
     };
 
-    const summaryCards = [
+    // First row cards
+    const firstRowCards = [
         {
             label: "Total Income",
             value: formatCurrency(totalIncome),
@@ -158,6 +159,24 @@ const MainPage = () => {
             tooltip: "Total income from filtered transactions",
         },
         {
+            label: "Total Fabric",
+            value: totalFabric.toLocaleString(),
+            icon: <Flower size={26} />,
+            color: "#FB923C",
+            tooltip: "Total fabric softener used",
+        },
+        {
+            label: "Total Detergent",
+            value: totalDetergent.toLocaleString(),
+            icon: <Droplets size={26} />,
+            color: "#A78BFA",
+            tooltip: "Total detergent used",
+        },
+    ];
+
+    // Second row cards
+    const secondRowCards = [
+        {
             label: "Total Loads",
             value: totalLoads.toLocaleString(),
             icon: <Package size={26} />,
@@ -165,25 +184,18 @@ const MainPage = () => {
             tooltip: "Total number of laundry loads in filtered period",
         },
         {
-            label: "Total Fabric",
-            value: totalFabric.toLocaleString(),
-            icon: <Package size={26} />,
-            color: "#FB923C",
-            tooltip: "Total fabric conditioner used",
-        },
-        {
-            label: "Total Detergent",
-            value: totalDetergent.toLocaleString(),
-            icon: <Package size={26} />,
-            color: "#A78BFA",
-            tooltip: "Total detergent used",
-        },
-        {
             label: "Unclaimed Loads",
             value: unclaimed.toLocaleString(),
             icon: <AlertCircle size={26} />,
             color: "#FACC15",
             tooltip: "Completed loads that haven't been picked up yet (excluding expired and disposed loads)",
+        },
+        {
+            label: "Expired Loads",
+            value: expired.toLocaleString(),
+            icon: <TimerOff size={26} />,
+            color: "#F87171",
+            tooltip: "Loads that exceeded their pickup window (excluding disposed loads)",
         },
     ];
 
@@ -373,7 +385,7 @@ const MainPage = () => {
                          style={{
                              backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
                          }}>
-                        {[...Array(10)].map((_, i) => (
+                        {[...Array(11)].map((_, i) => (
                             <div key={i} className="h-4 rounded animate-pulse"
                                  style={{
                                      backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
@@ -390,7 +402,7 @@ const MainPage = () => {
                              backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
                              borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
                          }}>
-                        {[...Array(10)].map((_, colIndex) => (
+                        {[...Array(11)].map((_, colIndex) => (
                             <div key={colIndex} 
                                  className={`h-4 rounded animate-pulse ${
                                      colIndex === 0 ? "w-4" : colIndex === 4 ? "w-16" : "w-full"
@@ -637,62 +649,123 @@ const MainPage = () => {
                 </div>
             </motion.div>
 
-            {/* Summary Cards - UPDATED WITH FABRIC AND DETERGENT */}
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                {loading ? (
-                    [...Array(5)].map((_, index) => (
-                        <SkeletonCard key={index} index={index} />
-                    ))
-                ) : (
-                    summaryCards.map(({ label, value, icon, color, tooltip }, index) => (
-                        <motion.div
-                            key={label}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            whileHover={{ 
-                                scale: 1.03,
-                                y: -2,
-                                transition: { duration: 0.2 }
-                            }}
-                            className="rounded-xl border-2 p-5 transition-all"
-                            style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                            }}
-                            title={tooltip}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <motion.div
-                                    whileHover={{ scale: 1.1, rotate: 5 }}
-                                    className="rounded-lg p-2"
-                                    style={{
-                                        backgroundColor: `${color}20`,
-                                        color: color,
-                                    }}
-                                >
-                                    {icon}
-                                </motion.div>
-                                <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ delay: index * 0.2 }}
-                                    className="text-right"
-                                >
-                                    <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                                        {value}
-                                    </p>
-                                </motion.div>
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                                    {label}
-                                </h3>
-                            </div>
-                        </motion.div>
-                    ))
-                )}
+            {/* Summary Cards - EXACTLY 2 ROWS WITH 3 CARDS EACH */}
+            <div className="space-y-5">
+                {/* First Row - Total Income, Total Fabric, Total Detergent */}
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                    {loading ? (
+                        [...Array(3)].map((_, index) => (
+                            <SkeletonCard key={index} index={index} />
+                        ))
+                    ) : (
+                        firstRowCards.map(({ label, value, icon, color, tooltip }, index) => (
+                            <motion.div
+                                key={label}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                whileHover={{ 
+                                    scale: 1.03,
+                                    y: -2,
+                                    transition: { duration: 0.2 }
+                                }}
+                                className="rounded-xl border-2 p-5 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                }}
+                                title={tooltip}
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <motion.div
+                                        whileHover={{ scale: 1.1, rotate: 5 }}
+                                        className="rounded-lg p-2"
+                                        style={{
+                                            backgroundColor: `${color}20`,
+                                            color: color,
+                                        }}
+                                    >
+                                        {icon}
+                                    </motion.div>
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ delay: index * 0.2 }}
+                                        className="text-right"
+                                    >
+                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            {value}
+                                        </p>
+                                    </motion.div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        {label}
+                                    </h3>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
+                </div>
+
+                {/* Second Row - Total Loads, Unclaimed Loads, Expired Loads */}
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                    {loading ? (
+                        [...Array(3)].map((_, index) => (
+                            <SkeletonCard key={index} index={index + 3} />
+                        ))
+                    ) : (
+                        secondRowCards.map(({ label, value, icon, color, tooltip }, index) => (
+                            <motion.div
+                                key={label}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: (index + 3) * 0.1 }}
+                                whileHover={{ 
+                                    scale: 1.03,
+                                    y: -2,
+                                    transition: { duration: 0.2 }
+                                }}
+                                className="rounded-xl border-2 p-5 transition-all"
+                                style={{
+                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                }}
+                                title={tooltip}
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <motion.div
+                                        whileHover={{ scale: 1.1, rotate: 5 }}
+                                        className="rounded-lg p-2"
+                                        style={{
+                                            backgroundColor: `${color}20`,
+                                            color: color,
+                                        }}
+                                    >
+                                        {icon}
+                                    </motion.div>
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ delay: (index + 3) * 0.2 }}
+                                        className="text-right"
+                                    >
+                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            {value}
+                                        </p>
+                                    </motion.div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        {label}
+                                    </h3>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
+                </div>
             </div>
 
             {/* Record Table */}

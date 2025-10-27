@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import PrintableReceipt from "@/components/PrintableReceipt";
+import { api } from "@/lib/api-config"; // Import the api utility
 
-const tableHeaders = ["Name", "Service", "Loads", "Detergent", "Fabric", "Price", "Date", "Pickup", "Actions"];
+const tableHeaders = ["Invoice", "Name", "Service", "Loads", "Detergent", "Fabric", "Price", "Date", "Pickup", "Actions"];
 
 const renderStatusBadge = (status, isExpired, isDarkMode) => {
     // If expired, override the status to show as expired
@@ -345,6 +346,14 @@ const RecordTable = ({ items = [], isDarkMode }) => {
                                             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
                                         }}
                                     >
+                                        {/* Invoice Number Column */}
+                                        <td
+                                            className="px-3 py-2 font-mono text-xs"
+                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        >
+                                            {record.invoice}
+                                        </td>
+                                        
                                         <td
                                             className="px-3 py-2 font-medium"
                                             style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}

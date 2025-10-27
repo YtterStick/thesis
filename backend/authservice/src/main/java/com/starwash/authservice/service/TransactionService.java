@@ -285,57 +285,58 @@ public class TransactionService {
                 tx.getStaffId());
     }
 
-    public List<RecordResponseDto> getAllRecords() {
-        List<Transaction> allTransactions = transactionRepository.findAll();
-        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+    // In TransactionService.java - update the getAllRecords method
+public List<RecordResponseDto> getAllRecords() {
+    List<Transaction> allTransactions = transactionRepository.findAll();
+    List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
 
-        Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
-                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+    Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+            .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-        // Use Manila time for expiration checks
-        LocalDateTime currentManilaTime = getCurrentManilaTime();
+    // Use Manila time for expiration checks
+    LocalDateTime currentManilaTime = getCurrentManilaTime();
 
-        return allTransactions.stream().map(tx -> {
-            RecordResponseDto dto = new RecordResponseDto();
-            dto.setId(tx.getId());
-            dto.setCustomerName(tx.getCustomerName());
-            dto.setServiceName(tx.getServiceName());
-            dto.setLoads(tx.getServiceQuantity());
+    return allTransactions.stream().map(tx -> {
+        RecordResponseDto dto = new RecordResponseDto();
+        dto.setId(tx.getId());
+        dto.setInvoiceNumber(tx.getInvoiceNumber()); // Add this line
+        dto.setCustomerName(tx.getCustomerName());
+        dto.setServiceName(tx.getServiceName());
+        dto.setLoads(tx.getServiceQuantity());
+        dto.setContact(tx.getContact());
 
-            dto.setContact(tx.getContact());
+        dto.setDetergent(tx.getConsumables().stream()
+                .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                .map(c -> String.valueOf(c.getQuantity()))
+                .findFirst().orElse("—"));
 
-            dto.setDetergent(tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                    .map(c -> String.valueOf(c.getQuantity()))
-                    .findFirst().orElse("—"));
+        dto.setFabric(tx.getConsumables().stream()
+                .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                .map(c -> String.valueOf(c.getQuantity()))
+                .findFirst().orElse("—"));
 
-            dto.setFabric(tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                    .map(c -> String.valueOf(c.getQuantity()))
-                    .findFirst().orElse("—"));
+        dto.setTotalPrice(tx.getTotalPrice());
+        dto.setPaymentMethod(tx.getPaymentMethod());
+        dto.setPickupStatus("Unclaimed");
+        dto.setWashed(false);
+        
+        // Use Manila time for expiration check
+        dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
+        dto.setCreatedAt(tx.getCreatedAt());
 
-            dto.setTotalPrice(tx.getTotalPrice());
-            dto.setPaymentMethod(tx.getPaymentMethod());
-            dto.setPickupStatus("Unclaimed");
-            dto.setWashed(false);
-            
-            // Use Manila time for expiration check
+        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+        if (job != null) {
+            dto.setPickupStatus(job.getPickupStatus());
+            dto.setExpired(job.isExpired());
+            dto.setDisposed(job.isDisposed());
+        } else {
+            dto.setPickupStatus("UNCLAIMED");
             dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
-            dto.setCreatedAt(tx.getCreatedAt());
+        }
 
-            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
-            if (job != null) {
-                dto.setPickupStatus(job.getPickupStatus());
-                dto.setExpired(job.isExpired());
-                dto.setDisposed(job.isDisposed());
-            } else {
-                dto.setPickupStatus("UNCLAIMED");
-                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
-            }
-
-            return dto;
-        }).collect(Collectors.toList());
-    }
+        return dto;
+    }).collect(Collectors.toList());
+}
 
     public List<RecordResponseDto> getStaffRecords() {
         List<RecordResponseDto> allRecords = this.getAllRecords();
