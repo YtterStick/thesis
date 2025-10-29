@@ -97,29 +97,29 @@ const MainPage = () => {
       transition={{ delay: index * 0.1 }}
       className="rounded-xl border-2 p-5 transition-all"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#0B2B26",
       }}
     >
       <div className="flex items-center gap-x-3 mb-4">
         <div className="w-fit rounded-lg p-2 animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
              }}>
           <div className="h-6 w-6"></div>
         </div>
         <div className="h-5 w-28 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
              }}></div>
       </div>
       <div className="rounded-lg p-3 animate-pulse"
            style={{
-             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+             backgroundColor: isDarkMode ? "#334155" : "#F3EDE3"
            }}>
         <div className="h-8 w-32 rounded"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#475569" : "#E0EAE8"
              }}></div>
       </div>
     </motion.div>
@@ -150,7 +150,9 @@ const MainPage = () => {
   ];
 
   return (
-    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
+      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+    }}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -162,17 +164,17 @@ const MainPage = () => {
             whileHover={{ scale: 1.1, rotate: 5 }}
             className="rounded-lg p-2"
             style={{
-              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-              color: "#F3EDE3",
+              backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
+              color: "#f1f5f9",
             }}
           >
             <ShieldCheck size={22} />
           </motion.div>
           <div>
-            <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+            <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
               Manage Accounts
             </p>
-            <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+            <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#0B2B26/70' }}>
               Manage staff and administrator accounts
             </p>
           </div>
@@ -185,8 +187,8 @@ const MainPage = () => {
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
             style={{
-              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-              color: "#F3EDE3",
+              backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
+              color: "#f1f5f9",
             }}
           >
             <Plus size={18} />
@@ -231,8 +233,8 @@ const MainPage = () => {
               }}
               className="rounded-xl border-2 p-5 transition-all cursor-pointer"
               style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#0B2B26",
               }}
             >
               <div className="flex items-center justify-between mb-4">
@@ -252,17 +254,17 @@ const MainPage = () => {
                   transition={{ delay: index * 0.2 }}
                   className="text-right"
                 >
-                  <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                     {value}
                   </p>
                 </motion.div>
               </div>
               
               <div>
-                <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                   {title}
                 </h3>
-                <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+                <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#0B2B26/80' }}>
                   {description}
                 </p>
               </div>
@@ -278,13 +280,13 @@ const MainPage = () => {
           animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border-2 p-5 transition-all"
           style={{
-            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+            borderColor: isDarkMode ? "#334155" : "#0B2B26",
           }}
         >
           <div className="h-64 animate-pulse rounded-lg"
                style={{
-                 backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+                 backgroundColor: isDarkMode ? "#334155" : "#F3EDE3"
                }}></div>
         </motion.div>
       ) : (

@@ -29,16 +29,16 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
         animate={{ opacity: 1, y: 0 }}
         className="rounded-xl border-2 p-6 transition-all"
         style={{
-          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+          borderColor: isDarkMode ? "#334155" : "#0B2B26",
         }}
       >
         <div className="flex flex-col gap-4">
-          <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+          <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
             Account List
           </p>
           <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} isDarkMode={isDarkMode} />
-          <div className="pt-6 text-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+          <div className="pt-6 text-center" style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}>
             No accounts found
           </div>
         </div>
@@ -114,7 +114,7 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
   const SortableHeader = ({ children, field }) => (
     <th 
       className="p-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors hover:opacity-80"
-      style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+      style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center">
@@ -134,17 +134,17 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border-2 p-5 transition-all"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#0B2B26",
       }}
     >
       {/* Header with Search */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+          <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
             Account List
           </p>
-          <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+          <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}>
             {filtered.length} accounts found
           </p>
         </div>
@@ -161,17 +161,17 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border-2"
            style={{
-             borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+             borderColor: isDarkMode ? "#334155" : "#0B2B26",
            }}>
         <table className="min-w-full text-left text-sm">
           <thead style={{
-            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
           }}>
             <tr>
               <SortableHeader field="username">Username</SortableHeader>
               <SortableHeader field="role">Role</SortableHeader>
               <SortableHeader field="contact">Contact</SortableHeader>
-              <th className="p-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              <th className="p-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                 Actions
               </th>
             </tr>
@@ -186,11 +186,11 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
                   transition={{ delay: index * 0.1 }}
                   className="border-t transition-colors hover:opacity-90"
                   style={{
-                    borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                    borderColor: isDarkMode ? "#334155" : "#E0EAE8",
+                    backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#F3EDE3",
                   }}
                 >
-                  <td className="p-3 font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  <td className="p-3 font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                     {account.username}
                   </td>
                   <td className="p-3 font-medium uppercase"
@@ -199,11 +199,11 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
                           ? (isDarkMode ? "#60A5FA" : "#2563EB")
                           : account.role === "STAFF"
                           ? (isDarkMode ? "#FB923C" : "#EA580C")
-                          : (isDarkMode ? '#13151B' : '#0B2B26')
+                          : (isDarkMode ? '#f1f5f9' : '#0B2B26')
                       }}>
                     {account.role}
                   </td>
-                  <td className="p-3" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                  <td className="p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                     {account.contact?.replace(/^\+63/, "0")}
                   </td>
                   <td className="p-3 text-right">
@@ -215,10 +215,10 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
                         onClick={() => setEditingStaff(account)}
                         className="rounded-lg p-2 transition-colors hover:opacity-80"
                         style={{
-                          backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                          backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                         }}
                       >
-                        <Pencil className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                        <Pencil className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }} />
                       </motion.button>
                       
                       <motion.button
@@ -243,7 +243,7 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
                 <td
                   colSpan={4}
                   className="p-8 text-center"
-                  style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                  style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}
                 >
                   <div className="flex flex-col items-center gap-3">
                     <Search className="h-12 w-12 opacity-50" />
@@ -264,7 +264,7 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+          <div className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}>
             Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} accounts
           </div>
           
@@ -276,14 +276,14 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
               disabled={currentPage === 1}
               className="rounded-lg px-3 py-1 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                color: isDarkMode ? '#13151B' : '#0B2B26',
+                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                color: isDarkMode ? '#f1f5f9' : '#0B2B26',
               }}
             >
               Previous
             </motion.button>
 
-            <span className="text-sm font-medium px-3" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+            <span className="text-sm font-medium px-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
               Page <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{currentPage}</span> of{" "}
               <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{totalPages}</span>
             </span>
@@ -295,8 +295,8 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
               disabled={currentPage === totalPages}
               className="rounded-lg px-3 py-1 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                color: isDarkMode ? '#13151B' : '#0B2B26',
+                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                color: isDarkMode ? '#f1f5f9' : '#0B2B26',
               }}
             >
               Next
@@ -325,12 +325,12 @@ const SearchBar = ({ searchTerm, setSearchTerm, isDarkMode }) => (
     <div className="relative">
       <div className="flex h-[38px] items-center rounded-lg border-2 px-3 transition-all"
            style={{
-             backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-             borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+             backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+             borderColor: isDarkMode ? "#334155" : "#0B2B26",
            }}>
         <Search
           size={16}
-          style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}
+          style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26' }}
         />
         <input
           type="text"
@@ -339,7 +339,7 @@ const SearchBar = ({ searchTerm, setSearchTerm, isDarkMode }) => (
           placeholder="Search by username, contact, role..."
           className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
           style={{
-            color: isDarkMode ? '#13151B' : '#0B2B26',
+            color: isDarkMode ? '#f1f5f9' : '#0B2B26',
           }}
         />
       </div>

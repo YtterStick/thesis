@@ -1,8 +1,8 @@
-// AuditService.java
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.AuditLog;
 import com.starwash.authservice.repository.AuditLogRepository;
+import com.starwash.authservice.security.ManilaTimeUtil;
 import org.springframework.stereotype.Service;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,11 +29,17 @@ public class AuditService {
         
         String ipAddress = getClientIpAddress(request);
         
+        // Use Manila time instead of server time
+        LocalDateTime manilaTime = ManilaTimeUtil.now();
+        
         AuditLog auditLog = new AuditLog(username, action, entityType, entityId, description, ipAddress);
+        auditLog.setTimestamp(manilaTime); // Set Manila time
         auditLog.setOldValues(oldValues);
         auditLog.setNewValues(newValues);
         
         auditLogRepository.save(auditLog);
+        
+        System.out.println("📝 Audit log created at Manila time: " + manilaTime);
     }
 
     private String getClientIpAddress(HttpServletRequest request) {

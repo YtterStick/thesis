@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { Plus, Boxes, PackageX, Package, Clock8, Calendar, TrendingUp, Trash2 } from "lucide-react";
+import { Plus, Boxes, PackageX, Package, Clock8, Calendar, TrendingUp, Trash2, Layers } from "lucide-react";
 import InventoryForm from "./InventoryForm";
 import StockModal from "./StockModal";
+import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
 import {
   Card,
   CardContent,
@@ -21,19 +22,25 @@ import { api } from "@/lib/api-config";
 import { useToast } from "@/hooks/use-toast";
 
 const getStockStatusCounts = (items) => {
-  let out = 0, low = 0, adequate = 0;
+  let out = 0, low = 0, adequate = 0, full = 0;
 
   for (const item of items) {
     const q = item.quantity ?? 0;
     const lowT = item.lowStockThreshold ?? 0;
     const adequateT = item.adequateStockThreshold ?? 0;
 
-    if (q === 0) out++;
-    else if (q <= lowT) low++;
-    else if (q <= adequateT) adequate++;
+    if (q === 0) {
+      out++;
+    } else if (q <= lowT) {
+      low++;
+    } else if (q <= adequateT) {
+      adequate++;
+    } else {
+      full++; // Quantity is above adequate threshold
+    }
   }
 
-  return { out, low, adequate };
+  return { out, low, adequate, full };
 };
 
 const MainPage = () => {
@@ -47,8 +54,11 @@ const MainPage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showStockModal, setShowStockModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addingStock, setAddingStock] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchInventory();
@@ -77,7 +87,6 @@ const MainPage = () => {
     setSaving(true);
     try {
       if (editingItem) {
-        // Include the ID in the update data
         const updateData = {
           ...data,
           id: editingItem.id
@@ -109,21 +118,23 @@ const MainPage = () => {
     }
   };
 
-  const handleDelete = async (item) => {
-    // Confirmation dialog
-    if (!window.confirm(`Are you sure you want to delete "${item.name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteClick = (item) => {
+    setItemToDelete(item);
+    setShowDeleteModal(true);
+  };
 
-    if (saving) return;
+  const handleDeleteConfirm = async (item) => {
+    if (deleting) return;
     
-    setSaving(true);
+    setDeleting(true);
     try {
       await api.delete(`api/stock/${item.id}`);
       toast({
         title: "Success",
-        description: "Item deleted successfully",
+        description: `"${item.name}" has been deleted successfully`,
       });
+      setShowDeleteModal(false);
+      setItemToDelete(null);
       await fetchInventory();
     } catch (error) {
       console.error("Error deleting item:", error);
@@ -133,8 +144,13 @@ const MainPage = () => {
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setDeleting(false);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setItemToDelete(null);
   };
 
   const handleEdit = (item) => {
@@ -187,7 +203,7 @@ const MainPage = () => {
     setShowForm(true);
   };
 
-  const { out, low, adequate } = getStockStatusCounts(items);
+  const { out, low, adequate, full } = getStockStatusCounts(items);
   const totalItems = items.length;
 
   // Skeleton Loader Components
@@ -216,24 +232,35 @@ const MainPage = () => {
       icon: <Package size={20} />,
       value: totalItems,
       color: isDarkMode ? "#3DD9B6" : "#0B2B26",
+      description: "All inventory items"
     },
     {
-      title: "Well Stocked",
+      title: "Full Stock",
+      icon: <Layers size={20} />,
+      value: full,
+      color: "#059669", // Green
+      description: "Above adequate threshold"
+    },
+    {
+      title: "Adequate",
       icon: <Boxes size={20} />,
       value: adequate,
-      color: "#059669",
+      color: "#3B82F6", // Blue
+      description: "Within adequate range"
     },
     {
       title: "Low Stock",
       icon: <PackageX size={20} />,
       value: low,
-      color: "#D97706",
+      color: "#D97706", // Amber
+      description: "Below low threshold"
     },
     {
       title: "Out of Stock",
       icon: <Clock8 size={20} />,
       value: out,
-      color: "#DC2626",
+      color: "#DC2626", // Red
+      description: "Zero quantity"
     },
   ];
 
@@ -267,54 +294,59 @@ const MainPage = () => {
         </div>
       </motion.div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Updated to 5 columns */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="grid grid-cols-1 md:grid-cols-4 gap-4"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
       >
         {loading ? (
-          [...Array(4)].map((_, index) => (
+          [...Array(5)].map((_, index) => (
             <SkeletonCard key={index} />
           ))
         ) : (
-          summaryCards.map(({ title, icon, value, color }, index) => (
+          summaryCards.map(({ title, icon, value, color, description }, index) => (
             <motion.div
               key={title}
               whileHover={{ scale: 1.02, y: -2 }}
               transition={{ duration: 0.2 }}
             >
-              <Card className="rounded-xl border-2 transition-all hover:shadow-lg" style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-              }}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                        {title}
-                      </p>
-                      <p className="text-2xl font-bold mt-1" style={{ color }}>
-                        {value}
-                      </p>
-                    </div>
-                    <div 
-                      className="rounded-lg p-2"
-                      style={{
-                        backgroundColor: title === "Total Items" 
-                          ? (isDarkMode ? "rgba(59, 130, 246, 0.1)" : "rgba(11, 43, 38, 0.1)")
-                          : `${color}20`,
-                        color: title === "Total Items" 
-                          ? (isDarkMode ? "#3DD9B6" : "#0B2B26")
-                          : color,
-                      }}
-                    >
-                      {icon}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Card className="rounded-xl border-2 transition-all hover:shadow-lg cursor-help" style={{
+                      backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                      borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                    }}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium mb-1" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                              {title}
+                            </p>
+                            <p className="text-2xl font-bold" style={{ color }}>
+                              {value}
+                            </p>
+                          </div>
+                          <div 
+                            className="rounded-lg p-2"
+                            style={{
+                              backgroundColor: `${color}20`,
+                              color: color,
+                            }}
+                          >
+                            {icon}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </motion.div>
           ))
         )}
@@ -525,8 +557,8 @@ const MainPage = () => {
                                     <motion.button
                                       whileHover={{ scale: 1.1 }}
                                       whileTap={{ scale: 0.9 }}
-                                      onClick={() => handleDelete(item)}
-                                      disabled={saving}
+                                      onClick={() => handleDeleteClick(item)}
+                                      disabled={saving || deleting}
                                       className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                                       style={{
                                         backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(239, 68, 68, 0.1)",
@@ -602,6 +634,16 @@ const MainPage = () => {
           onClose={closeStockModal}
           onSubmit={handleAddStock}
           loading={addingStock}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && itemToDelete && (
+        <DeleteConfirmationModal
+          item={itemToDelete}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+          loading={deleting}
         />
       )}
     </div>
