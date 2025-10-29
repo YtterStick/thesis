@@ -262,31 +262,31 @@ export default function MainPage() {
             transition={{ delay: index * 0.1 }}
             className="rounded-xl border-2 p-5 transition-all"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#0B2B26",
             }}
         >
             <div className="flex items-center justify-between mb-4">
                 <div className="w-fit rounded-lg p-2 animate-pulse"
                      style={{
-                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                      }}>
                     <div className="h-6 w-6"></div>
                 </div>
                 <div className="h-8 w-24 rounded animate-pulse"
                      style={{
-                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                      }}></div>
             </div>
             
             <div className="space-y-2">
                 <div className="h-5 w-32 rounded animate-pulse mb-2"
                      style={{
-                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                      }}></div>
                 <div className="h-4 w-44 rounded animate-pulse"
                      style={{
-                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                      }}></div>
             </div>
         </motion.div>
@@ -301,22 +301,22 @@ export default function MainPage() {
             <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg animate-pulse"
                      style={{
-                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                      }}></div>
                 <div className="space-y-2">
                     <div className="h-6 w-44 rounded-lg animate-pulse"
                          style={{
-                           backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                           backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                          }}></div>
                     <div className="h-4 w-56 rounded animate-pulse"
                          style={{
-                           backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                           backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                          }}></div>
                 </div>
             </div>
             <div className="h-10 w-32 rounded-lg animate-pulse"
                  style={{
-                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                  }}></div>
         </motion.div>
     );
@@ -335,8 +335,8 @@ export default function MainPage() {
             onClick={() => setEditTarget(service)}
             className="relative rounded-xl border-2 p-5 transition-all cursor-pointer"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#0B2B26",
             }}
         >
             <button
@@ -346,7 +346,7 @@ export default function MainPage() {
                 }}
                 className="absolute right-3 top-3 rounded-lg p-1 transition-all hover:opacity-80"
                 style={{
-                    backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                 }}
                 title="Delete service"
             >
@@ -367,12 +367,12 @@ export default function MainPage() {
                 >
                     <WashingMachine size={22} />
                 </motion.div>
-                <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                     {service.name}
                 </h3>
             </div>
             
-            <p className="text-sm mb-4" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+            <p className="text-sm mb-4" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                 {service.description}
             </p>
             
@@ -393,7 +393,9 @@ export default function MainPage() {
     // Show skeleton loader only during initial load AND when no cached data is available
     if (initialLoad && !servicesCache) {
         return (
-            <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+            <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+            }}>
                 <SkeletonHeader />
                 
                 {error && (
@@ -402,13 +404,13 @@ export default function MainPage() {
                         animate={{ opacity: 1, scale: 1 }}
                         className="rounded-xl border-2 p-4 transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#FEF2F2" : "#FEF2F2",
+                            backgroundColor: isDarkMode ? "rgba(254, 226, 226, 0.1)" : "#FEF2F2",
                             borderColor: isDarkMode ? "#F87171" : "#EF4444",
                         }}
                     >
                         <div className="h-5 w-full rounded animate-pulse"
                              style={{
-                               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                               backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
                              }}></div>
                     </motion.div>
                 )}
@@ -423,7 +425,9 @@ export default function MainPage() {
     }
 
     return (
-        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
+            backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+        }}>
             {/* 🧢 Section Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -435,17 +439,17 @@ export default function MainPage() {
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         className="rounded-lg p-2"
                         style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                            color: "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
+                            color: "#f1f5f9",
                         }}
                     >
                         <Settings size={22} />
                     </motion.div>
                     <div>
-                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                             Service Options
                         </p>
-                        <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                             Manage your laundry services and pricing
                         </p>
                     </div>
@@ -457,8 +461,8 @@ export default function MainPage() {
                     onClick={() => setEditTarget({})}
                     className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                        color: "#F3EDE3",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
+                        color: "#f1f5f9",
                     }}
                 >
                     <Plus size={18} />
@@ -473,11 +477,11 @@ export default function MainPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="rounded-xl border-2 p-4 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#FEF2F2" : "#FEF2F2",
+                        backgroundColor: isDarkMode ? "rgba(254, 226, 226, 0.1)" : "#FEF2F2",
                         borderColor: isDarkMode ? "#F87171" : "#EF4444",
                     }}
                 >
-                    <p className="text-sm font-medium" style={{ color: isDarkMode ? '#DC2626' : '#DC2626' }}>
+                    <p className="text-sm font-medium" style={{ color: isDarkMode ? '#F87171' : '#DC2626' }}>
                         {error}
                     </p>
                 </motion.div>
@@ -495,16 +499,16 @@ export default function MainPage() {
                         animate={{ opacity: 1, y: 0 }}
                         className="rounded-xl border-2 p-8 text-center col-span-full transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#334155" : "#0B2B26",
                         }}
                     >
                         <div className="flex flex-col items-center justify-center">
-                            <Package className="mb-4 h-16 w-16 opacity-50" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
-                            <p className="mb-2 text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <Package className="mb-4 h-16 w-16 opacity-50" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }} />
+                            <p className="mb-2 text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                                 No services yet.
                             </p>
-                            <p className="mb-4 text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                            <p className="mb-4 text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                                 Start by adding your first service.
                             </p>
                             <motion.button
@@ -513,8 +517,8 @@ export default function MainPage() {
                                 onClick={() => setEditTarget({})}
                                 className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                    color: "#F3EDE3",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
+                                    color: "#f1f5f9",
                                 }}
                             >
                                 <Plus size={18} />
@@ -550,14 +554,14 @@ export default function MainPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             className="w-full max-w-sm rounded-xl border-2 p-6 shadow-xl transition-all"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#0B2B26",
                             }}
                         >
-                            <h3 className="mb-2 text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <h3 className="mb-2 text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                                 Delete Service
                             </h3>
-                            <p className="mb-4 text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+                            <p className="mb-4 text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                                 Are you sure you want to delete this service? This action cannot be undone.
                             </p>
                             <div className="flex justify-end gap-2">
@@ -567,8 +571,8 @@ export default function MainPage() {
                                     onClick={() => setConfirmDeleteId(null)}
                                     className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
                                     style={{
-                                        backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                        color: isDarkMode ? '#f1f5f9' : '#0B2B26',
                                     }}
                                 >
                                     Cancel

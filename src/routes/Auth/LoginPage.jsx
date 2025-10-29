@@ -12,15 +12,48 @@ import { motion } from "framer-motion";
 import AuthLoader from "@/components/feedback/AuthLoader";
 import { getApiUrl, api } from "@/lib/api-config";
 
+// Manila time utility functions
+const toManilaTime = (timestamp) => {
+  if (!timestamp) return null;
+  
+  const date = new Date(timestamp);
+  return new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+};
+
+const formatManilaTime = (timestamp, options = {}) => {
+  if (!timestamp) return 'N/A';
+  
+  const date = new Date(timestamp);
+  const defaultOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Asia/Manila'
+  };
+  
+  return date.toLocaleString('en-PH', { ...defaultOptions, ...options });
+};
+
 const decodeToken = (token) => {
     try {
         const payload = token.split(".")[1];
         const decoded = JSON.parse(atob(payload));
+        
+        // Convert to Manila time
         const issuedAt = new Date(decoded.iat * 1000);
         const expiresAt = new Date(decoded.exp * 1000);
         const isExpired = expiresAt.getTime() < Date.now();
+        
         if (isExpired) return null;
-        return { ...decoded, issuedAt, expiresAt };
+        
+        return { 
+          ...decoded, 
+          issuedAt: toManilaTime(issuedAt),
+          expiresAt: toManilaTime(expiresAt)
+        };
     } catch {
         return null;
     }
@@ -390,14 +423,14 @@ const LoginPage = () => {
                                             clipRule="evenodd"
                                         />
                                     </svg>
-                                    <span className="font-semibold text-[#1C3F3A]">Authentication Successful</span>
+                                    <span className="font-semibold text-[#1C3F3A]">Authentication Successful (Manila Time)</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <span className="text-[#1C3F3A]/50">Issued:</span> {loginMeta.issuedAt.toLocaleString()}
+                                        <span className="text-[#1C3F3A]/50">Issued:</span> {formatManilaTime(loginMeta.issuedAt)}
                                     </div>
                                     <div>
-                                        <span className="text-[#1C3F3A]/50">Expires:</span> {loginMeta.expiresAt.toLocaleString()}
+                                        <span className="text-[#1C3F3A]/50">Expires:</span> {formatManilaTime(loginMeta.expiresAt)}
                                     </div>
                                 </div>
                             </motion.div>

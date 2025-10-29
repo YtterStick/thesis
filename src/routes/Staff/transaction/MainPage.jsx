@@ -7,8 +7,12 @@ import { Separator } from "@/components/ui/separator";
 import { RotateCcw, XCircle } from "lucide-react";
 import { api } from "@/lib/api-config";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/use-theme";
 
 const MainPage = () => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
     const formRef = useRef();
     const [invoice, setInvoice] = useState(null);
     const [previewData, setPreviewData] = useState({
@@ -128,7 +132,9 @@ const MainPage = () => {
     };
 
     return (
-        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
+            backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+        }}>
             <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
                 <TransactionForm
                     ref={formRef}
@@ -161,27 +167,31 @@ const MainPage = () => {
             </div>
 
             {errorMessage && (
-                <div className="mt-6 text-sm text-red-600 dark:text-red-400">
+                <div className="mt-6 text-sm" style={{ color: isDarkMode ? '#F87171' : '#DC2626' }}>
                     ❌ {errorMessage}
                 </div>
             )}
 
             {showActions && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm print:hidden">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm print:hidden">
                     <div className="w-full max-w-sm space-y-4 rounded-xl border-2 p-6 transition-all"
                          style={{
-                             borderColor: 'rgb(11, 43, 38)',
-                             backgroundColor: 'rgb(243, 237, 227)',
-                             color: 'rgb(11, 43, 38)'
+                             borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                             backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
                          }}>
-                        <div className="text-center text-base font-semibold">Transaction Complete</div>
-                        <Separator style={{ backgroundColor: 'rgb(11, 43, 38)' }} />
+                        <div className="text-center text-base font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            Transaction Complete
+                        </div>
+                        <Separator style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1' }} />
                         <div className="flex justify-center gap-3">
                             <Button
                                 variant="ghost"
                                 onClick={handleStartNew}
-                                className="flex items-center gap-2 text-sm font-medium hover:text-blue-600"
-                                style={{ color: 'rgb(11, 43, 38)' }}
+                                className="flex items-center gap-2 text-sm font-medium"
+                                style={{ 
+                                    color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(11, 43, 38, 0.1)',
+                                }}
                             >
                                 <RotateCcw className="h-4 w-4" />
                                 Start New
@@ -189,8 +199,11 @@ const MainPage = () => {
                             <Button
                                 variant="ghost"
                                 onClick={handleCancel}
-                                className="flex items-center gap-2 text-sm font-medium hover:text-red-600"
-                                style={{ color: 'rgb(11, 43, 38)' }}
+                                className="flex items-center gap-2 text-sm font-medium"
+                                style={{ 
+                                    color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(11, 43, 38, 0.1)',
+                                }}
                             >
                                 <XCircle className="h-4 w-4" />
                                 Cancel

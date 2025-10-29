@@ -10,7 +10,7 @@ import EditStaffForm from "./EditStaffForm";
 
 const ITEMS_PER_PAGE = 4;
 
-const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
+const StaffTable = ({ staff, onStatusChange, onStaffUpdate, onDeleteRequest }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
@@ -38,7 +38,7 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
             Account List
           </p>
           <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} isDarkMode={isDarkMode} />
-          <div className="pt-6 text-center" style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}>
+          <div className="pt-6 text-center" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
             No accounts found
           </div>
         </div>
@@ -92,7 +92,18 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
     setCurrentPage(1);
   };
 
-  const handleDelete = async (id) => {
+  // Updated handleDelete to use the confirmation modal
+  const handleDelete = (account) => {
+    if (onDeleteRequest) {
+      onDeleteRequest(account);
+    } else {
+      // Fallback to direct deletion if no modal handler provided
+      handleDirectDelete(account.id);
+    }
+  };
+
+  // Fallback function for direct deletion (without modal)
+  const handleDirectDelete = async (id) => {
     setLoadingId(id);
     try {
       await onStatusChange(id, "Inactive");
@@ -144,7 +155,7 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
           <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
             Account List
           </p>
-          <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}>
+          <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
             {filtered.length} accounts found
           </p>
         </div>
@@ -221,15 +232,16 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
                         <Pencil className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }} />
                       </motion.button>
                       
+                      {/* Delete Button - Now opens confirmation modal */}
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => handleDelete(account.id)}
+                        onClick={() => handleDelete(account)}
                         disabled={loadingId === account.id}
                         className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50"
                         style={{
                           backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                          color: "#EF4444",
+                          color: isDarkMode ? "#FCA5A5" : "#DC2626",
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -243,14 +255,14 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
                 <td
                   colSpan={4}
                   className="p-8 text-center"
-                  style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}
+                  style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
                 >
                   <div className="flex flex-col items-center gap-3">
                     <Search className="h-12 w-12 opacity-50" />
                     <div>
-                      <p className="font-medium">No matching accounts found</p>
+                      <p className="font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>No matching accounts found</p>
                       {searchTerm && (
-                        <p className="text-sm">Try adjusting your search terms</p>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>Try adjusting your search terms</p>
                       )}
                     </div>
                   </div>
@@ -264,7 +276,7 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate }) => {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}>
+          <div className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
             Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} accounts
           </div>
           
@@ -330,7 +342,7 @@ const SearchBar = ({ searchTerm, setSearchTerm, isDarkMode }) => (
            }}>
         <Search
           size={16}
-          style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26' }}
+          style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
         />
         <input
           type="text"
@@ -351,6 +363,7 @@ StaffTable.propTypes = {
   staff: PropTypes.array.isRequired,
   onStatusChange: PropTypes.func.isRequired,
   onStaffUpdate: PropTypes.func.isRequired,
+  onDeleteRequest: PropTypes.func, // Optional prop for delete confirmation modal
 };
 
 export default StaffTable;

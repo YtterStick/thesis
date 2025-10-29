@@ -8,10 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import QRCode from "react-qr-code";
 import { ScrollText, Save, Eye, Receipt, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 const ALLOWED_SKEW_MS = 5000;
 const CACHE_DURATION = 5 * 60 * 1000;
+
+// Add tracking URL as a constant
+const TRACKING_URL_BASE = "https://your-tracking-domain.com/track";
 
 const initializeCache = () => {
   try {
@@ -33,8 +36,6 @@ const initializeCache = () => {
 
 let receiptSettingsCache = initializeCache();
 let cacheTimestamp = receiptSettingsCache?.timestamp || null;
-
-// Remove the old secureFetch function and use the api utility instead
 
 const saveCacheToStorage = (data) => {
   try {
@@ -61,7 +62,6 @@ export default function ReceiptConfigPage() {
         address: receiptSettingsCache.data.address || "",
         phone: receiptSettingsCache.data.phone || "",
         footerNote: receiptSettingsCache.data.footerNote || "",
-        trackingUrl: receiptSettingsCache.data.trackingUrl || "",
       };
     }
     
@@ -70,14 +70,13 @@ export default function ReceiptConfigPage() {
       address: "",
       phone: "",
       footerNote: "",
-      trackingUrl: "",
     };
   });
 
   const [activePreview, setActivePreview] = useState("invoice");
-  const [isLoading, setIsLoading] = useState(!receiptSettingsCache); // Only loading if no cache
+  const [isLoading, setIsLoading] = useState(!receiptSettingsCache);
   const [isSaving, setIsSaving] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(!receiptSettingsCache); // Only initial load if no cache
+  const [initialLoad, setInitialLoad] = useState(!receiptSettingsCache);
   const isMountedRef = useRef(true);
 
   const hasDataChanged = (newData, oldData) => {
@@ -87,8 +86,7 @@ export default function ReceiptConfigPage() {
       newData.storeName !== oldData.storeName ||
       newData.address !== oldData.address ||
       newData.phone !== oldData.phone ||
-      newData.footerNote !== oldData.footerNote ||
-      newData.trackingUrl !== oldData.trackingUrl
+      newData.footerNote !== oldData.footerNote
     );
   };
 
@@ -121,7 +119,6 @@ export default function ReceiptConfigPage() {
       console.error("Failed to fetch format settings:", err);
       if (!isMountedRef.current) return;
       
-      // On error, keep cached data if available
       if (receiptSettingsCache) {
         console.log("⚠️ Fetch failed, falling back to cached receipt settings");
         setSettings(receiptSettingsCache.data);
@@ -149,7 +146,6 @@ export default function ReceiptConfigPage() {
     }
 
     try {
-      // Use the api utility instead of direct fetch
       const data = await api.get("api/format-settings");
       
       const newSettings = {
@@ -157,7 +153,6 @@ export default function ReceiptConfigPage() {
         address: data?.address || "",
         phone: data?.phone || "",
         footerNote: data?.footerNote || "",
-        trackingUrl: data?.trackingUrl || "",
       };
 
       const currentTime = Date.now();
@@ -225,11 +220,9 @@ export default function ReceiptConfigPage() {
         storeName: settings.storeName, 
         address: settings.address, 
         phone: settings.phone, 
-        footerNote: settings.footerNote, 
-        trackingUrl: settings.trackingUrl 
+        footerNote: settings.footerNote,
       };
       
-      // Use the api utility for POST request
       await api.post("api/format-settings", payload);
       
       receiptSettingsCache = {
@@ -267,9 +260,8 @@ export default function ReceiptConfigPage() {
     paymentMethod: "Cash",
   };
 
-  const previewTrackingLink = settings.trackingUrl.includes("{id}")
-    ? settings.trackingUrl.replace("{id}", sampleData.id)
-    : settings.trackingUrl;
+  // Use the constant tracking URL with the sample ID
+  const previewTrackingLink = `${TRACKING_URL_BASE}?id=${sampleData.id}`;
 
   const formattedDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-PH", {
     year: "numeric",
@@ -281,60 +273,62 @@ export default function ReceiptConfigPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="font-mono text-sm space-y-2 border-2 rounded-xl transition-all"
+      className="font-mono text-sm border-2 rounded-xl transition-all"
       style={{
-        backgroundColor: isDarkMode ? "#183D3D" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-        color: isDarkMode ? "#F3EDE3" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+        color: isDarkMode ? "#f1f5f9" : "#0f172a",
       }}
     >
-      <div className="p-4 space-y-2">
+      <div className="p-4 space-y-3">
         {/* Header */}
-        <div className="text-center font-bold text-lg" style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}>
-          {settings.storeName || "Store Name"}
-        </div>
-        <div className="text-center text-sm" style={{ color: isDarkMode ? "#E0EAE8" : "#1E3A3A" }}>
-          {settings.address || "Store Address"}
-        </div>
-        <div className="text-center text-sm" style={{ color: isDarkMode ? "#E0EAE8" : "#1E3A3A" }}>
-          {settings.phone || "Phone Number"}
+        <div className="text-center space-y-1">
+          <div className="font-bold text-lg" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+            {settings.storeName || "Store Name"}
+          </div>
+          <div className="text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+            {settings.address || "Store Address"}
+          </div>
+          <div className="text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+            {settings.phone || "Phone Number"}
+          </div>
         </div>
 
         <hr style={{ 
-          borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
           borderWidth: '1px'
         }} />
 
         {/* Transaction Details */}
-        <div className="grid grid-cols-2 gap-1 text-xs" style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}>
+        <div className="grid grid-cols-2 gap-2 text-xs" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
           <div>
             {activePreview === "invoice" ? "Service Invoice #:" : "Receipt #:"}{" "}
-            <span className="font-bold" style={{ color: isDarkMode ? "#FFFFFF" : "#0B2B26" }}>
+            <span className="font-bold" style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}>
               {sampleData.id}
             </span>
           </div>
           <div className="text-right">
-            Date: <span className="font-bold" style={{ color: isDarkMode ? "#FFFFFF" : "#0B2B26" }}>
+            Date: <span className="font-bold" style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}>
               {sampleData.createdAt}
             </span>
           </div>
           <div>
-            Customer: <span className="font-bold" style={{ color: isDarkMode ? "#FFFFFF" : "#0B2B26" }}>
+            Customer: <span className="font-bold" style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}>
               {sampleData.customerName}
             </span>
           </div>
           <div className="text-right">
-            Staff: <span className="font-bold" style={{ color: isDarkMode ? "#FFFFFF" : "#0B2B26" }}>
+            Staff: <span className="font-bold" style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}>
               {sampleData.staffName}
             </span>
           </div>
           <div>
-            Payment: <span className="font-bold" style={{ color: isDarkMode ? "#FFFFFF" : "#0B2B26" }}>
+            Payment: <span className="font-bold" style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}>
               {sampleData.paymentMethod}
             </span>
           </div>
           {activePreview === "invoice" && (
-            <div className="col-span-2 flex justify-between">
+            <div className="col-span-2 flex justify-between pt-1">
               <span>Due Date to Claim:</span>
               <span className="font-bold" style={{ color: "#F87171" }}>{formattedDueDate}</span>
             </div>
@@ -342,12 +336,12 @@ export default function ReceiptConfigPage() {
         </div>
 
         <hr style={{ 
-          borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
           borderWidth: '1px'
         }} />
 
         {/* Items */}
-        <div className="space-y-1 text-sm" style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}>
+        <div className="space-y-2 text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
           <div className="flex justify-between">
             <span>Detergents × {sampleData.detergentQty}</span>
             <span>₱{(sampleData.detergentQty * 30).toFixed(2)}</span>
@@ -367,18 +361,18 @@ export default function ReceiptConfigPage() {
         </div>
 
         <hr style={{ 
-          borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
           borderWidth: '1px'
         }} />
 
         {/* Total */}
-        <div className="flex justify-between font-bold text-sm" style={{ color: isDarkMode ? "#FFFFFF" : "#0B2B26" }}>
+        <div className="flex justify-between font-bold text-sm pt-1" style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}>
           <span>Total</span>
           <span>₱{sampleData.total.toFixed(2)}</span>
         </div>
 
         {/* QR Code */}
-        <div className="flex justify-center mt-3 print:hidden">
+        <div className="flex justify-center pt-3 print:hidden">
           <div style={{ 
             background: 'white', 
             padding: '8px', 
@@ -392,7 +386,7 @@ export default function ReceiptConfigPage() {
             />
           </div>
         </div>
-        <div className="text-center mt-1 text-xs" style={{ color: isDarkMode ? "#CBD5E1" : "#4B5563" }}>
+        <div className="text-center text-xs pt-1" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
           Scan to track your laundry status
         </div>
 
@@ -400,11 +394,11 @@ export default function ReceiptConfigPage() {
         {activePreview === "invoice" && (
           <>
             <hr style={{ 
-              borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+              borderColor: isDarkMode ? "#334155" : "#cbd5e1",
               borderWidth: '1px'
             }} />
-            <div className="text-xs mt-2" style={{ color: isDarkMode ? "#E0EAE8" : "#6B7280" }}>
-              <strong className="block mb-1 text-sm" style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}>
+            <div className="text-xs pt-2" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+              <strong className="block mb-1 text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                 Terms & Conditions
               </strong>
               <p>
@@ -416,7 +410,7 @@ export default function ReceiptConfigPage() {
         )}
 
         {/* Footer Note */}
-        <div className="text-center mt-2 text-xs" style={{ color: isDarkMode ? "#CBD5E1" : "#6B7280" }}>
+        <div className="text-center text-xs pt-2" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
           {settings.footerNote || "Thank you for choosing our service!"}
         </div>
       </div>
@@ -429,32 +423,32 @@ export default function ReceiptConfigPage() {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border-2 p-5 transition-all h-[560px]"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
       }}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="w-fit rounded-lg p-2 animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}>
           <div className="h-6 w-6"></div>
         </div>
         <div className="h-6 w-32 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
       </div>
       <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
+        {[...Array(4)].map((_, i) => (
           <div key={i} className="space-y-2">
             <div className="h-4 w-20 rounded animate-pulse"
                  style={{
-                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                  }}></div>
             <div className="h-10 w-full rounded animate-pulse"
                  style={{
-                   backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+                   backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                  }}></div>
           </div>
         ))}
@@ -462,7 +456,7 @@ export default function ReceiptConfigPage() {
       <div className="mt-6 flex justify-end">
         <div className="h-10 w-40 rounded-lg animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
       </div>
     </motion.div>
@@ -476,16 +470,16 @@ export default function ReceiptConfigPage() {
     >
       <div className="h-10 w-10 rounded-lg animate-pulse"
            style={{
-             backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+             backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
            }}></div>
       <div className="space-y-2">
         <div className="h-6 w-44 rounded-lg animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
         <div className="h-4 w-56 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
       </div>
     </motion.div>
@@ -493,7 +487,9 @@ export default function ReceiptConfigPage() {
 
   if (initialLoad && !receiptSettingsCache) {
     return (
-      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
+        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+      }}>
         <SkeletonHeader />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -505,7 +501,9 @@ export default function ReceiptConfigPage() {
   }
 
   return (
-    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
+      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+    }}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -516,17 +514,17 @@ export default function ReceiptConfigPage() {
           whileHover={{ scale: 1.1, rotate: 5 }}
           className="rounded-lg p-2"
           style={{
-            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-            color: "#F3EDE3",
+            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+            color: "#f1f5f9",
           }}
         >
           <ScrollText size={22} />
         </motion.div>
         <div>
-          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
             Receipt Configuration
           </p>
-          <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+          <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
             Customize your receipt and invoice templates
           </p>
         </div>
@@ -541,39 +539,41 @@ export default function ReceiptConfigPage() {
         >
           <Card className="rounded-xl border-2 transition-all h-[560px] flex flex-col"
                 style={{
-                  backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                  borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                  backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                  borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}>
-            <CardHeader className="pb-1">
+            <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2" 
-                         style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
-                <div className="rounded-lg p-1.5"
-                     style={{
-                       backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                       color: isDarkMode ? "#18442AF5" : "#0B2B26",
-                     }}>
+                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className="rounded-lg p-1.5"
+                  style={{
+                    backgroundColor: "#0f172a",
+                    color: "#f1f5f9",
+                  }}
+                >
                   <Save size={16} />
-                </div>
+                </motion.div>
                 Receipt Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm px-6 flex-1">
+            <CardContent className="space-y-4 px-6 flex-1">
               {[
                 { label: "Store Name", key: "storeName" },
                 { label: "Address", key: "address" },
                 { label: "Phone Number", key: "phone" },
                 { label: "Footer Note", key: "footerNote" },
-                { label: "Tracking URL", key: "trackingUrl" },
               ].map(({ label, key }, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.05 }}
-                  className="space-y-1"
+                  className="space-y-2"
                 >
                   <Label className="text-sm font-medium" 
-                         style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                     {label}
                   </Label>
                   <Input
@@ -583,15 +583,15 @@ export default function ReceiptConfigPage() {
                     aria-label={label}
                     className="rounded-lg border-2 transition-all"
                     style={{
-                      backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                      color: isDarkMode ? "#13151B" : "#0B2B26",
+                      backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                      borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                      color: isDarkMode ? "#f1f5f9" : "#0f172a",
                     }}
                   />
                 </motion.div>
               ))}
             </CardContent>
-            <div className="flex justify-end px-6 pb-4">
+            <div className="flex justify-end px-6 pb-4 pt-2">
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -601,7 +601,7 @@ export default function ReceiptConfigPage() {
                   disabled={isSaving}
                   className="rounded-lg px-4 py-2 text-white transition-all"
                   style={{
-                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                    backgroundColor: "#0f172a",
                   }}
                 >
                   {isSaving ? (
@@ -629,20 +629,23 @@ export default function ReceiptConfigPage() {
         >
           <Card className="rounded-xl border-2 transition-all h-[560px] flex flex-col"
                 style={{
-                  backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                  borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                  backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                  borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}>
-            <CardHeader className="pb-1">
+            <CardHeader className="pb-2">
               <CardTitle className="text-base flex justify-between items-center" 
-                         style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                 <div className="flex items-center gap-2">
-                  <div className="rounded-lg p-1.5"
-                       style={{
-                         backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                         color: isDarkMode ? "#18442AF5" : "#0B2B26",
-                       }}>
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="rounded-lg p-1.5"
+                    style={{
+                      backgroundColor: "#0f172a",
+                      color: "#f1f5f9",
+                    }}
+                  >
                     <Eye size={16} />
-                  </div>
+                  </motion.div>
                   <span>Receipt Preview</span>
                 </div>
                 <div className="flex space-x-2">
@@ -657,11 +660,11 @@ export default function ReceiptConfigPage() {
                     }`}
                     style={{
                       backgroundColor: activePreview === "invoice" 
-                        ? (isDarkMode ? "#18442AF5" : "#0B2B26")
-                        : (isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)"),
+                        ? "#0f172a"
+                        : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)"),
                       color: activePreview === "invoice" 
                         ? "#FFFFFF"
-                        : (isDarkMode ? "#13151B" : "#0B2B26"),
+                        : (isDarkMode ? "#f1f5f9" : "#0f172a"),
                     }}
                   >
                     <FileText size={12} className="inline mr-1" />
@@ -678,11 +681,11 @@ export default function ReceiptConfigPage() {
                     }`}
                     style={{
                       backgroundColor: activePreview === "receipt" 
-                        ? (isDarkMode ? "#18442AF5" : "#0B2B26")
-                        : (isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)"),
+                        ? "#0f172a"
+                        : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)"),
                       color: activePreview === "receipt" 
                         ? "#FFFFFF"
-                        : (isDarkMode ? "#13151B" : "#0B2B26"),
+                        : (isDarkMode ? "#f1f5f9" : "#0f172a"),
                     }}
                   >
                     <Receipt size={12} className="inline mr-1" />

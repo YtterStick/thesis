@@ -36,13 +36,38 @@ import {
 const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
 const ALLOWED_SKEW_MS = 5000;
 
+// Manila time utility functions
+const toManilaTime = (timestamp) => {
+  if (!timestamp) return null;
+  
+  const date = new Date(timestamp);
+  return new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+};
+
+const formatManilaTime = (timestamp, options = {}) => {
+  if (!timestamp) return 'N/A';
+  
+  const date = new Date(timestamp);
+  const defaultOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Asia/Manila'
+  };
+  
+  return date.toLocaleString('en-PH', { ...defaultOptions, ...options });
+};
+
 const isTokenExpired = (token) => {
   try {
     const payload = token.split(".")[1];
     const decoded = JSON.parse(atob(payload));
     const exp = decoded.exp * 1000;
-    const now = Date.now();
-    return exp + ALLOWED_SKEW_MS < now;
+    const manilaNow = toManilaTime(new Date()).getTime();
+    return exp + ALLOWED_SKEW_MS < manilaNow;
   } catch (err) {
     console.warn("❌ Failed to decode token:", err);
     return true;
@@ -76,7 +101,7 @@ const secureFetch = async (endpoint, method = "GET", body = null) => {
 const SkeletonCard = ({ isDarkMode }) => (
   <Card className="rounded-xl border-2 animate-pulse"
     style={{
-      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      borderColor: isDarkMode ? "#334155" : "#0B2B26",
       backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
     }}
   >
@@ -292,20 +317,20 @@ const AuditTrailPage = () => {
 
     let matchesDate = true;
     if (dateRange !== "all" && log.timestamp) {
-      const logDate = new Date(log.timestamp);
-      const now = new Date();
+      const logDate = toManilaTime(log.timestamp);
+      const now = toManilaTime(new Date());
       
       switch (dateRange) {
         case "today":
           matchesDate = logDate.toDateString() === now.toDateString();
           break;
         case "week":
-          const weekAgo = new Date();
+          const weekAgo = new Date(now);
           weekAgo.setDate(now.getDate() - 7);
           matchesDate = logDate >= weekAgo;
           break;
         case "month":
-          const monthAgo = new Date();
+          const monthAgo = new Date(now);
           monthAgo.setMonth(now.getMonth() - 1);
           matchesDate = logDate >= monthAgo;
           break;
@@ -341,15 +366,7 @@ const AuditTrailPage = () => {
   };
 
   const formatTimestamp = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleString('en-PH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    return formatManilaTime(timestamp);
   };
 
   const goToFirstPage = () => setCurrentPage(1);

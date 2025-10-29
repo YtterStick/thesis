@@ -65,14 +65,13 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         className="relative z-50 w-full max-w-2xl rounded-xl border-2 p-6 shadow-xl transition-all"
         style={{
-          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-          color: isDarkMode ? "#13151B" : "#0B2B26",
+          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
         }}
       >
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+          <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
             {initialData?.id ? "Edit Terms" : "Add New Terms"}
           </h2>
           <motion.button
@@ -81,10 +80,10 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
             onClick={onClose}
             className="rounded-lg p-1 transition-colors hover:opacity-80"
             style={{
-              backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+              backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
             }}
           >
-            <X className="h-5 w-5" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+            <X className="h-5 w-5" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
           </motion.button>
         </div>
 
@@ -92,7 +91,7 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
           <div>
             <Label 
               className="text-sm font-medium mb-2 block"
-              style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+              style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
             >
               Title
             </Label>
@@ -103,9 +102,9 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
               required
               className="rounded-lg border-2 transition-all"
               style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                color: isDarkMode ? "#13151B" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                color: isDarkMode ? "#f1f5f9" : "#0f172a",
               }}
             />
           </div>
@@ -113,7 +112,7 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
           <div>
             <Label 
               className="text-sm font-medium mb-2 block"
-              style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+              style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
             >
               Content
             </Label>
@@ -125,9 +124,9 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
               required
               className="rounded-lg border-2 transition-all resize-none"
               style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                color: isDarkMode ? "#13151B" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                color: isDarkMode ? "#f1f5f9" : "#0f172a",
               }}
             />
           </div>
@@ -140,8 +139,8 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
               onClick={onClose}
               className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
               style={{
-                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                color: isDarkMode ? '#13151B' : '#0B2B26',
+                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                color: isDarkMode ? '#f1f5f9' : '#0f172a',
               }}
             >
               Cancel
@@ -152,7 +151,7 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
               type="submit"
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all"
               style={{
-                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                backgroundColor: "#0f172a",
               }}
             >
               <Save className="h-4 w-4" />

@@ -11,6 +11,7 @@ import PaymentSection from "./PaymentSection";
 import ServiceSelector from "./ServiceSelector";
 import ConsumablesSection from "./ConsumablesSection";
 import { api } from "@/lib/api-config";
+import { useTheme } from "@/hooks/use-theme";
 
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
 const POLLING_INTERVAL = 60000; // 1 minute polling
@@ -50,6 +51,9 @@ const saveCacheToStorage = (data) => {
 };
 
 const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, isLocked }, ref) => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
     const [form, setForm] = useState({
         name: "",
         contact: "",
@@ -445,12 +449,12 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     return (
         <Card className="rounded-xl border-2 transition-all"
               style={{
-                  borderColor: 'rgb(11, 43, 38)',
-                  backgroundColor: 'rgb(243, 237, 227)'
+                  borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                  backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF'
               }}>
             <CardHeader className="pb-1">
                 <CardTitle className="flex items-center gap-2 text-base"
-                          style={{ color: 'rgb(11, 43, 38)' }}>
+                          style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                     <Receipt size={18} />
                     New Transaction
                 </CardTitle>
@@ -463,7 +467,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 >
                     {/* 👤 Customer Info */}
                     <div>
-                        <Label className="mb-1 mt-4 block" style={{ color: 'rgb(11, 43, 38)' }}>Name</Label>
+                        <Label className="mb-1 mt-4 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Name</Label>
                         <Input
                             placeholder="Customer Name"
                             value={form.name}
@@ -472,15 +476,15 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                             disabled={isLocked}
                             className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
                             style={{
-                                borderColor: 'rgb(11, 43, 38)',
-                                backgroundColor: 'rgb(255, 255, 255)',
-                                color: 'rgb(11, 43, 38)'
+                                borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                                color: isDarkMode ? '#f1f5f9' : '#0f172a'
                             }}
                         />
                     </div>
 
                     <div>
-                        <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>Contact Number</Label>
+                        <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Contact Number</Label>
                         <Input
                             type="tel"
                             inputMode="numeric"
@@ -498,9 +502,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                             disabled={isLocked}
                             className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
                             style={{
-                                borderColor: 'rgb(11, 43, 38)',
-                                backgroundColor: 'rgb(255, 255, 255)',
-                                color: 'rgb(11, 43, 38)'
+                                borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                                color: isDarkMode ? '#f1f5f9' : '#0f172a'
                             }}
                         />
                     </div>
@@ -515,34 +519,40 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
                     {/* 🧺 Supply Source Selector */}
                     <div className="space-y-2 pt-4">
-                        <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>Supply Source</Label>
+                        <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Supply Source</Label>
                         <Select
                             value={supplySource}
                             onValueChange={setSupplySource}
                             disabled={isLocked}
                         >
-                            <SelectTrigger className="rounded-lg border-2 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                            <SelectTrigger className="rounded-lg border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                           style={{
-                                              borderColor: 'rgb(11, 43, 38)',
-                                              backgroundColor: 'rgb(255, 255, 255)',
-                                              color: 'rgb(11, 43, 38)'
+                                              borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                              backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                                              color: isDarkMode ? '#f1f5f9' : '#0f172a'
                                           }}>
                                 <SelectValue placeholder="Select source" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-lg border-2 bg-white text-slate-900"
+                            <SelectContent className="rounded-lg border-2"
                                           style={{
-                                              borderColor: 'rgb(11, 43, 38)',
-                                              backgroundColor: 'rgb(255, 255, 255)'
+                                              borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                              backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF'
                                           }}>
                                 <SelectItem
                                     value="in-store"
-                                    className="cursor-pointer hover:bg-slate-100"
+                                    className="cursor-pointer"
+                                    style={{
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a'
+                                    }}
                                 >
                                     In-store
                                 </SelectItem>
                                 <SelectItem
                                     value="customer"
-                                    className="cursor-pointer hover:bg-slate-100"
+                                    className="cursor-pointer"
+                                    style={{
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a'
+                                    }}
                                 >
                                     Customer-provided
                                 </SelectItem>
@@ -581,8 +591,8 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         disabled={isSubmitting || isLocked}
                         className="mt-2 w-full rounded-lg px-4 py-2 text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 hover:scale-105 transition-transform"
                         style={{
-                            backgroundColor: 'rgb(11, 43, 38)',
-                            color: 'rgb(243, 237, 227)'
+                            backgroundColor: isDarkMode ? '#0f172a' : '#0f172a',
+                            color: '#f1f5f9'
                         }}
                     >
                         {isSubmitting ? "Processing..." : "Save Transaction"}

@@ -16,7 +16,7 @@ import washingAnimation from "@/assets/lottie/washing-machine.json";
 import dryerAnimation from "@/assets/lottie/dryer-machine.json";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -26,7 +26,6 @@ const initializeCache = () => {
     const stored = localStorage.getItem('machinesCache');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Check if cache is still valid
       if (Date.now() - parsed.timestamp < CACHE_DURATION) {
         console.log("📦 Initializing machines from stored cache");
         return parsed;
@@ -79,38 +78,37 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
 
   const inputClass = `rounded-lg border-2 transition-all ${
     isDarkMode 
-      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B] placeholder-[#6B7280]" 
+      ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9] placeholder-[#94a3b8]" 
       : "bg-white border-[#0B2B26] text-[#0B2B26] placeholder-gray-500"
   } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
 
   const selectTriggerClass = `rounded-lg border-2 transition-all ${
     isDarkMode 
-      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+      ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
       : "bg-white border-[#0B2B26] text-[#0B2B26]"
   } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
 
   const buttonClass = `rounded-lg px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2 ${
     isDarkMode 
-      ? "bg-[#18442AF5] hover:bg-[#1E524A] text-white" 
+      ? "bg-[#0f172a] hover:bg-[#1e293b] text-white" 
       : "bg-[#0B2B26] hover:bg-[#18442A] text-white"
   }`;
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="max-w-lg w-full rounded-xl border-2 p-6 shadow-xl"
         style={{
-          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-          color: isDarkMode ? "#13151B" : "#0B2B26",
+          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+          borderColor: isDarkMode ? "#334155" : "#0B2B26",
         }}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
             {isEdit ? "Edit Machine" : "Add New Machine"}
           </h2>
           <motion.button
@@ -119,17 +117,17 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
             onClick={() => onOpenChange(false)}
             className="rounded-lg p-1 transition-colors hover:opacity-80"
             style={{
-              backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+              backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
             }}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }} />
           </motion.button>
         </div>
 
         <div className="space-y-4">
           {/* Machine Type */}
           <div>
-            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
               Machine Type
             </Label>
             <Select value={form.type} onValueChange={(val) => handleChange("type", val)}>
@@ -138,7 +136,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
               </SelectTrigger>
               <SelectContent className={`rounded-lg border-2 ${
                 isDarkMode 
-                  ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+                  ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
                   : "bg-white border-[#0B2B26] text-[#0B2B26]"
               }`}>
                 <SelectItem value="Washer">Washer</SelectItem>
@@ -149,7 +147,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
 
           {/* Machine Name */}
           <div>
-            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
               Machine Name
             </Label>
             <Input
@@ -162,7 +160,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
 
           {/* Capacity */}
           <div>
-            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
               Capacity (kg)
             </Label>
             <Input
@@ -176,7 +174,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
 
           {/* Status */}
           <div>
-            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
               Status
             </Label>
             <Select value={form.status} onValueChange={(val) => handleChange("status", val)}>
@@ -185,7 +183,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
               </SelectTrigger>
               <SelectContent className={`rounded-lg border-2 ${
                 isDarkMode 
-                  ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+                  ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
                   : "bg-white border-[#0B2B26] text-[#0B2B26]"
               }`}>
                 <SelectItem value="Available" className={statusColorMap["Available"]}>
@@ -242,12 +240,17 @@ function MachineCard({ machine, animationData, onEdit, onDelete }) {
   };
 
   return (
-    <div
+    <motion.div
+      whileHover={{ 
+        scale: 1.03,
+        y: -2,
+        transition: { duration: 0.2 }
+      }}
       onClick={() => onEdit(machine)}
-      className="relative flex h-[200px] cursor-pointer flex-col items-center justify-between rounded-lg border-2 p-4 shadow-sm transition-all hover:scale-105 hover:shadow-md"
+      className="relative flex h-[200px] cursor-pointer flex-col items-center justify-between rounded-xl border-2 p-4 shadow-sm transition-all hover:shadow-md"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#0B2B26",
       }}
     >
       <button
@@ -257,8 +260,8 @@ function MachineCard({ machine, animationData, onEdit, onDelete }) {
         }}
         className="absolute right-2 top-2 rounded-full p-1 transition-colors hover:bg-red-100"
         style={{ 
-          color: isDarkMode ? "#13151B" : "#0B2B26",
-          backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "transparent"
+          color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+          backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "transparent"
         }}
         title="Delete machine"
       >
@@ -274,23 +277,23 @@ function MachineCard({ machine, animationData, onEdit, onDelete }) {
         />
         {machine.status === "Maintenance" && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
-            <WrenchIcon className="h-6 w-6" style={{ color: isDarkMode ? "#EF4444" : "#DC2626" }} />
+            <WrenchIcon className="h-6 w-6" style={{ color: isDarkMode ? "#F87171" : "#DC2626" }} />
           </div>
         )}
       </div>
 
       <div className="space-y-1 text-center">
-        <div className="font-semibold text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+        <div className="font-semibold text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
           {machine.name}
         </div>
-        <div className="text-xs" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+        <div className="text-xs" style={{ color: isDarkMode ? "#cbd5e1" : "#0B2B26" }}>
           {machine.capacityKg} kg
         </div>
         <div className={`text-xs italic ${statusColor[machine.status]}`}>
           {machine.status}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -318,12 +321,16 @@ function MachineListItem({ machine, animationData, onEdit, onDelete }) {
   };
 
   return (
-    <div
+    <motion.div
+      whileHover={{ 
+        scale: 1.02,
+        transition: { duration: 0.2 }
+      }}
       onClick={() => onEdit(machine)}
-      className="flex items-center justify-between rounded-lg border-2 p-4 transition-all hover:scale-[1.02] hover:shadow-md cursor-pointer"
+      className="flex items-center justify-between rounded-xl border-2 p-4 transition-all hover:shadow-md cursor-pointer"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#0B2B26",
       }}
     >
       <div className="flex items-center gap-4">
@@ -336,15 +343,15 @@ function MachineListItem({ machine, animationData, onEdit, onDelete }) {
           />
           {machine.status === "Maintenance" && (
             <div className="absolute inset-0 z-10 flex items-center justify-center">
-              <WrenchIcon className="h-4 w-4" style={{ color: isDarkMode ? "#EF4444" : "#DC2626" }} />
+              <WrenchIcon className="h-4 w-4" style={{ color: isDarkMode ? "#F87171" : "#DC2626" }} />
             </div>
           )}
         </div>
         <div>
-          <div className="font-semibold" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+          <div className="font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
             {machine.name}
           </div>
-          <div className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+          <div className="text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#0B2B26" }}>
             {machine.capacityKg} kg • <span className={`italic ${statusColor[machine.status]}`}>{machine.status}</span>
           </div>
         </div>
@@ -356,13 +363,14 @@ function MachineListItem({ machine, animationData, onEdit, onDelete }) {
         }}
         className="rounded-full p-2 transition-colors hover:bg-red-100"
         style={{ 
-          color: isDarkMode ? "#13151B" : "#0B2B26",
+          color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+          backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "transparent"
         }}
         title="Delete machine"
       >
         <X className="h-4 w-4" />
       </button>
-    </div>
+    </motion.div>
   );
 }
 
@@ -374,14 +382,14 @@ function DeleteConfirmationModal({ open, onOpenChange, onConfirm, machineId }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="max-w-sm w-full rounded-xl border-2 p-6 shadow-xl"
         style={{
-          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+          borderColor: isDarkMode ? "#334155" : "#0B2B26",
         }}
       >
         <div className="text-center">
@@ -392,13 +400,13 @@ function DeleteConfirmationModal({ open, onOpenChange, onConfirm, machineId }) {
           
           <h3 
             className="mb-2 text-lg font-semibold"
-            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+            style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}
           >
             Delete Machine
           </h3>
           <p 
             className="mb-6 text-sm"
-            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+            style={{ color: isDarkMode ? "#cbd5e1" : "#0B2B26" }}
           >
             Are you sure you want to delete this machine? This action cannot be undone.
           </p>
@@ -409,8 +417,8 @@ function DeleteConfirmationModal({ open, onOpenChange, onConfirm, machineId }) {
               onClick={() => onOpenChange(false)}
               className="rounded-lg px-4 py-2 transition-colors border-2"
               style={{
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                color: isDarkMode ? "#13151B" : "#0B2B26",
+                borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                 backgroundColor: 'transparent',
               }}
             >
@@ -420,7 +428,7 @@ function DeleteConfirmationModal({ open, onOpenChange, onConfirm, machineId }) {
               onClick={() => onConfirm(machineId)}
               className="rounded-lg px-4 py-2 transition-colors"
               style={{
-                backgroundColor: isDarkMode ? "#DC2626" : "#DC2626",
+                backgroundColor: "#DC2626",
                 color: "#FFFFFF",
               }}
             >
@@ -445,8 +453,8 @@ export default function MachineMainPage() {
     }
     return [];
   });
-  const [loading, setLoading] = useState(!machinesCache); // Only loading if no cache
-  const [initialLoad, setInitialLoad] = useState(!machinesCache); // Only initial load if no cache
+  const [loading, setLoading] = useState(!machinesCache);
+  const [initialLoad, setInitialLoad] = useState(!machinesCache);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -696,44 +704,47 @@ export default function MachineMainPage() {
 
   const SkeletonCard = () => (
     <div
-      className="h-[200px] animate-pulse rounded-lg"
-      style={{ backgroundColor: isDarkMode ? "#F3EDE3" : "#E0EAE8" }}
+      className="h-[200px] animate-pulse rounded-xl"
+      style={{ backgroundColor: isDarkMode ? "#334155" : "#f1f5f9" }}
     />
   );
 
   const SkeletonListItem = () => (
-    <div className="h-16 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+    <div className="h-16 animate-pulse rounded-xl" 
+         style={{ backgroundColor: isDarkMode ? "#334155" : "#f1f5f9" }} />
   );
 
   // Show skeleton loader only during initial load AND when no cached data is available
   if (initialLoad && !machinesCache) {
     return (
-      <div className="min-h-screen px-6 pb-6 pt-4 text-slate-900 dark:text-white">
+      <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
+        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+      }}>
         {/* Header Skeleton */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 flex items-center justify-between"
+          className="flex items-center justify-between mb-3"
         >
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg animate-pulse"
                  style={{
-                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                  }}></div>
             <div className="space-y-2">
               <div className="h-6 w-44 rounded-lg animate-pulse"
                    style={{
-                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                    }}></div>
               <div className="h-4 w-56 rounded animate-pulse"
                    style={{
-                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                    }}></div>
             </div>
           </div>
           <div className="h-10 w-40 rounded-lg animate-pulse"
                style={{
-                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                }}></div>
         </motion.div>
 
@@ -743,7 +754,7 @@ export default function MachineMainPage() {
             <div key={sectionIndex} className="space-y-4">
               <div className="h-6 w-32 rounded animate-pulse"
                    style={{
-                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                    }}></div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {[...Array(5)].map((_, i) => (
@@ -758,12 +769,14 @@ export default function MachineMainPage() {
   }
 
   return (
-    <div className="min-h-screen px-6 pb-6 pt-4 text-slate-900 dark:text-white">
+    <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
+      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+    }}>
       {/* Enhanced Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6 flex items-center justify-between"
+        className="flex items-center justify-between mb-3"
       >
         <div className="flex items-center gap-3">
           <motion.div
@@ -771,15 +784,17 @@ export default function MachineMainPage() {
             transition={{ duration: 0.2 }}
             className="rounded-lg p-2"
             style={{
-              backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-              color: "#F3EDE3",
+              backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+              color: "#f1f5f9",
             }}
           >
             <WashingMachine size={22} />
           </motion.div>
           <div>
-            <p className="text-xl font-bold">Laundry Machines</p>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-xl font-bold" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+              Laundry Machines
+            </p>
+            <p className="text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
               Manage and monitor your washing machines and dryers
             </p>
           </div>
@@ -787,12 +802,15 @@ export default function MachineMainPage() {
         
         <div className="flex items-center gap-3">
           {/* View Mode Toggle */}
-          <div className="flex rounded-lg border-2 p-1" style={{ borderColor: isDarkMode ? "#2A524C" : "#0B2B26" }}>
+          <div className="flex rounded-lg border-2 p-1" style={{ 
+            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+          }}>
             <button
               onClick={() => setViewMode('grid')}
               className={`rounded-md p-2 transition-colors ${
                 viewMode === 'grid' 
-                  ? isDarkMode ? "bg-[#18442AF5] text-white" : "bg-[#0B2B26] text-white"
+                  ? isDarkMode ? "bg-[#0f172a] text-white" : "bg-[#0B2B26] text-white"
                   : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
             >
@@ -802,7 +820,7 @@ export default function MachineMainPage() {
               onClick={() => setViewMode('list')}
               className={`rounded-md p-2 transition-colors ${
                 viewMode === 'list' 
-                  ? isDarkMode ? "bg-[#18442AF5] text-white" : "bg-[#0B2B26] text-white"
+                  ? isDarkMode ? "bg-[#0f172a] text-white" : "bg-[#0B2B26] text-white"
                   : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
             >
@@ -819,8 +837,8 @@ export default function MachineMainPage() {
               onClick={handleAddMachine}
               className="flex items-center gap-2 text-sm font-medium transition-all duration-200 focus:outline-none rounded-lg px-4 py-2"
               style={{
-                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                color: "#F3EDE3",
+                backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                color: "#f1f5f9",
               }}
             >
               <PlusCircle className="w-4 h-4" />
@@ -830,7 +848,21 @@ export default function MachineMainPage() {
         </div>
       </motion.div>
 
-      {error && <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-xl border-2 p-4 transition-all"
+          style={{
+            backgroundColor: isDarkMode ? "rgba(254, 226, 226, 0.1)" : "#FEF2F2",
+            borderColor: isDarkMode ? "#F87171" : "#EF4444",
+          }}
+        >
+          <p className="text-sm font-medium" style={{ color: isDarkMode ? "#F87171" : "#DC2626" }}>
+            {error}
+          </p>
+        </motion.div>
+      )}
 
       {/* Combined Machines Grid View */}
       {viewMode === 'grid' && (
@@ -875,7 +907,11 @@ export default function MachineMainPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex h-32 items-center justify-center rounded-lg border-2 border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800"
+                className="flex h-32 items-center justify-center rounded-xl border-2"
+                style={{
+                  borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                  backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                }}
               >
                 <p className="text-muted-foreground">No washers added yet.</p>
               </motion.div>
@@ -923,7 +959,11 @@ export default function MachineMainPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex h-32 items-center justify-center rounded-lg border-2 border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800"
+                className="flex h-32 items-center justify-center rounded-xl border-2"
+                style={{
+                  borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                  backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                }}
               >
                 <p className="text-muted-foreground">No dryers added yet.</p>
               </motion.div>
@@ -967,7 +1007,11 @@ export default function MachineMainPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex h-20 items-center justify-center rounded-lg border-2 border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800">
+              <div className="flex h-20 items-center justify-center rounded-xl border-2"
+                   style={{
+                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                   }}>
                 <p className="text-muted-foreground">No washers added yet.</p>
               </div>
             )}
@@ -1000,7 +1044,11 @@ export default function MachineMainPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex h-20 items-center justify-center rounded-lg border-2 border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800">
+              <div className="flex h-20 items-center justify-center rounded-xl border-2"
+                   style={{
+                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                   }}>
                 <p className="text-muted-foreground">No dryers added yet.</p>
               </div>
             )}

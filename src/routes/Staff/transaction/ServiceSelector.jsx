@@ -8,34 +8,41 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useTheme } from "@/hooks/use-theme";
 
 const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   return (
     <div className="space-y-2 pt-4">
-      <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>Service Type</Label>
+      <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Service Type</Label>
       <Select
         value={serviceId}
         onValueChange={(value) => onChange("serviceId", value)}
         disabled={isLocked}
       >
-        <SelectTrigger className="rounded-lg border-2 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        <SelectTrigger className="rounded-lg border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                       style={{
-                        borderColor: 'rgb(11, 43, 38)',
-                        backgroundColor: 'rgb(255, 255, 255)',
-                        color: 'rgb(11, 43, 38)'
+                        borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                        backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                        color: isDarkMode ? '#f1f5f9' : '#0f172a'
                       }}>
           <SelectValue placeholder="Select service" />
         </SelectTrigger>
-        <SelectContent className="rounded-lg border-2 bg-white text-slate-900"
+        <SelectContent className="rounded-lg border-2"
                       style={{
-                        borderColor: 'rgb(11, 43, 38)',
-                        backgroundColor: 'rgb(255, 255, 255)'
+                        borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                        backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF'
                       }}>
           {services.map((service) => (
             <SelectItem
               key={service.id}
               value={service.id}
-              className="cursor-pointer hover:bg-slate-100"
+              className="cursor-pointer"
+              style={{
+                color: isDarkMode ? '#f1f5f9' : '#0f172a'
+              }}
             >
               {service.name}
             </SelectItem>

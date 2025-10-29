@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { useTheme } from "@/hooks/use-theme";
 
 const ConsumablesSection = ({
   stockItems,
@@ -14,6 +15,9 @@ const ConsumablesSection = ({
   supplySource,
   isLocked,
 }) => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   const plasticItems = stockItems.filter((item) =>
     item.name.toLowerCase().includes("plastic")
   );
@@ -63,7 +67,7 @@ const ConsumablesSection = ({
 
   const renderInput = (item, isPlastic = false) => (
     <div key={item.id}>
-      <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>{item.name}</Label>
+      <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{item.name}</Label>
       <Input
         type="number"
         inputMode="numeric"
@@ -83,9 +87,9 @@ const ConsumablesSection = ({
         disabled={isLocked}
         className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
         style={{
-          borderColor: 'rgb(11, 43, 38)',
-          backgroundColor: 'rgb(255, 255, 255)',
-          color: 'rgb(11, 43, 38)'
+          borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+          backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+          color: isDarkMode ? '#f1f5f9' : '#0f172a'
         }}
       />
     </div>
@@ -96,7 +100,7 @@ const ConsumablesSection = ({
       {/* 🔁 Loads + Plastic Items */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="mb-1 block" style={{ color: 'rgb(11, 43, 38)' }}>Loads</Label>
+          <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loads</Label>
           <Input
             type="number"
             inputMode="numeric"
@@ -115,9 +119,9 @@ const ConsumablesSection = ({
             disabled={isLocked}
             className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
             style={{
-              borderColor: 'rgb(11, 43, 38)',
-              backgroundColor: 'rgb(255, 255, 255)',
-              color: 'rgb(11, 43, 38)'
+              borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+              backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+              color: isDarkMode ? '#f1f5f9' : '#0f172a'
             }}
           />
         </div>

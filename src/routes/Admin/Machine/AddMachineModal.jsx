@@ -30,19 +30,19 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
   const inputClass = `rounded-lg border-2 transition-all ${
     isDarkMode 
-      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B] placeholder-[#6B7280]" 
+      ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9] placeholder-[#94a3b8]" 
       : "bg-white border-[#0B2B26] text-[#0B2B26] placeholder-gray-500"
   } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
 
   const selectTriggerClass = `rounded-lg border-2 transition-all ${
     isDarkMode 
-      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+      ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
       : "bg-white border-[#0B2B26] text-[#0B2B26]"
   } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
 
   const buttonClass = `rounded-lg px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2 ${
     isDarkMode 
-      ? "bg-[#18442AF5] hover:bg-[#1E524A] text-white" 
+      ? "bg-[#0f172a] hover:bg-[#1e293b] text-white" 
       : "bg-[#0B2B26] hover:bg-[#18442A] text-white"
   }`;
 
@@ -60,8 +60,8 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
           onClick={() => setOpen(true)}
           className="flex items-center gap-2 text-sm font-medium transition-colors focus:outline-none rounded-lg px-4 py-2"
           style={{
-            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-            color: "#F3EDE3",
+            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+            color: "#f1f5f9",
           }}
         >
           <PlusCircle className="w-4 h-4" />
@@ -70,19 +70,18 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="max-w-lg w-full rounded-xl border-2 p-6 shadow-xl"
             style={{
-              backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-              borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-              color: isDarkMode ? "#13151B" : "#0B2B26",
+              backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+              borderColor: isDarkMode ? "#334155" : "#0B2B26",
             }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
                 {isEdit ? "Edit Machine" : "Add New Machine"}
               </h2>
               <motion.button
@@ -91,17 +90,17 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
                 onClick={handleClose}
                 className="rounded-lg p-1 transition-colors hover:opacity-80"
                 style={{
-                  backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                  backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                 }}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }} />
               </motion.button>
             </div>
 
             <div className="space-y-4">
               {/* Machine Type */}
               <div>
-                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
                   Machine Type
                 </Label>
                 <Select value={form.type} onValueChange={(val) => handleChange("type", val)}>
@@ -110,7 +109,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
                   </SelectTrigger>
                   <SelectContent className={`rounded-lg border-2 ${
                     isDarkMode 
-                      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+                      ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
                       : "bg-white border-[#0B2B26] text-[#0B2B26]"
                   }`}>
                     <SelectItem value="Washer">Washer</SelectItem>
@@ -121,7 +120,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Machine Name */}
               <div>
-                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
                   Machine Name
                 </Label>
                 <Input
@@ -134,7 +133,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Capacity */}
               <div>
-                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
                   Capacity (kg)
                 </Label>
                 <Input
@@ -148,7 +147,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Status */}
               <div>
-                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
                   Status
                 </Label>
                 <Select value={form.status} onValueChange={(val) => handleChange("status", val)}>
@@ -157,7 +156,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
                   </SelectTrigger>
                   <SelectContent className={`rounded-lg border-2 ${
                     isDarkMode 
-                      ? "bg-[#F3EDE3] border-[#2A524C] text-[#13151B]" 
+                      ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
                       : "bg-white border-[#0B2B26] text-[#0B2B26]"
                   }`}>
                     <SelectItem value="Available" className={statusColorMap["Available"]}>

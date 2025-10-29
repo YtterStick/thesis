@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import StaffTable from "./StaffTable";
 import StaffForm from "./StaffForm";
-import { ShieldCheck, Users, User, Plus } from "lucide-react";
+import { ShieldCheck, Users, User, Plus, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const MainPage = () => {
   const { theme } = useTheme();
@@ -15,6 +17,9 @@ const MainPage = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState(null);
+  const [accountToDelete, setAccountToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
   const activeAccounts = accountList.filter(acc => acc.status === "Active");
@@ -25,7 +30,6 @@ const MainPage = () => {
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        // Use the api utility instead of secureFetch
         const data = await api.get("api/accounts");
         const enriched = data.map((acc) => ({
           ...acc,
@@ -50,7 +54,6 @@ const MainPage = () => {
 
   const handleStatusChange = useCallback(async (id, newStatus) => {
     try {
-      // Use the api utility instead of direct fetch
       await api.patch(`api/accounts/${id}/status`, { status: newStatus });
 
       setAccountList(prev => 
@@ -88,6 +91,191 @@ const MainPage = () => {
       description: "Account created successfully",
     });
   }, [toast]);
+
+  // Handle delete account request
+  const handleDeleteRequest = useCallback((account) => {
+    setAccountToDelete(account);
+    setShowDeleteModal(true);
+  }, []);
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!accountToDelete || deleting) return;
+
+    setDeleting(true);
+    try {
+      // First deactivate the account
+      await api.patch(`api/accounts/${accountToDelete.id}/status`, { status: "Inactive" });
+
+      // Update local state
+      setAccountList(prev => 
+        prev.map(acc => 
+          acc.id === accountToDelete.id ? { ...acc, status: "Inactive" } : acc
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: `Account "${accountToDelete.username}" has been deactivated successfully`,
+      });
+
+      setShowDeleteModal(false);
+      setAccountToDelete(null);
+    } catch (error) {
+      console.error("❌ Error deactivating account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to deactivate account",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }, [accountToDelete, deleting, toast]);
+
+  // Handle delete cancellation
+  const handleDeleteCancel = useCallback(() => {
+    setShowDeleteModal(false);
+    setAccountToDelete(null);
+  }, []);
+
+  // Delete Confirmation Modal Component
+  const DeleteConfirmationModal = () => {
+    if (!showDeleteModal || !accountToDelete) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Backdrop */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+          onClick={handleDeleteCancel}
+        />
+        
+        {/* Modal */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="relative z-50 w-full max-w-md mx-4"
+        >
+          <Card className="rounded-xl border-2 shadow-2xl"
+            style={{
+              backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+              borderColor: isDarkMode ? "#334155" : "#0B2B26",
+            }}
+          >
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100"
+                style={{
+                  backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.2)" : "rgba(239, 68, 68, 0.1)",
+                }}
+              >
+                <AlertTriangle 
+                  className="h-6 w-6 text-red-600" 
+                  style={{
+                    color: isDarkMode ? "#EF4444" : "#DC2626",
+                  }}
+                />
+              </div>
+              <CardTitle className="text-lg font-semibold"
+                style={{
+                  color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                }}
+              >
+                Deactivate Account
+              </CardTitle>
+              <CardDescription className="text-sm"
+                style={{
+                  color: isDarkMode ? "#cbd5e1" : "#475569",
+                }}
+              >
+                Are you sure you want to deactivate this account?
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              {/* Account Details */}
+              <div className="rounded-lg border-2 p-3"
+                style={{
+                  backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "rgba(243, 237, 227, 0.3)",
+                  borderColor: isDarkMode ? "#334155" : "#E0EAE8",
+                }}
+              >
+                <div className="text-center">
+                  <p className="font-medium text-sm"
+                    style={{
+                      color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                    }}
+                  >
+                    {accountToDelete.username}
+                  </p>
+                  <p className="text-xs"
+                    style={{
+                      color: isDarkMode ? "#cbd5e1" : "#475569",
+                    }}
+                  >
+                    {accountToDelete.role} • {accountToDelete.contact || 'No contact'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Warning Message */}
+              <div className="rounded-lg border-2 p-3"
+                style={{
+                  backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.1)" : "rgba(254, 226, 226, 0.5)",
+                  borderColor: isDarkMode ? "#EF4444" : "#FECACA",
+                }}
+              >
+                <p className="text-xs text-center"
+                  style={{
+                    color: isDarkMode ? "#FCA5A5" : "#DC2626",
+                  }}
+                >
+                  ⚠️ This action will deactivate the account. The user will no longer be able to access the system.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={handleDeleteCancel}
+                  disabled={deleting}
+                  className="flex-1 rounded-lg border-2 transition-all hover:opacity-80"
+                  style={{
+                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
+                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteConfirm}
+                  disabled={deleting}
+                  className="flex-1 rounded-lg transition-all hover:opacity-80"
+                  style={{
+                    backgroundColor: isDarkMode ? "#EF4444" : "#DC2626",
+                    color: "#FFFFFF",
+                  }}
+                >
+                  {deleting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Deactivating...
+                    </div>
+                  ) : (
+                    "Deactivate Account"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
 
   // Skeleton Loader Components
   const SkeletonCard = ({ index }) => (
@@ -174,7 +362,7 @@ const MainPage = () => {
             <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
               Manage Accounts
             </p>
-            <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#0B2B26/70' }}>
+            <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
               Manage staff and administrator accounts
             </p>
           </div>
@@ -264,7 +452,7 @@ const MainPage = () => {
                 <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                   {title}
                 </h3>
-                <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#0B2B26/80' }}>
+                <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                   {description}
                 </p>
               </div>
@@ -294,6 +482,7 @@ const MainPage = () => {
           staff={activeAccounts} 
           onStatusChange={handleStatusChange}
           onStaffUpdate={handleStaffUpdate}
+          onDeleteRequest={handleDeleteRequest} // Pass delete handler to StaffTable
         />
       )}
 
@@ -304,6 +493,9 @@ const MainPage = () => {
           onClose={() => setShowForm(false)}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal />
     </div>
   );
 };

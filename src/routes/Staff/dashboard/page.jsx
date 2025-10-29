@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { PackageX, PhilippinePeso, Package, Clock8, Timer, AlertCircle, LineChart } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 15000;
@@ -320,40 +320,40 @@ const StaffDashboardPage = () => {
     };
   };
 
-  // Fixed Skeleton Components - Removed animations that cause movement
+  // Skeleton Components with updated dark mode colors
   const SkeletonCard = () => (
     <div
       className="rounded-xl border-2 p-5 transition-all h-[140px] flex flex-col"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
       }}
     >
       <div className="flex items-center gap-x-3 mb-4">
-        <div className="w-fit rounded-lg p-2"
+        <div className="w-fit rounded-lg p-2 animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}>
           <div className="h-6 w-6 rounded"></div>
         </div>
-        <div className="h-5 w-28 rounded"
+        <div className="h-5 w-28 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
       </div>
       <div className="flex-1 flex flex-col justify-between">
         <div className="rounded-lg p-3"
              style={{
-               backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
+               backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc"
              }}>
-          <div className="h-8 w-32 rounded"
+          <div className="h-8 w-32 rounded animate-pulse"
                style={{
-                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                }}></div>
         </div>
-        <div className="h-4 w-40 rounded mt-2"
+        <div className="h-4 w-40 rounded mt-2 animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
       </div>
     </div>
@@ -363,47 +363,47 @@ const StaffDashboardPage = () => {
     <div
       className="rounded-xl border-2 p-5 transition-all h-[380px] flex flex-col"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
       }}
     >
       <div className="mb-5">
-        <div className="h-6 w-44 rounded mb-2"
+        <div className="h-6 w-44 rounded mb-2 animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
-        <div className="h-4 w-32 rounded"
+        <div className="h-4 w-32 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
       </div>
       <div className="flex-1 space-y-3 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
           {/* Washers Column */}
-          <div className="space-y-3 border-r border-slate-200 pr-4 dark:border-slate-700">
-            <div className="h-5 w-24 rounded mb-2"
+          <div className="space-y-3 border-r pr-4" style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }}>
+            <div className="h-5 w-24 rounded mb-2 animate-pulse"
                  style={{
-                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                  }}></div>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg border"
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg border animate-pulse"
                    style={{
-                     borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                     backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                     backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
                    }}>
                 <div className="flex items-center gap-x-2">
                   <div className="w-5 h-5 rounded"
                        style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                        }}></div>
                   <div className="h-4 w-28 rounded"
                        style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                        }}></div>
                 </div>
                 <div className="h-4 w-12 rounded"
                      style={{
-                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                       backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }}></div>
               </div>
             ))}
@@ -411,29 +411,29 @@ const StaffDashboardPage = () => {
 
           {/* Dryers Column */}
           <div className="space-y-3 pl-4">
-            <div className="h-5 w-20 rounded mb-2"
+            <div className="h-5 w-20 rounded mb-2 animate-pulse"
                  style={{
-                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                  }}></div>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg border"
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg border animate-pulse"
                    style={{
-                     borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                     backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                     backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
                    }}>
                 <div className="flex items-center gap-x-2">
                   <div className="w-5 h-5 rounded"
                        style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                        }}></div>
                   <div className="h-4 w-28 rounded"
                        style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                        }}></div>
                 </div>
                 <div className="h-4 w-12 rounded"
                      style={{
-                       backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                       backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }}></div>
               </div>
             ))}
@@ -447,40 +447,40 @@ const StaffDashboardPage = () => {
     <div
       className="rounded-xl border-2 p-5 transition-all h-[380px] flex flex-col"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
       }}
     >
       <div className="mb-5">
-        <div className="h-6 w-36 rounded mb-2"
+        <div className="h-6 w-36 rounded mb-2 animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
-        <div className="h-4 w-44 rounded"
+        <div className="h-4 w-44 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
              }}></div>
       </div>
       <div className="flex-1 space-y-3 overflow-hidden">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex items-center justify-between p-3 rounded-lg border"
+          <div key={i} className="flex items-center justify-between p-3 rounded-lg border animate-pulse"
                style={{
-                 borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                 backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                 backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
                }}>
             <div className="space-y-2 flex-1">
               <div className="h-4 w-28 rounded"
                    style={{
-                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                    }}></div>
               <div className="h-3 w-36 rounded"
                    style={{
-                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                    }}></div>
             </div>
             <div className="h-6 w-16 rounded-full"
                  style={{
-                   backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                   backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                  }}></div>
           </div>
         ))}
@@ -490,16 +490,18 @@ const StaffDashboardPage = () => {
 
   if (initialLoad && !staffDashboardCache) {
     return (
-      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+      <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
+        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+      }}>
         {/* Header Skeleton */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-8 w-8 rounded-lg"
+          <div className="h-8 w-8 rounded-lg animate-pulse"
                style={{
-                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                }}></div>
-          <div className="h-8 w-44 rounded-lg"
+          <div className="h-8 w-44 rounded-lg animate-pulse"
                style={{
-                 backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                }}></div>
         </div>
 
@@ -528,14 +530,16 @@ const StaffDashboardPage = () => {
 
   if (dashboardData.error && !staffDashboardCache) {
     return (
-      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+      <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
+        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+      }}>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-3 mb-4"
         >
-          <LineChart size={22} style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }} />
-          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+          <LineChart size={22} style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
             Staff Dashboard
           </p>
         </motion.div>
@@ -544,19 +548,19 @@ const StaffDashboardPage = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="flex items-center justify-center h-52 rounded-xl border-2 p-6"
           style={{
-            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
           }}
         >
           <div className="text-center">
             <AlertCircle className="h-14 w-14 mx-auto mb-3" 
                          style={{ color: '#F87171' }} />
             <p className="text-base font-semibold mb-1"
-               style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+               style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
               Failed to load dashboard data
             </p>
             <p className="text-sm"
-               style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}>
+               style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
               Auto-retrying in 30 seconds...
             </p>
           </div>
@@ -602,7 +606,9 @@ const StaffDashboardPage = () => {
   const machineStats = calculateMachineStats();
 
   return (
-    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+    <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
+      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+    }}>
       {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -613,15 +619,18 @@ const StaffDashboardPage = () => {
           whileHover={{ scale: 1.1, rotate: 5 }}
           className="rounded-lg p-2"
           style={{
-            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-            color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+            color: "#f1f5f9",
           }}
         >
           <LineChart size={22} />
         </motion.div>
         <div>
-          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
             Staff Dashboard
+          </p>
+          <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+            Real-time overview of laundry operations
           </p>
         </div>
       </motion.div>
@@ -641,8 +650,8 @@ const StaffDashboardPage = () => {
             }}
             className="rounded-xl border-2 p-5 transition-all cursor-pointer h-[140px] flex flex-col"
             style={{
-              backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-              borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+              backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+              borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
           >
             <div className="flex items-center justify-between mb-4">
@@ -662,17 +671,17 @@ const StaffDashboardPage = () => {
                 transition={{ delay: index * 0.2 }}
                 className="text-right"
               >
-                <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                   {value}
                 </p>
               </motion.div>
             </div>
             
             <div className="flex-1 flex flex-col justify-between">
-              <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                 {title}
               </h3>
-              <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+              <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                 {description}
               </p>
             </div>
@@ -680,7 +689,7 @@ const StaffDashboardPage = () => {
         ))}
       </div>
 
-      {/* 🎰 Machine Status & Unclaimed Transactions */}
+      {/* Machine Status & Unclaimed Transactions */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
         {/* All Machines Card */}
         <motion.div
@@ -690,17 +699,17 @@ const StaffDashboardPage = () => {
           whileHover={{ scale: 1.01 }}
           className="rounded-xl border-2 p-5 col-span-1 md:col-span-2 lg:col-span-4 transition-all h-[380px] flex flex-col"
           style={{
-            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
           }}
         >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                 All Machines Status
               </p>
               {/* Machine Statistics Label */}
-              <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+              <span className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                 {machineStats.total} total • {machineStats.available} available • {machineStats.inUse} in use • {machineStats.maintenance} maintenance
               </span>
             </div>
@@ -708,8 +717,8 @@ const StaffDashboardPage = () => {
               whileHover={{ scale: 1.1 }}
               className="rounded-lg p-2"
               style={{
-                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                color: "#f1f5f9",
               }}
             >
               <Timer size={18} />
@@ -723,23 +732,23 @@ const StaffDashboardPage = () => {
                 animate={{ opacity: 1 }}
                 className="flex flex-col items-center justify-center h-full text-center py-8"
               >
-                <Timer size={36} style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} className="mb-3" />
-                <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                <Timer size={36} style={{ color: isDarkMode ? '#94a3b8' : '#cbd5e1' }} className="mb-3" />
+                <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                   No Machines Found
                 </p>
-                <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                   No machines are currently registered
                 </p>
               </motion.div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
                 {/* Washers */}
-                <div className="space-y-3 border-r border-slate-200 pr-4 dark:border-slate-700">
-                  <p className="text-sm font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                <div className="space-y-3 border-r pr-4" style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }}>
+                  <p className="text-sm font-medium" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                     Washers ({washers.length})
                   </p>
                   {washers.length === 0 ? (
-                    <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }}>
+                    <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#cbd5e1' }}>
                       No washers found
                     </p>
                   ) : (
@@ -754,13 +763,13 @@ const StaffDashboardPage = () => {
                           transition={{ delay: index * 0.1 }}
                           whileHover={{ 
                             scale: 1.02,
-                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
                             transition: { duration: 0.2 }
                           }}
                           className="flex items-center justify-between rounded-lg border p-3 transition-all cursor-pointer"
                           style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                            backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.5)" : "rgba(248, 250, 252, 0.9)",
                           }}
                         >
                           <div className="flex items-center gap-x-2 leading-tight">
@@ -768,7 +777,7 @@ const StaffDashboardPage = () => {
                               size={20}
                               style={{ color: '#3B82F6' }}
                             />
-                            <p className="text-sm font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <p className="text-sm font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               {machine.name || "Unnamed Washer"}
                             </p>
                           </div>
@@ -787,11 +796,11 @@ const StaffDashboardPage = () => {
 
                 {/* Dryers */}
                 <div className="space-y-3 pl-4">
-                  <p className="text-sm font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                  <p className="text-sm font-medium" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                     Dryers ({dryers.length})
                   </p>
                   {dryers.length === 0 ? (
-                    <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }}>
+                    <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#cbd5e1' }}>
                       No dryers found
                     </p>
                   ) : (
@@ -806,13 +815,13 @@ const StaffDashboardPage = () => {
                           transition={{ delay: index * 0.1 }}
                           whileHover={{ 
                             scale: 1.02,
-                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
                             transition: { duration: 0.2 }
                           }}
                           className="flex items-center justify-between rounded-lg border p-3 transition-all cursor-pointer"
                           style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                            backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.5)" : "rgba(248, 250, 252, 0.9)",
                           }}
                         >
                           <div className="flex items-center gap-x-2 leading-tight">
@@ -820,7 +829,7 @@ const StaffDashboardPage = () => {
                               size={20}
                               style={{ color: '#F59E0B' }}
                             />
-                            <p className="text-sm font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <p className="text-sm font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               {machine.name || "Unnamed Dryer"}
                             </p>
                           </div>
@@ -849,16 +858,16 @@ const StaffDashboardPage = () => {
           whileHover={{ scale: 1.01 }}
           className="rounded-xl border-2 p-5 col-span-1 md:col-span-2 lg:col-span-3 transition-all h-[380px] flex flex-col"
           style={{
-            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
           }}
         >
           <div className="flex items-center justify-between mb-5">
             <div>
-              <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                 Unclaimed Laundry
               </p>
-              <span className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+              <span className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                 {displayData.completedUnclaimedTransactions.length} completed but not claimed
               </span>
             </div>
@@ -866,8 +875,8 @@ const StaffDashboardPage = () => {
               whileHover={{ scale: 1.1 }}
               className="rounded-lg p-2"
               style={{
-                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                color: "#f1f5f9",
               }}
             >
               <PackageX size={18} />
@@ -881,11 +890,11 @@ const StaffDashboardPage = () => {
                 animate={{ opacity: 1 }}
                 className="flex flex-col items-center justify-center h-full text-center py-8"
               >
-                <PackageX size={36} style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} className="mb-3" />
-                <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                <PackageX size={36} style={{ color: isDarkMode ? '#94a3b8' : '#cbd5e1' }} className="mb-3" />
+                <p className="text-base font-semibold mb-1" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                   No Unclaimed Loads
                 </p>
-                <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                   All completed laundry has been claimed
                 </p>
               </motion.div>
@@ -899,21 +908,21 @@ const StaffDashboardPage = () => {
                     transition={{ delay: index * 0.1 }}
                     whileHover={{ 
                       scale: 1.02,
-                      backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                      backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
                       transition: { duration: 0.2 }
                     }}
                     className="rounded-lg border p-3 transition-all cursor-pointer"
                     style={{
-                      borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                      backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                      borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                      backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.5)" : "rgba(248, 250, 252, 0.9)",
                     }}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="font-semibold text-sm mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                        <p className="font-semibold text-sm mb-1" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                           {transaction.customerName}
                         </p>
-                        <p className="text-sm mb-1" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/80' }}>
+                        <p className="text-sm mb-1" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                           {transaction.serviceType} • {transaction.loadAssignments?.length || 0} loads
                         </p>
                       </div>

@@ -104,19 +104,19 @@ export default function EditServiceModal({ service, onClose, onSave }) {
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           className="max-w-lg w-full rounded-xl border-2 p-6 shadow-xl transition-all"
           style={{
-            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+            borderColor: isDarkMode ? "#334155" : "#0B2B26",
           }}
         >
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                 {isEditing ? "Edit Service" : "Add New Service"}
               </h2>
               {isPermanentService && (
                 <p className="text-xs mt-1 flex items-center gap-1" 
-                   style={{ color: isDarkMode ? '#0891B2' : '#0E7490' }}>
+                   style={{ color: isDarkMode ? '#60A5FA' : '#0E7490' }}>
                   <Lock size={12} />
                   Permanent service - name cannot be changed
                 </p>
@@ -128,20 +128,20 @@ export default function EditServiceModal({ service, onClose, onSave }) {
               onClick={onClose}
               className="rounded-lg p-1 transition-colors hover:opacity-80"
               style={{
-                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
               }}
             >
-              <X className="w-5 h-5" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+              <X className="w-5 h-5" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }} />
             </motion.button>
           </div>
 
           <div className="space-y-5" onKeyPress={handleKeyPress}>
             {/* Service Name */}
             <div>
-              <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                 Service Name
                 {isPermanentService && (
-                  <span className="ml-2 text-xs" style={{ color: isDarkMode ? '#0891B2' : '#0E7490' }}>
+                  <span className="ml-2 text-xs" style={{ color: isDarkMode ? '#60A5FA' : '#0E7490' }}>
                     (Locked)
                   </span>
                 )}
@@ -152,12 +152,12 @@ export default function EditServiceModal({ service, onClose, onSave }) {
                 <div 
                   className="flex items-center gap-2 rounded-lg border-2 p-2 transition-all"
                   style={{
-                    backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                   }}
                 >
-                  <Lock size={16} style={{ color: isDarkMode ? '#6B7280' : '#6B7280' }} />
+                  <Lock size={16} style={{ color: isDarkMode ? '#94a3b8' : '#6B7280' }} />
                   <span className="flex-1">{form.name}</span>
                 </div>
               ) : (
@@ -165,11 +165,11 @@ export default function EditServiceModal({ service, onClose, onSave }) {
                 <Input
                   className="rounded-lg border-2 transition-all"
                   style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                     borderColor: errors.name 
                       ? (isDarkMode ? "#F87171" : "#EF4444")
-                      : (isDarkMode ? "#2A524C" : "#0B2B26"),
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                      : (isDarkMode ? "#334155" : "#0B2B26"),
+                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                   }}
                   value={form.name}
                   onChange={(e) => handleChange("name", e.target.value)}
@@ -187,15 +187,15 @@ export default function EditServiceModal({ service, onClose, onSave }) {
 
             {/* Description - Always Editable */}
             <div>
-              <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                 Description
               </Label>
               <Input
                 className="rounded-lg border-2 transition-all"
                 style={{
-                  backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                  borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                  color: isDarkMode ? "#13151B" : "#0B2B26",
+                  backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                  borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                  color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                 }}
                 value={form.description}
                 onChange={(e) => handleChange("description", e.target.value)}
@@ -205,26 +205,26 @@ export default function EditServiceModal({ service, onClose, onSave }) {
 
             {/* Price with Peso Sign - Always Editable */}
             <div>
-              <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+              <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                 Price
               </Label>
               <div 
                 className="flex items-center rounded-lg border-2 transition-all focus-within:ring-2 focus-within:ring-offset-2"
                 style={{
-                  backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                  backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                   borderColor: errors.price 
                     ? (isDarkMode ? "#F87171" : "#EF4444")
-                    : (isDarkMode ? "#2A524C" : "#0B2B26"),
+                    : (isDarkMode ? "#334155" : "#0B2B26"),
                 }}
               >
-                <span className="px-3" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>₱</span>
+                <span className="px-3" style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}>₱</span>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
                   className="flex-1 border-none bg-transparent transition-all focus-visible:outline-none focus-visible:ring-0"
                   style={{
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                   }}
                   value={form.price}
                   onChange={(e) => handleChange("price", e.target.value)}
@@ -251,9 +251,9 @@ export default function EditServiceModal({ service, onClose, onSave }) {
                 className="rounded-lg px-4 py-2 transition-all flex items-center gap-2"
                 style={{
                   backgroundColor: isSubmitting 
-                    ? (isDarkMode ? "#6B7280" : "#9CA3AF") 
-                    : (isDarkMode ? "#18442AF5" : "#0B2B26"),
-                  color: "#F3EDE3",
+                    ? (isDarkMode ? "#475569" : "#9CA3AF") 
+                    : (isDarkMode ? "#0f172a" : "#0B2B26"),
+                  color: "#f1f5f9",
                 }}
               >
                 <Save className="w-4 h-4" />
