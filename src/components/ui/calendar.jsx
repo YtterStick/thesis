@@ -24,19 +24,19 @@ function Calendar({
 
   // Define colors based on theme
   const themeColors = {
-    background: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-    foreground: isDarkMode ? "#13151B" : "#0B2B26",
-    muted: isDarkMode ? "#6B7280" : "#0B2B26/70",
-    border: isDarkMode ? "#2A524C" : "#0B2B26",
-    primary: isDarkMode ? "#18442AF5" : "#0B2B26",
-    primaryForeground: "#F3EDE3",
-    accent: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-    // Range colors
-    rangeStartEnd: isDarkMode ? "#E0EAE8" : "#1C3F3A",
-    rangeMiddle: isDarkMode ? "rgba(224, 234, 232, 0.3)" : "rgba(28, 63, 58, 0.3)",
-    rangeText: isDarkMode ? "#13151B" : "#F3EDE3",
-  }
-
+    background: isDarkMode ? "#1e293b" : "#FFFFFF",
+    foreground: isDarkMode ? "#f1f5f9" : "#0B2B26", // Light text in dark mode
+    muted: isDarkMode ? "#94a3b8" : "#0B2B26/70",
+    border: isDarkMode ? "#334155" : "#0B2B26",
+    primary: isDarkMode ? "#E0EAE8" : "#0B2B26", // Same as light mode range
+    primaryForeground: isDarkMode ? "#f1f5f9" : "#F3EDE3",
+    accent: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+    // Range colors - IDENTICAL TO LIGHT MODE
+    rangeStartEnd: isDarkMode ? "#E0EAE8" : "#E0EAE8",
+    rangeMiddle: isDarkMode ? "rgba(28, 63, 58, 0.3)" : "rgba(28, 63, 58, 0.3)",
+    rangeText: isDarkMode ? "#F3EDE3" : "#1e293b",
+}
+  
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -107,15 +107,15 @@ function Calendar({
           defaultClassNames.day
         ),
         range_start: cn(
-          "rounded-l-md bg-[#E0EAE8] text-[#13151B] dark:bg-[#1C3F3A] dark:text-[#F3EDE3]",
+          "rounded-l-md bg-[#E0EAE8] text-[#13151B] dark:bg-[#E0EAE8] dark:text-[#1e293b]",
           defaultClassNames.range_start
         ),
         range_middle: cn(
-          "bg-[#E0EAE8] text-[#13151B] dark:bg-[#1C3F3A] dark:text-[#F3EDE3]",
+          "bg-[#E0EAE8] text-[#13151B] dark:bg-[#E0EAE8] dark:text-[#1e293b]",
           defaultClassNames.range_middle
         ),
         range_end: cn(
-          "rounded-r-md bg-[#E0EAE8] text-[#13151B] dark:bg-[#1C3F3A] dark:text-[#F3EDE3]",
+          "rounded-r-md bg-[#E0EAE8] text-[#13151B] dark:bg-[#E0EAE8] dark:text-[#1e293b]",
           defaultClassNames.range_end
         ),
         today: cn(

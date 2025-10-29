@@ -21,7 +21,6 @@ const Layout = ({ children }) => {
   const { loading, isAuthenticated, role, user } = useAuth();
   const { theme } = useTheme();
 
-  // Calculate isDarkMode based on theme - matching User side
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   const isAuthRoute =
@@ -43,10 +42,8 @@ const Layout = ({ children }) => {
     }
   });
 
-  // Handle search result click - navigate to the selected page
   const handleSearchResultClick = (result) => {
     navigate(result.path);
-    // Close sidebar on mobile after navigation
     if (!isDesktopDevice) {
       setCollapsed(true);
     }
@@ -63,10 +60,9 @@ const Layout = ({ children }) => {
   return (
     <div className="min-h-screen transition-colors duration-300"
          style={{ 
-           backgroundColor: isDarkMode ? '#0B2B26' : '#E0EAE8',
-           color: isDarkMode ? '#F3EDE3' : '#0B2B26'
+           backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+           color: isDarkMode ? '#f1f5f9' : '#0f172a'
          }}>
-      {/* Mobile overlay */}
       <div
         className={cn(
           "pointer-events-none fixed inset-0 -z-10 bg-black opacity-0 transition-opacity",
@@ -90,7 +86,6 @@ const Layout = ({ children }) => {
           collapsed ? "md:ml-[70px]" : "md:ml-[240px]"
         )}
       >
-        {/* Header with search functionality */}
         <Header 
           collapsed={collapsed} 
           setCollapsed={setCollapsed} 
@@ -99,7 +94,7 @@ const Layout = ({ children }) => {
         />
 
         {/* Page content */}
-        <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
+        <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
           {children}
         </div>
       </div>

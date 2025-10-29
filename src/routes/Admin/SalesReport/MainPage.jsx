@@ -68,7 +68,7 @@ const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
         <div className="space-y-2">
             <Label
                 className="mb-1 block"
-                style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}
             >
                 Service Type
             </Label>
@@ -80,18 +80,18 @@ const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
                 <SelectTrigger
                     className="transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                        color: isDarkMode ? "#13151B" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                     }}
                 >
                     <SelectValue placeholder="Select service" />
                 </SelectTrigger>
                 <SelectContent
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                        color: isDarkMode ? "#13151B" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                     }}
                 >
                     {services.map((service) => (
@@ -100,7 +100,7 @@ const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
                             value={service.id}
                             className="cursor-pointer transition-colors"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                             }}
                         >
                             {service.name}
@@ -129,9 +129,9 @@ const CustomBarTooltip = ({ active, payload, label, isDarkMode }) => {
             <div
                 className="rounded-lg border-2 p-3 shadow-lg"
                 style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                 }}
             >
                 <p className="font-medium">{label}{monthInfo}</p>
@@ -152,9 +152,9 @@ const CustomPieTooltip = ({ active, payload, isDarkMode }) => {
             <div
                 className="rounded-lg border-2 p-3 shadow-lg"
                 style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                 }}
             >
                 <p className="font-medium">{data.name}</p>
@@ -589,22 +589,27 @@ const SalesReportPage = () => {
     const currentItems = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
-    // Updated color scheme with #1C3F3A as primary
+    // Updated color scheme to match admin dashboard
     const CHART_COLORS = {
-        primary: "#1C3F3A",
-        secondary: "#2A524C",
+        primary: "#0891B2", // Cyan from admin dashboard area chart
+        secondary: "#0E7490", // Darker cyan for gradient
         accent: "#3DD9B6",
         highlight: "#60A5FA",
         complementary: "#FB923C",
-        light: "#18442AF5",
+        success: "#10B981",
+        warning: "#F59E0B",
+        error: "#EF4444",
     };
 
+    // Service colors that work well in both light and dark mode
     const SERVICE_COLORS = [
-        CHART_COLORS.primary, // #1C3F3A - Dark Teal
-        CHART_COLORS.secondary, // #2A524C - Medium Teal
-        CHART_COLORS.accent, // #3DD9B6 - Bright Teal
-        CHART_COLORS.highlight, // #60A5FA - Blue
-        CHART_COLORS.complementary, // #FB923C - Orange
+        "#0891B2", // Cyan
+        "#10B981", // Emerald
+        "#F59E0B", // Amber
+        "#EF4444", // Red
+        "#8B5CF6", // Violet
+        "#EC4899", // Pink
+        "#14B8A6", // Teal
     ];
 
     const summaryCards = [
@@ -648,7 +653,7 @@ const SalesReportPage = () => {
                     y={0}
                     dy={16}
                     textAnchor="middle"
-                    fill={isDarkMode ? "#13151B" : "#0B2B26"}
+                    fill={isDarkMode ? "#f1f5f9" : "#0B2B26"}
                     fontSize="12"
                     fontWeight="500"
                 >
@@ -665,15 +670,15 @@ const SalesReportPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-xl border-2 p-5 transition-all"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#0B2B26",
             }}
         >
             <div className="mb-4 flex items-center justify-between">
                 <div
                     className="w-fit animate-pulse rounded-lg p-2"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                     }}
                 >
                     <div className="h-6 w-6"></div>
@@ -681,7 +686,7 @@ const SalesReportPage = () => {
                 <div
                     className="h-8 w-24 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                     }}
                 ></div>
             </div>
@@ -690,13 +695,13 @@ const SalesReportPage = () => {
                 <div
                     className="mb-2 h-5 w-32 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                     }}
                 ></div>
                 <div
                     className="h-4 w-44 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                     }}
                 ></div>
             </div>
@@ -709,28 +714,28 @@ const SalesReportPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-xl border-2 p-5 transition-all"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#0B2B26",
             }}
         >
             <div className="mb-5">
                 <div
                     className="mb-2 h-6 w-44 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                     }}
                 ></div>
                 <div
                     className="h-4 w-36 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                     }}
                 ></div>
             </div>
             <div
                 className="h-[300px] w-full animate-pulse rounded-lg"
                 style={{
-                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                    backgroundColor: isDarkMode ? "#334155" : "#F3EDE3",
                 }}
             ></div>
         </motion.div>
@@ -746,20 +751,20 @@ const SalesReportPage = () => {
                 <div
                     className="h-10 w-10 animate-pulse rounded-lg"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                     }}
                 ></div>
                 <div className="space-y-2">
                     <div
                         className="h-6 w-44 animate-pulse rounded-lg"
                         style={{
-                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                            backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                         }}
                     ></div>
                     <div
                         className="h-4 w-56 animate-pulse rounded"
                         style={{
-                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                            backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                         }}
                     ></div>
                 </div>
@@ -770,7 +775,12 @@ const SalesReportPage = () => {
     // Show skeleton loader only during initial load
     if (initialLoad) {
         return (
-            <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
+            <div 
+                className="space-y-5 overflow-visible px-6 pb-5 pt-4 min-h-screen"
+                style={{
+                    backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+                }}
+            >
                 <SkeletonHeader />
 
                 {/* Filters Skeleton */}
@@ -779,14 +789,14 @@ const SalesReportPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="rounded-xl border-2 p-5 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
                     }}
                 >
                     <div
                         className="mb-4 h-6 w-32 animate-pulse rounded"
                         style={{
-                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                            backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                         }}
                     ></div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -798,13 +808,13 @@ const SalesReportPage = () => {
                                 <div
                                     className="h-4 w-20 animate-pulse rounded"
                                     style={{
-                                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                        backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                                     }}
                                 ></div>
                                 <div
                                     className="h-10 w-full animate-pulse rounded"
                                     style={{
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                        backgroundColor: isDarkMode ? "#334155" : "#F3EDE3",
                                     }}
                                 ></div>
                             </div>
@@ -831,20 +841,20 @@ const SalesReportPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="rounded-xl border-2 p-5 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
                     }}
                 >
                     <div
                         className="mb-4 h-6 w-44 animate-pulse rounded"
                         style={{
-                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                            backgroundColor: isDarkMode ? "#334155" : "#E0EAE8",
                         }}
                     ></div>
                     <div
                         className="h-[400px] w-full animate-pulse rounded-lg"
                         style={{
-                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#334155" : "#F3EDE3",
                         }}
                     ></div>
                 </motion.div>
@@ -853,7 +863,12 @@ const SalesReportPage = () => {
     }
 
     return (
-        <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
+        <div 
+            className="space-y-5 overflow-visible px-6 pb-5 pt-4 min-h-screen"
+            style={{
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+            }}
+        >
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -865,22 +880,22 @@ const SalesReportPage = () => {
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         className="rounded-lg p-2"
                         style={{
-                            backgroundColor: isDarkMode ? CHART_COLORS.light : CHART_COLORS.primary,
-                            color: "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                            color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                         }}
                     >
-                        <LineChart size={22} />
+                        <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
                     </motion.div>
                     <div>
                         <p
                             className="text-xl font-bold"
-                            style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                         >
                             Sales Reports
                         </p>
                         <p
                             className="text-sm"
-                            style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
+                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                         >
                             Analyze and track your business performance
                         </p>
@@ -897,17 +912,17 @@ const SalesReportPage = () => {
                 <Card
                     className="rounded-xl border-2 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <CardHeader
                         className="rounded-t-xl pb-4"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                         }}
                     >
-                        <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Report Filters</CardTitle>
+                        <CardTitle style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>Report Filters</CardTitle>
                     </CardHeader>
                     <CardContent className="p-5">
                         {datesSwapped && (
@@ -928,7 +943,7 @@ const SalesReportPage = () => {
                             <div className="space-y-2">
                                 <Label
                                     className="mb-1 block"
-                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}
                                 >
                                     Date Range
                                 </Label>
@@ -939,18 +954,18 @@ const SalesReportPage = () => {
                                     <SelectTrigger
                                         className="transition-all"
                                         style={{
-                                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                            borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                                            color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                                         }}
                                     >
                                         <SelectValue placeholder="Select date range" />
                                     </SelectTrigger>
                                     <SelectContent
                                         style={{
-                                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                            borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                                            color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                                         }}
                                     >
                                         <SelectItem value="today">Today</SelectItem>
@@ -968,12 +983,15 @@ const SalesReportPage = () => {
                                     <div className="space-y-2">
                                         <Label
                                             className="mb-1 block"
-                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}
                                         >
                                             Start Date
                                         </Label>
                                         <div className="relative">
-                                            <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }} />
+                                            <Calendar 
+                                                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" 
+                                                style={{ color: isDarkMode ? "#94a3b8" : "#0B2B26/70" }} 
+                                            />
                                             <Input
                                                 type="date"
                                                 value={startDate}
@@ -981,9 +999,9 @@ const SalesReportPage = () => {
                                                 onChange={(e) => handleStartDateChange(e.target.value)}
                                                 className="w-full pl-10 transition-all"
                                                 style={{
-                                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                                                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                                                 }}
                                             />
                                         </div>
@@ -991,12 +1009,15 @@ const SalesReportPage = () => {
                                     <div className="space-y-2">
                                         <Label
                                             className="mb-1 block"
-                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}
                                         >
                                             End Date
                                         </Label>
                                         <div className="relative">
-                                            <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }} />
+                                            <Calendar 
+                                                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" 
+                                                style={{ color: isDarkMode ? "#94a3b8" : "#0B2B26/70" }} 
+                                            />
                                             <Input
                                                 type="date"
                                                 value={endDate}
@@ -1004,9 +1025,9 @@ const SalesReportPage = () => {
                                                 onChange={(e) => handleEndDateChange(e.target.value)}
                                                 className="w-full pl-10 transition-all"
                                                 style={{
-                                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                                                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
                                                 }}
                                             />
                                         </div>
@@ -1040,8 +1061,8 @@ const SalesReportPage = () => {
                         }}
                         className="cursor-pointer rounded-xl border-2 p-5 transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <div className="mb-4 flex items-center justify-between">
@@ -1064,7 +1085,7 @@ const SalesReportPage = () => {
                                 {/* Change the p tag to div since it contains block content */}
                                 <div
                                     className="text-2xl font-bold"
-                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                 >
                                     {/* Use AnimatedNumber instead of skeleton loading */}
                                     <AnimatedNumber
@@ -1078,14 +1099,14 @@ const SalesReportPage = () => {
                         <div>
                             <h3
                                 className="mb-2 text-lg font-semibold"
-                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                             >
                                 {label}
                             </h3>
                             <p
                                 className="text-sm"
                                 style={{
-                                    color: trend !== undefined ? (trend >= 0 ? "#10B981" : "#EF4444") : isDarkMode ? "#6B7280" : "#0B2B26/80",
+                                    color: trend !== undefined ? (trend >= 0 ? "#10B981" : "#EF4444") : isDarkMode ? "#94a3b8" : "#475569",
                                 }}
                             >
                                 {description}
@@ -1106,13 +1127,13 @@ const SalesReportPage = () => {
                     <Card
                         className="rounded-xl border-2 transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <CardHeader>
-                            <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Income Trend</CardTitle>
-                            <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
+                            <CardTitle style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Income Trend</CardTitle>
+                            <CardDescription style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}>
                                 {dateRange === "month" ? "Current month total income" : "Income performance overview"}
                             </CardDescription>
                         </CardHeader>
@@ -1127,25 +1148,34 @@ const SalesReportPage = () => {
                                 >
                                     <CartesianGrid
                                         strokeDasharray="3 3"
-                                        stroke={isDarkMode ? "#2A524C" : "#E0EAE8"}
+                                        stroke={isDarkMode ? "#334155" : "#e2e8f0"}
                                     />
                                     <XAxis
                                         dataKey="period"
-                                        stroke={isDarkMode ? "#13151B" : "#0B2B26"}
-                                        tickLine={{ stroke: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        stroke={isDarkMode ? "#cbd5e1" : "#475569"}
+                                        tickLine={{ stroke: isDarkMode ? "#cbd5e1" : "#475569" }}
                                         interval={0} // Force show all labels
                                         tick={renderCustomXAxisTick}
                                         height={50} // Increase height to accommodate all labels
                                     />
                                     <YAxis
-                                        stroke={isDarkMode ? "#13151B" : "#0B2B26"}
-                                        tick={{ fill: isDarkMode ? "#13151B" : "#0B2B26" }}
-                                        tickLine={{ stroke: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        stroke={isDarkMode ? "#cbd5e1" : "#475569"}
+                                        tick={{ fill: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                        tickLine={{ stroke: isDarkMode ? "#cbd5e1" : "#475569" }}
                                         tickFormatter={(value) => `₱${value > 1000 ? `${(value / 1000).toFixed(0)}k` : value}`}
                                     />
                                     <Tooltip
                                         content={<CustomBarTooltip isDarkMode={isDarkMode} />}
-                                        cursor={{ fill: "transparent" }}
+                                        cursor={false}
+                                        contentStyle={{
+                                            backgroundColor: isDarkMode ? "#0f172a" : "#FFFFFF",
+                                            border: `2px solid ${isDarkMode ? "#334155" : "#cbd5e1"}`,
+                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                            fontSize: "0.8rem",
+                                            fontWeight: "500",
+                                            borderRadius: "0.5rem",
+                                            padding: "0.6rem",
+                                        }}
                                     />
                                     <Legend />
                                     <Bar
@@ -1156,13 +1186,16 @@ const SalesReportPage = () => {
                                         strokeWidth={1}
                                         radius={[4, 4, 0, 0]}
                                         className="transition-all duration-300 hover:opacity-80"
-                                        activeBar={{
-                                            fill: CHART_COLORS.accent,
-                                            stroke: CHART_COLORS.primary,
-                                            strokeWidth: 2,
-                                            radius: [4, 4, 0, 0],
-                                        }}
-                                    />
+                                    >
+                                        {salesData.map((entry, index) => (
+                                            <Cell 
+                                                key={`cell-${index}`}
+                                                fill={CHART_COLORS.primary}
+                                                stroke={CHART_COLORS.secondary}
+                                                strokeWidth={1}
+                                            />
+                                        ))}
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </CardContent>
@@ -1178,13 +1211,13 @@ const SalesReportPage = () => {
                     <Card
                         className="rounded-xl border-2 transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <CardHeader>
-                            <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Service Distribution</CardTitle>
-                            <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>Distribution of services used</CardDescription>
+                            <CardTitle style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Service Distribution</CardTitle>
+                            <CardDescription style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}>Distribution of services used</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ResponsiveContainer
@@ -1202,7 +1235,7 @@ const SalesReportPage = () => {
                                         dataKey="value"
                                         label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
                                         labelStyle={{
-                                            fill: isDarkMode ? "#13151B" : "#0B2B26",
+                                            fill: isDarkMode ? "#f1f5f9" : "#0f172a",
                                             fontSize: "12px",
                                             fontWeight: "500",
                                         }}
@@ -1211,13 +1244,24 @@ const SalesReportPage = () => {
                                             <Cell
                                                 key={`cell-${index}`}
                                                 fill={SERVICE_COLORS[index % SERVICE_COLORS.length]}
-                                                stroke={isDarkMode ? "#F3EDE3" : "#FFFFFF"} // Fixed: Use appropriate stroke for dark mode
+                                                stroke={isDarkMode ? "#1e293b" : "#FFFFFF"}
                                                 strokeWidth={2}
                                                 className="cursor-pointer transition-all duration-300 hover:opacity-80"
                                             />
                                         ))}
                                     </Pie>
-                                    <Tooltip content={<CustomPieTooltip isDarkMode={isDarkMode} />} />
+                                    <Tooltip 
+                                        content={<CustomPieTooltip isDarkMode={isDarkMode} />}
+                                        contentStyle={{
+                                            backgroundColor: isDarkMode ? "#0f172a" : "#FFFFFF",
+                                            border: `2px solid ${isDarkMode ? "#334155" : "#cbd5e1"}`,
+                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                            fontSize: "0.8rem",
+                                            fontWeight: "500",
+                                            borderRadius: "0.5rem",
+                                            padding: "0.6rem",
+                                        }}
+                                    />
                                 </RechartsPieChart>
                             </ResponsiveContainer>
                         </CardContent>
@@ -1234,35 +1278,35 @@ const SalesReportPage = () => {
                 <Card
                     className="rounded-xl border-2 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <CardHeader
                         className="rounded-t-xl pb-4"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                         }}
                     >
                         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                             <div>
-                                <CardTitle style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>Customer Transactions</CardTitle>
-                                <CardDescription style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}>
+                                <CardTitle style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Customer Transactions</CardTitle>
+                                <CardDescription style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}>
                                     Latest transaction per customer ({filteredTransactions.length} unique customers)
                                 </CardDescription>
                             </div>
                             <div className="relative w-full sm:w-64">
                                 <Search
                                     className="absolute left-2 top-2.5 h-4 w-4"
-                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                    style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
                                 />
                                 <Input
                                     placeholder="Search customers..."
                                     className="w-full pl-8 transition-all"
                                     style={{
-                                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                     }}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -1274,38 +1318,38 @@ const SalesReportPage = () => {
                         <div
                             className="rounded-b-xl border-2 border-t-0"
                             style={{
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                             }}
                         >
                             <table className="w-full">
                                 <thead>
                                     <tr
                                         style={{
-                                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                         }}
                                     >
                                         <th
                                             className="p-4 text-left font-medium"
-                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                         >
                                             Customer
                                         </th>
                                         <th
                                             className="p-4 text-left font-medium"
-                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                         >
                                             Service
                                         </th>
                                         <th
                                             className="p-4 text-left font-medium"
-                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                         >
                                             Amount
                                         </th>
                                         <th
                                             className="p-4 text-left font-medium"
-                                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                         >
                                             Date
                                         </th>
@@ -1317,31 +1361,31 @@ const SalesReportPage = () => {
                                             key={transaction.id}
                                             className="border-t transition-all hover:opacity-90"
                                             style={{
-                                                borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                                borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+                                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
                                             }}
                                         >
                                             <td
                                                 className="p-4 font-medium"
-                                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                             >
                                                 {transaction.customerName}
                                             </td>
                                             <td
                                                 className="p-4"
-                                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                             >
                                                 {transaction.serviceType}
                                             </td>
                                             <td
                                                 className="p-4 font-medium"
-                                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                             >
                                                 ₱{transaction.totalPrice}
                                             </td>
                                             <td
                                                 className="p-4"
-                                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                             >
                                                 {new Date(transaction.createdAt).toLocaleDateString("en-US", {
                                                     month: "2-digit",
@@ -1358,12 +1402,12 @@ const SalesReportPage = () => {
                             <div
                                 className="flex items-center justify-between border-t p-4"
                                 style={{
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                 }}
                             >
                                 <div
                                     className="text-sm"
-                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                    style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
                                 >
                                     Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredTransactions.length)} of{" "}
                                     {filteredTransactions.length} customers
@@ -1379,18 +1423,18 @@ const SalesReportPage = () => {
                                         <SelectTrigger
                                             className="w-20 transition-all"
                                             style={{
-                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                             }}
                                         >
                                             <SelectValue placeholder="10" />
                                         </SelectTrigger>
                                         <SelectContent
                                             style={{
-                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                             }}
                                         >
                                             <SelectItem value="10">10</SelectItem>
@@ -1405,15 +1449,15 @@ const SalesReportPage = () => {
                                         disabled={currentPage === 1}
                                         className="transition-all"
                                         style={{
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                         }}
                                     >
                                         <ChevronLeft className="h-4 w-4" />
                                     </Button>
                                     <span
                                         className="text-sm font-medium"
-                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                     >
                                         Page <span style={{ color: CHART_COLORS.accent }}>{currentPage}</span> of{" "}
                                         <span style={{ color: CHART_COLORS.accent }}>{totalPages}</span>
@@ -1425,8 +1469,8 @@ const SalesReportPage = () => {
                                         disabled={currentPage === totalPages || totalPages === 0}
                                         className="transition-all"
                                         style={{
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                         }}
                                     >
                                         <ChevronRight className="h-4 w-4" />

@@ -319,15 +319,15 @@ const MainPage = () => {
             transition={{ delay: index * 0.1 }}
             className="rounded-xl border-2 p-5 transition-all"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
         >
             <div className="flex items-center justify-between mb-4">
                 <motion.div
                     className="rounded-lg p-2 animate-pulse"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                     }}
                 >
                     <div className="h-6 w-6"></div>
@@ -340,7 +340,7 @@ const MainPage = () => {
                 >
                     <div className="h-6 w-20 rounded animate-pulse"
                          style={{
-                             backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                             backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                          }} />
                 </motion.div>
             </div>
@@ -348,7 +348,7 @@ const MainPage = () => {
             <div className="flex items-center justify-between">
                 <div className="h-5 w-28 rounded animate-pulse"
                      style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
             </div>
         </motion.div>
@@ -361,34 +361,34 @@ const MainPage = () => {
             transition={{ delay: 0.3 }}
             className="rounded-xl border-2 p-5 transition-all"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
         >
             <div className="flex items-center justify-between mb-4">
                 <div className="h-6 w-32 rounded animate-pulse"
                      style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
                 <div className="h-4 w-24 rounded animate-pulse"
                      style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
             </div>
 
             <div className="overflow-x-auto rounded-lg border-2 mb-4"
                  style={{
-                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                  }}>
                 <div className="min-w-full">
                     <div className="grid grid-cols-11 gap-4 p-4"
                          style={{
-                             backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                          }}>
                         {[...Array(11)].map((_, i) => (
                             <div key={i} className="h-4 rounded animate-pulse"
                                  style={{
-                                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                                  }} />
                         ))}
                     </div>
@@ -399,8 +399,8 @@ const MainPage = () => {
                 {[...Array(5)].map((_, rowIndex) => (
                     <div key={rowIndex} className="grid grid-cols-11 gap-4 p-4 rounded-lg border-2"
                          style={{
-                             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                             borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                             backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
+                             borderColor: isDarkMode ? "#475569" : "#e2e8f0",
                          }}>
                         {[...Array(11)].map((_, colIndex) => (
                             <div key={colIndex} 
@@ -408,7 +408,7 @@ const MainPage = () => {
                                      colIndex === 0 ? "w-4" : colIndex === 4 ? "w-16" : "w-full"
                                  }`}
                                  style={{
-                                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                     backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                                      animationDelay: `${rowIndex * 0.1}s`
                                  }} />
                         ))}
@@ -419,8 +419,13 @@ const MainPage = () => {
     );
 
     return (
-        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
-            {/* Header - RESTORED ORIGINAL DESIGN */}
+        <div 
+            className="space-y-5 px-6 pb-5 pt-4 overflow-visible min-h-screen"
+            style={{
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+            }}
+        >
+            {/* Header - UPDATED DARK MODE COLORS */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -431,38 +436,38 @@ const MainPage = () => {
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         className="rounded-lg p-2"
                         style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                            color: "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                            color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                         }}
                     >
                         <Package size={22} />
                     </motion.div>
                     <div>
-                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             Admin Laundry Records
                         </p>
-                        <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                             Manage and track all laundry transactions
                         </p>
                     </div>
                 </div>
 
-                {/* Time Filter and Filter Button - RESTORED ORIGINAL BEAUTIFUL DESIGN */}
+                {/* Time Filter and Filter Button - UPDATED DARK MODE COLORS */}
                 <div className="flex items-center gap-2">
-                    {/* Time Filter - ORIGINAL STYLING */}
+                    {/* Time Filter - UPDATED STYLING */}
                     <div className="flex items-center gap-2">
                         <Calendar
                             size={18}
-                            style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
+                            style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                         />
                         <select
                             value={timeFilter}
                             onChange={(e) => setTimeFilter(e.target.value)}
                             className="rounded-lg border-2 px-3 py-2 text-sm focus:outline-none transition-all"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                             }}
                         >
                             {timeFilters.map((filter) => (
@@ -476,7 +481,7 @@ const MainPage = () => {
                         </select>
                     </div>
 
-                    {/* Filter Button - ORIGINAL STYLING */}
+                    {/* Filter Button - UPDATED STYLING */}
                     <div className="relative" ref={filterDropdownRef}>
                         <button
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
@@ -484,9 +489,9 @@ const MainPage = () => {
                                 getActiveFilterCount() > 0 ? "ring-2 ring-offset-2 ring-blue-500" : ""
                             }`}
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                             }}
                         >
                             <Filter size={16} />
@@ -498,15 +503,15 @@ const MainPage = () => {
                             )}
                         </button>
 
-                        {/* Filter Dropdown - ORIGINAL STYLING */}
+                        {/* Filter Dropdown - UPDATED STYLING */}
                         {showFilterDropdown && (
                             <div className="absolute right-0 z-50 mt-2 w-80 rounded-lg border-2 p-4 shadow-lg"
                                  style={{
-                                     backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                  }}>
                                 <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="font-semibold" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                    <h3 className="font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                         Filters
                                     </h3>
                                     {getActiveFilterCount() > 0 && (
@@ -522,7 +527,7 @@ const MainPage = () => {
                                 <div className="space-y-6 max-h-96 overflow-y-auto">
                                     {/* Sort By Section */}
                                     <div>
-                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                             Sort By
                                         </h4>
                                         <div className="grid grid-cols-2 gap-2 mb-3">
@@ -535,10 +540,10 @@ const MainPage = () => {
                                                         onChange={() => handleSortChange(option.id)}
                                                         className="rounded border-2"
                                                         style={{
-                                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                                         }}
                                                     />
-                                                    <span className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                    <span className="text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                                         {option.label}
                                                     </span>
                                                 </label>
@@ -550,7 +555,7 @@ const MainPage = () => {
                                                 className={`flex-1 text-sm py-1 px-2 rounded border ${
                                                     activeFilters.sortOrder === "asc" 
                                                         ? "bg-blue-500 text-white" 
-                                                        : "bg-gray-100 text-gray-700"
+                                                        : isDarkMode ? "bg-slate-700 text-slate-300" : "bg-gray-100 text-gray-700"
                                                 }`}
                                             >
                                                 Ascending
@@ -560,7 +565,7 @@ const MainPage = () => {
                                                 className={`flex-1 text-sm py-1 px-2 rounded border ${
                                                     activeFilters.sortOrder === "desc" 
                                                         ? "bg-blue-500 text-white" 
-                                                        : "bg-gray-100 text-gray-700"
+                                                        : isDarkMode ? "bg-slate-700 text-slate-300" : "bg-gray-100 text-gray-700"
                                                 }`}
                                             >
                                                 Descending
@@ -570,7 +575,7 @@ const MainPage = () => {
 
                                     {/* Status Filters */}
                                     <div>
-                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                             Status
                                         </h4>
                                         <div className="space-y-2">
@@ -582,10 +587,10 @@ const MainPage = () => {
                                                         onChange={() => handleStatusFilterChange(option.id)}
                                                         className="rounded border-2"
                                                         style={{
-                                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                                         }}
                                                     />
-                                                    <span className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                    <span className="text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                                         {option.label}
                                                     </span>
                                                 </label>
@@ -595,7 +600,7 @@ const MainPage = () => {
 
                                     {/* Payment Filters */}
                                     <div>
-                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                             Payment
                                         </h4>
                                         <div className="space-y-2">
@@ -607,10 +612,10 @@ const MainPage = () => {
                                                         onChange={() => handlePaymentFilterChange(option.id)}
                                                         className="rounded border-2"
                                                         style={{
-                                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                                         }}
                                                     />
-                                                    <span className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                    <span className="text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                                         {option.label}
                                                     </span>
                                                 </label>
@@ -620,7 +625,7 @@ const MainPage = () => {
 
                                     {/* Service Filters */}
                                     <div>
-                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                        <h4 className="mb-2 font-medium text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                             Service Type
                                         </h4>
                                         <div className="space-y-2">
@@ -632,10 +637,10 @@ const MainPage = () => {
                                                         onChange={() => handleServiceFilterChange(option.id)}
                                                         className="rounded border-2"
                                                         style={{
-                                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                                         }}
                                                     />
-                                                    <span className="text-sm" style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                    <span className="text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                                         {option.label}
                                                     </span>
                                                 </label>
@@ -649,7 +654,7 @@ const MainPage = () => {
                 </div>
             </motion.div>
 
-            {/* Summary Cards - EXACTLY 2 ROWS WITH 3 CARDS EACH */}
+            {/* Summary Cards - UPDATED DARK MODE COLORS */}
             <div className="space-y-5">
                 {/* First Row - Total Income, Total Fabric, Total Detergent */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -671,8 +676,8 @@ const MainPage = () => {
                                 }}
                                 className="rounded-xl border-2 p-5 transition-all"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                 }}
                                 title={tooltip}
                             >
@@ -693,14 +698,14 @@ const MainPage = () => {
                                         transition={{ delay: index * 0.2 }}
                                         className="text-right"
                                     >
-                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                             {value}
                                         </p>
                                     </motion.div>
                                 </div>
                                 
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                         {label}
                                     </h3>
                                 </div>
@@ -729,8 +734,8 @@ const MainPage = () => {
                                 }}
                                 className="rounded-xl border-2 p-5 transition-all"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                 }}
                                 title={tooltip}
                             >
@@ -751,14 +756,14 @@ const MainPage = () => {
                                         transition={{ delay: (index + 3) * 0.2 }}
                                         className="text-right"
                                     >
-                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                             {value}
                                         </p>
                                     </motion.div>
                                 </div>
                                 
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                         {label}
                                     </h3>
                                 </div>
@@ -768,7 +773,7 @@ const MainPage = () => {
                 </div>
             </div>
 
-            {/* Record Table */}
+            {/* Record Table - UPDATED DARK MODE COLORS */}
             {loading ? (
                 <SkeletonTable />
             ) : (
@@ -778,15 +783,15 @@ const MainPage = () => {
                     transition={{ delay: 0.3 }}
                     className="rounded-xl border-2 p-5 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <div className="flex items-center justify-between mb-4">
-                        <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                        <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             Laundry Records
                         </p>
-                        <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                        <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             {filteredRecordsCount > 0 ? filteredRecordsCount : filteredRecords.length} records found
                         </span>
                     </div>

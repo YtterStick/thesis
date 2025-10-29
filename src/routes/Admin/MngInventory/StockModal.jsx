@@ -27,21 +27,21 @@ const StockModal = ({ item, onClose, onSubmit, loading = false }) => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="rounded-xl border-2 p-6 w-full max-w-sm transition-all"
                 style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
-                <p className="text-lg font-bold mb-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                <p className="text-lg font-bold mb-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                     Add Stock
                 </p>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <p className="text-sm mb-1" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                            {item.name} stock: <strong style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>{item.quantity}</strong>
+                        <p className="text-sm mb-1" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            {item.name} stock: <strong style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{item.quantity}</strong>
                         </p>
-                        <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                            Unit price: <strong style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>₱{item.price?.toFixed(2) ?? "—"}</strong>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                            Unit price: <strong style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>₱{item.price?.toFixed(2) ?? "—"}</strong>
                         </p>
                     </div>
 
@@ -52,9 +52,9 @@ const StockModal = ({ item, onClose, onSubmit, loading = false }) => {
                             placeholder="Enter amount to add"
                             className="w-full rounded-lg border-2 px-3 py-2 text-sm transition-all [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                color: isDarkMode ? '#13151B' : '#0B2B26',
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? '#f1f5f9' : '#0f172a',
                             }}
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
@@ -72,8 +72,8 @@ const StockModal = ({ item, onClose, onSubmit, loading = false }) => {
                             disabled={loading}
                             className="rounded-lg px-4 py-2 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{
-                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                                color: isDarkMode ? '#13151B' : '#0B2B26',
+                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                color: isDarkMode ? '#f1f5f9' : '#0f172a',
                             }}
                         >
                             Cancel
@@ -85,7 +85,7 @@ const StockModal = ({ item, onClose, onSubmit, loading = false }) => {
                             disabled={loading}
                             className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{
-                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
                             }}
                         >
                             {loading ? (

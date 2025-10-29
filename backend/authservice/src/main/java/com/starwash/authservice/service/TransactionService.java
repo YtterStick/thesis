@@ -16,7 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class TransactionService {
-    
+
     private final ServiceRepository serviceRepository;
     private final StockRepository stockRepository;
     private final TransactionRepository transactionRepository;
@@ -63,7 +63,7 @@ public class TransactionService {
 
         // Check stock availability first before processing
         List<String> insufficientStockItems = new ArrayList<>();
-        
+
         for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
             String itemName = entry.getKey();
             int quantity = entry.getValue();
@@ -72,16 +72,17 @@ public class TransactionService {
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
 
             if (item.getQuantity() < quantity) {
-                insufficientStockItems.add(String.format("%s (Requested: %d, Available: %d)", 
-                    itemName, quantity, item.getQuantity()));
-                
+                insufficientStockItems.add(String.format("%s (Requested: %d, Available: %d)",
+                        itemName, quantity, item.getQuantity()));
+
                 // Send notification about stock issue instead of throwing error immediately
                 notificationService.notifyTransactionStockIssue(
-                    itemName, quantity, item.getQuantity(), "pending-transaction");
+                        itemName, quantity, item.getQuantity(), "pending-transaction");
             }
         }
 
-        // If there are insufficient stock items, throw a business exception with details
+        // If there are insufficient stock items, throw a business exception with
+        // details
         if (!insufficientStockItems.isEmpty()) {
             String errorMessage = "Insufficient stock for: " + String.join(", ", insufficientStockItems);
             throw new InsufficientStockException(errorMessage, insufficientStockItems);
@@ -108,7 +109,8 @@ public class TransactionService {
             consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
             consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
 
-            // Notify about stock level change after transaction - this will only notify if status actually changed
+            // Notify about stock level change after transaction - this will only notify if
+            // status actually changed
             notificationService.checkAndNotifyStockLevel(item, previousQuantity);
         }
 
@@ -200,12 +202,12 @@ public class TransactionService {
     // Custom exception for insufficient stock
     public static class InsufficientStockException extends RuntimeException {
         private final List<String> insufficientItems;
-        
+
         public InsufficientStockException(String message, List<String> insufficientItems) {
             super(message);
             this.insufficientItems = insufficientItems;
         }
-        
+
         public List<String> getInsufficientItems() {
             return insufficientItems;
         }
@@ -286,57 +288,57 @@ public class TransactionService {
     }
 
     // In TransactionService.java - update the getAllRecords method
-public List<RecordResponseDto> getAllRecords() {
-    List<Transaction> allTransactions = transactionRepository.findAll();
-    List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+    public List<RecordResponseDto> getAllRecords() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
+        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
 
-    Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
-            .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+        Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-    // Use Manila time for expiration checks
-    LocalDateTime currentManilaTime = getCurrentManilaTime();
+        // Use Manila time for expiration checks
+        LocalDateTime currentManilaTime = getCurrentManilaTime();
 
-    return allTransactions.stream().map(tx -> {
-        RecordResponseDto dto = new RecordResponseDto();
-        dto.setId(tx.getId());
-        dto.setInvoiceNumber(tx.getInvoiceNumber()); // Add this line
-        dto.setCustomerName(tx.getCustomerName());
-        dto.setServiceName(tx.getServiceName());
-        dto.setLoads(tx.getServiceQuantity());
-        dto.setContact(tx.getContact());
+        return allTransactions.stream().map(tx -> {
+            RecordResponseDto dto = new RecordResponseDto();
+            dto.setId(tx.getId());
+            dto.setInvoiceNumber(tx.getInvoiceNumber()); // Add this line
+            dto.setCustomerName(tx.getCustomerName());
+            dto.setServiceName(tx.getServiceName());
+            dto.setLoads(tx.getServiceQuantity());
+            dto.setContact(tx.getContact());
 
-        dto.setDetergent(tx.getConsumables().stream()
-                .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                .map(c -> String.valueOf(c.getQuantity()))
-                .findFirst().orElse("—"));
+            dto.setDetergent(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
 
-        dto.setFabric(tx.getConsumables().stream()
-                .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                .map(c -> String.valueOf(c.getQuantity()))
-                .findFirst().orElse("—"));
+            dto.setFabric(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
 
-        dto.setTotalPrice(tx.getTotalPrice());
-        dto.setPaymentMethod(tx.getPaymentMethod());
-        dto.setPickupStatus("Unclaimed");
-        dto.setWashed(false);
-        
-        // Use Manila time for expiration check
-        dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
-        dto.setCreatedAt(tx.getCreatedAt());
+            dto.setTotalPrice(tx.getTotalPrice());
+            dto.setPaymentMethod(tx.getPaymentMethod());
+            dto.setPickupStatus("Unclaimed");
+            dto.setWashed(false);
 
-        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
-        if (job != null) {
-            dto.setPickupStatus(job.getPickupStatus());
-            dto.setExpired(job.isExpired());
-            dto.setDisposed(job.isDisposed());
-        } else {
-            dto.setPickupStatus("UNCLAIMED");
+            // Use Manila time for expiration check
             dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
-        }
+            dto.setCreatedAt(tx.getCreatedAt());
 
-        return dto;
-    }).collect(Collectors.toList());
-}
+            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+            if (job != null) {
+                dto.setPickupStatus(job.getPickupStatus());
+                dto.setExpired(job.isExpired());
+                dto.setDisposed(job.isDisposed());
+            } else {
+                dto.setPickupStatus("UNCLAIMED");
+                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
+    }
 
     public List<RecordResponseDto> getStaffRecords() {
         List<RecordResponseDto> allRecords = this.getAllRecords();
@@ -416,108 +418,108 @@ public List<RecordResponseDto> getAllRecords() {
         return summary;
     }
 
-   // In TransactionService.java, update the getAllAdminRecords method:
+    // In TransactionService.java, update the getAllAdminRecords method:
 
-public List<AdminRecordResponseDto> getAllAdminRecords() {
-    List<Transaction> allTransactions = transactionRepository.findAll();
-    List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+    public List<AdminRecordResponseDto> getAllAdminRecords() {
+        List<Transaction> allTransactions = transactionRepository.findAll();
+        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
 
-    Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
-            .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+        Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-    // Use Manila time for expiration checks
-    LocalDateTime currentManilaTime = getCurrentManilaTime();
+        // Use Manila time for expiration checks
+        LocalDateTime currentManilaTime = getCurrentManilaTime();
 
-    return allTransactions.stream().map(tx -> {
-        AdminRecordResponseDto dto = new AdminRecordResponseDto();
-        dto.setId(tx.getId());
-        dto.setInvoiceNumber(tx.getInvoiceNumber());
-        dto.setCustomerName(tx.getCustomerName());
-        dto.setContact(tx.getContact());
-        dto.setServiceName(tx.getServiceName());
-        dto.setLoads(tx.getServiceQuantity());
+        return allTransactions.stream().map(tx -> {
+            AdminRecordResponseDto dto = new AdminRecordResponseDto();
+            dto.setId(tx.getId());
+            dto.setInvoiceNumber(tx.getInvoiceNumber());
+            dto.setCustomerName(tx.getCustomerName());
+            dto.setContact(tx.getContact());
+            dto.setServiceName(tx.getServiceName());
+            dto.setLoads(tx.getServiceQuantity());
 
-        // Calculate detergent and fabric quantities
-        String detergentQty = tx.getConsumables().stream()
-                .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                .map(c -> String.valueOf(c.getQuantity()))
-                .findFirst().orElse("0");
-        
-        String fabricQty = tx.getConsumables().stream()
-                .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                .map(c -> String.valueOf(c.getQuantity()))
-                .findFirst().orElse("0");
+            // Calculate detergent and fabric quantities
+            String detergentQty = tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("0");
 
-        dto.setDetergent(detergentQty);
-        dto.setFabric(fabricQty);
+            String fabricQty = tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("0");
 
-        dto.setTotalPrice(tx.getTotalPrice());
-        dto.setPaymentMethod(tx.getPaymentMethod());
-        dto.setProcessedByStaff(tx.getStaffId());
-        dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
-        dto.setCreatedAt(tx.getCreatedAt());
+            dto.setDetergent(detergentQty);
+            dto.setFabric(fabricQty);
 
-        dto.setGcashVerified(tx.getGcashVerified());
+            dto.setTotalPrice(tx.getTotalPrice());
+            dto.setPaymentMethod(tx.getPaymentMethod());
+            dto.setProcessedByStaff(tx.getStaffId());
+            dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
+            dto.setCreatedAt(tx.getCreatedAt());
 
-        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
-        if (job != null) {
-            dto.setPickupStatus(
-                    job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
+            dto.setGcashVerified(tx.getGcashVerified());
 
-            if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
-                long completedLoads = job.getLoadAssignments().stream()
-                        .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
-                        .count();
+            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+            if (job != null) {
+                dto.setPickupStatus(
+                        job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
 
-                long totalLoads = job.getLoadAssignments().size();
+                if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
+                    long completedLoads = job.getLoadAssignments().stream()
+                            .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
+                            .count();
 
-                if (completedLoads == totalLoads) {
-                    dto.setLaundryStatus("Completed");
-                } else if (completedLoads > 0) {
-                    dto.setLaundryStatus("In Progress");
-                } else {
-                    boolean anyInProgress = job.getLoadAssignments().stream()
-                            .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
-                                    !"COMPLETED".equalsIgnoreCase(load.getStatus()));
+                    long totalLoads = job.getLoadAssignments().size();
 
-                    if (anyInProgress) {
+                    if (completedLoads == totalLoads) {
+                        dto.setLaundryStatus("Completed");
+                    } else if (completedLoads > 0) {
                         dto.setLaundryStatus("In Progress");
                     } else {
-                        dto.setLaundryStatus("Not Started");
+                        boolean anyInProgress = job.getLoadAssignments().stream()
+                                .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
+                                        !"COMPLETED".equalsIgnoreCase(load.getStatus()));
+
+                        if (anyInProgress) {
+                            dto.setLaundryStatus("In Progress");
+                        } else {
+                            dto.setLaundryStatus("Not Started");
+                        }
                     }
+
+                    // Keep unwashed loads count for internal use if needed
+                    long unwashedLoadsCount = job.getLoadAssignments().stream()
+                            .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                            .count();
+                    dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
+
+                } else {
+                    dto.setLaundryStatus("Not Started");
+                    dto.setUnwashedLoadsCount(tx.getServiceQuantity());
                 }
 
-                // Keep unwashed loads count for internal use if needed
-                long unwashedLoadsCount = job.getLoadAssignments().stream()
-                        .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
-                        .count();
-                dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
-
+                dto.setExpired(job.isExpired());
+                dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
+                dto.setClaimProcessedBy(job.getClaimedByStaffId());
+                dto.setDisposed(job.isDisposed());
+                dto.setDisposedBy(job.getDisposedBy());
             } else {
+                dto.setPickupStatus("UNCLAIMED");
                 dto.setLaundryStatus("Not Started");
                 dto.setUnwashedLoadsCount(tx.getServiceQuantity());
+                // Use Manila time for transaction expiration check
+                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
+                dto.setLaundryProcessedBy(null);
+                dto.setClaimProcessedBy(null);
+                dto.setDisposed(false);
+                dto.setDisposedBy(null);
             }
 
-            dto.setExpired(job.isExpired());
-            dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
-            dto.setClaimProcessedBy(job.getClaimedByStaffId());
-            dto.setDisposed(job.isDisposed());
-            dto.setDisposedBy(job.getDisposedBy());
-        } else {
-            dto.setPickupStatus("UNCLAIMED");
-            dto.setLaundryStatus("Not Started");
-            dto.setUnwashedLoadsCount(tx.getServiceQuantity());
-            // Use Manila time for transaction expiration check
-            dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
-            dto.setLaundryProcessedBy(null);
-            dto.setClaimProcessedBy(null);
-            dto.setDisposed(false);
-            dto.setDisposedBy(null);
-        }
-
-        return dto;
-    }).collect(Collectors.toList());
-}
+            return dto;
+        }).collect(Collectors.toList());
+    }
 
     public List<Transaction> findPendingGcashTransactions() {
         return transactionRepository.findByPaymentMethodAndGcashVerified("GCash", false);
@@ -556,12 +558,15 @@ public List<AdminRecordResponseDto> getAllAdminRecords() {
 
                 // Check and fix createdAt if needed
                 if (transaction.getCreatedAt() != null) {
-                    // If createdAt is more than 8 hours off from current Manila time, it might be in wrong timezone
-                    long hoursDifference = java.time.Duration.between(transaction.getCreatedAt(), currentManilaTime).toHours();
+                    // If createdAt is more than 8 hours off from current Manila time, it might be
+                    // in wrong timezone
+                    long hoursDifference = java.time.Duration.between(transaction.getCreatedAt(), currentManilaTime)
+                            .toHours();
                     if (Math.abs(hoursDifference) > 12) {
                         System.out.println("🕒 Fixing createdAt for transaction: " + transaction.getInvoiceNumber());
                         // For simplicity, we'll set it to current Manila time minus a reasonable offset
-                        // In a real scenario, you might want to preserve the original time but adjust timezone
+                        // In a real scenario, you might want to preserve the original time but adjust
+                        // timezone
                         transaction.setCreatedAt(currentManilaTime.minusDays(1)); // Example adjustment
                         needsUpdate = true;
                     }
@@ -583,7 +588,8 @@ public List<AdminRecordResponseDto> getAllAdminRecords() {
                     fixedCount++;
                 }
             } catch (Exception e) {
-                System.err.println("❌ Error fixing transaction dates for " + transaction.getInvoiceNumber() + ": " + e.getMessage());
+                System.err.println("❌ Error fixing transaction dates for " + transaction.getInvoiceNumber() + ": "
+                        + e.getMessage());
             }
         }
 

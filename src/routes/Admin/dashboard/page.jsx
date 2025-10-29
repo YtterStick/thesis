@@ -411,15 +411,15 @@ export default function AdminDashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-xl border-2 p-5 transition-all"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
         >
             <div className="mb-4 flex items-center gap-x-3">
                 <div
                     className="w-fit animate-pulse rounded-lg p-2"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                     }}
                 >
                     <div className="h-6 w-6"></div>
@@ -427,20 +427,20 @@ export default function AdminDashboardPage() {
                 <div
                     className="h-5 w-28 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                     }}
                 ></div>
             </div>
             <div
                 className="animate-pulse rounded-lg p-3"
                 style={{
-                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                    backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                 }}
             >
                 <div
                     className="h-8 w-32 rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                     }}
                 ></div>
             </div>
@@ -453,28 +453,28 @@ export default function AdminDashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="col-span-1 rounded-xl border-2 p-5 transition-all md:col-span-2 lg:col-span-4"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
         >
             <div className="mb-5">
                 <div
                     className="mb-2 h-6 w-44 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                     }}
                 ></div>
                 <div
                     className="h-4 w-36 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                     }}
                 ></div>
             </div>
             <div
                 className="h-[280px] w-full animate-pulse rounded-lg"
                 style={{
-                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                    backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                 }}
             ></div>
         </motion.div>
@@ -486,21 +486,21 @@ export default function AdminDashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="col-span-1 rounded-xl border-2 p-5 transition-all md:col-span-2 lg:col-span-3"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
         >
             <div className="mb-5">
                 <div
                     className="mb-2 h-6 w-36 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                     }}
                 ></div>
                 <div
                     className="h-4 w-44 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                     }}
                 ></div>
             </div>
@@ -509,32 +509,32 @@ export default function AdminDashboardPage() {
                     <div
                         key={item}
                         className="flex items-center justify-between border-b py-3 last:border-none"
-                        style={{ borderColor: isDarkMode ? "#2A524C" : "#E0EAE8" }}
+                        style={{ borderColor: isDarkMode ? "#334155" : "#e2e8f0" }}
                     >
                         <div className="space-y-2">
                             <div
                                 className="h-4 w-36 animate-pulse rounded"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                    backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                                 }}
                             ></div>
                             <div
                                 className="h-3 w-44 animate-pulse rounded"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                    backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                                 }}
                             ></div>
                             <div
                                 className="h-3 w-28 animate-pulse rounded"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                    backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                                 }}
                             ></div>
                         </div>
                         <div
                             className="h-5 w-20 animate-pulse rounded"
                             style={{
-                                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                             }}
                         ></div>
                     </div>
@@ -553,11 +553,11 @@ export default function AdminDashboardPage() {
                 >
                     <LineChart
                         size={22}
-                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     />
                     <p
                         className="text-xl font-bold"
-                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     >
                         Access Denied
                     </p>
@@ -567,8 +567,8 @@ export default function AdminDashboardPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex h-52 items-center justify-center rounded-xl border-2 p-6"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <div className="text-center">
@@ -578,19 +578,19 @@ export default function AdminDashboardPage() {
                         />
                         <p
                             className="mb-1 text-base font-semibold"
-                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                         >
                             Insufficient Privileges
                         </p>
                         <p
                             className="text-sm"
-                            style={{ color: isDarkMode ? "#6B7280" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                         >
                             You need admin privileges to access this dashboard.
                         </p>
                         <p
                             className="mt-2 text-sm"
-                            style={{ color: isDarkMode ? "#6B7280" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                         >
                             Current role: {user?.role}
                         </p>
@@ -612,13 +612,13 @@ export default function AdminDashboardPage() {
                     <div
                         className="h-8 w-8 animate-pulse rounded-lg"
                         style={{
-                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                            backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                         }}
                     ></div>
                     <div
                         className="h-8 w-44 animate-pulse rounded-lg"
                         style={{
-                            backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                            backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                         }}
                     ></div>
                 </motion.div>
@@ -652,11 +652,11 @@ export default function AdminDashboardPage() {
                 >
                     <LineChart
                         size={22}
-                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     />
                     <p
                         className="text-xl font-bold"
-                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     >
                         Admin Dashboard
                     </p>
@@ -666,8 +666,8 @@ export default function AdminDashboardPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex h-52 items-center justify-center rounded-xl border-2 p-6"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <div className="text-center">
@@ -677,13 +677,13 @@ export default function AdminDashboardPage() {
                         />
                         <p
                             className="mb-1 text-base font-semibold"
-                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                         >
                             Failed to load dashboard data
                         </p>
                         <p
                             className="text-sm"
-                            style={{ color: isDarkMode ? "#6B7280" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                         >
                             {dashboardData.error || "Auto-retrying in 30 seconds..."}
                         </p>
@@ -736,22 +736,22 @@ export default function AdminDashboardPage() {
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     className="rounded-lg p-2"
                     style={{
-                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                        color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#1e293b",
+                        color: isDarkMode ? "#1e293b" : "#1e293b",
                     }}
                 >
-                    <LineChart size={22} />
+                    <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
                 </motion.div>
                 <div>
                     <p
                         className="text-xl font-bold"
-                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     >
                         Admin Dashboard
                     </p>
                     <p
                         className="text-sm"
-                        style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
+                        style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                     >
                         Real-time business overview and analytics
                     </p>
@@ -773,8 +773,8 @@ export default function AdminDashboardPage() {
                         }}
                         className="cursor-pointer rounded-xl border-2 p-5 transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <div className="mb-4 flex items-center justify-between">
@@ -796,7 +796,7 @@ export default function AdminDashboardPage() {
                             >
                                 <p
                                     className="text-2xl font-bold"
-                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                 >
                                     {value}
                                 </p>
@@ -806,13 +806,13 @@ export default function AdminDashboardPage() {
                         <div>
                             <h3
                                 className="mb-2 text-lg font-semibold"
-                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                             >
                                 {title}
                             </h3>
                             <p
                                 className="text-sm"
-                                style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/80" }}
+                                style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                             >
                                 {description}
                             </p>
@@ -831,21 +831,21 @@ export default function AdminDashboardPage() {
                     whileHover={{ scale: 1.01 }}
                     className="col-span-1 rounded-xl border-2 p-5 transition-all md:col-span-2 lg:col-span-4"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <div className="mb-5 flex items-center justify-between">
                         <div>
                             <p
                                 className="mb-1 text-lg font-bold"
-                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                             >
                                 Revenue Overview
                             </p>
                             <span
                                 className="text-sm"
-                                style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                             >
                                 {new Date().getFullYear()} Monthly Revenue
                             </span>
@@ -854,11 +854,11 @@ export default function AdminDashboardPage() {
                             whileHover={{ scale: 1.1 }}
                             className="rounded-lg p-2"
                             style={{
-                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+                                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                             }}
                         >
-                            <TrendingUp size={18} />
+                            <TrendingUp size={18} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
                         </motion.div>
                     </div>
 
@@ -900,9 +900,9 @@ export default function AdminDashboardPage() {
                                         "Revenue",
                                     ]}
                                     contentStyle={{
-                                        backgroundColor: isDarkMode ? "#0B2B26" : "#FFFFFF",
-                                        border: `2px solid ${isDarkMode ? "#1C3F3A" : "#0B2B26"}`,
-                                        color: isDarkMode ? "#F3EDE3" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#0f172a" : "#FFFFFF",
+                                        border: `2px solid ${isDarkMode ? "#334155" : "#cbd5e1"}`,
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                         fontSize: "0.8rem",
                                         fontWeight: "500",
                                         borderRadius: "0.5rem",
@@ -915,14 +915,14 @@ export default function AdminDashboardPage() {
                                 <XAxis
                                     dataKey="name"
                                     strokeWidth={0}
-                                    stroke={isDarkMode ? "#6B7280" : "#0B2B26"}
+                                    stroke={isDarkMode ? "#cbd5e1" : "#475569"}
                                     tickMargin={6}
                                     tick={{ fontSize: 12 }}
                                 />
                                 <YAxis
                                     dataKey="total"
                                     strokeWidth={0}
-                                    stroke={isDarkMode ? "#6B7280" : "#0B2B26"}
+                                    stroke={isDarkMode ? "#cbd5e1" : "#475569"}
                                     tickFormatter={(value) => `₱${value > 1000 ? `${(value / 1000).toFixed(0)}k` : value}`}
                                     tickMargin={6}
                                     tick={{ fontSize: 12 }}
@@ -949,21 +949,21 @@ export default function AdminDashboardPage() {
                     whileHover={{ scale: 1.01 }}
                     className="col-span-1 rounded-xl border-2 p-5 transition-all md:col-span-2 lg:col-span-3"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <div className="mb-5 flex items-center justify-between">
                         <div>
                             <p
                                 className="mb-1 text-lg font-bold"
-                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                             >
                                 Unclaimed Laundry
                             </p>
                             <span
                                 className="text-sm"
-                                style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                             >
                                 {displayData.unclaimedList.length} unclaimed loads
                             </span>
@@ -972,11 +972,11 @@ export default function AdminDashboardPage() {
                             whileHover={{ scale: 1.1 }}
                             className="rounded-lg p-2"
                             style={{
-                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                color: isDarkMode ? "#F3EDE3" : "#F3EDE3",
+                                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                             }}
                         >
-                            <Users size={18} />
+                            <Users size={18} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
                         </motion.div>
                     </div>
 
@@ -989,18 +989,18 @@ export default function AdminDashboardPage() {
                             >
                                 <PackageX
                                     size={36}
-                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/50" }}
+                                    style={{ color: isDarkMode ? "#64748b" : "#94a3b8" }}
                                     className="mb-3"
                                 />
                                 <p
                                     className="mb-1 text-base font-semibold"
-                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                 >
                                     No Unclaimed Loads
                                 </p>
                                 <p
                                     className="text-sm"
-                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                 >
                                     All completed laundry has been picked up
                                 </p>
@@ -1015,38 +1015,38 @@ export default function AdminDashboardPage() {
                                         transition={{ delay: index * 0.1 }}
                                         whileHover={{
                                             scale: 1.02,
-                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                            backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
                                             transition: { duration: 0.2 },
                                         }}
                                         className="cursor-pointer rounded-lg border p-3 transition-all"
                                         style={{
-                                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                            borderColor: isDarkMode ? "#475569" : "#e2e8f0",
+                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(248, 250, 252, 0.8)",
                                         }}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <p
                                                     className="mb-1 text-sm font-semibold"
-                                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                 >
                                                     {transaction.customerName}
                                                 </p>
                                                 <p
                                                     className="mb-1 text-sm"
-                                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/80" }}
+                                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                                 >
                                                     {transaction.serviceType} • {transaction.loadCount || 0} loads
                                                 </p>
                                                 <p
                                                     className="text-xs"
-                                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/60" }}
+                                                    style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
                                                 >
                                                     Invoice: {transaction.invoiceNumber}
                                                 </p>
                                                 <p
                                                     className="text-xs"
-                                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/60" }}
+                                                    style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
                                                 >
                                                     {transaction.date}
                                                 </p>

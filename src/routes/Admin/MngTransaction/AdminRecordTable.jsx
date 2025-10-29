@@ -125,9 +125,9 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
             <TooltipContent
                 side="top"
                 style={{
-                    backgroundColor: isDarkMode ? "#0B2B26" : "#FFFFFF",
-                    color: isDarkMode ? "#F3EDE3" : "#0B2B26",
-                    borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
                 <div className="font-medium text-sm">{status}</div>
@@ -638,20 +638,20 @@ const AdminRecordTable = ({
     return (
         <TooltipProvider>
             <div className="flex flex-col gap-6">
-                {/* Search + Calendar + Export */}
+                {/* Search + Calendar + Export - UPDATED DARK MODE COLORS */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="w-full max-w-xs flex-1">
                         <div className="relative w-full max-w-xs">
                             <div
                                 className="flex h-[38px] items-center rounded-lg border-2 px-3 transition-all"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                 }}
                             >
                                 <Search
                                     size={16}
-                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26" }}
+                                    style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
                                 />
                                 <input
                                     type="text"
@@ -663,7 +663,7 @@ const AdminRecordTable = ({
                                     placeholder="Search by name"
                                     className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
                                     style={{
-                                        color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                     }}
                                 />
                             </div>
@@ -671,7 +671,7 @@ const AdminRecordTable = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {/* Calendar */}
+                        {/* Calendar - UPDATED DARK MODE COLORS */}
                         <div
                             className="relative"
                             ref={calendarRef}
@@ -680,8 +680,9 @@ const AdminRecordTable = ({
                                 onClick={() => setShowCalendar((p) => !p)}
                                 className="transition-all"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                    color: "#F3EDE3",
+                                    backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                    color: "#f1f5f9",
+                                    border: `2px solid ${isDarkMode ? "#0f172a" : "#0f172a"}`,
                                 }}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -691,11 +692,12 @@ const AdminRecordTable = ({
                                 <div
                                     className="absolute right-0 z-50 mt-2 rounded-lg border-2 p-2 shadow-lg"
                                     style={{
-                                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#0f172a" : "#FFFFFF",
+                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                     }}
                                 >
                                     <Calendar
+                                        isDarkMode={isDarkMode}
                                         mode="range"
                                         selected={localSelectedRange}
                                         onSelect={handleDateRangeChange}
@@ -708,8 +710,9 @@ const AdminRecordTable = ({
                                             onClick={clearDateFilter}
                                             className="mt-2 w-full transition-all"
                                             style={{
-                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
+                                                borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                             }}
                                         >
                                             Clear Date Filter
@@ -726,6 +729,7 @@ const AdminRecordTable = ({
                             style={{
                                 backgroundColor: "#10B981",
                                 color: "#FFFFFF",
+                                border: "2px solid #10B981",
                             }}
                             disabled={items.length === 0}
                         >
@@ -734,18 +738,18 @@ const AdminRecordTable = ({
                     </div>
                 </div>
 
-                {/* Table with horizontal scrolling */}
+                {/* Table with horizontal scrolling - UPDATED DARK MODE COLORS */}
                 <div className="overflow-x-auto">
                     <div
                         className="rounded-lg border-2 min-w-max"
                         style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <table className="min-w-full table-auto text-sm">
                             <thead
                                 style={{
-                                    backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                    backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                                 }}
                             >
                                 <tr>
@@ -755,7 +759,7 @@ const AdminRecordTable = ({
                                             key={header}
                                             className="px-3 py-2 text-left text-xs font-medium whitespace-nowrap"
                                             style={{
-                                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                             }}
                                         >
                                             {header}
@@ -770,12 +774,12 @@ const AdminRecordTable = ({
                                             colSpan={tableHeaders.length + 1}
                                             className="px-4 py-6 text-center text-sm"
                                             style={{
-                                                color: isDarkMode ? "#6B7280" : "#0B2B26/70",
+                                                color: isDarkMode ? "#94a3b8" : "#475569",
                                             }}
                                         >
                                             <div className="flex flex-col items-center gap-2">
                                                 <AlertCircle
-                                                    style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                                    style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
                                                     className="h-5 w-5"
                                                 />
                                                 <span>No records found.</span>
@@ -788,7 +792,9 @@ const AdminRecordTable = ({
                                                         }}
                                                         className="transition-all"
                                                         style={{
-                                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                            backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
+                                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                            border: `1px solid ${isDarkMode ? "#475569" : "#cbd5e1"}`,
                                                         }}
                                                     >
                                                         Clear all filters
@@ -809,8 +815,8 @@ const AdminRecordTable = ({
                                                     key={record.id}
                                                     className="border-t transition-all hover:opacity-90"
                                                     style={{
-                                                        borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                                        borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+                                                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
                                                     }}
                                                 >
                                                     <td className="px-2 py-2">
@@ -818,67 +824,67 @@ const AdminRecordTable = ({
                                                             onClick={() => toggleRowExpansion(record.id)}
                                                             className="rounded p-1 transition-all hover:opacity-80"
                                                             style={{
-                                                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                                             }}
                                                         >
                                                             {isExpanded ? (
                                                                 <ChevronUp
                                                                     className="h-4 w-4"
-                                                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                                 />
                                                             ) : (
                                                                 <ChevronDown
                                                                     className="h-4 w-4"
-                                                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                                 />
                                                             )}
                                                         </button>
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 font-mono text-xs whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.invoiceNumber || "—"}
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 font-medium whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.name}
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.service}
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.loads}
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.detergent}
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.fabric}
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 font-semibold whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {formatCurrency(record.price)}
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 whitespace-nowrap"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.createdAt && !isNaN(new Date(record.createdAt))
                                                             ? format(new Date(record.createdAt), "MMM dd, yyyy")
@@ -886,14 +892,14 @@ const AdminRecordTable = ({
                                                     </td>
                                                     <td className="px-3 py-2 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
-                                                            <span style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>{record.paymentMethod}</span>
+                                                            <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{record.paymentMethod}</span>
                                                             <StatusBadge status={record.paid ? "Paid" : "Pending"} type="payment" isDarkMode={isDarkMode} />
                                                         </div>
                                                     </td>
                                                     <td
                                                         className="px-3 py-2 font-mono text-xs whitespace-nowrap"
                                                         style={{ 
-                                                            color: isDarkMode ? "#13151B" : "#0B2B26",
+                                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                                             fontFamily: 'monospace'
                                                         }}
                                                     >
@@ -901,7 +907,7 @@ const AdminRecordTable = ({
                                                     </td>
                                                     <td className="px-3 py-2 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
-                                                            <span style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                            <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                                                 {pickupStatus}
                                                             </span>
                                                             <StatusBadge 
@@ -919,21 +925,21 @@ const AdminRecordTable = ({
                                                                     disabled={isPrinting}
                                                                     className="rounded-lg p-2 transition-all hover:opacity-80 disabled:opacity-50"
                                                                     style={{
-                                                                        backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                                                     }}
                                                                 >
                                                                     <Printer
                                                                         className="h-4 w-4"
-                                                                        style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                                     />
                                                                 </button>
                                                             </TooltipTrigger>
                                                             <TooltipContent
                                                                 side="top"
                                                                 style={{
-                                                                    backgroundColor: isDarkMode ? "#0B2B26" : "#FFFFFF",
-                                                                    color: isDarkMode ? "#F3EDE3" : "#0B2B26",
-                                                                    borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
+                                                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                                                 }}
                                                             >
                                                                 {isPrinting ? "Printing..." : "Print Receipt"}
@@ -945,7 +951,7 @@ const AdminRecordTable = ({
                                                     <tr
                                                         className="transition-all"
                                                         style={{
-                                                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(248, 250, 252, 0.9)",
                                                         }}
                                                     >
                                                         <td
@@ -956,33 +962,33 @@ const AdminRecordTable = ({
                                                                 <div>
                                                                     <span
                                                                         className="font-medium"
-                                                                        style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
                                                                     >
                                                                         Laundry Processed By:
                                                                     </span>
-                                                                    <p style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                                    <p style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                                                         {record.laundryProcessedBy || "—"}
                                                                     </p>
                                                                 </div>
                                                                 <div>
                                                                     <span
                                                                         className="font-medium"
-                                                                        style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
                                                                     >
                                                                         Claim Processed By:
                                                                     </span>
-                                                                    <p style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                                    <p style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                                                         {record.claimProcessedBy || "—"}
                                                                     </p>
                                                                 </div>
                                                                 <div>
                                                                     <span
                                                                         className="font-medium"
-                                                                        style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/70" }}
+                                                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
                                                                     >
                                                                         Disposed By:
                                                                     </span>
-                                                                    <p style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}>
+                                                                    <p style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                                                         {record.disposedBy || "—"}
                                                                     </p>
                                                                 </div>
@@ -999,40 +1005,51 @@ const AdminRecordTable = ({
                     </div>
                 </div>
 
-                {/* Pagination */}
+                {/* Pagination - UPDATED WITH BETTER BUTTON COLORS */}
                 {totalPages > 1 && (
                     <div className="mt-4 flex items-center justify-center gap-4 text-sm">
                         <button
                             onClick={() => handlePageChange(currentPage - 1)}
                             disabled={currentPage === 1}
-                            className={`rounded px-3 py-1 transition-colors ${
-                                currentPage === 1 ? "cursor-not-allowed opacity-50" : "hover:opacity-80"
+                            className={`rounded px-4 py-2 transition-all font-medium ${
+                                currentPage === 1 
+                                    ? "cursor-not-allowed opacity-50" 
+                                    : "hover:scale-105 hover:opacity-90"
                             }`}
                             style={{
-                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                color: "#F3EDE3",
+                                backgroundColor: isDarkMode ? "#334155" : "#0f172a",
+                                color: "#f1f5f9",
+                                border: `2px solid ${isDarkMode ? "#475569" : "#0f172a"}`,
+                                minWidth: "80px",
                             }}
                         >
                             Prev
                         </button>
 
                         <span
-                            className="font-medium"
-                            style={{ color: isDarkMode ? "#0B2B26" : "#0B2B26" }}
+                            className="font-medium px-4 py-2 rounded"
+                            style={{ 
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                            }}
                         >
-                            Page <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2" }}>{currentPage}</span> of{" "}
-                            <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2" }}>{totalPages}</span>
+                            Page <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{currentPage}</span> of{" "}
+                            <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{totalPages}</span>
                         </span>
 
                         <button
                             onClick={() => handlePageChange(currentPage + 1)}
                             disabled={currentPage === totalPages}
-                            className={`rounded px-3 py-1 transition-colors ${
-                                currentPage === totalPages ? "cursor-not-allowed opacity-50" : "hover:opacity-80"
+                            className={`rounded px-4 py-2 transition-all font-medium ${
+                                currentPage === totalPages 
+                                    ? "cursor-not-allowed opacity-50" 
+                                    : "hover:scale-105 hover:opacity-90"
                             }`}
                             style={{
-                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                color: "#F3EDE3",
+                                backgroundColor: isDarkMode ? "#334155" : "#0f172a",
+                                color: "#f1f5f9",
+                                border: `2px solid ${isDarkMode ? "#475569" : "#0f172a"}`,
+                                minWidth: "80px",
                             }}
                         >
                             Next

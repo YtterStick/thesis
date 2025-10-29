@@ -44,17 +44,17 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
         animate={{ opacity: 1, y: 0 }}
         className="rounded-xl border-2 p-5 transition-all"
         style={{
-          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
         }}
       >
         {/* Header */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+            <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
               Inventory List
             </p>
-            <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+            <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
               {filteredItems.length} items found
             </p>
           </div>
@@ -64,12 +64,12 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
             <div className="relative">
               <div className="flex h-[38px] items-center rounded-lg border-2 px-3 transition-all"
                    style={{
-                     backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                    }}>
                 <Search
                   size={16}
-                  style={{ color: isDarkMode ? '#6B7280' : '#0B2B26' }}
+                  style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}
                 />
                 <input
                   type="text"
@@ -78,7 +78,7 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                   placeholder="Search items..."
                   className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
                   style={{
-                    color: isDarkMode ? '#13151B' : '#0B2B26',
+                    color: isDarkMode ? '#f1f5f9' : '#0f172a',
                   }}
                 />
               </div>
@@ -89,19 +89,19 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
         {/* Table */}
         <div className="overflow-x-auto rounded-lg border-2"
              style={{
-               borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+               borderColor: isDarkMode ? "#334155" : "#cbd5e1",
              }}>
           <table className="min-w-full text-left text-sm">
             <thead style={{
-              backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+              backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
             }}>
               <tr>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Name</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Quantity</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Price</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Last Restock</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Restock Qty</th>
-                <th className="p-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Action</th>
+                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Name</th>
+                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Quantity</th>
+                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Price</th>
+                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Last Restock</th>
+                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Restock Qty</th>
+                <th className="p-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -174,26 +174,26 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                       transition={{ delay: index * 0.1 }}
                       className="border-t transition-colors hover:opacity-90"
                       style={{
-                        borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                        borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
                       }}
                     >
-                      <td className="p-3 font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                      <td className="p-3 font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                         {item.name}
                       </td>
-                      <td className="flex items-center p-3" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                      <td className="flex items-center p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                         {quantity} {unit}
                         {statusIcon}
                       </td>
-                      <td className="p-3" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                      <td className="p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                         ₱{item.price?.toFixed(2) ?? "—"}
                       </td>
-                      <td className="p-3 text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                      <td className="p-3 text-xs" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                         {item.lastRestock
                           ? new Date(item.lastRestock).toLocaleString()
                           : "—"}
                       </td>
-                      <td className="p-3" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                      <td className="p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                         {item.lastRestockAmount != null ? `+${item.lastRestockAmount}` : "—"}
                       </td>
                       <td className="p-3 text-right">
@@ -204,26 +204,26 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                               whileTap={{ scale: 0.9 }}
                               className="rounded-md p-1 transition-colors hover:opacity-80"
                               style={{
-                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                               }}
                             >
-                              <MoreVertical className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                              <MoreVertical className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
                             </motion.button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
                             className="w-36 border-2 transition-all"
                             style={{
-                              backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                              borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                              color: isDarkMode ? "#13151B" : "#0B2B26",
+                              backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                              borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                              color: isDarkMode ? "#f1f5f9" : "#0f172a",
                             }}
                           >
                             <DropdownMenuItem
                               onClick={() => onAddStock(item)}
                               className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:opacity-80"
                               style={{
-                                color: isDarkMode ? '#13151B' : '#0B2B26',
+                                color: isDarkMode ? '#f1f5f9' : '#0f172a',
                               }}
                             >
                               <Plus className="h-4 w-4" />
@@ -233,8 +233,8 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                               onClick={() => onEditItem(item)}
                               className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:opacity-80"
                               style={{
-                                color: isDarkMode ? '#13151B' : '#0B2B26',
-                              }}
+                                color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                }}
                             >
                               <Pencil className="h-4 w-4" />
                               Edit
@@ -260,7 +260,7 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                   <td
                     colSpan={6}
                     className="p-8 text-center"
-                    style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                    style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}
                   >
                     <div className="flex flex-col items-center gap-3">
                       <Boxes className="h-12 w-12 opacity-50" />

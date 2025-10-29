@@ -120,14 +120,14 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 className="relative z-50 w-full max-w-md rounded-xl border-2 p-6 shadow-xl transition-all"
                 style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
                 }}
             >
                 {/* Header */}
                 <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                    <h2 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                         {isEditMode ? "Edit Item" : "Add New Item"}
                     </h2>
                     <motion.button
@@ -137,10 +137,10 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                         disabled={loading}
                         className="rounded-lg p-1 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                         }}
                     >
-                        <X className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                        <X className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
                     </motion.button>
                 </div>
 
@@ -149,7 +149,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                         <label
                             htmlFor="name"
                             className="text-sm font-medium mb-2 block"
-                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                            style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                         >
                             Item Name
                         </label>
@@ -162,9 +162,9 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                             disabled={loading}
                             className="rounded-lg border-2 transition-all disabled:opacity-50"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                             }}
                         />
                     </div>
@@ -173,7 +173,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                         <label
                             htmlFor="quantity"
                             className="text-sm font-medium mb-2 block"
-                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                            style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                         >
                             Quantity
                         </label>
@@ -189,9 +189,9 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                             disabled={loading}
                             className="rounded-lg border-2 transition-all disabled:opacity-50"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                             }}
                         />
                     </div>
@@ -200,16 +200,16 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                         <label
                             htmlFor="price"
                             className="text-sm font-medium mb-2 block"
-                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                            style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                         >
                             Price
                         </label>
                         <div className="flex items-center rounded-lg border-2 transition-all disabled:opacity-50"
                              style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                              }}>
-                            <span className="px-3" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>₱</span>
+                            <span className="px-3" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>₱</span>
                             <Input
                                 id="price"
                                 type="number"
@@ -222,7 +222,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                                 disabled={loading}
                                 className="flex-1 border-none bg-transparent transition-all focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-50"
                                 style={{
-                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                 }}
                             />
                         </div>
@@ -232,7 +232,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                         <label
                             htmlFor="unit"
                             className="text-sm font-medium mb-2 block"
-                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                            style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                         >
                             Unit
                         </label>
@@ -245,9 +245,9 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                                 id="unit"
                                 className="rounded-lg border-2 transition-all disabled:opacity-50"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                 }}
                             >
                                 <SelectValue placeholder="Select unit" />
@@ -255,9 +255,9 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                             <SelectContent 
                                 className="rounded-lg border-2 transition-all"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                 }}
                             >
                                 {units.map((u) => (
@@ -266,7 +266,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                                         value={u}
                                         className="cursor-pointer transition-colors hover:opacity-80"
                                         style={{
-                                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                                         }}
                                     >
                                         {u}
@@ -280,7 +280,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                         <label
                             htmlFor="lowStockThreshold"
                             className="text-sm font-medium mb-2 block"
-                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                            style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                         >
                             Low Stock Threshold
                         </label>
@@ -295,9 +295,9 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                             disabled={loading}
                             className="rounded-lg border-2 transition-all disabled:opacity-50"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                             }}
                         />
                     </div>
@@ -306,7 +306,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                         <label
                             htmlFor="adequateStockThreshold"
                             className="text-sm font-medium mb-2 block"
-                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                            style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                         >
                             Adequate Stock Threshold
                         </label>
@@ -321,9 +321,9 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                             disabled={loading}
                             className="rounded-lg border-2 transition-all disabled:opacity-50"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                             }}
                         />
                     </div>
@@ -338,7 +338,7 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                             disabled={loading}
                             className="w-full rounded-lg px-4 py-2 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{
-                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
                             }}
                         >
                             {loading ? (

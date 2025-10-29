@@ -45,7 +45,7 @@ public class StockService {
 
         StockItem savedItem = stockRepository.save(newItem);
 
-        // Notify about initial stock status - both ADMIN and STAFF will receive
+        // Notify about initial stock status
         notificationService.notifyCurrentStockStatus(savedItem);
         return savedItem;
     }
@@ -56,24 +56,19 @@ public class StockService {
         return stockRepository.findById(id).map(existing -> {
             Integer previousQuantity = existing.getQuantity();
 
+            // Update fields
             existing.setName(updatedItem.getName());
             existing.setQuantity(updatedItem.getQuantity());
             existing.setUnit(updatedItem.getUnit());
+            existing.setPrice(updatedItem.getPrice());
             existing.setUpdatedBy(updatedItem.getUpdatedBy());
             existing.setLowStockThreshold(updatedItem.getLowStockThreshold());
             existing.setAdequateStockThreshold(updatedItem.getAdequateStockThreshold());
-
-            if (updatedItem.getLastRestock() != null) {
-                existing.setLastRestock(updatedItem.getLastRestock());
-            }
-
-            existing.setLastRestockAmount(updatedItem.getLastRestockAmount());
             existing.setLastUpdated(getCurrentManilaTime());
 
             StockItem savedItem = stockRepository.save(existing);
 
-            // Always check stock level, not just on transitions
-            // This will notify both ADMIN and STAFF
+            // Check and notify about stock level changes
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
             return savedItem;
         });
@@ -103,11 +98,11 @@ public class StockService {
             String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s",
                     item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
 
-            // Notify both ADMIN and STAFF about restock
+            // Notify about restock
             notificationService.notifyAllUsers("inventory_update",
                     "Restock Completed", message, item.getId());
 
-            // Check stock level after restock - will notify both ADMIN and STAFF
+            // Check stock level after restock
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
 
             return savedItem;

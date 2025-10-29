@@ -492,15 +492,14 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     const NotificationSkeleton = () => (
         <div className="animate-pulse">
             {[...Array(3)].map((_, index) => (
-                <div key={index} className="flex items-start gap-3 border-b p-3"
-                    style={{ borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26" }}>
+                <div key={index} className="flex items-start gap-3 border-b p-3 border-slate-700">
                     <div className="mt-0.5 flex-shrink-0">
-                        <div className={`w-4 h-4 rounded-full ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
+                        <div className={`w-4 h-4 rounded-full ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`}></div>
                     </div>
                     <div className="flex-1 min-w-0 space-y-2">
-                        <div className={`h-4 rounded ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} style={{ width: '70%' }}></div>
-                        <div className={`h-3 rounded ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} style={{ width: '90%' }}></div>
-                        <div className={`h-2 rounded ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} style={{ width: '40%' }}></div>
+                        <div className={`h-4 rounded ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`} style={{ width: '70%' }}></div>
+                        <div className={`h-3 rounded ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`} style={{ width: '90%' }}></div>
+                        <div className={`h-2 rounded ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`} style={{ width: '40%' }}></div>
                     </div>
                 </div>
             ))}
@@ -512,8 +511,8 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
         <motion.div
             className="fixed top-20 right-4 w-80 rounded-md border shadow-lg z-50 cursor-pointer"
             style={{
-                backgroundColor: isDarkMode ? "#0B2B26" : "white",
-                borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "white",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 borderLeft: `4px solid ${getNotificationColor(notification.type)}`
             }}
             initial={{ opacity: 0, x: 300 }}
@@ -529,16 +528,13 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                     {getNotificationIcon(notification.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium truncate"
-                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}>
+                    <h4 className="text-sm font-medium truncate text-slate-900 dark:text-slate-100">
                         {notification.title || 'No Title'}
                     </h4>
-                    <p className="mt-1 text-sm line-clamp-2"
-                        style={{ color: isDarkMode ? "#F3EDE3/80" : "#0B2B26/80" }}>
+                    <p className="mt-1 text-sm line-clamp-2 text-slate-600 dark:text-slate-400">
                         {notification.message || 'No message'}
                     </p>
-                    <p className="mt-1 text-xs"
-                        style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
                         {notification.createdAt ? formatTimeAgo(notification.createdAt) : 'Recently'}
                     </p>
                 </div>
@@ -555,7 +551,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
     return (
         <header
             className={`relative z-10 flex h-[60px] items-center justify-between border-b px-4 shadow-sm transition-colors ${
-                isDarkMode ? "border-[#1C3F3A] bg-[#0B2B26]" : "border-[#0B2B26] bg-[#E0EAE8]"
+                isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-slate-50"
             }`}
         >
             {/* Auto Notifications */}
@@ -572,11 +568,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
             <div className="relative flex flex-1 items-center gap-x-3">
                 {!searchActive && (
                     <button
-                        className="group size-10 rounded-md transition-colors hover:opacity-80"
-                        style={{
-                            backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
-                            color: isDarkMode ? '#F3EDE3' : '#0B2B26'
-                        }}
+                        className="group size-10 rounded-md transition-colors hover:opacity-80 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                         onClick={() => setCollapsed(!collapsed)}
                         title="Toggle sidebar"
                     >
@@ -590,12 +582,12 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                 <div
                     ref={searchRef}
                     className={`input relative hidden h-[38px] w-full max-w-[250px] items-center rounded-md border px-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-cyan-500 sm:flex ${
-                        isDarkMode ? "border-[#1C3F3A] bg-[#0B2B26]" : "border-[#0B2B26] bg-white"
+                        isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-white"
                     }`}
                 >
                     <Search
                         size={18}
-                        className={isDarkMode ? "text-[#F3EDE3]" : "text-[#0B2B26]"}
+                        className="text-slate-600 dark:text-slate-400"
                     />
                     <input
                         type="text"
@@ -603,23 +595,17 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                         value={searchQuery}
                         onChange={handleSearchChange}
                         onFocus={() => searchQuery && setShowSearchResults(true)}
-                        className={`w-full bg-transparent px-2 text-sm outline-none placeholder:${
-                            isDarkMode ? 'text-[#F3EDE3]/60' : 'text-[#0B2B26]/60'
-                        } ${isDarkMode ? "text-[#F3EDE3]" : "text-[#0B2B26]"}`}
+                        className={`w-full bg-transparent px-2 text-sm outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-900 dark:text-slate-100`}
                     />
                     {searchQuery && (
                         <button
                             onClick={clearSearch}
-                            className={isDarkMode ? "text-[#F3EDE3]/60 hover:text-[#F3EDE3]" : "text-[#0B2B26]/60 hover:text-[#0B2B26]"}
+                            className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                         >
                             <X size={16} />
                         </button>
                     )}
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs"
-                          style={{
-                              backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
-                              color: isDarkMode ? '#F3EDE3' : '#0B2B26'
-                          }}>
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100">
                         /
                     </span>
 
@@ -627,28 +613,20 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                     <AnimatePresence>
                         {showSearchResults && searchResults.length > 0 && (
                             <motion.div
-                                className="absolute left-0 right-0 top-full mt-1 max-h-80 overflow-y-auto rounded-md border shadow-lg"
+                                className="absolute left-0 right-0 top-full mt-1 max-h-80 overflow-y-auto rounded-md border shadow-lg bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
-                                style={{
-                                    backgroundColor: isDarkMode ? "#0B2B26" : "white",
-                                    borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
-                                }}
                             >
                                 <div className="p-2">
-                                    <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide"
-                                         style={{ color: isDarkMode ? '#F3EDE3/60' : '#0B2B26/60' }}>
+                                    <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                         Search Results ({searchResults.length})
                                     </div>
                                     {searchResults.map((result, index) => (
                                         <motion.button
                                             key={`${result.path}-${index}`}
-                                            className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:opacity-80"
-                                            style={{
-                                                backgroundColor: isDarkMode ? 'transparent' : 'transparent',
-                                            }}
+                                            className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
                                             onClick={() => handleSearchResultClick(result)}
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
@@ -658,16 +636,13 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                         >
                                             <result.icon
                                                 size={18}
-                                                className="flex-shrink-0"
-                                                style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
+                                                className="flex-shrink-0 text-slate-600 dark:text-slate-400"
                                             />
                                             <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-medium truncate"
-                                                     style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                                                <div className="text-sm font-medium truncate text-slate-900 dark:text-slate-100">
                                                     {result.label}
                                                 </div>
-                                                <div className="text-xs truncate"
-                                                     style={{ color: isDarkMode ? '#F3EDE3/60' : '#0B2B26/60' }}>
+                                                <div className="text-xs truncate text-slate-500 dark:text-slate-400">
                                                     {result.groupTitle}
                                                 </div>
                                             </div>
@@ -684,11 +659,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                     {!searchActive && (
                         <motion.button
                             onClick={() => setSearchActive(true)}
-                            className="group flex size-10 items-center justify-center rounded-md transition-colors hover:opacity-80 sm:hidden"
-                            style={{
-                                backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
-                                color: isDarkMode ? '#F3EDE3' : '#0B2B26'
-                            }}
+                            className="group flex size-10 items-center justify-center rounded-md transition-colors hover:opacity-80 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 sm:hidden"
                             title="Search"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -701,7 +672,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                             >
                                 <Search
                                     size={18}
-                                    className={isDarkMode ? "text-[#F3EDE3]" : "text-[#0B2B26]"}
+                                    className="text-slate-600 dark:text-slate-400"
                                 />
                             </motion.div>
                         </motion.button>
@@ -714,11 +685,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                 <div className="relative flex items-center gap-x-3">
                     {/* 🌗 Enhanced Theme toggle with animation */}
                     <motion.button
-                        className="group relative size-10 rounded-md transition-colors hover:opacity-80"
-                        style={{
-                            backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
-                            color: isDarkMode ? '#F3EDE3' : '#0B2B26'
-                        }}
+                        className="group relative size-10 rounded-md transition-colors hover:opacity-80 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                         onClick={toggleTheme}
                         title="Toggle theme"
                         whileHover={{ scale: 1.1, rotate: 5 }}
@@ -746,11 +713,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                     {/* 🔔 Enhanced Notification System */}
                     <div className="relative" ref={notificationRef}>
                         <button
-                            className="group relative size-10 rounded-md transition-colors hover:opacity-80 flex items-center justify-center"
-                            style={{
-                                backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
-                                color: isDarkMode ? '#F3EDE3' : '#0B2B26'
-                            }}
+                            className="group relative size-10 rounded-md transition-colors hover:opacity-80 flex items-center justify-center bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                             title="Notifications"
                             onClick={() => {
                                 setNotificationOpen(!notificationOpen);
@@ -771,11 +734,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                         <AnimatePresence>
                             {notificationOpen && (
                                 <motion.div
-                                    className="absolute right-0 top-12 w-80 rounded-md border shadow-lg z-50"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#0B2B26" : "white",
-                                        borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
-                                    }}
+                                    className="absolute right-0 top-12 w-80 rounded-md border shadow-lg z-50 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -783,19 +742,16 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                 >
                                     {/* Header */}
                                     <div
-                                        className="border-b p-3"
-                                        style={{ borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26" }}
+                                        className="border-b p-3 border-slate-200 dark:border-slate-700"
                                     >
                                         <div className="flex items-center justify-between">
                                             <h3
-                                                className="font-semibold"
-                                                style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                                                className="font-semibold text-slate-900 dark:text-slate-100"
                                             >
                                                 Notifications
                                             </h3>
                                             {unreadCount > 0 && (
-                                                <span className="rounded-full px-2 py-1 text-xs text-white"
-                                                      style={{ backgroundColor: isDarkMode ? '#1C3F3A' : '#0B2B26' }}>
+                                                <span className="rounded-full px-2 py-1 text-xs text-white bg-slate-800 dark:bg-slate-700">
                                                     {unreadCount} new
                                                 </span>
                                             )}
@@ -814,14 +770,13 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                                         className={`flex cursor-pointer items-start gap-3 border-b p-3 transition-all ${
                                                             !notification.read
                                                                 ? "border-l-2"
-                                                                : "hover:opacity-80"
-                                                        }`}
+                                                                : "hover:bg-slate-50 dark:hover:bg-slate-700"
+                                                        } border-slate-200 dark:border-slate-700`}
                                                         style={{ 
-                                                            borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
                                                             borderLeftColor: !notification.read ? 
                                                                 getNotificationColor(notification.type) : 'transparent',
                                                             backgroundColor: !notification.read ? 
-                                                                (isDarkMode ? 'rgba(243, 237, 227, 0.1)' : 'rgba(11, 43, 38, 0.1)') : 'transparent'
+                                                                'rgba(100, 116, 139, 0.1)' : 'transparent'
                                                         }}
                                                         onClick={() => handleNotificationClick(notification)}
                                                     >
@@ -830,20 +785,17 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <h4
-                                                                className="text-sm font-medium truncate"
-                                                                style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                                                                className="text-sm font-medium truncate text-slate-900 dark:text-slate-100"
                                                             >
                                                                 {notification.title || 'No Title'}
                                                             </h4>
                                                             <p
-                                                                className="mt-1 text-sm line-clamp-2"
-                                                                style={{ color: isDarkMode ? "#F3EDE3/80" : "#0B2B26/80" }}
+                                                                className="mt-1 text-sm line-clamp-2 text-slate-600 dark:text-slate-400"
                                                             >
                                                                 {notification.message || 'No message'}
                                                             </p>
                                                             <p
-                                                                className="mt-1 text-xs"
-                                                                style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}
+                                                                className="mt-1 text-xs text-slate-500 dark:text-slate-500"
                                                             >
                                                                 {notification.createdAt ? formatTimeAgo(notification.createdAt) : 'Recently'}
                                                             </p>
@@ -861,12 +813,11 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                                 <div ref={notificationsEndRef} className="p-2">
                                                     {notificationsLoading && page > 1 && (
                                                         <div className="flex justify-center">
-                                                            <RefreshCw size={16} className="animate-spin" />
+                                                            <RefreshCw size={16} className="animate-spin text-slate-500" />
                                                         </div>
                                                     )}
                                                     {!hasMore && notifications.length > 0 && (
-                                                        <div className="text-center text-xs py-2"
-                                                             style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}>
+                                                        <div className="text-center text-xs py-2 text-slate-500 dark:text-slate-400">
                                                             No more notifications
                                                         </div>
                                                     )}
@@ -874,8 +825,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                             </>
                                         ) : (
                                             <div
-                                                className="p-6 text-center"
-                                                style={{ color: isDarkMode ? "#F3EDE3/60" : "#0B2B26/60" }}
+                                                className="p-6 text-center text-slate-500 dark:text-slate-400"
                                             >
                                                 <Bell size={32} className="mx-auto mb-2 opacity-50" />
                                                 <p className="text-sm">No notifications</p>
@@ -887,14 +837,10 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                     {/* Footer */}
                                     {notifications.length > 0 && !notificationsLoading && (
                                         <div
-                                            className="border-t p-2"
-                                            style={{ borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26" }}
+                                            className="border-t p-2 border-slate-200 dark:border-slate-700"
                                         >
                                             <button
-                                                className="w-full rounded-md py-2 text-sm transition-all hover:opacity-80"
-                                                style={{ 
-                                                    color: isDarkMode ? "#F3EDE3" : "#0B2B26",
-                                                }}
+                                                className="w-full rounded-md py-2 text-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100"
                                                 onClick={markAllAsRead}
                                             >
                                                 Mark all as read
@@ -921,9 +867,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                     >
                         <div
                             ref={searchRef}
-                            className={`flex h-[38px] items-center rounded-md border px-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-cyan-500 ${
-                                isDarkMode ? "border-[#1C3F3A] bg-[#0B2B26]" : "border-[#0B2B26] bg-white"
-                            }`}
+                            className={`flex h-[38px] items-center rounded-md border px-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-cyan-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700`}
                         >
                             <motion.div
                                 layoutId="search-icon"
@@ -931,7 +875,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                             >
                                 <Search
                                     size={18}
-                                    className={isDarkMode ? "text-[#F3EDE3]" : "text-[#0B2B26]"}
+                                    className="text-slate-600 dark:text-slate-400"
                                 />
                             </motion.div>
                             <input
@@ -941,16 +885,14 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                 onChange={handleSearchChange}
                                 onFocus={() => searchQuery && setShowSearchResults(true)}
                                 autoFocus
-                                className={`w-full bg-transparent px-2 text-sm outline-none placeholder:${
-                                    isDarkMode ? 'text-[#F3EDE3]/60' : 'text-[#0B2B26]/60'
-                                } ${isDarkMode ? "text-[#F3EDE3]" : "text-[#0B2B26]"}`}
+                                className={`w-full bg-transparent px-2 text-sm outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-900 dark:text-slate-100`}
                             />
                             <button
                                 onClick={() => {
                                     setSearchActive(false);
                                     clearSearch();
                                 }}
-                                className={isDarkMode ? "text-[#F3EDE3] hover:text-[#F3EDE3]/60" : "text-[#0B2B26] hover:text-[#0B2B26]/60"}
+                                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                                 title="Close search"
                             >
                                 <X size={16} />
@@ -961,28 +903,20 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                         <AnimatePresence>
                             {showSearchResults && searchResults.length > 0 && (
                                 <motion.div
-                                    className="absolute left-4 right-4 top-full mt-1 max-h-80 overflow-y-auto rounded-md border shadow-lg"
+                                    className="absolute left-4 right-4 top-full mt-1 max-h-80 overflow-y-auto rounded-md border shadow-lg bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     transition={{ duration: 0.2 }}
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#0B2B26" : "white",
-                                        borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
-                                    }}
                                 >
                                     <div className="p-2">
-                                        <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide"
-                                             style={{ color: isDarkMode ? '#F3EDE3/60' : '#0B2B26/60' }}>
+                                        <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                             Search Results ({searchResults.length})
                                         </div>
                                         {searchResults.map((result, index) => (
                                             <motion.button
                                                 key={`${result.path}-${index}`}
-                                                className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:opacity-80"
-                                                style={{
-                                                    backgroundColor: isDarkMode ? 'transparent' : 'transparent',
-                                                }}
+                                                className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
                                                 onClick={() => handleSearchResultClick(result)}
                                                 initial={{ opacity: 0, x: -10 }}
                                                 animate={{ opacity: 1, x: 0 }}
@@ -990,16 +924,13 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                             >
                                                 <result.icon
                                                     size={18}
-                                                    className="flex-shrink-0"
-                                                    style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}
+                                                    className="flex-shrink-0 text-slate-600 dark:text-slate-400"
                                                 />
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate"
-                                                         style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                                                    <div className="text-sm font-medium truncate text-slate-900 dark:text-slate-100">
                                                         {result.label}
                                                     </div>
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate"
-                                                         style={{ color: isDarkMode ? '#F3EDE3/60' : '#0B2B26/60' }}>
+                                                    <div className="text-xs truncate text-slate-500 dark:text-slate-400">
                                                         {result.groupTitle}
                                                     </div>
                                                 </div>

@@ -320,10 +320,9 @@ const StaffDashboardPage = () => {
     };
   };
 
+  // Fixed Skeleton Components - Removed animations that cause movement
   const SkeletonCard = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className="rounded-xl border-2 p-5 transition-all h-[140px] flex flex-col"
       style={{
         backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
@@ -331,19 +330,19 @@ const StaffDashboardPage = () => {
       }}
     >
       <div className="flex items-center gap-x-3 mb-4">
-        <div className="w-fit rounded-lg p-2 animate-pulse"
+        <div className="w-fit rounded-lg p-2"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}>
           <div className="h-6 w-6 rounded"></div>
         </div>
-        <div className="h-5 w-28 rounded animate-pulse"
+        <div className="h-5 w-28 rounded"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}></div>
       </div>
       <div className="flex-1 flex flex-col justify-between">
-        <div className="rounded-lg p-3 animate-pulse"
+        <div className="rounded-lg p-3"
              style={{
                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3"
              }}>
@@ -352,18 +351,16 @@ const StaffDashboardPage = () => {
                  backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                }}></div>
         </div>
-        <div className="h-4 w-40 rounded animate-pulse mt-2"
+        <div className="h-4 w-40 rounded mt-2"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}></div>
       </div>
-    </motion.div>
+    </div>
   );
 
   const SkeletonMachineList = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className="rounded-xl border-2 p-5 transition-all h-[380px] flex flex-col"
       style={{
         backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
@@ -371,11 +368,11 @@ const StaffDashboardPage = () => {
       }}
     >
       <div className="mb-5">
-        <div className="h-6 w-44 rounded animate-pulse mb-2"
+        <div className="h-6 w-44 rounded mb-2"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}></div>
-        <div className="h-4 w-32 rounded animate-pulse"
+        <div className="h-4 w-32 rounded"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}></div>
@@ -384,27 +381,27 @@ const StaffDashboardPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
           {/* Washers Column */}
           <div className="space-y-3 border-r border-slate-200 pr-4 dark:border-slate-700">
-            <div className="h-5 w-24 rounded animate-pulse mb-2"
+            <div className="h-5 w-24 rounded mb-2"
                  style={{
                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                  }}></div>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg border animate-pulse"
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg border"
                    style={{
                      borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
                      backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
                    }}>
                 <div className="flex items-center gap-x-2">
-                  <div className="w-5 h-5 rounded animate-pulse"
+                  <div className="w-5 h-5 rounded"
                        style={{
                          backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                        }}></div>
-                  <div className="h-4 w-28 rounded animate-pulse"
+                  <div className="h-4 w-28 rounded"
                        style={{
                          backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                        }}></div>
                 </div>
-                <div className="h-4 w-12 rounded animate-pulse"
+                <div className="h-4 w-12 rounded"
                      style={{
                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                      }}></div>
@@ -414,27 +411,27 @@ const StaffDashboardPage = () => {
 
           {/* Dryers Column */}
           <div className="space-y-3 pl-4">
-            <div className="h-5 w-20 rounded animate-pulse mb-2"
+            <div className="h-5 w-20 rounded mb-2"
                  style={{
                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                  }}></div>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg border animate-pulse"
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg border"
                    style={{
                      borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
                      backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
                    }}>
                 <div className="flex items-center gap-x-2">
-                  <div className="w-5 h-5 rounded animate-pulse"
+                  <div className="w-5 h-5 rounded"
                        style={{
                          backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                        }}></div>
-                  <div className="h-4 w-28 rounded animate-pulse"
+                  <div className="h-4 w-28 rounded"
                        style={{
                          backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                        }}></div>
                 </div>
-                <div className="h-4 w-12 rounded animate-pulse"
+                <div className="h-4 w-12 rounded"
                      style={{
                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                      }}></div>
@@ -443,13 +440,11 @@ const StaffDashboardPage = () => {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 
   const SkeletonUnclaimedList = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className="rounded-xl border-2 p-5 transition-all h-[380px] flex flex-col"
       style={{
         backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
@@ -457,60 +452,56 @@ const StaffDashboardPage = () => {
       }}
     >
       <div className="mb-5">
-        <div className="h-6 w-36 rounded animate-pulse mb-2"
+        <div className="h-6 w-36 rounded mb-2"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}></div>
-        <div className="h-4 w-44 rounded animate-pulse"
+        <div className="h-4 w-44 rounded"
              style={{
                backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
              }}></div>
       </div>
       <div className="flex-1 space-y-3 overflow-hidden">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex items-center justify-between p-3 rounded-lg border animate-pulse"
+          <div key={i} className="flex items-center justify-between p-3 rounded-lg border"
                style={{
                  borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
                  backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
                }}>
             <div className="space-y-2 flex-1">
-              <div className="h-4 w-28 rounded animate-pulse"
+              <div className="h-4 w-28 rounded"
                    style={{
                      backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                    }}></div>
-              <div className="h-3 w-36 rounded animate-pulse"
+              <div className="h-3 w-36 rounded"
                    style={{
                      backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                    }}></div>
             </div>
-            <div className="h-6 w-16 rounded-full animate-pulse"
+            <div className="h-6 w-16 rounded-full"
                  style={{
                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                  }}></div>
           </div>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 
   if (initialLoad && !staffDashboardCache) {
     return (
       <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
         {/* Header Skeleton */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 mb-4"
-        >
-          <div className="h-8 w-8 rounded-lg animate-pulse"
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-8 w-8 rounded-lg"
                style={{
                  backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                }}></div>
-          <div className="h-8 w-44 rounded-lg animate-pulse"
+          <div className="h-8 w-44 rounded-lg"
                style={{
                  backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
                }}></div>
-        </motion.div>
+        </div>
 
         {/* Summary Cards Skeleton */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

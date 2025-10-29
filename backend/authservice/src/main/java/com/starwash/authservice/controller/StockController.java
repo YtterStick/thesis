@@ -38,61 +38,62 @@ public class StockController {
     @PostMapping("/stock")
     public ResponseEntity<?> createStockItem(@RequestBody StockItemDto dto,
                                              @RequestHeader("Authorization") String authHeader) {
-        if (dto.getName() == null || dto.getUnit() == null) {
-            return ResponseEntity.badRequest().body("Missing required fields: name or unit");
+        try {
+            if (dto.getName() == null || dto.getUnit() == null) {
+                return ResponseEntity.badRequest().body("Missing required fields: name or unit");
+            }
+
+            String token = authHeader.substring(7);
+            String userId = jwtUtil.getUsername(token);
+
+            StockItem newItem = new StockItem();
+            newItem.setName(dto.getName());
+            newItem.setUnit(dto.getUnit());
+            newItem.setQuantity(dto.getQuantity() != null ? dto.getQuantity() : 0);
+            newItem.setPrice(dto.getPrice() != null ? dto.getPrice() : 0.0);
+            newItem.setCreatedAt(LocalDateTime.now());
+            newItem.setLastUpdated(LocalDateTime.now());
+            newItem.setLastRestock(LocalDateTime.now());
+            newItem.setUpdatedBy(userId);
+
+            // Thresholds
+            newItem.setLowStockThreshold(dto.getLowStockThreshold());
+            newItem.setAdequateStockThreshold(dto.getAdequateStockThreshold());
+            newItem.setPreviousQuantity(dto.getPreviousQuantity());
+
+            StockItem created = stockService.createItem(newItem);
+            return ResponseEntity.ok(created);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error creating item: " + e.getMessage());
         }
-
-        String token = authHeader.substring(7);
-        String userId = jwtUtil.getUsername(token);
-
-        StockItem newItem = new StockItem();
-        newItem.setName(dto.getName());
-        newItem.setUnit(dto.getUnit());
-        newItem.setQuantity(dto.getQuantity());
-        newItem.setPrice(dto.getPrice());
-        newItem.setCreatedAt(LocalDateTime.now());
-        newItem.setLastUpdated(LocalDateTime.now());
-        newItem.setLastRestock(LocalDateTime.now());
-        newItem.setUpdatedBy(userId); // Set the user ID from token
-
-        // ✅ Thresholds and previous quantity
-        newItem.setLowStockThreshold(dto.getLowStockThreshold());
-        newItem.setAdequateStockThreshold(dto.getAdequateStockThreshold());
-        newItem.setPreviousQuantity(dto.getPreviousQuantity());
-
-        StockItem created = stockService.createItem(newItem);
-        return ResponseEntity.ok(created);
     }
 
     @PutMapping("/stock/{id}")
     public ResponseEntity<?> updateStockItem(@PathVariable String id,
                                              @RequestBody StockItemDto dto,
                                              @RequestHeader("Authorization") String authHeader) {
-        Optional<StockItem> existingOpt = stockService.getItemById(id);
-        if (existingOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        try {
+            // Extract user ID from token
+            String token = authHeader.substring(7);
+            String userId = jwtUtil.getUsername(token);
+
+            // Create StockItem from DTO
+            StockItem updatedItem = new StockItem();
+            updatedItem.setName(dto.getName());
+            updatedItem.setQuantity(dto.getQuantity());
+            updatedItem.setUnit(dto.getUnit());
+            updatedItem.setPrice(dto.getPrice());
+            updatedItem.setLowStockThreshold(dto.getLowStockThreshold());
+            updatedItem.setAdequateStockThreshold(dto.getAdequateStockThreshold());
+            updatedItem.setUpdatedBy(userId);
+
+            Optional<StockItem> result = stockService.updateItem(id, updatedItem);
+            return result.map(ResponseEntity::ok)
+                        .orElse(ResponseEntity.notFound().build());
+                        
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error updating item: " + e.getMessage());
         }
-
-        // Extract user ID from token
-        String token = authHeader.substring(7); // Remove "Bearer " prefix
-        String userId = jwtUtil.getUsername(token);
-
-        StockItem existing = existingOpt.get();
-
-        // Apply updates only if fields are present
-        if (dto.getName() != null) existing.setName(dto.getName());
-        if (dto.getUnit() != null) existing.setUnit(dto.getUnit());
-        if (dto.getQuantity() != null) existing.setQuantity(dto.getQuantity());
-        if (dto.getPrice() != null) existing.setPrice(dto.getPrice());
-        existing.setUpdatedBy(userId); // Set the user ID from token
-        if (dto.getLowStockThreshold() != null) existing.setLowStockThreshold(dto.getLowStockThreshold());
-        if (dto.getAdequateStockThreshold() != null) existing.setAdequateStockThreshold(dto.getAdequateStockThreshold());
-        if (dto.getPreviousQuantity() != null) existing.setPreviousQuantity(dto.getPreviousQuantity());
-
-        existing.setLastUpdated(LocalDateTime.now());
-
-        StockItem updated = stockService.createItem(existing); // reuse save logic
-        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/stock/{id}")
@@ -105,15 +106,19 @@ public class StockController {
     public ResponseEntity<?> addStock(@PathVariable String id,
                                       @RequestParam int amount,
                                       @RequestHeader("Authorization") String authHeader) {
-        if (amount <= 0) {
-            return ResponseEntity.badRequest().body("Invalid restock amount");
+        try {
+            if (amount <= 0) {
+                return ResponseEntity.badRequest().body("Invalid restock amount");
+            }
+            
+            String token = authHeader.substring(7);
+            String userId = jwtUtil.getUsername(token);
+            
+            Optional<StockItem> item = stockService.addStock(id, amount, userId);
+            return item.map(ResponseEntity::ok)
+                       .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error restocking item: " + e.getMessage());
         }
-        
-        String token = authHeader.substring(7);
-        String userId = jwtUtil.getUsername(token);
-        
-        Optional<StockItem> item = stockService.addStock(id, amount, userId);
-        return item.map(ResponseEntity::ok)
-                   .orElse(ResponseEntity.notFound().build());
     }
 }

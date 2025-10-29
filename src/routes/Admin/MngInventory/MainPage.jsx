@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { Plus, Boxes, PackageX, Package, Clock8, Calendar, TrendingUp } from "lucide-react";
+import { Plus, Boxes, PackageX, Package, Clock8, Calendar, TrendingUp, Trash2 } from "lucide-react";
 import InventoryForm from "./InventoryForm";
-import InventoryTable from "./InventoryTable";
 import StockModal from "./StockModal";
 import {
   Card,
@@ -73,12 +72,17 @@ const MainPage = () => {
   };
 
   const handleSave = async (data) => {
-    if (saving) return; // Prevent double click
+    if (saving) return;
     
     setSaving(true);
     try {
       if (editingItem) {
-        await api.put(`api/stock/${editingItem.id}`, data);
+        // Include the ID in the update data
+        const updateData = {
+          ...data,
+          id: editingItem.id
+        };
+        await api.put(`api/stock/${editingItem.id}`, updateData);
         toast({
           title: "Success",
           description: "Item updated successfully",
@@ -106,7 +110,12 @@ const MainPage = () => {
   };
 
   const handleDelete = async (item) => {
-    if (saving) return; // Prevent double click
+    // Confirmation dialog
+    if (!window.confirm(`Are you sure you want to delete "${item.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    if (saving) return;
     
     setSaving(true);
     try {
@@ -134,7 +143,7 @@ const MainPage = () => {
   };
 
   const handleAddStock = async (amount) => {
-    if (addingStock) return; // Prevent double click
+    if (addingStock) return;
     
     setAddingStock(true);
     try {
@@ -184,8 +193,8 @@ const MainPage = () => {
   // Skeleton Loader Components
   const SkeletonCard = () => (
     <Card className="rounded-xl border-2 animate-pulse" style={{
-      backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-      borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+      backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+      borderColor: isDarkMode ? "#334155" : "#cbd5e1",
     }}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
@@ -206,7 +215,7 @@ const MainPage = () => {
       title: "Total Items",
       icon: <Package size={20} />,
       value: totalItems,
-      color: isDarkMode ? "#18442AF5" : "#0B2B26",
+      color: isDarkMode ? "#3DD9B6" : "#0B2B26",
     },
     {
       title: "Well Stocked",
@@ -229,7 +238,9 @@ const MainPage = () => {
   ];
 
   return (
-    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
+      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+    }}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -240,17 +251,17 @@ const MainPage = () => {
           whileHover={{ scale: 1.1, rotate: 5 }}
           className="rounded-lg p-2"
           style={{
-            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-            color: "#F3EDE3",
+            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+            color: "#f1f5f9",
           }}
         >
           <Boxes size={22} />
         </motion.div>
         <div>
-          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
             Supply Monitoring
           </p>
-          <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+          <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
             Track and manage inventory supplies
           </p>
         </div>
@@ -275,13 +286,13 @@ const MainPage = () => {
               transition={{ duration: 0.2 }}
             >
               <Card className="rounded-xl border-2 transition-all hover:shadow-lg" style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
               }}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                      <p className="text-sm font-medium" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                         {title}
                       </p>
                       <p className="text-2xl font-bold mt-1" style={{ color }}>
@@ -292,10 +303,10 @@ const MainPage = () => {
                       className="rounded-lg p-2"
                       style={{
                         backgroundColor: title === "Total Items" 
-                          ? (isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)")
+                          ? (isDarkMode ? "rgba(59, 130, 246, 0.1)" : "rgba(11, 43, 38, 0.1)")
                           : `${color}20`,
                         color: title === "Total Items" 
-                          ? (isDarkMode ? "#18442AF5" : "#0B2B26")
+                          ? (isDarkMode ? "#3DD9B6" : "#0B2B26")
                           : color,
                       }}
                     >
@@ -316,18 +327,18 @@ const MainPage = () => {
         transition={{ duration: 0.3, delay: 0.1 }}
       >
         <Card className="rounded-xl border-2 transition-all" style={{
-          backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
         }}>
           <CardHeader className="rounded-t-xl p-6" style={{
-            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
           }}>
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <CardTitle className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                <CardTitle className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                   Inventory Items
                 </CardTitle>
-                <CardDescription className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                <CardDescription className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                   {totalItems} supply item{totalItems !== 1 ? 's' : ''} in inventory
                 </CardDescription>
               </div>
@@ -340,8 +351,8 @@ const MainPage = () => {
                   disabled={saving}
                   className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                    color: "#F3EDE3",
+                    backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                    color: "#f1f5f9",
                   }}
                 >
                   {saving ? (
@@ -379,20 +390,20 @@ const MainPage = () => {
             ) : items.length > 0 ? (
               <TooltipProvider>
                 <div className="rounded-lg border-2 shadow-sm" style={{
-                  borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                  borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b" style={{
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                        backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                       }}>
-                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Supply Item</th>
-                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Quantity</th>
-                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Price</th>
-                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Last Restock</th>
-                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Restock Qty</th>
-                        <th className="p-4 text-right font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Action</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Supply Item</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Quantity</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Price</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Last Restock</th>
+                        <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Restock Qty</th>
+                        <th className="p-4 text-right font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -413,19 +424,19 @@ const MainPage = () => {
                             key={item._id || item.id}
                             className="border-t transition-all hover:opacity-90"
                             style={{
-                              borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                              backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                              borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+                              backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
                             }}
                           >
                             <td className="p-4">
                               <div className="flex items-center gap-3">
                                 <div className="rounded-lg p-2" style={{
-                                  backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                  backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                 }}>
-                                  <Package className="h-4 w-4" style={{ color: isDarkMode ? '#18442AF5' : '#0B2B26' }} />
+                                  <Package className="h-4 w-4" style={{ color: isDarkMode ? '#3DD9B6' : '#0B2B26' }} />
                                 </div>
                                 <div>
-                                  <p className="font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                  <p className="font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                     {item.name}
                                   </p>
                                 </div>
@@ -433,21 +444,21 @@ const MainPage = () => {
                             </td>
                             <td className="p-4">
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                <span className="font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                   {item.quantity}
                                 </span>
-                                <span style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                <span style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                                   {item.unit}
                                 </span>
                               </div>
                             </td>
-                            <td className="p-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <td className="p-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               ₱{item.price?.toFixed(2) ?? "—"}
                             </td>
                             <td className="p-4">
                               <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} />
-                                <span style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                <Calendar className="h-4 w-4" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }} />
+                                <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                   {formatDate(item.lastRestock)}
                                 </span>
                               </div>
@@ -461,11 +472,12 @@ const MainPage = () => {
                                   </span>
                                 </div>
                               ) : (
-                                <span style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>—</span>
+                                <span style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>—</span>
                               )}
                             </td>
                             <td className="p-4 text-right">
                               <div className="flex justify-end gap-2">
+                                {/* Add Stock Button */}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <motion.button
@@ -475,16 +487,18 @@ const MainPage = () => {
                                       disabled={saving || addingStock}
                                       className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                                       style={{
-                                        backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                       }}
                                     >
-                                      <Plus className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                                      <Plus className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
                                     </motion.button>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>Add Stock</p>
                                   </TooltipContent>
                                 </Tooltip>
+
+                                {/* Edit Button */}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <motion.button
@@ -494,14 +508,35 @@ const MainPage = () => {
                                       disabled={saving}
                                       className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                                       style={{
-                                        backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                       }}
                                     >
-                                      <Package className="h-4 w-4" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                                      <Package className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
                                     </motion.button>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>Edit Item</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                {/* Delete Button */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <motion.button
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => handleDelete(item)}
+                                      disabled={saving}
+                                      className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      style={{
+                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(239, 68, 68, 0.1)",
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" style={{ color: isDarkMode ? '#ef4444' : '#dc2626' }} />
+                                    </motion.button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Delete Item</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
@@ -515,8 +550,8 @@ const MainPage = () => {
               </TooltipProvider>
             ) : (
               <div className="p-8 text-center">
-                <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                  <PackageX className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
+                <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                  <PackageX className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }} />
                   <p className="text-lg font-medium">No supplies found</p>
                   <p className="text-sm mb-4">Inventory items will appear here once added</p>
                   <motion.button
@@ -526,8 +561,8 @@ const MainPage = () => {
                     disabled={saving}
                     className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                      color: "#F3EDE3",
+                      backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                      color: "#f1f5f9",
                     }}
                   >
                     {saving ? (
