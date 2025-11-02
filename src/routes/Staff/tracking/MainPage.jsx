@@ -10,7 +10,7 @@ import { maskContact } from "./utils";
 import { api } from "@/lib/api-config";
 
 const POLLING_INTERVAL = 10000;
-const ACTIVE_POLLING_INTERVAL = 5000;
+const ACTIVE_POLLING_INTERVAL = 5000; // Changed from 3000 to 5000
 const TIMER_CHECK_INTERVAL = 1000;
 
 export default function ServiceTrackingPage() {
@@ -33,6 +33,7 @@ export default function ServiceTrackingPage() {
     const timerCheckRef = useRef(null);
     const completedTimersRef = useRef(new Set());
     const activeTimersRef = useRef(new Map());
+    const actionInProgressRef = useRef(new Set()); // Track actions in progress
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -52,7 +53,6 @@ export default function ServiceTrackingPage() {
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = jobs.slice(startIndex, endIndex);
 
-    // NEW: Function to fetch completed today count
     const fetchCompletedTodayCount = useCallback(async () => {
         try {
             const count = await api.get("api/laundry-jobs/completed-today-count");
@@ -132,7 +132,6 @@ export default function ServiceTrackingPage() {
         }
     };
 
-    // UPDATED: Fetch completed count along with other data
     const fetchData = async (force = false) => {
         if ((isPolling && !force) || !autoRefresh) return;
 
@@ -141,7 +140,7 @@ export default function ServiceTrackingPage() {
             const [jobsSuccess, machinesSuccess, completedCountSuccess] = await Promise.allSettled([
                 fetchJobs(), 
                 fetchMachines(),
-                fetchCompletedTodayCount() // Fetch completed count
+                fetchCompletedTodayCount()
             ]);
 
             if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
@@ -324,8 +323,21 @@ export default function ServiceTrackingPage() {
     };
 
     const startAction = async (jobKey, loadIndex) => {
+        // Prevent double-click
+        const actionKey = `${jobKey}-${loadIndex}-start`;
+        if (actionInProgressRef.current.has(actionKey)) {
+            console.log("Action already in progress, skipping...");
+            return;
+        }
+        
+        actionInProgressRef.current.add(actionKey);
+
         const job = jobs.find((j) => getJobKey(j) === jobKey);
-        if (!job?.id) return;
+        if (!job?.id) {
+            actionInProgressRef.current.delete(actionKey);
+            return;
+        }
+        
         const load = job.loads[loadIndex];
 
         const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
@@ -349,6 +361,7 @@ export default function ServiceTrackingPage() {
 
             if (!isCorrectMachineType) {
                 const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
+                actionInProgressRef.current.delete(actionKey);
                 return alert(`Please assign a ${machineTypeName} machine first.`);
             }
         }
@@ -373,7 +386,9 @@ export default function ServiceTrackingPage() {
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status, startTime, duration } : l)),
+                          loads: j.loads.map((l, idx) => 
+                            idx === loadIndex ? { ...l, status, startTime, duration, pending: true } : l
+                          ),
                       }
                     : j,
             ),
@@ -383,15 +398,54 @@ export default function ServiceTrackingPage() {
             await api.patch(
                 `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
             );
+            
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
+            );
         } catch (err) {
             console.error("Failed to start load:", err);
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
+            );
             fetchData(true);
+        } finally {
+            actionInProgressRef.current.delete(actionKey);
         }
     };
 
     const advanceStatus = async (jobKey, loadIndex) => {
+        // Prevent double-click
+        const actionKey = `${jobKey}-${loadIndex}-advance`;
+        if (actionInProgressRef.current.has(actionKey)) {
+            console.log("Action already in progress, skipping...");
+            return;
+        }
+        
+        actionInProgressRef.current.add(actionKey);
+
         const job = jobs.find((j) => getJobKey(j) === jobKey);
-        if (!job?.id) return;
+        if (!job?.id) {
+            actionInProgressRef.current.delete(actionKey);
+            return;
+        }
 
         const load = job.loads[loadIndex];
 
@@ -467,12 +521,27 @@ export default function ServiceTrackingPage() {
                 ),
             );
             fetchData(true);
+        } finally {
+            actionInProgressRef.current.delete(actionKey);
         }
     };
 
     const startDryingAgain = async (jobKey, loadIndex) => {
+        // Prevent double-click
+        const actionKey = `${jobKey}-${loadIndex}-dry-again`;
+        if (actionInProgressRef.current.has(actionKey)) {
+            console.log("Action already in progress, skipping...");
+            return;
+        }
+        
+        actionInProgressRef.current.add(actionKey);
+
         const job = jobs.find((j) => getJobKey(j) === jobKey);
-        if (!job?.id) return;
+        if (!job?.id) {
+            actionInProgressRef.current.delete(actionKey);
+            return;
+        }
+        
         const load = job.loads[loadIndex];
 
         const startTime = new Date().toISOString();
@@ -486,7 +555,9 @@ export default function ServiceTrackingPage() {
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status: "DRYING", startTime } : l)),
+                          loads: j.loads.map((l, idx) => 
+                            idx === loadIndex ? { ...l, status: "DRYING", startTime, pending: true } : l
+                          ),
                       }
                     : j,
             ),
@@ -494,9 +565,36 @@ export default function ServiceTrackingPage() {
 
         try {
             await api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`);
+            
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
+            );
         } catch (err) {
             console.error("Failed to start drying again:", err);
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
+            );
             fetchData(true);
+        } finally {
+            actionInProgressRef.current.delete(actionKey);
         }
     };
 
@@ -537,7 +635,12 @@ export default function ServiceTrackingPage() {
 
     if (error) {
         return (
-            <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
+            <div 
+                className="space-y-5 overflow-visible px-6 pb-5 pt-4 min-h-screen"
+                style={{
+                    backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+                }}
+            >
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -545,11 +648,11 @@ export default function ServiceTrackingPage() {
                 >
                     <WashingMachine
                         size={22}
-                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     />
                     <p
                         className="text-xl font-bold"
-                        style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     >
                         Service Tracking
                     </p>
@@ -559,8 +662,8 @@ export default function ServiceTrackingPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex h-52 items-center justify-center rounded-xl border-2 p-6"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <div className="text-center">
@@ -570,13 +673,13 @@ export default function ServiceTrackingPage() {
                         />
                         <p
                             className="mb-1 text-base font-semibold"
-                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                         >
                             Failed to load tracking data
                         </p>
                         <p
                             className="mb-4 text-sm"
-                            style={{ color: isDarkMode ? "#6B7280" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                         >
                             {error}
                         </p>
@@ -586,8 +689,8 @@ export default function ServiceTrackingPage() {
                             onClick={() => fetchData(true)}
                             className="mx-auto flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-all"
                             style={{
-                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                color: "#F3EDE3",
+                                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                color: "#f1f5f9",
                             }}
                         >
                             <RefreshCw className="h-4 w-4" />
@@ -600,7 +703,13 @@ export default function ServiceTrackingPage() {
     }
 
     return (
-        <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
+        <div 
+            className="space-y-5 overflow-visible px-6 pb-5 pt-4 min-h-screen"
+            style={{
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+            }}
+        >
+            {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -611,8 +720,8 @@ export default function ServiceTrackingPage() {
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         className="rounded-lg p-2"
                         style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                            color: "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                            color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                         }}
                     >
                         <WashingMachine size={22} />
@@ -620,13 +729,13 @@ export default function ServiceTrackingPage() {
                     <div>
                         <p
                             className="text-xl font-bold"
-                            style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                         >
                             Service Tracking
                         </p>
                         <p
                             className="text-sm"
-                            style={{ color: isDarkMode ? "#F3EDE3/70" : "#0B2B26/70" }}
+                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                         >
                             Track and manage laundry service progress
                         </p>
@@ -641,7 +750,7 @@ export default function ServiceTrackingPage() {
                         />
                         <span
                             className="text-sm"
-                            style={{ color: isDarkMode ? "#F3EDE3" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                         >
                             Auto-refresh
                         </span>
@@ -652,8 +761,8 @@ export default function ServiceTrackingPage() {
                         onClick={() => fetchData(true)}
                         className="flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                            color: "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                            color: "#f1f5f9",
                         }}
                     >
                         <RefreshCw className={`h-4 w-4 ${isPolling ? "animate-spin" : ""}`} />
@@ -662,7 +771,7 @@ export default function ServiceTrackingPage() {
                 </div>
             </motion.div>
 
-            {/* Summary Cards - UPDATED: Uses separate completed count API */}
+            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     {
@@ -688,7 +797,7 @@ export default function ServiceTrackingPage() {
                     },
                     {
                         label: "Completed Today",
-                        value: completedTodayCount, // Uses the separate API count
+                        value: completedTodayCount,
                         color: "#10B981",
                         description: "Finished loads today",
                     },
@@ -705,8 +814,8 @@ export default function ServiceTrackingPage() {
                         }}
                         className="cursor-pointer rounded-xl border-2 p-5 transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <div className="mb-4 flex items-center justify-between">
@@ -728,7 +837,7 @@ export default function ServiceTrackingPage() {
                             >
                                 <p
                                     className="text-2xl font-bold"
-                                    style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                 >
                                     {value}
                                 </p>
@@ -738,13 +847,13 @@ export default function ServiceTrackingPage() {
                         <div>
                             <h3
                                 className="mb-2 text-lg font-semibold"
-                                style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                             >
                                 {label}
                             </h3>
                             <p
                                 className="text-sm"
-                                style={{ color: isDarkMode ? "#6B7280" : "#0B2B26/80" }}
+                                style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                             >
                                 {description}
                             </p>
@@ -753,7 +862,7 @@ export default function ServiceTrackingPage() {
                 ))}
             </div>
 
-            {/* Tracking Table - This remains unchanged (only shows incomplete jobs) */}
+            {/* Tracking Table */}
             <TooltipProvider>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -790,23 +899,23 @@ export default function ServiceTrackingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center justify-between rounded-xl border-2 border-t p-4 sm:flex-row"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <div className="mb-4 flex items-center space-x-2 sm:mb-0">
                         <p
                             className="text-sm"
-                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                         >
                             Rows per page
                         </p>
                         <select
                             className="h-8 rounded-md border-2 text-sm transition-all"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                color: isDarkMode ? "#13151B" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
                             }}
                             value={itemsPerPage}
                             onChange={(e) => handleItemsPerPageChange(e.target.value)}
@@ -821,7 +930,7 @@ export default function ServiceTrackingPage() {
                     <div className="flex items-center space-x-2">
                         <div
                             className="text-sm font-medium"
-                            style={{ color: isDarkMode ? "#13151B" : "#0B2B26" }}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                         >
                             {startIndex + 1}-{endIndex} of {totalItems}
                         </div>
@@ -834,8 +943,8 @@ export default function ServiceTrackingPage() {
                                 disabled={currentPage === 1}
                                 className="rounded-lg p-2 transition-all disabled:opacity-50"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                    color: "#F3EDE3",
+                                    backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                    color: "#f1f5f9",
                                 }}
                             >
                                 <ChevronsLeft className="h-4 w-4" />
@@ -848,8 +957,8 @@ export default function ServiceTrackingPage() {
                                 disabled={currentPage === 1}
                                 className="rounded-lg p-2 transition-all disabled:opacity-50"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                    color: "#F3EDE3",
+                                    backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                    color: "#f1f5f9",
                                 }}
                             >
                                 <ChevronLeft className="h-4 w-4" />
@@ -862,8 +971,8 @@ export default function ServiceTrackingPage() {
                                 disabled={currentPage === totalPages}
                                 className="rounded-lg p-2 transition-all disabled:opacity-50"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                    color: "#F3EDE3",
+                                    backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                    color: "#f1f5f9",
                                 }}
                             >
                                 <ChevronRight className="h-4 w-4" />
@@ -876,8 +985,8 @@ export default function ServiceTrackingPage() {
                                 disabled={currentPage === totalPages}
                                 className="rounded-lg p-2 transition-all disabled:opacity-50"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                    color: "#F3EDE3",
+                                    backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                    color: "#f1f5f9",
                                 }}
                             >
                                 <ChevronsRight className="h-4 w-4" />

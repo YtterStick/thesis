@@ -30,7 +30,6 @@ public class ClaimingService {
         this.transactionRepository = transactionRepository;
     }
 
-    // Manila timezone (GMT+8)
     private ZoneId getManilaTimeZone() {
         return ZoneId.of("Asia/Manila");
     }
@@ -51,7 +50,6 @@ public class ClaimingService {
             throw new RuntimeException("Cannot claim expired job");
         }
 
-        // Check if this is a GCash transaction and verify it's verified
         Transaction transaction = transactionRepository.findByInvoiceNumber(transactionId)
                 .orElse(null);
         
@@ -63,7 +61,6 @@ public class ClaimingService {
 
         String claimReceiptNumber = "CLM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        // Use Manila time for claim date
         LocalDateTime claimDateManila = getCurrentManilaTime();
         
         job.setPickupStatus("CLAIMED");
@@ -80,17 +77,14 @@ public class ClaimingService {
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
-        // Calculate completion date from load assignments (latest endTime)
         LocalDateTime completionDate = job.getLoadAssignments().stream()
                 .filter(load -> load.getEndTime() != null)
                 .map(LaundryJob.LoadAssignment::getEndTime)
                 .max(LocalDateTime::compareTo)
-                .orElse(claimDateManila); // Fallback to claim date if no endTime found
+                .orElse(claimDateManila);
 
-        // Get actual number of loads (not just completed ones)
         int totalLoads = job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0;
 
-        // Log completion date details for debugging
         System.out.println("📅 Completion Date Details for " + transactionId + ":");
         System.out.println("   - Latest End Time: " + completionDate);
         System.out.println("   - Total Loads: " + totalLoads);
@@ -98,14 +92,14 @@ public class ClaimingService {
 
         return new ServiceClaimReceiptDto(
                 claimReceiptNumber,
-                job.getTransactionId(), // This is the invoice number
+                job.getTransactionId(),
                 job.getCustomerName(),
                 job.getContact(),
                 job.getServiceType(),
-                totalLoads, // Use actual number of loads
-                completionDate, // When laundry was actually completed
-                claimDateManila, // When it was claimed (different from completion)
-                staffName, // Staff who processed the claim
+                totalLoads,
+                completionDate, 
+                claimDateManila,
+                staffName,
                 new FormatSettingsDto(settings));
     }
 
@@ -120,17 +114,14 @@ public class ClaimingService {
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));
 
-        // Calculate completion date from load assignments (latest endTime)
         LocalDateTime completionDate = job.getLoadAssignments().stream()
                 .filter(load -> load.getEndTime() != null)
                 .map(LaundryJob.LoadAssignment::getEndTime)
                 .max(LocalDateTime::compareTo)
                 .orElse(job.getClaimDate());
 
-        // Get actual number of loads
         int totalLoads = job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0;
 
-        // Log receipt retrieval for auditing
         System.out.println("📄 Claim receipt retrieved - Transaction: " + transactionId + 
                          " | Customer: " + job.getCustomerName() + 
                          " | Completion Date: " + completionDate);
@@ -152,7 +143,6 @@ public class ClaimingService {
         return laundryJobRepository.findByPickupStatus("CLAIMED");
     }
 
-    // Additional method to check expiration status with Manila time
     public void checkJobExpirationStatus(String transactionId) {
         try {
             LaundryJob job = laundryJobRepository.findById(transactionId)
@@ -180,16 +170,13 @@ public class ClaimingService {
         }
     }
 
-    // Method to manually update claim date to Manila time (for existing records)
     public void fixClaimDatesToManilaTime() {
         List<LaundryJob> claimedJobs = getClaimedJobs();
         int fixedCount = 0;
 
         for (LaundryJob job : claimedJobs) {
             try {
-                // Check if claim date needs fixing (if it's in a different timezone)
                 if (job.getClaimDate() != null) {
-                    // For now, we'll just log the current claim date
                     System.out.println("📅 Existing Claim Date for " + job.getTransactionId() + 
                                      ": " + job.getClaimDate() + 
                                      " | Customer: " + job.getCustomerName());

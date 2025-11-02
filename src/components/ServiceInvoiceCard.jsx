@@ -6,6 +6,16 @@ import { Printer } from "lucide-react";
 const ServiceInvoiceCard = ({ transaction, settings }) => {
   if (!transaction || !settings) return null;
 
+  // Add comprehensive debugging
+  console.log("🧾 ServiceInvoiceCard received transaction:", transaction);
+  console.log("🔍 Transaction structure:", Object.keys(transaction));
+  console.log("🛠️ Service data in transaction:", {
+    serviceName: transaction.serviceName,
+    servicePrice: transaction.servicePrice,
+    loads: transaction.loads,
+    service: transaction.service
+  });
+
   const {
     invoiceNumber,
     transactionId,
@@ -24,6 +34,9 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
     servicePrice = 0,
     consumables = [],
   } = transaction;
+
+  // Add a fallback for staffId
+  const displayStaffId = staffId || "Unknown";
 
   const formatCurrency = (value) =>
     typeof value === "number" ? `₱${value.toFixed(2)}` : "₱0.00";
@@ -44,10 +57,6 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
   const qrValue = trackingId 
     ? `https://www.starwashph.com/?search=${encodeURIComponent(trackingId)}#service_tracking`
     : null;
-
-  if (qrValue) {
-    console.log("[QR Destination]", qrValue);
-  }
 
   const [qrImage, setQrImage] = useState(null);
 
@@ -72,9 +81,30 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
     0
   );
 
-  const loadsTotal = loads * servicePrice;
+  // Calculate loadsTotal - handle different response structures
+  let loadsTotal = 0;
+  if (servicePrice && loads) {
+    loadsTotal = servicePrice * loads;
+  } else if (transaction.service && transaction.service.price && transaction.service.quantity) {
+    // If service data is nested in a service object
+    loadsTotal = transaction.service.price * transaction.service.quantity;
+  }
+
   const computedTotal = consumableTotal + loadsTotal;
   const finalTotal = totalPrice != null ? totalPrice : computedTotal;
+
+  // Determine what service name and price to display
+  const displayServiceName = serviceName || transaction.service?.name || "Service";
+  const displayServicePrice = servicePrice || transaction.service?.price || 0;
+  const displayLoads = loads || transaction.service?.quantity || 0;
+
+  console.log("📊 Final calculated values:", {
+    displayServiceName,
+    displayServicePrice,
+    displayLoads,
+    loadsTotal,
+    finalTotal
+  });
 
   return (
     <div className="printable-area">
@@ -105,7 +135,7 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
             Contact: <span className="font-bold text-gray-900 value-bold">{contact || "—"}</span>
           </div>
           <div className="text-gray-700 label">
-            Staff: <span className="font-bold text-gray-900 value-bold">{staffId || "—"}</span>
+            Staff: <span className="font-bold text-gray-900 value-bold">{displayStaffId}</span>
           </div>
           <div className="text-right text-gray-700 label">
             Payment: <span className="font-bold text-gray-900 value-bold">{paymentMethod}</span>
@@ -133,12 +163,12 @@ const ServiceInvoiceCard = ({ transaction, settings }) => {
           <div className="space-y-0.5">
             <div className="flex justify-between text-gray-700 service-item">
               <span className="label">
-                {serviceName}: {loads}
+                {displayServiceName}: {displayLoads}
               </span>
               <span className="text-gray-900 value-bold">{formatCurrency(loadsTotal)}</span>
             </div>
-            {servicePrice > 0 && (
-              <div className="pl-1 text-[9px] text-gray-600 rate-info">Rate: {formatCurrency(servicePrice)} per load</div>
+            {displayServicePrice > 0 && (
+              <div className="pl-1 text-[9px] text-gray-600 rate-info">Rate: {formatCurrency(displayServicePrice)} per load</div>
             )}
           </div>
         </div>

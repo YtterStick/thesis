@@ -66,15 +66,15 @@ const MainPage = () => {
         <div
             className="rounded-xl border-2 p-5"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
         >
             <div className="flex items-center justify-between mb-4">
                 <div
                     className="rounded-lg p-2"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                     }}
                 >
                     <div className="h-6 w-6"></div>
@@ -82,7 +82,7 @@ const MainPage = () => {
                 <div className="text-right">
                     <div className="h-6 w-20 rounded"
                          style={{
-                             backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                             backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                          }} />
                 </div>
             </div>
@@ -90,7 +90,7 @@ const MainPage = () => {
             <div className="flex items-center justify-between">
                 <div className="h-5 w-28 rounded"
                      style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
             </div>
         </div>
@@ -100,35 +100,35 @@ const MainPage = () => {
         <div
             className="rounded-xl border-2 p-5"
             style={{
-                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
         >
             <div className="flex items-center justify-between mb-4">
                 <div className="h-6 w-32 rounded"
                      style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
                 <div className="h-4 w-24 rounded"
                      style={{
-                         backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
             </div>
 
             {/* Table Header Skeleton - Updated to 10 columns */}
             <div className="overflow-x-auto rounded-lg border-2 mb-4"
                  style={{
-                     borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                  }}>
                 <div className="min-w-full">
                     <div className="grid grid-cols-10 gap-4 p-4"
                          style={{
-                             backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                          }}>
                         {[...Array(10)].map((_, i) => (
                             <div key={i} className="h-4 rounded"
                                  style={{
-                                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                                  }} />
                         ))}
                     </div>
@@ -140,8 +140,8 @@ const MainPage = () => {
                 {[...Array(5)].map((_, rowIndex) => (
                     <div key={rowIndex} className="grid grid-cols-10 gap-4 p-4 rounded-lg border-2"
                          style={{
-                             backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                             borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                             backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
+                             borderColor: isDarkMode ? "#475569" : "#e2e8f0",
                          }}>
                         {[...Array(10)].map((_, colIndex) => (
                             <div key={colIndex} 
@@ -151,7 +151,7 @@ const MainPage = () => {
                                      colIndex === 6 ? "w-16" : "w-full"
                                  }`}
                                  style={{
-                                     backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                                     backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                                  }} />
                         ))}
                     </div>
@@ -199,8 +199,13 @@ const MainPage = () => {
     ];
 
     return (
-        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
-            {/* Header */}
+        <div 
+            className="space-y-5 px-6 pb-5 pt-4 overflow-visible min-h-screen"
+            style={{
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+            }}
+        >
+            {/* Header - UPDATED DARK MODE COLORS */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -211,24 +216,24 @@ const MainPage = () => {
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         className="rounded-lg p-2"
                         style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                            color: "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                            color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                         }}
                     >
                         <Package size={22} />
                     </motion.div>
                     <div>
-                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             Staff Laundry Records
                         </p>
-                        <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                             Manage and track all laundry transactions
                         </p>
                     </div>
                 </div>
             </motion.div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards - UPDATED DARK MODE COLORS */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 <AnimatePresence>
                     {loading ? (
@@ -257,8 +262,8 @@ const MainPage = () => {
                                 }}
                                 className="rounded-xl border-2 p-5 transition-all cursor-pointer"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                 }}
                                 title={tooltip}
                             >
@@ -279,14 +284,14 @@ const MainPage = () => {
                                         transition={{ delay: index * 0.2 }}
                                         className="text-right"
                                     >
-                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                             {value}
                                         </p>
                                     </motion.div>
                                 </div>
                                 
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                         {label}
                                     </h3>
                                 </div>
@@ -296,7 +301,7 @@ const MainPage = () => {
                 </AnimatePresence>
             </div>
 
-            {/* Record Table */}
+            {/* Record Table - UPDATED DARK MODE COLORS */}
             <AnimatePresence>
                 {loading ? (
                     <motion.div
@@ -316,15 +321,15 @@ const MainPage = () => {
                         transition={{ duration: 0.3 }}
                         className="rounded-xl border-2 p-5 transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <p className="text-lg font-bold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                 Laundry Records
                             </p>
-                            <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                 {records.length} records found
                             </span>
                         </div>

@@ -7,12 +7,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import MissingForm from "./MissingForm";
 import MissingTable from "./MissingTable";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 const MissingItemsPage = () => {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    
+
     const [allItems, setAllItems] = useState([]);
     const [machines, setMachines] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -29,13 +29,12 @@ const MissingItemsPage = () => {
     });
     const [claimName, setClaimName] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    
-    // Get items per page from localStorage or default to 10
+
     const [itemsPerPage, setItemsPerPage] = useState(() => {
-        const saved = localStorage.getItem('missingItemsPerPage');
+        const saved = localStorage.getItem("missingItemsPerPage");
         return saved ? parseInt(saved) : 10;
     });
-    
+
     const { toast } = useToast();
 
     useEffect(() => {
@@ -43,31 +42,28 @@ const MissingItemsPage = () => {
         fetchMachines();
     }, []);
 
-    // Save items per page to localStorage whenever it changes
     useEffect(() => {
-        localStorage.setItem('missingItemsPerPage', itemsPerPage.toString());
+        localStorage.setItem("missingItemsPerPage", itemsPerPage.toString());
     }, [itemsPerPage]);
 
     const fetchMissingItems = async () => {
         try {
             setIsLoading(true);
-            // Use the api utility instead of direct fetch
             const data = await api.get("api/missing-items");
-            
-            // Sort by found date (newest first)
+
             const sortedData = data.sort((a, b) => {
                 const dateA = new Date(a.foundDate || a.createdAt || 0);
                 const dateB = new Date(b.foundDate || b.createdAt || 0);
-                return dateB - dateA; // Newest first
+                return dateB - dateA;
             });
-            
+
             setAllItems(sortedData);
         } catch (error) {
             console.error(error);
-            toast({ 
-                title: "Error", 
-                description: "Failed to load missing items", 
-                variant: "destructive" 
+            toast({
+                title: "Error",
+                description: "Failed to load missing items",
+                variant: "destructive",
             });
         } finally {
             setIsLoading(false);
@@ -77,15 +73,14 @@ const MissingItemsPage = () => {
     const fetchMachines = async () => {
         try {
             setIsLoadingMachines(true);
-            // Use the api utility instead of direct fetch
             const data = await api.get("api/machines");
             setMachines(data);
         } catch (error) {
             console.error(error);
-            toast({ 
-                title: "Error", 
-                description: "Failed to load machines", 
-                variant: "destructive" 
+            toast({
+                title: "Error",
+                description: "Failed to load machines",
+                variant: "destructive",
             });
         } finally {
             setIsLoadingMachines(false);
@@ -103,7 +98,6 @@ const MissingItemsPage = () => {
                 return;
             }
 
-            // Use the api utility instead of direct fetch
             await api.post("api/missing-items", newItem);
 
             toast({
@@ -116,10 +110,10 @@ const MissingItemsPage = () => {
             fetchMissingItems();
         } catch (error) {
             console.error(error);
-            toast({ 
-                title: "Error", 
-                description: "Failed to report missing item", 
-                variant: "destructive" 
+            toast({
+                title: "Error",
+                description: "Failed to report missing item",
+                variant: "destructive",
             });
         }
     };
@@ -135,7 +129,6 @@ const MissingItemsPage = () => {
                 return;
             }
 
-            // Use the api utility instead of direct fetch
             await api.patch(`api/missing-items/${selectedItem.id}/claim`, { claimedByName: claimName });
 
             toast({
@@ -149,15 +142,14 @@ const MissingItemsPage = () => {
             fetchMissingItems();
         } catch (error) {
             console.error(error);
-            toast({ 
-                title: "Error", 
-                description: error.message || "Failed to claim item", 
-                variant: "destructive" 
+            toast({
+                title: "Error",
+                description: error.message || "Failed to claim item",
+                variant: "destructive",
             });
         }
     };
 
-    // Filter items based on search and status
     const getFilteredItems = () => {
         return allItems.filter((item) => {
             const machineName = getMachineName(item.machineId);
@@ -167,9 +159,7 @@ const MissingItemsPage = () => {
                 (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase()));
 
             const matchesStatus =
-                statusFilter === "all" || 
-                (statusFilter === "unclaimed" && !item.claimed) || 
-                (statusFilter === "claimed" && item.claimed);
+                statusFilter === "all" || (statusFilter === "unclaimed" && !item.claimed) || (statusFilter === "claimed" && item.claimed);
 
             return matchesSearch && matchesStatus;
         });
@@ -191,7 +181,6 @@ const MissingItemsPage = () => {
     const unclaimedItems = allItems.filter((item) => !item.claimed);
     const claimedItems = allItems.filter((item) => item.claimed);
 
-    // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, statusFilter]);
@@ -201,28 +190,39 @@ const MissingItemsPage = () => {
     };
 
     return (
-        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        <div
+            className="min-h-screen space-y-5 overflow-visible px-6 pb-5 pt-4"
+            style={{
+                backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
+            }}
+        >
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 mb-3"
+                className="mb-3 flex items-center gap-3"
             >
                 <motion.div
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     className="rounded-lg p-2"
                     style={{
-                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                        color: "#F3EDE3",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                        color: "#f1f5f9",
                     }}
                 >
                     <Package size={22} />
                 </motion.div>
                 <div>
-                    <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                    <p
+                        className="text-xl font-bold"
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                    >
                         Missing Items
                     </p>
-                    <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                    <p
+                        className="text-sm"
+                        style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                    >
                         Track and manage lost and found items
                     </p>
                 </div>
@@ -233,30 +233,30 @@ const MissingItemsPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
             >
-                <Card 
+                <Card
                     className="rounded-xl border-2 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
-                    <CardHeader 
+                    <CardHeader
                         className="rounded-t-xl p-6"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                         }}
                     >
                         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                             <div>
-                                <CardTitle 
+                                <CardTitle
                                     className="text-lg font-bold"
-                                    style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                 >
                                     Missing Items
                                 </CardTitle>
-                                <CardDescription 
+                                <CardDescription
                                     className="text-sm"
-                                    style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                 >
                                     {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} found
                                 </CardDescription>
@@ -267,14 +267,17 @@ const MissingItemsPage = () => {
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                                            statusFilter === "all"
-                                                ? "text-white"
-                                                : isDarkMode ? "text-slate-100" : "text-slate-700"
+                                            statusFilter === "all" ? "text-white" : isDarkMode ? "text-slate-100" : "text-slate-700"
                                         }`}
                                         style={{
-                                            backgroundColor: statusFilter === "all" 
-                                                ? (isDarkMode ? "#18442AF5" : "#0B2B26")
-                                                : (isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)"),
+                                            backgroundColor:
+                                                statusFilter === "all"
+                                                    ? isDarkMode
+                                                        ? "#0f172a"
+                                                        : "#0f172a"
+                                                    : isDarkMode
+                                                      ? "rgba(51, 65, 85, 0.3)"
+                                                      : "rgba(11, 43, 38, 0.1)",
                                         }}
                                         onClick={() => setStatusFilter("all")}
                                     >
@@ -284,14 +287,17 @@ const MissingItemsPage = () => {
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                                            statusFilter === "unclaimed"
-                                                ? "text-white"
-                                                : isDarkMode ? "text-slate-100" : "text-slate-700"
+                                            statusFilter === "unclaimed" ? "text-white" : isDarkMode ? "text-slate-100" : "text-slate-700"
                                         }`}
                                         style={{
-                                            backgroundColor: statusFilter === "unclaimed" 
-                                                ? (isDarkMode ? "#18442AF5" : "#0B2B26")
-                                                : (isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)"),
+                                            backgroundColor:
+                                                statusFilter === "unclaimed"
+                                                    ? isDarkMode
+                                                        ? "#0f172a"
+                                                        : "#0f172a"
+                                                    : isDarkMode
+                                                      ? "rgba(51, 65, 85, 0.3)"
+                                                      : "rgba(11, 43, 38, 0.1)",
                                         }}
                                         onClick={() => setStatusFilter("unclaimed")}
                                     >
@@ -301,14 +307,17 @@ const MissingItemsPage = () => {
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                                            statusFilter === "claimed"
-                                                ? "text-white"
-                                                : isDarkMode ? "text-slate-100" : "text-slate-700"
+                                            statusFilter === "claimed" ? "text-white" : isDarkMode ? "text-slate-100" : "text-slate-700"
                                         }`}
                                         style={{
-                                            backgroundColor: statusFilter === "claimed" 
-                                                ? (isDarkMode ? "#18442AF5" : "#0B2B26")
-                                                : (isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)"),
+                                            backgroundColor:
+                                                statusFilter === "claimed"
+                                                    ? isDarkMode
+                                                        ? "#0f172a"
+                                                        : "#0f172a"
+                                                    : isDarkMode
+                                                      ? "rgba(51, 65, 85, 0.3)"
+                                                      : "rgba(11, 43, 38, 0.1)",
                                         }}
                                         onClick={() => setStatusFilter("claimed")}
                                     >
@@ -316,17 +325,17 @@ const MissingItemsPage = () => {
                                     </motion.button>
                                 </div>
                                 <div className="relative">
-                                    <Search 
-                                        className="absolute left-2 top-2.5 h-4 w-4" 
-                                        style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                                    <Search
+                                        className="absolute left-2 top-2.5 h-4 w-4"
+                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
                                     />
                                     <Input
                                         placeholder="Search items..."
                                         className="w-full border-2 pl-8 transition-all sm:w-64"
                                         style={{
-                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            color: isDarkMode ? '#13151B' : '#0B2B26',
+                                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                            borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                         }}
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}

@@ -14,7 +14,8 @@ const ActionButtons = ({
     startDryingAgain,
     getMachineTypeForStep,
     machines,
-    isDarkMode
+    isDarkMode,
+    onCompletion
 }) => {
     if (isLoadRunning(load)) {
         return (
@@ -37,16 +38,13 @@ const ActionButtons = ({
         );
     }
 
-    // Normalize service type - treat "Wash Only" as "Wash" and "Dry Only" as "Dry"
     const normalizedServiceType = job.serviceType?.replace(' Only', '') || job.serviceType;
     
-    // Check if the correct machine type is assigned for the current step
     const machineType = getMachineTypeForStep(load.status, normalizedServiceType);
     const hasCorrectMachine = machineType ? 
         (load.machineId && machines[machineType]?.some(m => m.id === load.machineId)) : 
         true;
 
-    // Custom Button Component
     const CustomButton = ({ 
         onClick, 
         disabled, 
@@ -59,12 +57,22 @@ const ActionButtons = ({
         <motion.button
             whileHover={{ scale: disabled ? 1 : 1.05 }}
             whileTap={{ scale: disabled ? 1 : 0.95 }}
-            onClick={onClick}
-            disabled={disabled}
+            onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (disabled) return;
+                
+                if (onCompletion && variant === "success") {
+                    onCompletion(jobKey, loadIndex);
+                }
+                onClick();
+            }}
+            disabled={disabled || load.pending}
             title={title}
             className={`
                 flex items-center gap-2 font-medium transition-all rounded-lg
-                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                ${(disabled || load.pending) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'}
                 ${size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm'}
                 ${
                     variant === 'primary' 
@@ -80,22 +88,31 @@ const ActionButtons = ({
             `}
             style={{
                 backgroundColor: 
-                    variant === 'primary' ? (isDarkMode ? "#18442AF5" : "#0B2B26") :
+                    variant === 'primary' ? (isDarkMode ? "#0f172a" : "#0f172a") :
                     variant === 'success' ? '#10B981' :
                     variant === 'warning' ? '#F59E0B' :
                     'transparent',
                 borderColor: 
-                    variant === 'secondary' ? (isDarkMode ? "#2A524C" : "#0B2B26") :
+                    variant === 'secondary' ? (isDarkMode ? "#334155" : "#cbd5e1") :
                     'transparent',
                 color: 
-                    variant === 'secondary' ? (isDarkMode ? "#F3EDE3" : "#0B2B26") :
+                    variant === 'secondary' ? (isDarkMode ? "#f1f5f9" : "#0f172a") :
                     variant === 'success' ? 'white' :
                     variant === 'warning' ? 'white' :
-                    '#F3EDE3'
+                    '#f1f5f9'
             }}
         >
-            {Icon && <Icon className={size === 'sm' ? "h-3 w-3" : "h-4 w-4"} />}
-            {children}
+            {load.pending ? (
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Starting...</span>
+                </div>
+            ) : (
+                <>
+                    {Icon && <Icon className={size === 'sm' ? "h-3 w-3" : "h-4 w-4"} />}
+                    {children}
+                </>
+            )}
         </motion.button>
     );
 
@@ -109,6 +126,7 @@ const ActionButtons = ({
                         icon={RefreshCw}
                         variant="warning"
                         size="sm"
+                        title="Start drying again"
                     >
                         Again
                     </CustomButton>
@@ -117,6 +135,7 @@ const ActionButtons = ({
                         disabled={load.pending}
                         icon={ArrowRight}
                         variant="primary"
+                        title="Move to folding"
                     >
                         Fold
                     </CustomButton>
@@ -127,6 +146,7 @@ const ActionButtons = ({
                     disabled={load.pending}
                     icon={Check}
                     variant="success"
+                    title="Mark as completed"
                 >
                     Done
                 </CustomButton>
@@ -136,7 +156,7 @@ const ActionButtons = ({
                     disabled={!hasCorrectMachine || load.pending}
                     icon={Play}
                     variant="primary"
-                    title={!hasCorrectMachine ? `Please assign a ${machineType?.toLowerCase() || "machine"} first` : ""}
+                    title={!hasCorrectMachine ? `Please assign a ${machineType?.toLowerCase() || "machine"} first` : "Start processing"}
                 >
                     Start
                 </CustomButton>
@@ -146,6 +166,7 @@ const ActionButtons = ({
                     disabled={load.pending}
                     icon={ArrowRight}
                     variant="primary"
+                    title="Move to next step"
                 >
                     Next
                 </CustomButton>

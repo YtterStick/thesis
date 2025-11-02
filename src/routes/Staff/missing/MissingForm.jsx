@@ -19,13 +19,13 @@ const MissingForm = ({
 }) => {
     const inputClass = `rounded-lg border-2 transition-all ${
         isDarkMode 
-            ? "bg-white text-slate-900 border-slate-300 focus:border-cyan-500" 
+            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3DD9B6]" 
             : "bg-white text-slate-900 border-slate-300 focus:border-cyan-500"
     }`;
     
     const selectTriggerClass = `rounded-lg border-2 transition-all ${
         isDarkMode 
-            ? "bg-white text-slate-900 border-slate-300 focus:border-cyan-500" 
+            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3DD9B6]" 
             : "bg-white text-slate-900 border-slate-300 focus:border-cyan-500"
     }`;
 
@@ -53,8 +53,8 @@ const MissingForm = ({
                     <Button 
                         className="rounded-lg transition-all flex items-center gap-2"
                         style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                            color: "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                            color: "#f1f5f9",
                         }}
                     >
                         <Plus className="h-4 w-4" />
@@ -65,21 +65,21 @@ const MissingForm = ({
             <DialogContent 
                 className="rounded-xl border-2 p-6"
                 style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
                 <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                    <DialogTitle className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                         Report Missing Item
                     </DialogTitle>
-                    <DialogDescription className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                    <DialogDescription className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                         Enter details about the item found in the machine.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                     <div>
-                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             Item Description *
                         </label>
                         <Input
@@ -91,7 +91,7 @@ const MissingForm = ({
                         />
                     </div>
                     <div>
-                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             Machine Found In (Optional)
                         </label>
                         <Select
@@ -104,8 +104,8 @@ const MissingForm = ({
                             <SelectContent 
                                 className="rounded-lg border-2"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                 }}
                             >
                                 <SelectItem value="none">Not associated with a machine</SelectItem>
@@ -129,10 +129,10 @@ const MissingForm = ({
                     </div>
                     <div>
                         <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <label className="text-sm font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                 Notes (Optional)
                             </label>
-                            <span className="text-xs" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                            <span className="text-xs" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                                 {newItem.notes?.length || 0}/30 characters
                             </span>
                         </div>
@@ -152,8 +152,8 @@ const MissingForm = ({
                             onClick={handleReportItem}
                             className="w-full rounded-lg transition-all"
                             style={{
-                                backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                color: "#F3EDE3",
+                                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                color: "#f1f5f9",
                             }}
                         >
                             Report Item

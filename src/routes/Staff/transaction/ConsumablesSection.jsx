@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import PropTypes from "prop-types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/hooks/use-theme";
+import { Info } from "lucide-react";
 
 const ConsumablesSection = ({
   stockItems,
@@ -12,6 +13,10 @@ const ConsumablesSection = ({
   onConsumableChange,
   plasticOverrides,
   setPlasticOverrides,
+  detergentOverrides,
+  setDetergentOverrides,
+  fabricOverrides,
+  setFabricOverrides,
   supplySource,
   isLocked,
 }) => {
@@ -21,53 +26,68 @@ const ConsumablesSection = ({
   const plasticItems = stockItems.filter((item) =>
     item.name.toLowerCase().includes("plastic")
   );
-  const nonPlasticItems = stockItems.filter(
-    (item) => !item.name.toLowerCase().includes("plastic")
+  
+  const detergentItems = stockItems.filter((item) =>
+    item.name.toLowerCase().includes("detergent")
   );
-
-  const hasInitialized = useRef(false);
-  const lastLoadsRef = useRef(parseInt(loads) || 1);
-  const currentLoads = parseInt(loads) || 1;
-
-  useEffect(() => {
-    if (!hasInitialized.current && plasticItems.length) {
-      plasticItems.forEach((item) => {
-        const name = item.name;
-        const current = consumables[name];
-        if (current === undefined) {
-          onConsumableChange(name, currentLoads);
-        }
-      });
-      hasInitialized.current = true;
-    }
-  }, [plasticItems, consumables, currentLoads, onConsumableChange]);
-
-  useEffect(() => {
-    const previousLoads = lastLoadsRef.current;
-    const delta = currentLoads - previousLoads;
-
-    if (delta !== 0) {
-      plasticItems.forEach((item) => {
-        const name = item.name;
-        const current = consumables[name] ?? 0;
-        const updated = Math.max(0, current + delta);
-        onConsumableChange(name, updated);
-      });
-      lastLoadsRef.current = currentLoads;
-    }
-  }, [currentLoads, plasticItems, consumables, onConsumableChange]);
+  
+  const fabricItems = stockItems.filter((item) =>
+    item.name.toLowerCase().includes("fabric")
+  );
+  
+  const nonConsumableItems = stockItems.filter(
+    (item) => 
+      !item.name.toLowerCase().includes("plastic") &&
+      !item.name.toLowerCase().includes("detergent") &&
+      !item.name.toLowerCase().includes("fabric")
+  );
 
   const handlePlasticChange = (name, value, raw) => {
     setPlasticOverrides((prev) => ({
       ...prev,
-      [name]: raw === "" ? false : true,
+      [name]: true,
     }));
     onConsumableChange(name, value);
   };
 
-  const renderInput = (item, isPlastic = false) => (
-    <div key={item.id}>
-      <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{item.name}</Label>
+  const handleDetergentChange = (name, value, raw) => {
+    setDetergentOverrides((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+    onConsumableChange(name, value);
+  };
+
+  const handleFabricChange = (name, value, raw) => {
+    setFabricOverrides((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+    onConsumableChange(name, value);
+  };
+
+  const isManuallySet = (itemName, type) => {
+    if (type === "plastic") {
+      return plasticOverrides[itemName];
+    } else if (type === "detergent") {
+      return detergentOverrides[itemName];
+    } else if (type === "fabric") {
+      return fabricOverrides[itemName];
+    }
+    return false;
+  };
+
+  const renderInput = (item, type = "other") => (
+    <div key={item.id} className="relative">
+      <div className="flex items-center justify-between mb-1">
+        <Label style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{item.name}</Label>
+        {isManuallySet(item.name, type) && (
+          <div className="flex items-center gap-1 text-xs" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }}>
+            <Info size={12} />
+            <span>Manual</span>
+          </div>
+        )}
+      </div>
       <Input
         type="number"
         inputMode="numeric"
@@ -78,8 +98,12 @@ const ConsumablesSection = ({
           const cleaned = raw.replace(/^0+/, "") || "0";
           const numeric = parseInt(cleaned, 10);
 
-          if (isPlastic) {
+          if (type === "plastic") {
             handlePlasticChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
+          } else if (type === "detergent") {
+            handleDetergentChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
+          } else if (type === "fabric") {
+            handleFabricChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
           } else {
             onConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
           }
@@ -95,9 +119,50 @@ const ConsumablesSection = ({
     </div>
   );
 
+  // Show different content based on supply source
+  if (supplySource === "customer") {
+    return (
+      <div className="space-y-4">
+        {/* 🔁 Loads + Plastic Only (always show plastic even for customer-provided) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loads</Label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={loads}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const cleaned = raw.replace(/^0+/, "") || "1";
+                onLoadsChange(cleaned);
+              }}
+              onBlur={(e) => {
+                const numeric = parseInt(e.target.value, 10);
+                onLoadsChange(isNaN(numeric) || numeric < 1 ? 1 : numeric);
+              }}
+              required
+              disabled={isLocked}
+              className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
+              style={{
+                borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                color: isDarkMode ? '#f1f5f9' : '#0f172a'
+              }}
+            />
+          </div>
+
+          {/* Plastic Items Only (always show) */}
+          {plasticItems.map((item) => renderInput(item, "plastic"))}
+        </div>
+      </div>
+    );
+  }
+
+  // In-store supply source - show all consumables
   return (
     <div className="space-y-4">
-      {/* 🔁 Loads + Plastic Items */}
+      {/* 🔁 Loads + Auto-increment Items */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loads</Label>
@@ -126,13 +191,20 @@ const ConsumablesSection = ({
           />
         </div>
 
-        {plasticItems.map((item) => renderInput(item, true))}
+        {/* Plastic Items */}
+        {plasticItems.map((item) => renderInput(item, "plastic"))}
+        
+        {/* Detergent Items */}
+        {detergentItems.map((item) => renderInput(item, "detergent"))}
+        
+        {/* Fabric Softener Items */}
+        {fabricItems.map((item) => renderInput(item, "fabric"))}
       </div>
 
-      {/* 🧼 Non-Plastic Items — only if supplySource is in-store */}
-      {supplySource === "in-store" && (
+      {/* 🧼 Non-Consumable Items — only if supplySource is in-store */}
+      {nonConsumableItems.length > 0 && (
         <div className="grid grid-cols-2 gap-4">
-          {nonPlasticItems.map((item) => renderInput(item))}
+          {nonConsumableItems.map((item) => renderInput(item, "other"))}
         </div>
       )}
     </div>
@@ -147,6 +219,10 @@ ConsumablesSection.propTypes = {
   onLoadsChange: PropTypes.func.isRequired,
   plasticOverrides: PropTypes.object.isRequired,
   setPlasticOverrides: PropTypes.func.isRequired,
+  detergentOverrides: PropTypes.object.isRequired,
+  setDetergentOverrides: PropTypes.func.isRequired,
+  fabricOverrides: PropTypes.object.isRequired,
+  setFabricOverrides: PropTypes.func.isRequired,
   supplySource: PropTypes.string.isRequired,
   isLocked: PropTypes.bool,
 };

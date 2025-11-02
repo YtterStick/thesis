@@ -29,11 +29,10 @@ public class AuditService {
         
         String ipAddress = getClientIpAddress(request);
         
-        // Use Manila time instead of server time
         LocalDateTime manilaTime = ManilaTimeUtil.now();
         
         AuditLog auditLog = new AuditLog(username, action, entityType, entityId, description, ipAddress);
-        auditLog.setTimestamp(manilaTime); // Set Manila time
+        auditLog.setTimestamp(manilaTime);
         auditLog.setOldValues(oldValues);
         auditLog.setNewValues(newValues);
         

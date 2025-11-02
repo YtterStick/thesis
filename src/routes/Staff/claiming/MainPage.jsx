@@ -214,7 +214,12 @@ const MainPage = () => {
     };
 
     return (
-        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
+        <div 
+            className="space-y-5 px-6 pb-5 pt-4 overflow-visible min-h-screen"
+            style={{
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+            }}
+        >
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -226,17 +231,17 @@ const MainPage = () => {
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         className="rounded-lg p-2"
                         style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                            color: "#F3EDE3",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                            color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                         }}
                     >
                         <Package size={22} />
                     </motion.div>
                     <div>
-                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#F3EDE3' : '#0B2B26' }}>
+                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             Laundry Claiming & Disposing
                         </p>
-                        <p className="text-sm" style={{ color: isDarkMode ? '#F3EDE3/70' : '#0B2B26/70' }}>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                             Manage completed and past due laundry
                         </p>
                     </div>
@@ -277,27 +282,27 @@ const MainPage = () => {
                 <Card 
                     className="rounded-xl border-2 transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     <CardHeader 
                         className="rounded-t-xl p-6"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                         }}
                     >
                         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                             <div>
                                 <CardTitle 
                                     className="text-lg font-bold"
-                                    style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                                    style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                                 >
                                     {activeTab === "unclaimed" ? "Completed & Unclaimed Laundry" : "Past Due Laundry"}
                                 </CardTitle>
                                 <CardDescription 
                                     className="text-sm"
-                                    style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                                    style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}
                                 >
                                     {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""}{" "}
                                     {activeTab === "unclaimed" ? "ready for pickup" : "past due and need disposal"}
@@ -316,8 +321,8 @@ const MainPage = () => {
                                         }`}
                                         style={{
                                             backgroundColor: activeTab === "unclaimed" 
-                                                ? (isDarkMode ? "#18442AF5" : "#0B2B26")
-                                                : (isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)"),
+                                                ? (isDarkMode ? "#0f172a" : "#0f172a")
+                                                : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)"),
                                         }}
                                         onClick={() => setActiveTab("unclaimed")}
                                     >
@@ -334,7 +339,7 @@ const MainPage = () => {
                                         style={{
                                             backgroundColor: activeTab === "expired" 
                                                 ? "#EF4444"
-                                                : (isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)"),
+                                                : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)"),
                                         }}
                                         onClick={() => setActiveTab("expired")}
                                     >
@@ -345,15 +350,15 @@ const MainPage = () => {
                                     <div className="relative">
                                         <Search 
                                             className="absolute left-2 top-2.5 h-4 w-4" 
-                                            style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                                            style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
                                         />
                                         <Input
                                             placeholder="Search customers..."
                                             className="w-full border-2 pl-8 transition-all sm:w-64"
                                             style={{
-                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                color: isDarkMode ? '#13151B' : '#0B2B26',
+                                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                                borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                                color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                             }}
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -365,8 +370,8 @@ const MainPage = () => {
                                         onClick={refreshData}
                                         className="rounded-lg p-2 transition-all"
                                         style={{
-                                            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)",
-                                            color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                            color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                         }}
                                     >
                                         <RefreshCw size={18} />

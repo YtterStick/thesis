@@ -19,10 +19,8 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final StockRepository stockRepository;
 
-    // Manila timezone (GMT+8)
     private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
     
-    // Track last notified status to only notify on state changes
     private final ConcurrentHashMap<String, String> lastStockStatus = new ConcurrentHashMap<>();
 
     public NotificationService(NotificationRepository notificationRepository, 
@@ -33,20 +31,16 @@ public class NotificationService {
         this.stockRepository = stockRepository;
     }
 
-    // Get current time in Manila timezone
     private LocalDateTime getCurrentManilaTime() {
         return LocalDateTime.now(MANILA_ZONE);
     }
 
-    // Enhanced notification method for different types
     public Notification createNotification(String userId, String type, String title, String message, String relatedEntityId) {
         Notification notification = new Notification(userId, type, title, message, relatedEntityId);
-        // Override createdAt with Manila time
         notification.setCreatedAt(getCurrentManilaTime());
         return notificationRepository.save(notification);
     }
 
-    // Notify both admin and staff for all notifications including inventory
     public void notifyAllUsers(String type, String title, String message, String relatedEntityId) {
         userRepository.findAll().forEach(user -> {
             if ("ADMIN".equals(user.getRole()) || "STAFF".equals(user.getRole())) {
@@ -67,8 +61,7 @@ public class NotificationService {
         });
     }
 
-    // Scheduled task to check stock levels every 30 minutes
-    @Scheduled(fixedRate = 1800000) // 30 minutes in milliseconds
+    @Scheduled(fixedRate = 1800000)
     public void autoCheckStockLevels() {
         try {
             System.out.println("🔄 Auto-checking stock levels at: " + getCurrentManilaTime());
@@ -88,7 +81,6 @@ public class NotificationService {
         }
     }
 
-    // Check and notify stock status - returns true if status changed and notification was sent
     private boolean checkAndNotifyStockStatus(StockItem item) {
         if (item.getLowStockThreshold() == null || item.getAdequateStockThreshold() == null) {
             return false;
@@ -102,7 +94,6 @@ public class NotificationService {
         String itemKey = item.getId();
         String lastStatus = lastStockStatus.get(itemKey);
 
-        // Only notify if status actually changed
         if (lastStatus == null || !currentStatus.equals(lastStatus)) {
             sendStockStatusNotification(item, currentQuantity, currentStatus, lastStatus);
             lastStockStatus.put(itemKey, currentStatus);
@@ -129,7 +120,6 @@ public class NotificationService {
         String title;
         String type;
 
-        // Determine if this is an improvement or deterioration
         boolean isImprovement = isStatusImprovement(previousStatus, currentStatus);
         
         switch (currentStatus) {
@@ -182,7 +172,6 @@ public class NotificationService {
     private boolean isStatusImprovement(String previousStatus, String currentStatus) {
         if (previousStatus == null) return false;
         
-        // Define status hierarchy (worst to best)
         String[] statusHierarchy = {"OUT_OF_STOCK", "LOW_STOCK", "ADEQUATE_STOCK", "FULLY_STOCKED"};
         
         int previousIndex = -1;
@@ -200,7 +189,6 @@ public class NotificationService {
         return currentIndex > previousIndex;
     }
 
-    // Enhanced stock level notification logic for manual operations
     public void checkAndNotifyStockLevel(StockItem item, Integer previousQuantity) {
         if (item.getLowStockThreshold() == null || item.getAdequateStockThreshold() == null) {
             return;
@@ -220,7 +208,6 @@ public class NotificationService {
             lastStockStatus.put(itemKey, currentStatus);
         }
         
-        // Also check transitions if we have previous quantity (for restock notifications)
         if (previousQuantity != null) {
             handleStockLevelTransitions(item, previousQuantity, currentQuantity, lowThreshold, adequateThreshold);
         }
@@ -228,7 +215,6 @@ public class NotificationService {
 
     private void handleStockLevelTransitions(StockItem item, int previousQuantity, int currentQuantity, 
                                            int lowThreshold, int adequateThreshold) {
-        // Restock notification (significant quantity increase)
         if (currentQuantity > previousQuantity && (currentQuantity - previousQuantity) >= 10) {
             String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s", 
                 item.getName(), (currentQuantity - previousQuantity), item.getUnit(), currentQuantity, item.getUnit());
@@ -236,7 +222,6 @@ public class NotificationService {
         }
     }
 
-    // Simple stock status check without transitions - only notifies on state changes
     public void notifyCurrentStockStatus(StockItem item) {
         int currentQuantity = item.getQuantity();
         int lowThreshold = item.getLowStockThreshold();
@@ -246,7 +231,6 @@ public class NotificationService {
         String itemKey = item.getId();
         String lastStatus = lastStockStatus.get(itemKey);
 
-        // Only notify if status changed
         if (lastStatus == null || !currentStatus.equals(lastStatus)) {
             String message;
             String title;
@@ -278,14 +262,12 @@ public class NotificationService {
         }
     }
 
-    // Manual trigger for stock check (can be called from API)
     public void triggerStockCheck() {
         System.out.println("🔍 Manual stock check triggered at: " + getCurrentManilaTime());
         autoCheckStockLevels();
     }
 
-    // Initialize stock status tracking on application start
-    @Scheduled(fixedRate = 300000) // Run every 5 minutes to initialize any missing statuses
+    @Scheduled(fixedRate = 300000)
     public void initializeStockStatusTracking() {
         try {
             List<StockItem> allItems = stockRepository.findAll();
@@ -312,7 +294,6 @@ public class NotificationService {
         }
     }
 
-    // Add these specific laundry status notification methods
     public void notifyLoadWashed(String customerName, String transactionId, int loadNumber) {
         String title = "🧼 Load Washed - Ready for Drying";
         String message = String.format("Load %d for %s has been washed and is ready for drying.", 
@@ -340,7 +321,6 @@ public class NotificationService {
         System.out.println("📢 Load completed notification sent: " + message);
     }
 
-    // New method to notify about transaction stock issues
     public void notifyTransactionStockIssue(String itemName, int requestedQuantity, int availableQuantity, String transactionId) {
         String title = "🚨 Transaction Stock Issue";
         String message = String.format("Cannot complete transaction for %s. Requested: %d, Available: %d", 
@@ -350,7 +330,6 @@ public class NotificationService {
         System.out.println("📢 Transaction stock issue notification sent: " + message);
     }
 
-    // Get user notifications with pagination support
     public List<Notification> getUserNotifications(String userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
@@ -374,7 +353,6 @@ public class NotificationService {
         return notificationRepository.countByUserIdAndRead(userId, false);
     }
 
-    // Method to get current stock status tracking (for debugging)
     public void printStockStatusTracking() {
         System.out.println("📊 Current Stock Status Tracking:");
         lastStockStatus.forEach((itemId, status) -> {

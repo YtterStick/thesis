@@ -35,7 +35,6 @@ const TrackingTable = ({
       [completionKey]: true
     }));
 
-    // Remove from completing state after animation
     setTimeout(() => {
       setCompletingLoads(prev => {
         const newState = { ...prev };
@@ -49,11 +48,9 @@ const TrackingTable = ({
     return completingLoads[`${jobKey}-${loadIndex}`];
   };
 
-  // Modified function to get visible loads - includes completing loads even if status is COMPLETED
   const getVisibleLoads = (job, expanded) => {
     const jobKey = getJobKey(job);
     
-    // Get all loads that are either not completed OR are currently completing
     const visibleLoads = job.loads.filter(load => {
       const loadIndex = job.loads.findIndex(l => 
         l.loadNumber === load.loadNumber && l.status === load.status
@@ -72,17 +69,17 @@ const TrackingTable = ({
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border-2 transition-all"
       style={{
-        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
       }}
     >
       <div className="overflow-x-auto rounded-lg border-2"
         style={{
-          borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
         }}>
         <table className="min-w-full table-auto text-sm">
           <thead style={{
-            backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
           }}>
             <tr>
               {["Name", "Contact", "Service", "Fabric", "Detergent", "Load", "Status", "Machine", "Duration", "Action"].map((header) => (
@@ -90,7 +87,7 @@ const TrackingTable = ({
                   key={header}
                   className="px-3 py-2 text-left text-xs font-medium"
                   style={{
-                    color: isDarkMode ? '#13151B' : '#0B2B26',
+                    color: isDarkMode ? '#f1f5f9' : '#0f172a',
                   }}
                 >
                   {header}
@@ -106,11 +103,11 @@ const TrackingTable = ({
                     colSpan={10}
                     className="px-4 py-16 text-center text-sm"
                     style={{
-                      color: isDarkMode ? '#6B7280' : '#0B2B26/70',
+                      color: isDarkMode ? '#94a3b8' : '#475569',
                     }}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <CheckCircle style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} className="h-12 w-12" />
+                      <CheckCircle style={{ color: isDarkMode ? '#94a3b8' : '#475569' }} className="h-12 w-12" />
                       <span>No laundry jobs found</span>
                       <p className="text-sm">All jobs have been completed or no jobs are scheduled.</p>
                     </div>
@@ -133,7 +130,6 @@ const TrackingTable = ({
 
                         const isCompleting = isLoadCompleting(jobKey, originalIndex);
 
-                        // Normalize service type for machine selection
                         const normalizedServiceType = job.serviceType?.replace(' Only', '') || job.serviceType;
                         const machineType = getMachineTypeForStep(load.status, normalizedServiceType);
                         const options = machineType === "WASHER" ? machines.WASHER : machineType === "DRYER" ? machines.DRYER : [];
@@ -146,10 +142,10 @@ const TrackingTable = ({
                               scale: 1,
                               backgroundColor: isCompleting 
                                 ? (isDarkMode ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.1)")
-                                : (isDarkMode ? "#FFFFFF" : "#F3EDE3"),
+                                : (isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc"),
                               borderColor: isCompleting 
                                 ? "#10B981"
-                                : (isDarkMode ? "#2A524C" : "#E0EAE8")
+                                : (isDarkMode ? "#334155" : "#e2e8f0")
                             }}
                             exit={{ 
                               scale: 0.9, 
@@ -162,35 +158,34 @@ const TrackingTable = ({
                             }}
                             className="border-t transition-all hover:opacity-90"
                             style={{
-                              borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
+                              borderColor: isDarkMode ? "#334155" : "#e2e8f0",
                             }}
                           >
-                            <td className="px-3 py-2 font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <td className="px-3 py-2 font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               {job.customerName}
                             </td>
-                            <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <td className="px-3 py-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               {job.contact ? maskContact(job.contact) : "—"}
                             </td>
                             <td className="px-3 py-2">
                               <Badge
                                 className="capitalize"
                                 style={{
-                                  backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.2)" : "rgba(11, 43, 38, 0.1)",
-                                  color: isDarkMode ? '#13151B' : '#0B2B26',
-                                  borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                  backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                  color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                  borderColor: isDarkMode ? "#475569" : "#0f172a",
                                 }}
                               >
-                                {/* Normalize display - show without "Only" suffix */}
                                 {normalizedServiceType?.toLowerCase() || "—"}
                               </Badge>
                             </td>
-                            <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <td className="px-3 py-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               {Math.ceil(job.fabricQty ?? 0)}
                             </td>
-                            <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <td className="px-3 py-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               {Math.ceil(job.detergentQty ?? 0)}
                             </td>
-                            <td className="px-3 py-2" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <td className="px-3 py-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               Load {load.loadNumber}
                             </td>
                             <td className="p-2">
@@ -238,18 +233,18 @@ const TrackingTable = ({
                                     <SelectTrigger 
                                       className="mx-auto w-[120px] transition-all"
                                       style={{
-                                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                       }}
                                     >
                                       <SelectValue placeholder="Duration" />
                                     </SelectTrigger>
                                     <SelectContent
                                       style={{
-                                        backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        color: isDarkMode ? "#13151B" : "#0B2B26",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                       }}
                                     >
                                       {[1, 20, 25, 30, 35, 40, 45, 50, 60].map((d) => (
@@ -258,7 +253,7 @@ const TrackingTable = ({
                                           value={d.toString()}
                                           className="cursor-pointer transition-colors"
                                           style={{
-                                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                                           }}
                                         >
                                           {d} mins
@@ -307,8 +302,8 @@ const TrackingTable = ({
                                 }
                                 className="flex items-center gap-1 px-3 py-1 rounded-lg transition-all"
                                 style={{
-                                  backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                                  color: isDarkMode ? '#13151B' : '#0B2B26',
+                                  backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                  color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                 }}
                               >
                                 {expanded ? (

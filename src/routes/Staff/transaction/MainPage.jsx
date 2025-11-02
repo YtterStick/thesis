@@ -54,17 +54,62 @@ const MainPage = () => {
         setErrorMessage(null);
 
         try {
-            const response = await api.post("api/transactions", payload);
-            console.log("🧾 Invoice saved:", response.invoiceNumber);
-
+            // Get staffId from localStorage BEFORE making the API call
             const staffId = localStorage.getItem("staffId");
-
-            setInvoice({
+            
+            // Include staffId in the payload
+            const payloadWithStaff = {
                 ...payload,
-                invoiceNumber: response.invoiceNumber,
-                formatSettings: response.formatSettings || {},
-                staffId: staffId || "Unknown",
+                staffId: staffId || "Unknown"
+            };
+
+            console.log("📝 Transaction payload staffId:", payloadWithStaff.staffId);
+
+            const response = await api.post("api/transactions", payloadWithStaff);
+            console.log("🧾 Full backend response:", response);
+            console.log("🔍 Response structure keys:", Object.keys(response));
+            
+            // Check what service data is in the response
+            console.log("🛠️ Service data in response:", {
+                serviceName: response.serviceName,
+                service: response.service,
+                servicePrice: response.servicePrice,
+                loads: response.loads,
+                serviceQuantity: response.serviceQuantity
             });
+
+            // Transform the response to ensure proper structure for frontend
+            const transformedInvoice = {
+                // Use direct properties from response
+                invoiceNumber: response.invoiceNumber,
+                customerName: response.customerName,
+                contact: response.contact,
+                staffId: response.staffId,
+                serviceName: response.serviceName,
+                servicePrice: response.servicePrice,
+                loads: response.loads || response.serviceQuantity || 1,
+                totalPrice: response.totalPrice,
+                paymentMethod: response.paymentMethod,
+                amountGiven: response.amountGiven,
+                change: response.change,
+                issueDate: response.issueDate,
+                dueDate: response.dueDate,
+                consumables: response.consumables || [],
+                formatSettings: response.formatSettings || {},
+                
+                // Include the original response as fallback
+                ...response
+            };
+
+            console.log("🎯 Transformed invoice data:", {
+                staffId: transformedInvoice.staffId,
+                serviceName: transformedInvoice.serviceName,
+                servicePrice: transformedInvoice.servicePrice,
+                loads: transformedInvoice.loads,
+                serviceQuantity: transformedInvoice.serviceQuantity
+            });
+
+            setInvoice(transformedInvoice);
 
             setPreviewData({
                 totalAmount: 0,

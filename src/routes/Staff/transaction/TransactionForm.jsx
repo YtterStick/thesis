@@ -67,6 +67,8 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const [supplySource, setSupplySource] = useState("in-store");
     const [consumables, setConsumables] = useState({});
     const [plasticOverrides, setPlasticOverrides] = useState({});
+    const [detergentOverrides, setDetergentOverrides] = useState({});
+    const [fabricOverrides, setFabricOverrides] = useState({});
     const [services, setServices] = useState([]);
     const [stockItems, setStockItems] = useState([]);
     const [paymentMethods, setPaymentMethods] = useState(["Cash"]);
@@ -102,9 +104,15 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             setLoads(1);
             setSupplySource("in-store");
             setPlasticOverrides({});
+            setDetergentOverrides({});
+            setFabricOverrides({});
+            
             const initialConsumables = {};
             stockItems.forEach((item) => {
-                initialConsumables[item.name] = item.name.toLowerCase().includes("plastic") ? 1 : 0;
+                initialConsumables[item.name] = 
+                    item.name.toLowerCase().includes("plastic") || 
+                    item.name.toLowerCase().includes("detergent") || 
+                    item.name.toLowerCase().includes("fabric") ? 1 : 0;
             });
             setConsumables(initialConsumables);
             onPreviewChange?.(null);
@@ -218,7 +226,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 
                 const initialConsumables = {};
                 safeStockItems.forEach((item) => {
-                    initialConsumables[item.name] = item.name.toLowerCase().includes("plastic") ? loads : 0;
+                    initialConsumables[item.name] = 
+                        item.name.toLowerCase().includes("plastic") || 
+                        item.name.toLowerCase().includes("detergent") || 
+                        item.name.toLowerCase().includes("fabric") ? loads : 0;
                 });
                 setConsumables(initialConsumables);
                 
@@ -254,7 +265,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             
             const initialConsumables = {};
             cachedData.stockItems.forEach((item) => {
-                initialConsumables[item.name] = item.name.toLowerCase().includes("plastic") ? loads : 0;
+                initialConsumables[item.name] = 
+                    item.name.toLowerCase().includes("plastic") || 
+                    item.name.toLowerCase().includes("detergent") || 
+                    item.name.toLowerCase().includes("fabric") ? loads : 0;
             });
             setConsumables(initialConsumables);
             
@@ -276,15 +290,60 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         };
     }, [fetchData]);
 
+    // Handle supply source changes - set detergent and fabric to 0 when customer-provided
+    useEffect(() => {
+        if (supplySource === "customer" && stockItems.length > 0) {
+            console.log("🔄 Customer provided selected - setting detergent and fabric to 0");
+            
+            const updatedConsumables = { ...consumables };
+            let hasChanges = false;
+
+            // Set all detergent items to 0
+            stockItems.forEach((item) => {
+                if (item.name.toLowerCase().includes("detergent")) {
+                    if (updatedConsumables[item.name] !== 0) {
+                        updatedConsumables[item.name] = 0;
+                        hasChanges = true;
+                        console.log(`✅ Set ${item.name} to 0`);
+                    }
+                    // Mark as manually set so it doesn't auto-sync
+                    setDetergentOverrides((prev) => ({ ...prev, [item.name]: true }));
+                }
+            });
+
+            // Set all fabric items to 0
+            stockItems.forEach((item) => {
+                if (item.name.toLowerCase().includes("fabric")) {
+                    if (updatedConsumables[item.name] !== 0) {
+                        updatedConsumables[item.name] = 0;
+                        hasChanges = true;
+                        console.log(`✅ Set ${item.name} to 0`);
+                    }
+                    // Mark as manually set so it doesn't auto-sync
+                    setFabricOverrides((prev) => ({ ...prev, [item.name]: true }));
+                }
+            });
+
+            if (hasChanges) {
+                setConsumables(updatedConsumables);
+            }
+        }
+    }, [supplySource, stockItems]);
+
+    // Auto-sync logic for consumables
     useEffect(() => {
         if (!stockItems.length) return;
 
         const expected = parseInt(loads) || 1;
+        
         const plasticItems = stockItems.filter((item) => item.name.toLowerCase().includes("plastic"));
+        const detergentItems = stockItems.filter((item) => item.name.toLowerCase().includes("detergent"));
+        const fabricItems = stockItems.filter((item) => item.name.toLowerCase().includes("fabric"));
 
         let changed = false;
         const updated = { ...consumables };
 
+        // Update plastic items that aren't overridden
         plasticItems.forEach((item) => {
             const name = item.name;
             if (!plasticOverrides[name] && consumables[name] !== expected) {
@@ -293,10 +352,32 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             }
         });
 
+        // Update detergent items that aren't overridden (only if in-store)
+        if (supplySource === "in-store") {
+            detergentItems.forEach((item) => {
+                const name = item.name;
+                if (!detergentOverrides[name] && consumables[name] !== expected) {
+                    updated[name] = expected;
+                    changed = true;
+                }
+            });
+        }
+
+        // Update fabric items that aren't overridden (only if in-store)
+        if (supplySource === "in-store") {
+            fabricItems.forEach((item) => {
+                const name = item.name;
+                if (!fabricOverrides[name] && consumables[name] !== expected) {
+                    updated[name] = expected;
+                    changed = true;
+                }
+            });
+        }
+
         if (changed) {
             setConsumables(updated);
         }
-    }, [loads, stockItems, plasticOverrides, consumables]);
+    }, [loads, stockItems, plasticOverrides, detergentOverrides, fabricOverrides, consumables, supplySource]);
 
     const handleConsumableChange = (name, value) => {
         setConsumables((prev) => ({
@@ -306,6 +387,16 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
         if (name.toLowerCase().includes("plastic")) {
             setPlasticOverrides((prev) => ({
+                ...prev,
+                [name]: true,
+            }));
+        } else if (name.toLowerCase().includes("detergent")) {
+            setDetergentOverrides((prev) => ({
+                ...prev,
+                [name]: true,
+            }));
+        } else if (name.toLowerCase().includes("fabric")) {
+            setFabricOverrides((prev) => ({
                 ...prev,
                 [name]: true,
             }));
@@ -435,8 +526,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             totalPrice: totalAmount,
             issueDate: new Date().toISOString(),
             dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            staffId: localStorage.getItem("staffId"),
+            staffId: localStorage.getItem("staffId") || "Unknown", // Ensure staffId is included
         };
+
+        console.log("📝 Submitting transaction with staffId:", payload.staffId);
 
         try {
             await onSubmit(payload);
@@ -569,6 +662,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         onConsumableChange={handleConsumableChange}
                         plasticOverrides={plasticOverrides}
                         setPlasticOverrides={setPlasticOverrides}
+                        detergentOverrides={detergentOverrides}
+                        setDetergentOverrides={setDetergentOverrides}
+                        fabricOverrides={fabricOverrides}
+                        setFabricOverrides={setFabricOverrides}
                         supplySource={supplySource}
                         isLocked={isLocked}
                     />

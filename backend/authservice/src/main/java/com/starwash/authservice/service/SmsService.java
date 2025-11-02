@@ -33,7 +33,6 @@ public class SmsService {
         sendSms(phoneNumber, message);
     }
     
-    // NEW METHOD: Send disposal warning notification
     public void sendDisposalWarningNotification(String phoneNumber, String customerName, String transactionId, int daysUntilDisposal) {
         String message;
         

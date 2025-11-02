@@ -63,7 +63,6 @@ public class DashboardService {
 
         List<MachineItem> allMachines = machineRepository.findAll();
 
-        // Get active loads with machine assignments
         Map<String, LocalDateTime> machineEndTimes = new HashMap<>();
         laundryJobRepository.findAll().stream()
                 .filter(job -> job.getLoadAssignments() != null)
@@ -72,7 +71,6 @@ public class DashboardService {
                         ("WASHING".equals(load.getStatus()) || "DRYING".equals(load.getStatus())))
                 .forEach(load -> machineEndTimes.put(load.getMachineId(), load.getEndTime()));
 
-        // Create enhanced machine list with endTime for in-use machines
         List<Map<String, Object>> enhancedMachines = allMachines.stream()
                 .map(machine -> {
                     Map<String, Object> machineData = new HashMap<>();
@@ -84,7 +82,6 @@ public class DashboardService {
                     machineData.put("lastMaintenance", machine.getLastMaintenance());
                     machineData.put("nextMaintenance", machine.getNextMaintenance());
                     
-                    // Add endTime if machine is in use
                     if ("In Use".equals(machine.getStatus()) && machineEndTimes.containsKey(machine.getId())) {
                         machineData.put("endTime", machineEndTimes.get(machine.getId()));
                     }

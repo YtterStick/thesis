@@ -41,7 +41,6 @@ public class TransactionService {
         this.auditService = auditService;
     }
 
-    // Manila timezone (GMT+8)
     private ZoneId getManilaTimeZone() {
         return ZoneId.of("Asia/Manila");
     }
@@ -61,7 +60,6 @@ public class TransactionService {
         List<ServiceEntryDto> consumableDtos = new ArrayList<>();
         List<ServiceEntry> consumables = new ArrayList<>();
 
-        // Check stock availability first before processing
         List<String> insufficientStockItems = new ArrayList<>();
 
         for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
@@ -75,20 +73,16 @@ public class TransactionService {
                 insufficientStockItems.add(String.format("%s (Requested: %d, Available: %d)",
                         itemName, quantity, item.getQuantity()));
 
-                // Send notification about stock issue instead of throwing error immediately
                 notificationService.notifyTransactionStockIssue(
                         itemName, quantity, item.getQuantity(), "pending-transaction");
             }
         }
 
-        // If there are insufficient stock items, throw a business exception with
-        // details
         if (!insufficientStockItems.isEmpty()) {
             String errorMessage = "Insufficient stock for: " + String.join(", ", insufficientStockItems);
             throw new InsufficientStockException(errorMessage, insufficientStockItems);
         }
 
-        // Process stock deduction only if all items are available
         for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
             String itemName = entry.getKey();
             int quantity = entry.getValue();
@@ -96,10 +90,8 @@ public class TransactionService {
             StockItem item = stockRepository.findByName(itemName)
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
 
-            // Store previous quantity for notification
             Integer previousQuantity = item.getQuantity();
 
-            // Deduct stock
             item.setQuantity(item.getQuantity() - quantity);
             stockRepository.save(item);
 
@@ -109,15 +101,12 @@ public class TransactionService {
             consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
             consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
 
-            // Notify about stock level change after transaction - this will only notify if
-            // status actually changed
             notificationService.checkAndNotifyStockLevel(item, previousQuantity);
         }
 
         double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
         double change = amountGiven - total;
 
-        // Use Manila time for all date operations
         LocalDateTime now = getCurrentManilaTime();
         LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
 
@@ -199,7 +188,6 @@ public class TransactionService {
                 staffId);
     }
 
-    // Custom exception for insufficient stock
     public static class InsufficientStockException extends RuntimeException {
         private final List<String> insufficientItems;
 
@@ -287,7 +275,6 @@ public class TransactionService {
                 tx.getStaffId());
     }
 
-    // In TransactionService.java - update the getAllRecords method
     public List<RecordResponseDto> getAllRecords() {
         List<Transaction> allTransactions = transactionRepository.findAll();
         List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
@@ -295,13 +282,12 @@ public class TransactionService {
         Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
                 .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-        // Use Manila time for expiration checks
         LocalDateTime currentManilaTime = getCurrentManilaTime();
 
         return allTransactions.stream().map(tx -> {
             RecordResponseDto dto = new RecordResponseDto();
             dto.setId(tx.getId());
-            dto.setInvoiceNumber(tx.getInvoiceNumber()); // Add this line
+            dto.setInvoiceNumber(tx.getInvoiceNumber());
             dto.setCustomerName(tx.getCustomerName());
             dto.setServiceName(tx.getServiceName());
             dto.setLoads(tx.getServiceQuantity());
@@ -322,7 +308,6 @@ public class TransactionService {
             dto.setPickupStatus("Unclaimed");
             dto.setWashed(false);
 
-            // Use Manila time for expiration check
             dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
             dto.setCreatedAt(tx.getCreatedAt());
 
@@ -356,7 +341,6 @@ public class TransactionService {
     public Map<String, Object> getStaffRecordsSummary() {
         Map<String, Object> summary = new HashMap<>();
 
-        // Use Manila time for date calculations
         LocalDate today = LocalDate.now(getManilaTimeZone());
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
@@ -418,7 +402,6 @@ public class TransactionService {
         return summary;
     }
 
-    // In TransactionService.java, update the getAllAdminRecords method:
 
     public List<AdminRecordResponseDto> getAllAdminRecords() {
         List<Transaction> allTransactions = transactionRepository.findAll();
@@ -427,7 +410,6 @@ public class TransactionService {
         Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
                 .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-        // Use Manila time for expiration checks
         LocalDateTime currentManilaTime = getCurrentManilaTime();
 
         return allTransactions.stream().map(tx -> {
@@ -439,7 +421,6 @@ public class TransactionService {
             dto.setServiceName(tx.getServiceName());
             dto.setLoads(tx.getServiceQuantity());
 
-            // Calculate detergent and fabric quantities
             String detergentQty = tx.getConsumables().stream()
                     .filter(c -> c.getName().toLowerCase().contains("detergent"))
                     .map(c -> String.valueOf(c.getQuantity()))
@@ -489,7 +470,6 @@ public class TransactionService {
                         }
                     }
 
-                    // Keep unwashed loads count for internal use if needed
                     long unwashedLoadsCount = job.getLoadAssignments().stream()
                             .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
                             .count();
@@ -509,7 +489,6 @@ public class TransactionService {
                 dto.setPickupStatus("UNCLAIMED");
                 dto.setLaundryStatus("Not Started");
                 dto.setUnwashedLoadsCount(tx.getServiceQuantity());
-                // Use Manila time for transaction expiration check
                 dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
                 dto.setLaundryProcessedBy(null);
                 dto.setClaimProcessedBy(null);
@@ -534,7 +513,6 @@ public class TransactionService {
         transactionRepository.save(transaction);
     }
 
-    // Additional method to log transaction updates
     public void logTransactionUpdate(String staffId, String transactionId, String description,
             HttpServletRequest request) {
         auditService.logActivity(
@@ -546,7 +524,6 @@ public class TransactionService {
                 request);
     }
 
-    // Utility method to fix existing transaction dates to Manila time
     public void fixTransactionDatesToManilaTime() {
         List<Transaction> allTransactions = transactionRepository.findAll();
         int fixedCount = 0;
@@ -556,25 +533,17 @@ public class TransactionService {
                 boolean needsUpdate = false;
                 LocalDateTime currentManilaTime = getCurrentManilaTime();
 
-                // Check and fix createdAt if needed
                 if (transaction.getCreatedAt() != null) {
-                    // If createdAt is more than 8 hours off from current Manila time, it might be
-                    // in wrong timezone
                     long hoursDifference = java.time.Duration.between(transaction.getCreatedAt(), currentManilaTime)
                             .toHours();
                     if (Math.abs(hoursDifference) > 12) {
                         System.out.println("🕒 Fixing createdAt for transaction: " + transaction.getInvoiceNumber());
-                        // For simplicity, we'll set it to current Manila time minus a reasonable offset
-                        // In a real scenario, you might want to preserve the original time but adjust
-                        // timezone
-                        transaction.setCreatedAt(currentManilaTime.minusDays(1)); // Example adjustment
+                        transaction.setCreatedAt(currentManilaTime.minusDays(1));
                         needsUpdate = true;
                     }
                 }
 
-                // Check and fix dueDate if it seems incorrect
                 if (transaction.getDueDate() != null && transaction.getIssueDate() != null) {
-                    // Due date should be 7 days after issue date
                     LocalDateTime expectedDueDate = transaction.getIssueDate().plusDays(7);
                     if (!transaction.getDueDate().equals(expectedDueDate)) {
                         System.out.println("📅 Fixing dueDate for transaction: " + transaction.getInvoiceNumber());

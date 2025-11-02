@@ -15,7 +15,6 @@ public class StockService {
     private final StockRepository stockRepository;
     private final NotificationService notificationService;
 
-    // Manila timezone (GMT+8)
     private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
 
     public StockService(StockRepository stockRepository, NotificationService notificationService) {
@@ -23,7 +22,6 @@ public class StockService {
         this.notificationService = notificationService;
     }
 
-    // Get current time in Manila timezone
     private LocalDateTime getCurrentManilaTime() {
         return LocalDateTime.now(MANILA_ZONE);
     }
@@ -45,7 +43,6 @@ public class StockService {
 
         StockItem savedItem = stockRepository.save(newItem);
 
-        // Notify about initial stock status
         notificationService.notifyCurrentStockStatus(savedItem);
         return savedItem;
     }
@@ -56,7 +53,6 @@ public class StockService {
         return stockRepository.findById(id).map(existing -> {
             Integer previousQuantity = existing.getQuantity();
 
-            // Update fields
             existing.setName(updatedItem.getName());
             existing.setQuantity(updatedItem.getQuantity());
             existing.setUnit(updatedItem.getUnit());
@@ -68,7 +64,6 @@ public class StockService {
 
             StockItem savedItem = stockRepository.save(existing);
 
-            // Check and notify about stock level changes
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
             return savedItem;
         });
@@ -98,11 +93,9 @@ public class StockService {
             String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s",
                     item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
 
-            // Notify about restock
             notificationService.notifyAllUsers("inventory_update",
                     "Restock Completed", message, item.getId());
 
-            // Check stock level after restock
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
 
             return savedItem;

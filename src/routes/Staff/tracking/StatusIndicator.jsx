@@ -7,7 +7,6 @@ import dryingAnimation from "@/assets/lottie/dryer-machine.json";
 import foldingAnimation from "@/assets/lottie/clothes.json";
 import loaderAnimation from "@/assets/lottie/loader.json";
 
-// Updated status icons with static versions for completed states
 const STATUS_ICONS = {
     UNWASHED: { 
         label: "Not Started", 
@@ -22,8 +21,8 @@ const STATUS_ICONS = {
     WASHED: { 
         label: "Washed", 
         animation: washingAnimation,
-        loop: false, // Static when completed
-        staticFrame: 50 // Use a specific frame for static state
+        loop: false,
+        staticFrame: 50
     },
     DRYING: { 
         label: "Drying", 
@@ -33,8 +32,8 @@ const STATUS_ICONS = {
     DRIED: { 
         label: "Dried", 
         animation: dryingAnimation,
-        loop: false, // Static when completed
-        staticFrame: 30 // Use a specific frame for static state
+        loop: false,
+        staticFrame: 30
     },
     FOLDING: { 
         label: "Folding", 
@@ -44,8 +43,8 @@ const STATUS_ICONS = {
     COMPLETED: { 
         label: "Completed", 
         animation: foldingAnimation,
-        loop: false, // Static when completed
-        staticFrame: 20 // Use a specific frame for static state
+        loop: false,
+        staticFrame: 20
     },
 };
 
@@ -63,7 +62,6 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
     const statusConfig = STATUS_ICONS[load.status] || STATUS_ICONS.UNWASHED;
     const remaining = getRemainingTime(load);
 
-    // Determine if we should show static animation (for completed states)
     const shouldShowStatic = !statusConfig.loop && statusConfig.staticFrame !== undefined;
     
     return (
@@ -101,9 +99,9 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
             </TooltipTrigger>
             <TooltipContent
                 style={{
-                    backgroundColor: isDarkMode ? "#0B2B26" : "#FFFFFF",
-                    color: isDarkMode ? "#F3EDE3" : "#0B2B26",
-                    borderColor: isDarkMode ? "#1C3F3A" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
                 {remaining !== null && remaining > 0

@@ -3,99 +3,115 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Clock, CheckCircle, AlertCircle, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, RefreshCw, Calendar, User, FileText, X } from "lucide-react";
+import {
+    Search,
+    Clock,
+    CheckCircle,
+    AlertCircle,
+    Filter,
+    ChevronDown,
+    ChevronUp,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    Eye,
+    RefreshCw,
+    Calendar,
+    User,
+    FileText,
+    X,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "@/lib/api-config"; // Import the api utility
-
-// Skeleton Loader Components
+import { api } from "@/lib/api-config";
 const SkeletonRow = ({ isDarkMode }) => (
-    <TableRow 
+    <TableRow
         className="border-t transition-all"
         style={{
-            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+            borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
         }}
     >
         <TableCell className="py-4">
             <div className="flex items-center">
-                <div 
-                    className="skeleton h-4 w-4 rounded mr-2"
+                <div
+                    className="skeleton mr-2 h-4 w-4 rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                     }}
                 ></div>
-                <div 
+                <div
                     className="skeleton h-4 w-32 rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                     }}
                 ></div>
             </div>
         </TableCell>
         <TableCell>
-            <div 
+            <div
                 className="skeleton h-4 w-24 rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                 }}
             ></div>
         </TableCell>
         <TableCell>
-            <div 
+            <div
                 className="skeleton h-4 w-20 rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                 }}
             ></div>
         </TableCell>
         <TableCell>
-            <div 
+            <div
                 className="skeleton h-4 w-28 rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                 }}
             ></div>
         </TableCell>
         <TableCell>
-            <div 
+            <div
                 className="skeleton h-4 w-20 rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                 }}
             ></div>
         </TableCell>
         <TableCell>
-            <div 
+            <div
                 className="skeleton h-4 w-28 rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                 }}
             ></div>
         </TableCell>
         <TableCell>
-            <div 
+            <div
                 className="skeleton h-4 w-20 rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                 }}
             ></div>
         </TableCell>
         <TableCell>
-            <div 
+            <div
                 className="skeleton h-6 w-24 rounded-full"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                 }}
             ></div>
         </TableCell>
         <TableCell>
-            <div 
+            <div
                 className="skeleton h-8 w-full rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
                 }}
             ></div>
         </TableCell>
@@ -111,12 +127,12 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
 
     const formatDate = (dateString) => {
         if (!dateString) return "Not available";
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+        return new Date(dateString).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
         });
     };
 
@@ -137,17 +153,23 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         className="relative w-full max-w-2xl rounded-xl border-2 p-6 shadow-xl transition-all"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         {/* Header */}
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="mb-6 flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                <h2
+                                    className="text-xl font-semibold"
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                >
                                     Item Details
                                 </h2>
-                                <p className="text-sm mt-1" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                <p
+                                    className="mt-1 text-sm"
+                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                >
                                     Complete information about this missing item
                                 </p>
                             </div>
@@ -157,10 +179,13 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                                 onClick={onClose}
                                 className="rounded-lg p-1 transition-colors hover:opacity-80"
                                 style={{
-                                    backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                 }}
                             >
-                                <X className="w-5 h-5" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
+                                <X
+                                    className="h-5 w-5"
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                />
                             </motion.button>
                         </div>
 
@@ -169,22 +194,22 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                             {/* Status Badge */}
                             <div className="flex justify-center">
                                 {item.claimed ? (
-                                    <Badge 
-                                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-base"
+                                    <Badge
+                                        className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-base"
                                         style={{
-                                            backgroundColor: '#F0FDF4',
-                                            color: '#059669',
+                                            backgroundColor: "#F0FDF4",
+                                            color: "#059669",
                                         }}
                                     >
                                         <CheckCircle className="h-4 w-4" />
                                         Claimed
                                     </Badge>
                                 ) : (
-                                    <Badge 
-                                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-base"
+                                    <Badge
+                                        className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-base"
                                         style={{
-                                            backgroundColor: '#FFFBEB',
-                                            color: '#D97706',
+                                            backgroundColor: "#FFFBEB",
+                                            color: "#D97706",
                                         }}
                                     >
                                         <Clock className="h-4 w-4" />
@@ -194,46 +219,64 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                             </div>
 
                             {/* Item Information */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                            <FileText className="inline w-4 h-4 mr-2" />
+                                        <label
+                                            className="mb-2 block text-sm font-medium"
+                                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                        >
+                                            <FileText className="mr-2 inline h-4 w-4" />
                                             Item Description
                                         </label>
-                                        <div className="p-3 rounded-lg border-2" style={{ 
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(243, 237, 227, 0.5)",
-                                            color: isDarkMode ? '#13151B' : '#0B2B26'
-                                        }}>
+                                        <div
+                                            className="rounded-lg border-2 p-3"
+                                            style={{
+                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.5)",
+                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                            }}
+                                        >
                                             {item.itemDescription}
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                            <User className="inline w-4 h-4 mr-2" />
+                                        <label
+                                            className="mb-2 block text-sm font-medium"
+                                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                        >
+                                            <User className="mr-2 inline h-4 w-4" />
                                             Reported By
                                         </label>
-                                        <div className="p-3 rounded-lg border-2" style={{ 
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(243, 237, 227, 0.5)",
-                                            color: isDarkMode ? '#13151B' : '#0B2B26'
-                                        }}>
+                                        <div
+                                            className="rounded-lg border-2 p-3"
+                                            style={{
+                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.5)",
+                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                            }}
+                                        >
                                             {item.foundByStaffId || "Not specified"}
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                            <Calendar className="inline w-4 h-4 mr-2" />
+                                        <label
+                                            className="mb-2 block text-sm font-medium"
+                                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                        >
+                                            <Calendar className="mr-2 inline h-4 w-4" />
                                             Found Date
                                         </label>
-                                        <div className="p-3 rounded-lg border-2" style={{ 
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(243, 237, 227, 0.5)",
-                                            color: isDarkMode ? '#13151B' : '#0B2B26'
-                                        }}>
+                                        <div
+                                            className="rounded-lg border-2 p-3"
+                                            style={{
+                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.5)",
+                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                            }}
+                                        >
                                             {formatDate(item.foundDate)}
                                         </div>
                                     </div>
@@ -241,14 +284,20 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                        <label
+                                            className="mb-2 block text-sm font-medium"
+                                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                        >
                                             Found In Machine
                                         </label>
-                                        <div className="p-3 rounded-lg border-2" style={{ 
-                                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                            backgroundColor: isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(243, 237, 227, 0.5)",
-                                            color: isDarkMode ? '#13151B' : '#0B2B26'
-                                        }}>
+                                        <div
+                                            className="rounded-lg border-2 p-3"
+                                            style={{
+                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.5)",
+                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                            }}
+                                        >
                                             {getMachineName(item.machineId) || "Not associated with a machine"}
                                         </div>
                                     </div>
@@ -256,29 +305,41 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                                     {item.claimed && (
                                         <>
                                             <div>
-                                                <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                                    <User className="inline w-4 h-4 mr-2" />
+                                                <label
+                                                    className="mb-2 block text-sm font-medium"
+                                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                                >
+                                                    <User className="mr-2 inline h-4 w-4" />
                                                     Claimed By
                                                 </label>
-                                                <div className="p-3 rounded-lg border-2" style={{ 
-                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(243, 237, 227, 0.5)",
-                                                    color: isDarkMode ? '#13151B' : '#0B2B26'
-                                                }}>
+                                                <div
+                                                    className="rounded-lg border-2 p-3"
+                                                    style={{
+                                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.5)",
+                                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                    }}
+                                                >
                                                     {item.claimedByName}
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                                    <Calendar className="inline w-4 h-4 mr-2" />
+                                                <label
+                                                    className="mb-2 block text-sm font-medium"
+                                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                                >
+                                                    <Calendar className="mr-2 inline h-4 w-4" />
                                                     Claimed Date
                                                 </label>
-                                                <div className="p-3 rounded-lg border-2" style={{ 
-                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(243, 237, 227, 0.5)",
-                                                    color: isDarkMode ? '#13151B' : '#0B2B26'
-                                                }}>
+                                                <div
+                                                    className="rounded-lg border-2 p-3"
+                                                    style={{
+                                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.5)",
+                                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                    }}
+                                                >
                                                     {formatDate(item.claimDate)}
                                                 </div>
                                             </div>
@@ -289,29 +350,38 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
 
                             {/* Notes */}
                             <div>
-                                <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                <label
+                                    className="mb-2 block text-sm font-medium"
+                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                >
                                     Additional Notes
                                 </label>
-                                <div className="p-3 rounded-lg border-2 min-h-20" style={{ 
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(243, 237, 227, 0.5)",
-                                    color: isDarkMode ? '#13151B' : '#0B2B26'
-                                }}>
+                                <div
+                                    className="min-h-20 rounded-lg border-2 p-3"
+                                    style={{
+                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.5)",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                    }}
+                                >
                                     {item.notes || "No additional notes provided"}
                                 </div>
                             </div>
                         </div>
 
                         {/* Footer */}
-                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: isDarkMode ? "#2A524C" : "#0B2B26" }}>
+                        <div
+                            className="mt-6 flex justify-end gap-3 border-t pt-4"
+                            style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }}
+                        >
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={onClose}
                                 className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
                                 style={{
-                                    backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
-                                    color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                 }}
                             >
                                 Close
@@ -397,7 +467,6 @@ const MissingTable = ({
 
             setIsSearchingLaundryJobs(true);
             try {
-                // Use the api utility instead of direct fetch
                 const data = await api.get(`api/laundry-jobs/search-by-customer?customerName=${encodeURIComponent(name)}`);
                 setLaundryJobSearchResults(data);
             } catch (error) {
@@ -435,12 +504,12 @@ const MissingTable = ({
 
     const formatDate = (dateString) => {
         if (!dateString) return "-";
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+        return new Date(dateString).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
         });
     };
 
@@ -462,58 +531,66 @@ const MissingTable = ({
     };
 
     const inputClass = `rounded-lg border-2 transition-all ${
-        isDarkMode 
-            ? "bg-white text-slate-900 border-slate-300 focus:border-cyan-500" 
+        isDarkMode
+            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3DD9B6]"
             : "bg-white text-slate-900 border-slate-300 focus:border-cyan-500"
     }`;
 
     if (isLoading) {
         return (
-            <div 
+            <div
                 className="rounded-lg border-2 shadow-sm"
                 style={{
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
                 <Table>
                     <TableHeader>
-                        <TableRow 
+                        <TableRow
                             className="border-b"
                             style={{
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                             }}
                         >
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Item Description</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Found In Machine</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Reported By</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Found Date</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Claimed By</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Claimed Date</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Notes</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Status</TableHead>
-                            <TableHead className="text-right" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Actions</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Item Description</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found In Machine</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Reported By</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found Date</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed By</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed Date</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Notes</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Status</TableHead>
+                            <TableHead
+                                className="text-right"
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                            >
+                                Actions
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {Array.from({ length: itemsPerPage }).map((_, index) => (
-                            <SkeletonRow key={index} isDarkMode={isDarkMode} />
+                            <SkeletonRow
+                                key={index}
+                                isDarkMode={isDarkMode}
+                            />
                         ))}
                     </TableBody>
                 </Table>
-                
+
                 <style jsx>{`
                     .skeleton {
                         background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
                         background-size: 200% 100%;
                         animation: loading 1.5s infinite;
                     }
-                    
+
                     .dark .skeleton {
                         background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
                         background-size: 200% 100%;
                     }
-                    
+
                     @keyframes loading {
                         0% {
                             background-position: 200% 0;
@@ -532,30 +609,35 @@ const MissingTable = ({
 
     return (
         <>
-            <div 
+            <div
                 className="rounded-lg border-2 shadow-sm"
                 style={{
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
                 <Table>
                     <TableHeader>
-                        <TableRow 
+                        <TableRow
                             className="border-b"
                             style={{
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                             }}
                         >
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Item Description</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Found In Machine</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Reported By</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Found Date</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Claimed By</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Claimed Date</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Notes</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Status</TableHead>
-                            <TableHead className="text-right" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Actions</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Item Description</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found In Machine</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Reported By</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found Date</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed By</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed Date</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Notes</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Status</TableHead>
+                            <TableHead
+                                className="text-right"
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                            >
+                                Actions
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -565,14 +647,16 @@ const MissingTable = ({
                                     colSpan={9}
                                     className="py-16 text-center"
                                 >
-                                    <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                        <CheckCircle className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
-                                        <p className="text-lg font-medium">
-                                            No missing items found
-                                        </p>
-                                        <p className="text-sm">
-                                            All items have been claimed or no items reported yet
-                                        </p>
+                                    <div
+                                        className="flex flex-col items-center justify-center"
+                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                                    >
+                                        <CheckCircle
+                                            className="mb-4 h-12 w-12"
+                                            style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                                        />
+                                        <p className="text-lg font-medium">No missing items found</p>
+                                        <p className="text-sm">All items have been claimed or no items reported yet</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -582,8 +666,14 @@ const MissingTable = ({
                                     colSpan={9}
                                     className="py-16 text-center"
                                 >
-                                    <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                        <Search className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
+                                    <div
+                                        className="flex flex-col items-center justify-center"
+                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                                    >
+                                        <Search
+                                            className="mb-4 h-12 w-12"
+                                            style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                                        />
                                         <p className="text-lg font-medium">No matching items found</p>
                                         <p className="text-sm">Try adjusting your search or filter criteria</p>
                                     </div>
@@ -602,11 +692,14 @@ const MissingTable = ({
                                             item.claimed ? "bg-green-50 dark:bg-green-950/20" : ""
                                         }`}
                                         style={{
-                                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                            borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
                                         }}
                                     >
-                                        <TableCell className="font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        <TableCell
+                                            className="font-medium"
+                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                        >
                                             {item.itemDescription}
                                         </TableCell>
                                         <TableCell>
@@ -614,27 +707,24 @@ const MissingTable = ({
                                                 variant="outline"
                                                 className="rounded-lg border-2 capitalize transition-all"
                                                 style={{
-                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                    color: isDarkMode ? '#13151B' : '#0B2B26',
-                                                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                                    borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.9)",
                                                 }}
                                             >
                                                 {machineName}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                                            {item.foundByStaffId}
-                                        </TableCell>
-                                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                                            {formatDate(item.foundDate)}
-                                        </TableCell>
-                                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                                            {item.claimedByName || "-"}
-                                        </TableCell>
-                                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{item.foundByStaffId}</TableCell>
+                                        <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{formatDate(item.foundDate)}</TableCell>
+                                        <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{item.claimedByName || "-"}</TableCell>
+                                        <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
                                             {item.claimed ? formatDate(item.claimDate) : "-"}
                                         </TableCell>
-                                        <TableCell className="max-w-xs" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        <TableCell
+                                            className="max-w-xs"
+                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                        >
                                             <div className="flex items-start gap-1">
                                                 <div className="flex-1">{shouldTruncate ? truncateNote(item.notes) : item.notes || "-"}</div>
                                                 {isLongNote(item.notes) && (
@@ -660,21 +750,21 @@ const MissingTable = ({
                                         </TableCell>
                                         <TableCell>
                                             {item.claimed ? (
-                                                <Badge 
+                                                <Badge
                                                     className="flex w-24 items-center justify-center gap-1 rounded-lg transition-all"
                                                     style={{
-                                                        backgroundColor: '#F0FDF4',
-                                                        color: '#059669',
+                                                        backgroundColor: "#F0FDF4",
+                                                        color: "#059669",
                                                     }}
                                                 >
                                                     <CheckCircle className="h-3 w-3" /> Claimed
                                                 </Badge>
                                             ) : (
-                                                <Badge 
+                                                <Badge
                                                     className="flex w-24 items-center justify-center gap-1 rounded-lg transition-all"
                                                     style={{
-                                                        backgroundColor: '#FFFBEB',
-                                                        color: '#D97706',
+                                                        backgroundColor: "#FFFBEB",
+                                                        color: "#D97706",
                                                     }}
                                                 >
                                                     <Clock className="h-3 w-3" /> Unclaimed
@@ -708,8 +798,8 @@ const MissingTable = ({
                                                                     }}
                                                                     className="rounded-lg transition-all"
                                                                     style={{
-                                                                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                                                        color: "#F3EDE3",
+                                                                        backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                                                        color: "#f1f5f9",
                                                                     }}
                                                                 >
                                                                     <CheckCircle className="mr-1 h-4 w-4" />
@@ -717,24 +807,34 @@ const MissingTable = ({
                                                                 </Button>
                                                             </motion.div>
                                                         </DialogTrigger>
-                                                        <DialogContent 
+                                                        <DialogContent
                                                             className="max-w-2xl rounded-xl border-2 p-6"
                                                             style={{
-                                                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                                             }}
                                                         >
                                                             <DialogHeader>
-                                                                <DialogTitle className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                                <DialogTitle
+                                                                    className="text-lg font-semibold"
+                                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                                >
                                                                     Claim Item
                                                                 </DialogTitle>
-                                                                <DialogDescription className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                                                    Enter the name of the person claiming this item. Matching laundry jobs will appear below.
+                                                                <DialogDescription
+                                                                    className="text-sm"
+                                                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                                                >
+                                                                    Enter the name of the person claiming this item. Matching laundry jobs will appear
+                                                                    below.
                                                                 </DialogDescription>
                                                             </DialogHeader>
                                                             <div className="space-y-4">
                                                                 <div>
-                                                                    <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                                    <label
+                                                                        className="mb-2 block text-sm font-medium"
+                                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                                    >
                                                                         Claimant Name
                                                                     </label>
                                                                     <Input
@@ -749,7 +849,10 @@ const MissingTable = ({
                                                                 </div>
 
                                                                 {isSearchingLaundryJobs && (
-                                                                    <div className="flex items-center text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                                                                    <div
+                                                                        className="flex items-center text-sm"
+                                                                        style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                                                    >
                                                                         <Clock className="mr-2 h-4 w-4 animate-spin" />
                                                                         Searching laundry jobs...
                                                                     </div>
@@ -757,13 +860,16 @@ const MissingTable = ({
 
                                                                 {laundryJobSearchResults.length > 0 && (
                                                                     <div className="mt-4">
-                                                                        <h4 className="mb-2 text-sm font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                                                        <h4
+                                                                            className="mb-2 text-sm font-medium"
+                                                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                                        >
                                                                             Matching Laundry Jobs ({laundryJobSearchResults.length}):
                                                                         </h4>
-                                                                        <div 
+                                                                        <div
                                                                             className="max-h-60 divide-y overflow-y-auto rounded-lg border-2"
                                                                             style={{
-                                                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                                                                             }}
                                                                         >
                                                                             {laundryJobSearchResults.map((job) => {
@@ -833,8 +939,8 @@ const MissingTable = ({
                                                                         className="w-full rounded-lg transition-all"
                                                                         disabled={!claimName.trim()}
                                                                         style={{
-                                                                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                                                            color: "#F3EDE3",
+                                                                            backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                                                            color: "#f1f5f9",
                                                                         }}
                                                                     >
                                                                         Mark as Claimed
@@ -853,9 +959,9 @@ const MissingTable = ({
                                                             onClick={() => handleViewDetails(item)}
                                                             className="rounded-lg border-2 transition-all"
                                                             style={{
-                                                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                                color: isDarkMode ? '#13151B' : '#0B2B26',
-                                                                backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                                                borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(243, 237, 227, 0.9)",
                                                             }}
                                                         >
                                                             <Eye className="mr-1 h-4 w-4" />
@@ -872,22 +978,26 @@ const MissingTable = ({
                     </TableBody>
                 </Table>
 
-                {/* Pagination Controls */}
                 {!isLoading && allItems.length > 0 && (
-                    <div 
+                    <div
                         className="flex flex-col items-center justify-between border-t p-4 sm:flex-row"
                         style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <div className="mb-4 flex items-center space-x-2 sm:mb-0">
-                            <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>Rows per page</p>
+                            <p
+                                className="text-sm"
+                                style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                            >
+                                Rows per page
+                            </p>
                             <select
                                 className="h-8 w-16 rounded-lg border-2 text-sm transition-all"
                                 style={{
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                    color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                 }}
                                 value={itemsPerPage}
                                 onChange={(e) => handleItemsPerPageChange(e.target.value)}
@@ -900,7 +1010,10 @@ const MissingTable = ({
                         </div>
 
                         <div className="flex items-center space-x-2">
-                            <div className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                            <div
+                                className="text-sm"
+                                style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                            >
                                 {startIndex + 1}-{endIndex} of {totalItems}
                             </div>
 
@@ -911,12 +1024,12 @@ const MissingTable = ({
                                     onClick={() => handlePageChange(1)}
                                     disabled={currentPage === 1}
                                     className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all ${
-                                        currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
+                                        currentPage === 1 ? "cursor-not-allowed opacity-50" : ""
                                     }`}
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                     }}
                                 >
                                     <ChevronsLeft className="h-4 w-4" />
@@ -928,12 +1041,12 @@ const MissingTable = ({
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
                                     className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all ${
-                                        currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
+                                        currentPage === 1 ? "cursor-not-allowed opacity-50" : ""
                                     }`}
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                     }}
                                 >
                                     <ChevronLeft className="h-4 w-4" />
@@ -945,12 +1058,12 @@ const MissingTable = ({
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
                                     className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all ${
-                                        currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
+                                        currentPage === totalPages ? "cursor-not-allowed opacity-50" : ""
                                     }`}
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                     }}
                                 >
                                     <ChevronRight className="h-4 w-4" />
@@ -962,12 +1075,12 @@ const MissingTable = ({
                                     onClick={() => handlePageChange(totalPages)}
                                     disabled={currentPage === totalPages}
                                     className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all ${
-                                        currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
+                                        currentPage === totalPages ? "cursor-not-allowed opacity-50" : ""
                                     }`}
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                     }}
                                 >
                                     <ChevronsRight className="h-4 w-4" />
@@ -978,7 +1091,6 @@ const MissingTable = ({
                 )}
             </div>
 
-            {/* View Details Modal */}
             <ViewDetailsModal
                 item={selectedViewItem}
                 isOpen={viewModalOpen}

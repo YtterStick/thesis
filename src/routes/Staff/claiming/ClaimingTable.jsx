@@ -20,15 +20,15 @@ import {
 } from "lucide-react";
 import ServiceReceiptCard from "@/components/ServiceReceiptCard";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
 // Skeleton Loader Components
 const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
     <TableRow 
         className="border-t transition-all"
         style={{
-            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+            borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
         }}
     >
         <TableCell className="py-4">
@@ -36,13 +36,13 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
                 <div 
                     className="skeleton h-4 w-4 rounded mr-2"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                     }}
                 ></div>
                 <div 
                     className="skeleton h-4 w-32 rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                     }}
                 ></div>
             </div>
@@ -51,7 +51,7 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
             <div 
                 className="skeleton h-4 w-24 rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                 }}
             ></div>
         </TableCell>
@@ -59,7 +59,7 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
             <div 
                 className="skeleton h-6 w-20 rounded-full"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                 }}
             ></div>
         </TableCell>
@@ -68,7 +68,7 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
                 <div 
                     className="skeleton h-6 w-8 rounded-full"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                     }}
                 ></div>
             </div>
@@ -78,13 +78,13 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
                 <div 
                     className="skeleton h-4 w-4 rounded mr-1"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                     }}
                 ></div>
                 <div 
                     className="skeleton h-4 w-28 rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                     }}
                 ></div>
             </div>
@@ -94,7 +94,7 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
                 <div 
                     className="skeleton h-4 w-28 rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                     }}
                 ></div>
             </TableCell>
@@ -104,7 +104,7 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
                 <div 
                     className="skeleton h-4 w-28 rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                        backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                     }}
                 ></div>
             </TableCell>
@@ -113,7 +113,7 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
             <div 
                 className="skeleton h-6 w-24 rounded-full"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                 }}
             ></div>
         </TableCell>
@@ -121,7 +121,7 @@ const SkeletonRow = ({ isExpiredTab, isDarkMode }) => (
             <div 
                 className="skeleton h-8 w-full rounded"
                 style={{
-                    backgroundColor: isDarkMode ? "#2A524C" : "#E0EAE8"
+                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0"
                 }}
             ></div>
         </TableCell>
@@ -165,7 +165,6 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
     const fetchFormatSettings = async () => {
         try {
             setLoadingSettings(true);
-            // Use the api utility instead of direct fetch
             const settings = await api.get("api/format-settings");
             setFormatSettings(settings);
         } catch (error) {
@@ -186,7 +185,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
             <div 
                 className="rounded-lg border-2 shadow-sm"
                 style={{
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
                 <Table>
@@ -194,19 +193,19 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                         <TableRow 
                             className="border-b"
                             style={{
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                             }}
                         >
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Customer</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Contact</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Service</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Loads</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Date Completed</TableHead>
-                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Due Date</TableHead>}
-                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Past Due On</TableHead>}
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Status</TableHead>
-                            <TableHead className="text-right" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Actions</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Customer</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Contact</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Service</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loads</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Date Completed</TableHead>
+                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Due Date</TableHead>}
+                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Past Due On</TableHead>}
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Status</TableHead>
+                            <TableHead className="text-right" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -309,7 +308,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
             <div 
                 className="rounded-lg border-2 shadow-sm"
                 style={{
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
                 <Table>
@@ -317,19 +316,19 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                         <TableRow 
                             className="border-b"
                             style={{
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                backgroundColor: isDarkMode ? "rgba(42, 82, 76, 0.1)" : "rgba(11, 43, 38, 0.1)",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                             }}
                         >
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Customer</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Contact</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Service</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Loads</TableHead>
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Date Completed</TableHead>
-                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Due Date</TableHead>}
-                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Past Due On</TableHead>}
-                            <TableHead style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Status</TableHead>
-                            <TableHead className="text-right" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Actions</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Customer</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Contact</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Service</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loads</TableHead>
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Date Completed</TableHead>
+                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Due Date</TableHead>}
+                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Past Due On</TableHead>}
+                            <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Status</TableHead>
+                            <TableHead className="text-right" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -339,8 +338,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     colSpan={isExpiredTab ? 8 : 8}
                                     className="py-16 text-center"
                                 >
-                                    <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                        <CheckCircle2 className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
+                                    <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
+                                        <CheckCircle2 className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }} />
                                         <p className="text-lg font-medium">
                                             {isExpiredTab ? "No past due laundry!" : "All laundry has been claimed!"}
                                         </p>
@@ -356,8 +355,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     colSpan={isExpiredTab ? 8 : 8}
                                     className="py-16 text-center"
                                 >
-                                    <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
-                                        <Search className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/50' }} />
+                                    <div className="flex flex-col items-center justify-center" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
+                                        <Search className="mb-4 h-12 w-12" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }} />
                                         <p className="text-lg font-medium">No matching transactions found</p>
                                         <p className="text-sm">Try adjusting your search or filter criteria</p>
                                     </div>
@@ -380,23 +379,23 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                             isExpired ? "bg-rose-50 dark:bg-rose-950/30" : ""
                                         }`}
                                         style={{
-                                            borderColor: isDarkMode ? "#2A524C" : "#E0EAE8",
-                                            backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
+                                            borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
                                         }}
                                     >
-                                        <TableCell className="flex items-center font-medium" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                        <TableCell className="flex items-center font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                             <Shirt className="mr-2 h-4 w-4" style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }} />
                                             {transaction.customerName}
                                         </TableCell>
-                                        <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>{transaction.contact || "N/A"}</TableCell>
+                                        <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{transaction.contact || "N/A"}</TableCell>
                                         <TableCell>
                                             <Badge
                                                 variant="outline"
                                                 className="border-2 capitalize transition-all"
                                                 style={{
-                                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                    color: isDarkMode ? '#13151B' : '#0B2B26',
-                                                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                                    borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                                    color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                                 }}
                                             >
                                                 {transaction.serviceType?.toLowerCase() || "N/A"}
@@ -407,25 +406,25 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                                 <Badge 
                                                     className="transition-all"
                                                     style={{
-                                                        backgroundColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                        color: "#F3EDE3",
+                                                        backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                                        color: "#f1f5f9",
                                                     }}
                                                 >
                                                     {transaction.loadAssignments?.length || 0}
                                                 </Badge>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="flex items-center" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
-                                            <Calendar className="mr-1 h-4 w-4" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }} />
+                                        <TableCell className="flex items-center" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                            <Calendar className="mr-1 h-4 w-4" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }} />
                                             {completionDate ? formatDateTime(completionDate) : "N/A"}
                                         </TableCell>
                                         {!isExpiredTab && (
-                                            <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                                 {dueDate ? formatDateTime(dueDate) : "N/A"}
                                             </TableCell>
                                         )}
                                         {isExpiredTab && (
-                                            <TableCell style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                                            <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                                 {dueDate ? formatDateTime(dueDate) : "N/A"}
                                             </TableCell>
                                         )}
@@ -495,8 +494,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                                     disabled={loadingTransactionId === transaction.id}
                                                     className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-all"
                                                     style={{
-                                                        backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
-                                                        color: "#F3EDE3",
+                                                        backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
+                                                        color: "#f1f5f9",
                                                     }}
                                                 >
                                                     {loadingTransactionId === transaction.id ? (
@@ -515,9 +514,9 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                                     onClick={() => handleViewReceipt(transaction)}
                                                     className="flex items-center gap-1 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-all"
                                                     style={{
-                                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                                        color: isDarkMode ? '#13151B' : '#0B2B26',
-                                                        backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                                        color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                                     }}
                                                 >
                                                     <Printer className="h-3 w-3" />
@@ -537,17 +536,17 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                     <div 
                         className="flex flex-col items-center justify-between border-t p-4 sm:flex-row"
                         style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     >
                         <div className="mb-4 flex items-center space-x-2 sm:mb-0">
-                            <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>Rows per page</p>
+                            <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>Rows per page</p>
                             <select
                                 className="h-8 w-16 rounded-lg border-2 text-sm transition-all"
                                 style={{
-                                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                    color: isDarkMode ? '#13151B' : '#0B2B26',
+                                    borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                    color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                 }}
                                 value={itemsPerPage}
                                 onChange={(e) => handleItemsPerPageChange(e.target.value)}
@@ -560,7 +559,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                         </div>
 
                         <div className="flex items-center space-x-2">
-                            <div className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>
+                            <div className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
                                 {startIndex + 1}-{endIndex} of {totalItems}
                             </div>
 
@@ -572,9 +571,9 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     disabled={currentPage === 1}
                                     className="flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all"
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                     }}
                                 >
                                     <ChevronsLeft className="h-4 w-4" />
@@ -587,9 +586,9 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     disabled={currentPage === 1}
                                     className="flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all"
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                     }}
                                 >
                                     <ChevronLeft className="h-4 w-4" />
@@ -602,9 +601,9 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     disabled={currentPage === totalPages}
                                     className="flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all"
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                     }}
                                 >
                                     <ChevronRight className="h-4 w-4" />
@@ -617,9 +616,9 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     disabled={currentPage === totalPages}
                                     className="flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-all"
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                     }}
                                 >
                                     <ChevronsRight className="h-4 w-4" />
@@ -645,8 +644,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                             exit={{ scale: 0.9, opacity: 0 }}
                             className="w-full max-w-md rounded-xl border-2 p-6 shadow-2xl"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#475569" : "#cbd5e1",
                             }}
                         >
                             <div className="mb-4 flex items-center gap-3">
@@ -659,12 +658,12 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     <AlertTriangle className="h-6 w-6" style={{ color: '#EF4444' }} />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Confirm Disposal</h3>
-                                    <p className="text-sm" style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}>This action cannot be undone</p>
+                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Confirm Disposal</h3>
+                                    <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>This action cannot be undone</p>
                                 </div>
                             </div>
 
-                            <p className="mb-6" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>
+                            <p className="mb-6" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                 This laundry item was not claimed by the customer. Are you sure you want to dispose it?
                             </p>
 
@@ -675,9 +674,9 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     onClick={cancelDispose}
                                     className="rounded-lg border-2 px-5 py-2 transition-all"
                                     style={{
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                        color: isDarkMode ? '#13151B' : '#0B2B26',
-                                        backgroundColor: isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(243, 237, 227, 0.9)",
+                                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                     }}
                                 >
                                     Cancel
@@ -721,12 +720,12 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                     <div 
                         className="rounded-xl border-2 p-6 shadow-lg"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                            borderColor: isDarkMode ? "#475569" : "#cbd5e1",
                         }}
                     >
-                        <Loader className="mx-auto mb-4 h-8 w-8 animate-spin" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }} />
-                        <p className="text-center" style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}>Loading receipt settings...</p>
+                        <Loader className="mx-auto mb-4 h-8 w-8 animate-spin" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
+                        <p className="text-center" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loading receipt settings...</p>
                     </div>
                 </div>
             )}

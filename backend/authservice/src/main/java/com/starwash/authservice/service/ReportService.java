@@ -91,18 +91,15 @@ public class ReportService {
     private List<Map<String, Object>> generateSalesTrend(List<Transaction> transactions, LocalDate startDate,
             LocalDate endDate, String dateRange) {
         
-        // For year view, group by month with abbreviated names
         if ("year".equals(dateRange)) {
             Map<String, Double> monthlySales = new LinkedHashMap<>();
             
-            // Initialize all months with 0.0
             String[] monthAbbreviations = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
             for (String month : monthAbbreviations) {
                 monthlySales.put(month, 0.0);
             }
             
-            // Aggregate sales by month
             transactions.forEach(transaction -> {
                 LocalDate transactionDate = transaction.getCreatedAt().toLocalDate();
                 String monthKey = transactionDate.format(DateTimeFormatter.ofPattern("MMM"));
@@ -118,8 +115,7 @@ public class ReportService {
                         return dataPoint;
                     })
                     .collect(Collectors.toList());
-        } 
-        // For other date ranges, use daily grouping
+        }
         else {
             Map<String, Double> dailySales = new LinkedHashMap<>();
 

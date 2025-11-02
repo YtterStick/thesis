@@ -14,11 +14,12 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
             onValueChange={isDriedStatus ? undefined : assignMachine} // Disable changes for DRIED status
             disabled={disabled || isDriedStatus} // Disable selector for DRIED status
         >
-            <SelectTrigger className="w-[160px] transition-all"
+            <SelectTrigger 
+                className="w-[160px] transition-all"
                 style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
                     opacity: isDriedStatus ? 0.7 : 1, // Slightly dim when disabled
                 }}
             >
@@ -31,9 +32,9 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
             <SelectContent 
                 className="transition-all"
                 style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                    color: isDarkMode ? "#13151B" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
                 }}
             >
                 {options.map((m) => {
@@ -53,7 +54,7 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                             }
                             className="cursor-pointer transition-colors"
                             style={{
-                                backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                             }}
                         >
                             <motion.span
