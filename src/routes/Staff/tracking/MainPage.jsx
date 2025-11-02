@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
@@ -10,7 +11,7 @@ import { maskContact } from "./utils";
 import { api } from "@/lib/api-config";
 
 const POLLING_INTERVAL = 10000;
-const ACTIVE_POLLING_INTERVAL = 5000; // Changed from 3000 to 5000
+const ACTIVE_POLLING_INTERVAL = 5000;
 const TIMER_CHECK_INTERVAL = 1000;
 
 export default function ServiceTrackingPage() {
@@ -33,7 +34,6 @@ export default function ServiceTrackingPage() {
     const timerCheckRef = useRef(null);
     const completedTimersRef = useRef(new Set());
     const activeTimersRef = useRef(new Map());
-    const actionInProgressRef = useRef(new Set()); // Track actions in progress
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -53,6 +53,7 @@ export default function ServiceTrackingPage() {
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = jobs.slice(startIndex, endIndex);
 
+    // NEW: Function to fetch completed today count
     const fetchCompletedTodayCount = useCallback(async () => {
         try {
             const count = await api.get("api/laundry-jobs/completed-today-count");
@@ -132,6 +133,7 @@ export default function ServiceTrackingPage() {
         }
     };
 
+    // UPDATED: Fetch completed count along with other data
     const fetchData = async (force = false) => {
         if ((isPolling && !force) || !autoRefresh) return;
 
@@ -140,7 +142,7 @@ export default function ServiceTrackingPage() {
             const [jobsSuccess, machinesSuccess, completedCountSuccess] = await Promise.allSettled([
                 fetchJobs(), 
                 fetchMachines(),
-                fetchCompletedTodayCount()
+                fetchCompletedTodayCount() // Fetch completed count
             ]);
 
             if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
@@ -323,21 +325,8 @@ export default function ServiceTrackingPage() {
     };
 
     const startAction = async (jobKey, loadIndex) => {
-        // Prevent double-click
-        const actionKey = `${jobKey}-${loadIndex}-start`;
-        if (actionInProgressRef.current.has(actionKey)) {
-            console.log("Action already in progress, skipping...");
-            return;
-        }
-        
-        actionInProgressRef.current.add(actionKey);
-
         const job = jobs.find((j) => getJobKey(j) === jobKey);
-        if (!job?.id) {
-            actionInProgressRef.current.delete(actionKey);
-            return;
-        }
-        
+        if (!job?.id) return;
         const load = job.loads[loadIndex];
 
         const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
@@ -361,7 +350,6 @@ export default function ServiceTrackingPage() {
 
             if (!isCorrectMachineType) {
                 const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
-                actionInProgressRef.current.delete(actionKey);
                 return alert(`Please assign a ${machineTypeName} machine first.`);
             }
         }
@@ -386,9 +374,7 @@ export default function ServiceTrackingPage() {
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => 
-                            idx === loadIndex ? { ...l, status, startTime, duration, pending: true } : l
-                          ),
+                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status, startTime, duration } : l)),
                       }
                     : j,
             ),
@@ -398,54 +384,15 @@ export default function ServiceTrackingPage() {
             await api.patch(
                 `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
             );
-            
-            setJobs((prev) =>
-                prev.map((j) =>
-                    getJobKey(j) === jobKey
-                        ? {
-                              ...j,
-                              loads: j.loads.map((l, idx) => 
-                                idx === loadIndex ? { ...l, pending: false } : l
-                              ),
-                          }
-                        : j,
-                ),
-            );
         } catch (err) {
             console.error("Failed to start load:", err);
-            setJobs((prev) =>
-                prev.map((j) =>
-                    getJobKey(j) === jobKey
-                        ? {
-                              ...j,
-                              loads: j.loads.map((l, idx) => 
-                                idx === loadIndex ? { ...l, pending: false } : l
-                              ),
-                          }
-                        : j,
-                ),
-            );
             fetchData(true);
-        } finally {
-            actionInProgressRef.current.delete(actionKey);
         }
     };
 
     const advanceStatus = async (jobKey, loadIndex) => {
-        // Prevent double-click
-        const actionKey = `${jobKey}-${loadIndex}-advance`;
-        if (actionInProgressRef.current.has(actionKey)) {
-            console.log("Action already in progress, skipping...");
-            return;
-        }
-        
-        actionInProgressRef.current.add(actionKey);
-
         const job = jobs.find((j) => getJobKey(j) === jobKey);
-        if (!job?.id) {
-            actionInProgressRef.current.delete(actionKey);
-            return;
-        }
+        if (!job?.id) return;
 
         const load = job.loads[loadIndex];
 
@@ -521,27 +468,12 @@ export default function ServiceTrackingPage() {
                 ),
             );
             fetchData(true);
-        } finally {
-            actionInProgressRef.current.delete(actionKey);
         }
     };
 
     const startDryingAgain = async (jobKey, loadIndex) => {
-        // Prevent double-click
-        const actionKey = `${jobKey}-${loadIndex}-dry-again`;
-        if (actionInProgressRef.current.has(actionKey)) {
-            console.log("Action already in progress, skipping...");
-            return;
-        }
-        
-        actionInProgressRef.current.add(actionKey);
-
         const job = jobs.find((j) => getJobKey(j) === jobKey);
-        if (!job?.id) {
-            actionInProgressRef.current.delete(actionKey);
-            return;
-        }
-        
+        if (!job?.id) return;
         const load = job.loads[loadIndex];
 
         const startTime = new Date().toISOString();
@@ -555,9 +487,7 @@ export default function ServiceTrackingPage() {
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => 
-                            idx === loadIndex ? { ...l, status: "DRYING", startTime, pending: true } : l
-                          ),
+                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status: "DRYING", startTime } : l)),
                       }
                     : j,
             ),
@@ -565,36 +495,9 @@ export default function ServiceTrackingPage() {
 
         try {
             await api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`);
-            
-            setJobs((prev) =>
-                prev.map((j) =>
-                    getJobKey(j) === jobKey
-                        ? {
-                              ...j,
-                              loads: j.loads.map((l, idx) => 
-                                idx === loadIndex ? { ...l, pending: false } : l
-                              ),
-                          }
-                        : j,
-                ),
-            );
         } catch (err) {
             console.error("Failed to start drying again:", err);
-            setJobs((prev) =>
-                prev.map((j) =>
-                    getJobKey(j) === jobKey
-                        ? {
-                              ...j,
-                              loads: j.loads.map((l, idx) => 
-                                idx === loadIndex ? { ...l, pending: false } : l
-                              ),
-                          }
-                        : j,
-                ),
-            );
             fetchData(true);
-        } finally {
-            actionInProgressRef.current.delete(actionKey);
         }
     };
 
@@ -709,7 +612,7 @@ export default function ServiceTrackingPage() {
                 backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
             }}
         >
-            {/* Header */}
+            {/* Header - UPDATED DARK MODE COLORS */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -771,7 +674,7 @@ export default function ServiceTrackingPage() {
                 </div>
             </motion.div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards - UPDATED DARK MODE COLORS */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     {
@@ -797,7 +700,7 @@ export default function ServiceTrackingPage() {
                     },
                     {
                         label: "Completed Today",
-                        value: completedTodayCount,
+                        value: completedTodayCount, // Uses the separate API count
                         color: "#10B981",
                         description: "Finished loads today",
                     },
@@ -862,7 +765,7 @@ export default function ServiceTrackingPage() {
                 ))}
             </div>
 
-            {/* Tracking Table */}
+            {/* Tracking Table - This remains unchanged (only shows incomplete jobs) */}
             <TooltipProvider>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -892,7 +795,7 @@ export default function ServiceTrackingPage() {
                 </motion.div>
             </TooltipProvider>
 
-            {/* Pagination */}
+            {/* Pagination - UPDATED DARK MODE COLORS */}
             {jobs.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

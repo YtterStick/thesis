@@ -1,3 +1,4 @@
+
 import React from "react";
 import { motion } from "framer-motion";
 import { Check, Play, ArrowRight, RefreshCw } from "lucide-react";
@@ -57,22 +58,17 @@ const ActionButtons = ({
         <motion.button
             whileHover={{ scale: disabled ? 1 : 1.05 }}
             whileTap={{ scale: disabled ? 1 : 0.95 }}
-            onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                if (disabled) return;
-                
+            onClick={() => {
                 if (onCompletion && variant === "success") {
                     onCompletion(jobKey, loadIndex);
                 }
                 onClick();
             }}
-            disabled={disabled || load.pending}
+            disabled={disabled}
             title={title}
             className={`
                 flex items-center gap-2 font-medium transition-all rounded-lg
-                ${(disabled || load.pending) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'}
+                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 ${size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm'}
                 ${
                     variant === 'primary' 
@@ -102,17 +98,8 @@ const ActionButtons = ({
                     '#f1f5f9'
             }}
         >
-            {load.pending ? (
-                <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Starting...</span>
-                </div>
-            ) : (
-                <>
-                    {Icon && <Icon className={size === 'sm' ? "h-3 w-3" : "h-4 w-4"} />}
-                    {children}
-                </>
-            )}
+            {Icon && <Icon className={size === 'sm' ? "h-3 w-3" : "h-4 w-4"} />}
+            {children}
         </motion.button>
     );
 
@@ -126,7 +113,6 @@ const ActionButtons = ({
                         icon={RefreshCw}
                         variant="warning"
                         size="sm"
-                        title="Start drying again"
                     >
                         Again
                     </CustomButton>
@@ -135,7 +121,6 @@ const ActionButtons = ({
                         disabled={load.pending}
                         icon={ArrowRight}
                         variant="primary"
-                        title="Move to folding"
                     >
                         Fold
                     </CustomButton>
@@ -146,7 +131,6 @@ const ActionButtons = ({
                     disabled={load.pending}
                     icon={Check}
                     variant="success"
-                    title="Mark as completed"
                 >
                     Done
                 </CustomButton>
@@ -156,7 +140,7 @@ const ActionButtons = ({
                     disabled={!hasCorrectMachine || load.pending}
                     icon={Play}
                     variant="primary"
-                    title={!hasCorrectMachine ? `Please assign a ${machineType?.toLowerCase() || "machine"} first` : "Start processing"}
+                    title={!hasCorrectMachine ? `Please assign a ${machineType?.toLowerCase() || "machine"} first` : ""}
                 >
                     Start
                 </CustomButton>
@@ -166,7 +150,6 @@ const ActionButtons = ({
                     disabled={load.pending}
                     icon={ArrowRight}
                     variant="primary"
-                    title="Move to next step"
                 >
                     Next
                 </CustomButton>
