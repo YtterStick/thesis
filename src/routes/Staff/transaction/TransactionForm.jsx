@@ -330,6 +330,47 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     }, [supplySource, stockItems]);
 
+    // NEW: Handle switching back to in-store - reset detergent and fabric to match loads
+    useEffect(() => {
+        if (supplySource === "in-store" && stockItems.length > 0) {
+            console.log("🔄 In-store selected - resetting detergent and fabric to match loads");
+            
+            const expected = parseInt(loads) || 1;
+            const updatedConsumables = { ...consumables };
+            let hasChanges = false;
+
+            // Reset detergent items to match loads and clear overrides
+            stockItems.forEach((item) => {
+                if (item.name.toLowerCase().includes("detergent")) {
+                    if (updatedConsumables[item.name] !== expected) {
+                        updatedConsumables[item.name] = expected;
+                        hasChanges = true;
+                        console.log(`✅ Reset ${item.name} to ${expected}`);
+                    }
+                    // Clear manual override so it can auto-sync
+                    setDetergentOverrides((prev) => ({ ...prev, [item.name]: false }));
+                }
+            });
+
+            // Reset fabric items to match loads and clear overrides
+            stockItems.forEach((item) => {
+                if (item.name.toLowerCase().includes("fabric")) {
+                    if (updatedConsumables[item.name] !== expected) {
+                        updatedConsumables[item.name] = expected;
+                        hasChanges = true;
+                        console.log(`✅ Reset ${item.name} to ${expected}`);
+                    }
+                    // Clear manual override so it can auto-sync
+                    setFabricOverrides((prev) => ({ ...prev, [item.name]: false }));
+                }
+            });
+
+            if (hasChanges) {
+                setConsumables(updatedConsumables);
+            }
+        }
+    }, [supplySource, stockItems, loads]);
+
     // Auto-sync logic for consumables
     useEffect(() => {
         if (!stockItems.length) return;
@@ -526,7 +567,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             totalPrice: totalAmount,
             issueDate: new Date().toISOString(),
             dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            staffId: localStorage.getItem("staffId") || "Unknown", // Ensure staffId is included
+            staffId: localStorage.getItem("staffId") || "Unknown",
         };
 
         console.log("📝 Submitting transaction with staffId:", payload.staffId);

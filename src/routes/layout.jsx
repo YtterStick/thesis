@@ -66,7 +66,7 @@ const Layout = ({ children }) => {
       <div
         className={cn(
           "pointer-events-none fixed inset-0 -z-10 bg-black opacity-0 transition-opacity",
-          !collapsed && "max-md:pointer-events-auto max-md:z-50 max-md:opacity-30"
+          !collapsed && "max-md:pointer-events-auto max-md:z-40 max-md:opacity-30" // Changed z-50 to z-40 to be lower than modals
         )}
       />
 

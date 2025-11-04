@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
@@ -52,6 +51,20 @@ export default function ServiceTrackingPage() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = jobs.slice(startIndex, endIndex);
+
+    // API call with retry logic
+    const apiCallWithRetry = async (apiCall, maxRetries = 3) => {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                return await apiCall();
+            } catch (error) {
+                console.warn(`API call attempt ${i + 1} failed:`, error);
+                if (i === maxRetries - 1) throw error;
+                // Wait before retrying (exponential backoff)
+                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            }
+        }
+    };
 
     // NEW: Function to fetch completed today count
     const fetchCompletedTodayCount = useCallback(async () => {
@@ -290,8 +303,10 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            await api.patch(
-                `api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`
+            await apiCallWithRetry(() => 
+                api.patch(
+                    `api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`
+                )
             );
         } catch (err) {
             console.error("Failed to assign machine:", err);
@@ -315,8 +330,10 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            await api.patch(
-                `api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`
+            await apiCallWithRetry(() =>
+                api.patch(
+                    `api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`
+                )
             );
         } catch (err) {
             console.error("Failed to update duration:", err);
@@ -328,6 +345,12 @@ export default function ServiceTrackingPage() {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
         if (!job?.id) return;
         const load = job.loads[loadIndex];
+
+        // Prevent multiple clicks
+        if (load.pending || isLoadRunning(load)) {
+            console.log('Start action prevented: load is pending or running');
+            return;
+        }
 
         const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
 
@@ -350,7 +373,8 @@ export default function ServiceTrackingPage() {
 
             if (!isCorrectMachineType) {
                 const machineTypeName = requiredMachineType === "WASHER" ? "washer" : "dryer";
-                return alert(`Please assign a ${machineTypeName} machine first.`);
+                alert(`Please assign a ${machineTypeName} machine first.`);
+                return;
             }
         }
 
@@ -369,23 +393,59 @@ export default function ServiceTrackingPage() {
         activeTimersRef.current.set(timerKey, startTime);
         completedTimersRef.current.delete(timerKey);
 
+        // Set pending state immediately to prevent double clicks
         setJobs((prev) =>
             prev.map((j) =>
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status, startTime, duration } : l)),
+                          loads: j.loads.map((l, idx) => 
+                              idx === loadIndex ? { ...l, status, startTime, duration, pending: true } : l
+                          ),
                       }
                     : j,
             ),
         );
 
         try {
-            await api.patch(
-                `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
+            // Add a small delay to ensure backend is ready
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await apiCallWithRetry(() =>
+                api.patch(
+                    `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
+                )
+            );
+
+            // Clear pending state after successful API call
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                  idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
             );
         } catch (err) {
             console.error("Failed to start load:", err);
+            
+            // Revert changes on error
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                  idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
+            );
             fetchData(true);
         }
     };
@@ -435,8 +495,13 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            await api.patch(
-                `api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`
+            // Add 5-second delay before making the API call (increased from 3 seconds)
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            await apiCallWithRetry(() =>
+                api.patch(
+                    `api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`
+                )
             );
 
             setJobs((prev) =>
@@ -476,27 +541,65 @@ export default function ServiceTrackingPage() {
         if (!job?.id) return;
         const load = job.loads[loadIndex];
 
+        // Prevent multiple clicks
+        if (load.pending) {
+            return;
+        }
+
         const startTime = new Date().toISOString();
 
         const timerKey = `${job.id}-${load.loadNumber}`;
         activeTimersRef.current.set(timerKey, startTime);
         completedTimersRef.current.delete(timerKey);
 
+        // Set pending state
         setJobs((prev) =>
             prev.map((j) =>
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status: "DRYING", startTime } : l)),
+                          loads: j.loads.map((l, idx) => 
+                              idx === loadIndex ? { ...l, status: "DRYING", startTime, pending: true } : l
+                          ),
                       }
                     : j,
             ),
         );
 
         try {
-            await api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`);
+            await apiCallWithRetry(() =>
+                api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`)
+            );
+
+            // Clear pending state
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                  idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
+            );
         } catch (err) {
             console.error("Failed to start drying again:", err);
+            
+            // Revert on error
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => 
+                                  idx === loadIndex ? { ...l, pending: false } : l
+                              ),
+                          }
+                        : j,
+                ),
+            );
             fetchData(true);
         }
     };
@@ -901,7 +1004,7 @@ export default function ServiceTrackingPage() {
         </div>
     );
 }
-
+    
 const DEFAULT_DURATION = { washing: 35, drying: 40 };
 const SERVICE_FLOWS = {
     Wash: ["UNWASHED", "WASHING", "WASHED", "COMPLETED"],

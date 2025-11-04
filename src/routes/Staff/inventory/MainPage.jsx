@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Boxes, PackageX, Package, Clock, CheckCircle2, AlertTriangle, TrendingUp, Calendar } from "lucide-react";
+import { Boxes, PackageX, Package, Clock, CheckCircle2, AlertTriangle, TrendingUp, Calendar, Layers } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,8 +58,8 @@ const getStatusIcon = (quantity, low, adequate) => {
         };
     }
     return {
-        icon: <CheckCircle2 className="h-4 w-4" />,
-        label: "Well Stocked",
+        icon: <Layers className="h-4 w-4" />,
+        label: "Full Stock",
         color: "text-green-600",
         labelColor: "text-green-600",
         darkLabelColor: "text-green-400",
@@ -221,10 +221,68 @@ const StaffInventoryPage = () => {
         loadInventory();
     }, []);
 
+    const getStockStatusCounts = (items) => {
+        let out = 0, low = 0, adequate = 0, full = 0;
+
+        for (const item of items) {
+            const q = item.quantity ?? 0;
+            const lowT = item.lowStockThreshold ?? 0;
+            const adequateT = item.adequateStockThreshold ?? 0;
+
+            if (q === 0) {
+                out++;
+            } else if (q <= lowT) {
+                low++;
+            } else if (q <= adequateT) {
+                adequate++;
+            } else {
+                full++;
+            }
+        }
+
+        return { out, low, adequate, full };
+    };
+
+    const { out, low, adequate, full } = getStockStatusCounts(items);
     const totalItems = items.length;
-    const outOfStockItems = items.filter((item) => item.quantity === 0).length;
-    const lowStockItems = items.filter((item) => item.quantity > 0 && item.quantity <= (item.lowStockThreshold ?? 0)).length;
-    const wellStockedItems = items.filter((item) => item.quantity > (item.adequateStockThreshold ?? 0)).length;
+
+    const summaryCards = [
+        {
+            title: "Total Items",
+            icon: <Package size={20} />,
+            value: totalItems,
+            color: isDarkMode ? "#3DD9B6" : "#0B2B26",
+            description: "All inventory items"
+        },
+        {
+            title: "Full Stock",
+            icon: <Layers size={20} />,
+            value: full,
+            color: "#059669",
+            description: "Above adequate threshold"
+        },
+        {
+            title: "Adequate",
+            icon: <Boxes size={20} />,
+            value: adequate,
+            color: "#3B82F6",
+            description: "Within adequate range"
+        },
+        {
+            title: "Low Stock",
+            icon: <PackageX size={20} />,
+            value: low,
+            color: "#D97706",
+            description: "Below low threshold"
+        },
+        {
+            title: "Out of Stock",
+            icon: <Clock size={20} />,
+            value: out,
+            color: "#DC2626",
+            description: "Zero quantity"
+        },
+    ];
 
     const formatDate = (dateString) => {
         if (!dateString) return "Never restocked";
@@ -277,8 +335,8 @@ const StaffInventoryPage = () => {
                     </div>
                 </motion.div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    {[...Array(4)].map((_, i) => (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+                    {[...Array(5)].map((_, i) => (
                         <SkeletonCard
                             key={i}
                             isDarkMode={isDarkMode}
@@ -430,164 +488,56 @@ const StaffInventoryPage = () => {
                 </div>
             </motion.div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards - Updated to 5 columns with new styling */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="grid grid-cols-1 gap-4 md:grid-cols-4"
+                className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5"
             >
-                <Card
-                    className="rounded-xl border-2 transition-all hover:shadow-lg"
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                    }}
-                >
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p
-                                    className="text-sm font-medium"
-                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                                >
-                                    Total Items
-                                </p>
-                                <p
-                                    className="mt-1 text-2xl font-bold"
-                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                >
-                                    {totalItems}
-                                </p>
-                            </div>
-                            <div
-                                className="rounded-lg p-2"
-                                style={{
-                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                }}
-                            >
-                                <Package
-                                    className="h-5 w-5"
-                                    style={{ color: isDarkMode ? "#3DD9B6" : "#0f172a" }}
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card
-                    className="rounded-xl border-2 transition-all hover:shadow-lg"
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                    }}
-                >
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p
-                                    className="text-sm font-medium"
-                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                                >
-                                    Well Stocked
-                                </p>
-                                <p
-                                    className="mt-1 text-2xl font-bold"
-                                    style={{ color: "#059669" }}
-                                >
-                                    {wellStockedItems}
-                                </p>
-                            </div>
-                            <div
-                                className="rounded-lg p-2"
-                                style={{
-                                    backgroundColor: isDarkMode ? "rgba(4, 120, 87, 0.2)" : "#F0FDF4",
-                                }}
-                            >
-                                <CheckCircle2
-                                    className="h-5 w-5"
-                                    style={{ color: "#059669" }}
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card
-                    className="rounded-xl border-2 transition-all hover:shadow-lg"
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                    }}
-                >
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p
-                                    className="text-sm font-medium"
-                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                                >
-                                    Low Stock
-                                </p>
-                                <p
-                                    className="mt-1 text-2xl font-bold"
-                                    style={{ color: "#D97706" }}
-                                >
-                                    {lowStockItems}
-                                </p>
-                            </div>
-                            <div
-                                className="rounded-lg p-2"
-                                style={{
-                                    backgroundColor: isDarkMode ? "rgba(217, 119, 6, 0.2)" : "#FFFBEB",
-                                }}
-                            >
-                                <AlertTriangle
-                                    className="h-5 w-5"
-                                    style={{ color: "#D97706" }}
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card
-                    className="rounded-xl border-2 transition-all hover:shadow-lg"
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                    }}
-                >
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p
-                                    className="text-sm font-medium"
-                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                                >
-                                    Out of Stock
-                                </p>
-                                <p
-                                    className="mt-1 text-2xl font-bold"
-                                    style={{ color: "#DC2626" }}
-                                >
-                                    {outOfStockItems}
-                                </p>
-                            </div>
-                            <div
-                                className="rounded-lg p-2"
-                                style={{
-                                    backgroundColor: isDarkMode ? "rgba(220, 38, 38, 0.2)" : "#FEF2F2",
-                                }}
-                            >
-                                <PackageX
-                                    className="h-5 w-5"
-                                    style={{ color: "#DC2626" }}
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                {summaryCards.map(({ title, icon, value, color, description }, index) => (
+                    <motion.div
+                        key={title}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Card className="rounded-xl border-2 transition-all hover:shadow-lg cursor-help" style={{
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                    }}>
+                                        <CardContent className="p-4">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-sm font-medium mb-1" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                                                        {title}
+                                                    </p>
+                                                    <p className="text-2xl font-bold" style={{ color }}>
+                                                        {value}
+                                                    </p>
+                                                </div>
+                                                <div 
+                                                    className="rounded-lg p-2"
+                                                    style={{
+                                                        backgroundColor: `${color}20`,
+                                                        color: color,
+                                                    }}
+                                                >
+                                                    {icon}
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{description}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </motion.div>
+                ))}
             </motion.div>
 
             {/* Inventory Table */}

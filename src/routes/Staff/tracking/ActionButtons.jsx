@@ -1,4 +1,3 @@
-
 import React from "react";
 import { motion } from "framer-motion";
 import { Check, Play, ArrowRight, RefreshCw } from "lucide-react";
@@ -18,7 +17,7 @@ const ActionButtons = ({
     isDarkMode,
     onCompletion
 }) => {
-    if (isLoadRunning(load)) {
+    if (isLoadRunning(load) || load.pending) {
         return (
             <div className="flex justify-end">
                 <div
@@ -59,16 +58,18 @@ const ActionButtons = ({
             whileHover={{ scale: disabled ? 1 : 1.05 }}
             whileTap={{ scale: disabled ? 1 : 0.95 }}
             onClick={() => {
-                if (onCompletion && variant === "success") {
-                    onCompletion(jobKey, loadIndex);
+                if (!disabled) {
+                    if (onCompletion && variant === "success") {
+                        onCompletion(jobKey, loadIndex);
+                    }
+                    onClick();
                 }
-                onClick();
             }}
             disabled={disabled}
             title={title}
             className={`
                 flex items-center gap-2 font-medium transition-all rounded-lg
-                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'}
                 ${size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm'}
                 ${
                     variant === 'primary' 
