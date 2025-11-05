@@ -66,7 +66,7 @@ export default function ServiceTrackingPage() {
         }
     };
 
-    // NEW: Function to fetch completed today count
+    // Function to fetch completed today count
     const fetchCompletedTodayCount = useCallback(async () => {
         try {
             const count = await api.get("api/laundry-jobs/completed-today-count");
@@ -146,7 +146,7 @@ export default function ServiceTrackingPage() {
         }
     };
 
-    // UPDATED: Fetch completed count along with other data
+    // Fetch completed count along with other data
     const fetchData = async (force = false) => {
         if ((isPolling && !force) || !autoRefresh) return;
 
@@ -155,7 +155,7 @@ export default function ServiceTrackingPage() {
             const [jobsSuccess, machinesSuccess, completedCountSuccess] = await Promise.allSettled([
                 fetchJobs(), 
                 fetchMachines(),
-                fetchCompletedTodayCount() // Fetch completed count
+                fetchCompletedTodayCount()
             ]);
 
             if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
@@ -387,20 +387,17 @@ export default function ServiceTrackingPage() {
                     ? DEFAULT_DURATION.drying
                     : null;
 
-        const startTime = new Date().toISOString();
-
-        const timerKey = `${job.id}-${load.loadNumber}`;
-        activeTimersRef.current.set(timerKey, startTime);
-        completedTimersRef.current.delete(timerKey);
-
-        // Set pending state immediately to prevent double clicks
+        // Set pending state immediately to show "Starting..." in button
         setJobs((prev) =>
             prev.map((j) =>
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
                           loads: j.loads.map((l, idx) => 
-                              idx === loadIndex ? { ...l, status, startTime, duration, pending: true } : l
+                              idx === loadIndex ? { 
+                                  ...l, 
+                                  pending: true 
+                              } : l
                           ),
                       }
                     : j,
@@ -408,23 +405,32 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Add a small delay to ensure backend is ready
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
+            const startTime = new Date().toISOString();
+
+            const timerKey = `${job.id}-${load.loadNumber}`;
+            activeTimersRef.current.set(timerKey, startTime);
+            completedTimersRef.current.delete(timerKey);
+
             await apiCallWithRetry(() =>
                 api.patch(
                     `api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`
                 )
             );
 
-            // Clear pending state after successful API call
+            // Update with actual status and timer data after successful API call
             setJobs((prev) =>
                 prev.map((j) =>
                     getJobKey(j) === jobKey
                         ? {
                               ...j,
                               loads: j.loads.map((l, idx) => 
-                                  idx === loadIndex ? { ...l, pending: false } : l
+                                  idx === loadIndex ? { 
+                                      ...l, 
+                                      status, 
+                                      startTime, 
+                                      duration, 
+                                      pending: false 
+                                  } : l
                               ),
                           }
                         : j,
@@ -440,7 +446,10 @@ export default function ServiceTrackingPage() {
                         ? {
                               ...j,
                               loads: j.loads.map((l, idx) => 
-                                  idx === loadIndex ? { ...l, pending: false } : l
+                                  idx === loadIndex ? { 
+                                      ...l, 
+                                      pending: false 
+                                  } : l
                               ),
                           }
                         : j,
@@ -495,7 +504,7 @@ export default function ServiceTrackingPage() {
         );
 
         try {
-            // Add 5-second delay before making the API call (increased from 3 seconds)
+            // Add 5-second delay before making the API call
             await new Promise(resolve => setTimeout(resolve, 5000));
             
             await apiCallWithRetry(() =>
@@ -546,12 +555,6 @@ export default function ServiceTrackingPage() {
             return;
         }
 
-        const startTime = new Date().toISOString();
-
-        const timerKey = `${job.id}-${load.loadNumber}`;
-        activeTimersRef.current.set(timerKey, startTime);
-        completedTimersRef.current.delete(timerKey);
-
         // Set pending state
         setJobs((prev) =>
             prev.map((j) =>
@@ -559,7 +562,7 @@ export default function ServiceTrackingPage() {
                     ? {
                           ...j,
                           loads: j.loads.map((l, idx) => 
-                              idx === loadIndex ? { ...l, status: "DRYING", startTime, pending: true } : l
+                              idx === loadIndex ? { ...l, pending: true } : l
                           ),
                       }
                     : j,
@@ -567,6 +570,12 @@ export default function ServiceTrackingPage() {
         );
 
         try {
+            const startTime = new Date().toISOString();
+
+            const timerKey = `${job.id}-${load.loadNumber}`;
+            activeTimersRef.current.set(timerKey, startTime);
+            completedTimersRef.current.delete(timerKey);
+
             await apiCallWithRetry(() =>
                 api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`)
             );
@@ -578,7 +587,12 @@ export default function ServiceTrackingPage() {
                         ? {
                               ...j,
                               loads: j.loads.map((l, idx) => 
-                                  idx === loadIndex ? { ...l, pending: false } : l
+                                  idx === loadIndex ? { 
+                                      ...l, 
+                                      status: "DRYING", 
+                                      startTime, 
+                                      pending: false 
+                                  } : l
                               ),
                           }
                         : j,
@@ -715,7 +729,7 @@ export default function ServiceTrackingPage() {
                 backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
             }}
         >
-            {/* Header - UPDATED DARK MODE COLORS */}
+            {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -777,7 +791,7 @@ export default function ServiceTrackingPage() {
                 </div>
             </motion.div>
 
-            {/* Summary Cards - UPDATED DARK MODE COLORS */}
+            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                 {[
                     {
@@ -803,7 +817,7 @@ export default function ServiceTrackingPage() {
                     },
                     {
                         label: "Completed Today",
-                        value: completedTodayCount, // Uses the separate API count
+                        value: completedTodayCount,
                         color: "#10B981",
                         description: "Finished loads today",
                     },
@@ -868,7 +882,7 @@ export default function ServiceTrackingPage() {
                 ))}
             </div>
 
-            {/* Tracking Table - This remains unchanged (only shows incomplete jobs) */}
+            {/* Tracking Table */}
             <TooltipProvider>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -898,7 +912,7 @@ export default function ServiceTrackingPage() {
                 </motion.div>
             </TooltipProvider>
 
-            {/* Pagination - UPDATED DARK MODE COLORS */}
+            {/* Pagination */}
             {jobs.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

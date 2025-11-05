@@ -14,45 +14,45 @@ import { getApiUrl, api } from "@/lib/api-config";
 
 // Manila time utility functions
 const toManilaTime = (timestamp) => {
-  if (!timestamp) return null;
-  
-  const date = new Date(timestamp);
-  return new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    if (!timestamp) return null;
+
+    const date = new Date(timestamp);
+    return new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
 };
 
 const formatManilaTime = (timestamp, options = {}) => {
-  if (!timestamp) return 'N/A';
-  
-  const date = new Date(timestamp);
-  const defaultOptions = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZone: 'Asia/Manila'
-  };
-  
-  return date.toLocaleString('en-PH', { ...defaultOptions, ...options });
+    if (!timestamp) return "N/A";
+
+    const date = new Date(timestamp);
+    const defaultOptions = {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "Asia/Manila",
+    };
+
+    return date.toLocaleString("en-PH", { ...defaultOptions, ...options });
 };
 
 const decodeToken = (token) => {
     try {
         const payload = token.split(".")[1];
         const decoded = JSON.parse(atob(payload));
-        
+
         // Convert to Manila time
         const issuedAt = new Date(decoded.iat * 1000);
         const expiresAt = new Date(decoded.exp * 1000);
         const isExpired = expiresAt.getTime() < Date.now();
-        
+
         if (isExpired) return null;
-        
-        return { 
-          ...decoded, 
-          issuedAt: toManilaTime(issuedAt),
-          expiresAt: toManilaTime(expiresAt)
+
+        return {
+            ...decoded,
+            issuedAt: toManilaTime(issuedAt),
+            expiresAt: toManilaTime(expiresAt),
         };
     } catch {
         return null;
@@ -77,7 +77,7 @@ const BackgroundElements = () => {
                 {elements.map((el) => (
                     <motion.div
                         key={el.id}
-                        className="absolute rounded-full bg-gradient-to-r from-[#18442A] to-[#2A8C6F]"
+                        className="absolute rounded-full bg-gradient-to-r from-[#1E40AF] to-[#3B82F6]"
                         style={{
                             width: el.width,
                             height: el.height,
@@ -99,21 +99,21 @@ const BackgroundElements = () => {
 
             {/* Floating Icons */}
             <motion.div
-                className="pointer-events-none fixed left-1/4 top-1/4 text-[#2A8C6F] opacity-40"
+                className="pointer-events-none fixed left-1/4 top-1/4 text-[#3B82F6] opacity-40"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
             >
                 <Orbit size={40} />
             </motion.div>
             <motion.div
-                className="pointer-events-none fixed right-1/4 top-1/3 text-[#225C4A] opacity-40"
+                className="pointer-events-none fixed right-1/4 top-1/3 text-[#1E40AF] opacity-40"
                 animate={{ y: [0, 15, 0] }}
                 transition={{ duration: 6, repeat: Infinity }}
             >
                 <Satellite size={30} />
             </motion.div>
             <motion.div
-                className="pointer-events-none fixed bottom-1/4 left-1/3 text-[#2A8C6F] opacity-40"
+                className="pointer-events-none fixed bottom-1/4 left-1/3 text-[#3B82F6] opacity-40"
                 animate={{ x: [0, 15, 0] }}
                 transition={{ duration: 8, repeat: Infinity }}
             >
@@ -234,7 +234,7 @@ const LoginPage = () => {
     }, []);
 
     return (
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#E0EAE8] via-[#D5DCDB] to-[#E0EAE8] px-4 py-10">
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#E0F2FE] via-[#DBEAFE] to-[#E0F2FE] px-4 py-10">
             <BackgroundElements />
 
             {/* Main Content */}
@@ -244,7 +244,7 @@ const LoginPage = () => {
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className="relative z-10 w-full max-w-md"
             >
-                <Card className="border border-0 border-[#1C3F3A]/15 bg-gradient-to-b from-white/90 to-[#F3EDE3]/90 shadow-2xl shadow-[#1C3F3A]/20 backdrop-blur-xl">
+                <Card className="border border-0 border-[#1E3A8A]/15 bg-gradient-to-b from-white/90 to-[#F0F9FF]/90 shadow-2xl shadow-[#1E3A8A]/20 backdrop-blur-xl">
                     <CardHeader className="space-y-3 text-center">
                         <motion.div
                             initial={{ scale: 0.9 }}
@@ -254,24 +254,24 @@ const LoginPage = () => {
                         >
                             <div className="relative">
                                 <motion.div
-                                    className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-[#1C3F3A] to-[#2A8C6F] shadow-lg"
+                                    className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-[#1E3A8A] to-[#3B82F6] shadow-lg"
                                     whileHover={{ rotate: 5 }}
                                     animate={{ rotate: [0, -2, 2, 0] }}
                                     transition={{ duration: 4, repeat: Infinity, repeatDelay: 5 }}
                                 >
-                                    <span className="text-lg font-bold text-[#F3EDE3]">SW</span>
+                                    <span className="text-lg font-bold text-[#F0F9FF]">SW</span>
                                 </motion.div>
                                 <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                                    className="pointer-events-none absolute -inset-3 rounded-full bg-gradient-to-r from-[#2A8C6F] to-[#D5DCDB] opacity-20 blur-md"
+                                    className="pointer-events-none absolute -inset-3 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#DBEAFE] opacity-20 blur-md"
                                 />
                             </div>
                         </motion.div>
-                        <CardTitle className="font-deathstar bg-gradient-to-br from-[#1C3F3A] to-[#2A8C6F] bg-clip-text text-3xl tracking-wider text-transparent">
+                        <CardTitle className="font-deathstar bg-gradient-to-br from-[#1E3A8A] to-[#3B82F6] bg-clip-text text-3xl tracking-wider text-transparent">
                             STAR WASH
                         </CardTitle>
-                        <CardDescription className="text-[#1C3F3A]/70">Access Star Wash laundry system</CardDescription>
+                        <CardDescription className="text-[#1E3A8A]/70">Access Star Wash laundry system</CardDescription>
                     </CardHeader>
 
                     <CardContent>
@@ -292,18 +292,18 @@ const LoginPage = () => {
                                         onBlur={() => handleBlur("username")}
                                         required
                                         disabled={isAuthenticating}
-                                        className="rounded-lg border-[#1C3F3A]/30 bg-white/60 py-5 pl-10 pr-4 text-[#0B2B26] transition-all duration-300 focus:border-transparent focus:ring-2 focus:ring-[#2A8C6F] disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="rounded-lg border-[#1E3A8A]/30 bg-white/60 py-5 pl-10 pr-4 text-[#0F172A] transition-all duration-300 focus:border-transparent focus:ring-2 focus:ring-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
                                         placeholder=" "
                                     />
                                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <User className="h-5 w-5 text-[#1C3F3A]/50" />
+                                        <User className="h-5 w-5 text-[#1E3A8A]/50" />
                                     </div>
                                     <Label
                                         htmlFor="username"
                                         className={`pointer-events-none absolute left-10 transition-all duration-300 ease-in-out ${
                                             isFocused.username || form.username
-                                                ? "-top-2.5 rounded bg-white px-1 text-xs font-medium text-[#2A8C6F]"
-                                                : "top-1/2 -translate-y-1/2 transform text-sm text-[#1C3F3A]/50"
+                                                ? "-top-2.5 rounded bg-white px-1 text-xs font-medium text-[#3B82F6]"
+                                                : "top-1/2 -translate-y-1/2 transform text-sm text-[#1E3A8A]/50"
                                         }`}
                                     >
                                         Username
@@ -324,18 +324,18 @@ const LoginPage = () => {
                                         onBlur={() => handleBlur("password")}
                                         required
                                         disabled={isAuthenticating}
-                                        className="rounded-lg border-[#1C3F3A]/30 bg-white/60 py-5 pl-10 pr-10 text-[#0B2B26] transition-all duration-300 focus:border-transparent focus:ring-2 focus:ring-[#2A8C6F] disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="rounded-lg border-[#1E3A8A]/30 bg-white/60 py-5 pl-10 pr-10 text-[#0F172A] transition-all duration-300 focus:border-transparent focus:ring-2 focus:ring-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
                                         placeholder=" "
                                     />
                                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <Lock className="h-5 w-5 text-[#1C3F3A]/50" />
+                                        <Lock className="h-5 w-5 text-[#1E3A8A]/50" />
                                     </div>
                                     <Label
                                         htmlFor="password"
                                         className={`pointer-events-none absolute left-10 transition-all duration-300 ease-in-out ${
                                             isFocused.password || form.password
-                                                ? "-top-2.5 rounded bg-white px-1 text-xs font-medium text-[#2A8C6F]"
-                                                : "top-1/2 -translate-y-1/2 transform text-sm text-[#1C3F3A]/50"
+                                                ? "-top-2.5 rounded bg-white px-1 text-xs font-medium text-[#3B82F6]"
+                                                : "top-1/2 -translate-y-1/2 transform text-sm text-[#1E3A8A]/50"
                                         }`}
                                     >
                                         Password
@@ -344,7 +344,7 @@ const LoginPage = () => {
                                         type="button"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                         disabled={isAuthenticating}
-                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#1C3F3A]/50 transition-colors duration-300 hover:text-[#2A8C6F] disabled:opacity-30"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#1E3A8A]/50 transition-colors duration-300 hover:text-[#3B82F6] disabled:opacity-30"
                                         aria-label="Toggle password visibility"
                                     >
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -379,25 +379,70 @@ const LoginPage = () => {
                             <motion.div
                                 whileHover={{ scale: isAuthenticating ? 1 : 1.02 }}
                                 whileTap={{ scale: 0.98 }}
+                                className="group relative"
                             >
                                 <Button
                                     type="submit"
                                     disabled={isAuthenticating || !form.username.trim() || !form.password.trim()}
-                                    className="flex w-full items-center justify-center rounded-lg bg-gradient-to-br from-[#1C3F3A] to-[#2A8C6F] py-6 font-medium text-[#F3EDE3] shadow-lg transition-all duration-300 hover:from-[#225C4A] hover:to-[#2A8C6F] hover:shadow-xl disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="relative flex w-full items-center justify-center overflow-hidden rounded-xl border border-blue-400/30 bg-gradient-to-br from-[#1E3A8A] to-[#3B82F6] py-6 font-semibold text-white shadow-lg transition-all duration-300 hover:from-[#1E40AF] hover:to-[#2563EB] hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
                                 >
+                                    {/* Bubbles animation on hover */}
+                                    {!isAuthenticating && (
+                                        <div className="absolute inset-0 overflow-hidden rounded-xl">
+                                            {[...Array(3)].map((_, i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    className="absolute h-2 w-2 rounded-full bg-white/30"
+                                                    animate={{
+                                                        y: [60, -10, 60],
+                                                        x: [10 + i * 20, 10 + i * 20], // Fixed x positions
+                                                        scale: [0, 1, 0],
+                                                        opacity: [0, 0.8, 0],
+                                                    }}
+                                                    transition={{
+                                                        duration: 3 + Math.random() * 2,
+                                                        repeat: Infinity,
+                                                        delay: i * 0.5,
+                                                    }}
+                                                    style={{
+                                                        left: `${10 + i * 20}%`,
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+
                                     {isAuthenticating ? (
-                                        <>
-                                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
-                                            Logging in...
-                                        </>
+                                        <div className="relative z-10 flex items-center justify-center space-x-3">
+                                            <span className="text-sm font-medium">Logging in</span>
+
+                                            {/* Spinning laundry animation next to text */}
+                                            <motion.div
+                                                className="h-5 w-5 rounded-full border-2 border-white/40"
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                            >
+                                                {/* Drum inside */}
+                                                <div className="absolute inset-0.5 rounded-full border border-white/20" />
+                                                {/* Clothes items */}
+                                                <div className="absolute left-1/2 top-0.5 h-1 w-1 -translate-x-1/2 transform rounded-full bg-white/60" />
+                                                <div className="absolute bottom-1 right-1 h-0.5 w-0.5 rounded-full bg-white/60" />
+                                            </motion.div>
+                                        </div>
                                     ) : (
-                                        <>
-                                            <Sparkles
-                                                size={18}
-                                                className="mr-2"
-                                            />
-                                            Login
-                                        </>
+                                        <motion.div
+                                            className="relative z-10 flex items-center space-x-2"
+                                            whileHover={{ scale: 1.05 }}
+                                            transition={{ type: "spring", stiffness: 400 }}
+                                        >
+                                            <motion.div
+                                                whileHover={{ rotate: 360 }}
+                                                transition={{ duration: 0.8 }}
+                                            >
+                                                <Sparkles size={18} />
+                                            </motion.div>
+                                            <span>Login</span>
+                                        </motion.div>
                                     )}
                                 </Button>
                             </motion.div>
@@ -408,12 +453,12 @@ const LoginPage = () => {
                             <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
-                                className="mt-6 rounded-lg border border-[#2A8C6F]/30 bg-gradient-to-br from-[#E0EAE8] to-[#D5DCDB] p-4 text-sm text-[#1C3F3A]/70 shadow-sm"
+                                className="mt-6 rounded-lg border border-[#3B82F6]/30 bg-gradient-to-br from-[#E0F2FE] to-[#DBEAFE] p-4 text-sm text-[#1E3A8A]/70 shadow-sm"
                             >
                                 <div className="mb-2 flex items-center">
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
-                                        className="mr-2 h-4 w-4 text-[#2A8C6F]"
+                                        className="mr-2 h-4 w-4 text-[#3B82F6]"
                                         viewBox="0 0 20 20"
                                         fill="currentColor"
                                     >
@@ -423,14 +468,14 @@ const LoginPage = () => {
                                             clipRule="evenodd"
                                         />
                                     </svg>
-                                    <span className="font-semibold text-[#1C3F3A]">Authentication Successful (Manila Time)</span>
+                                    <span className="font-semibold text-[#1E3A8A]">Authentication Successful (Manila Time)</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <span className="text-[#1C3F3A]/50">Issued:</span> {formatManilaTime(loginMeta.issuedAt)}
+                                        <span className="text-[#1E3A8A]/50">Issued:</span> {formatManilaTime(loginMeta.issuedAt)}
                                     </div>
                                     <div>
-                                        <span className="text-[#1C3F3A]/50">Expires:</span> {formatManilaTime(loginMeta.expiresAt)}
+                                        <span className="text-[#1E3A8A]/50">Expires:</span> {formatManilaTime(loginMeta.expiresAt)}
                                     </div>
                                 </div>
                             </motion.div>
@@ -440,7 +485,7 @@ const LoginPage = () => {
             </motion.div>
 
             {/* Footer */}
-            <div className="fixed bottom-4 left-0 right-0 text-center text-xs text-[#1C3F3A]/50">
+            <div className="fixed bottom-4 left-0 right-0 text-center text-xs text-[#1E3A8A]/50">
                 Star Wash Laundry System • {new Date().getFullYear()}
             </div>
 

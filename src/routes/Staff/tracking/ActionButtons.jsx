@@ -17,22 +17,23 @@ const ActionButtons = ({
     isDarkMode,
     onCompletion
 }) => {
+    // Show loader for running loads and pending state
     if (isLoadRunning(load) || load.pending) {
         return (
             <div className="flex justify-end">
-                <div
-                    style={{
-                        width: 40,
-                        height: 40,
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        overflow: "hidden",
-                    }}
-                >
-                    <div style={{ transform: "scale(0.5)" }}>
-                        <Loader />
-                    </div>
+                <div className="flex items-center justify-center min-w-[80px] h-10">
+                    {load.pending && !isLoadRunning(load) ? (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700">
+                            <div className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                            <span className="text-sm font-medium whitespace-nowrap">
+                                Starting...
+                            </span>
+                        </div>
+                    ) : (
+                        <div style={{ transform: "scale(0.5)" }}>
+                            <Loader />
+                        </div>
+                    )}
                 </div>
             </div>
         );
