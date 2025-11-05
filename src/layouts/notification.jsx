@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/contexts/auth-context";
 import {
     Bell,
     X,
@@ -30,6 +31,8 @@ const CACHE_EXPIRY = 5 * 60 * 1000;
 export const NotificationSystem = () => {
     const { theme } = useTheme();
     const navigate = useNavigate();
+    const { user, role: userRole } = useAuth(); // Get role from auth context
+    
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -39,7 +42,7 @@ export const NotificationSystem = () => {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    
+
     const notificationRef = useRef(null);
     const notificationsEndRef = useRef(null);
     const observerRef = useRef(null);
@@ -52,6 +55,12 @@ export const NotificationSystem = () => {
 
     // Calculate isDarkMode based on theme
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    // Debug role
+    useEffect(() => {
+        console.log("🎯 Notification System - User Role:", userRole);
+        console.log("👤 Notification System - User:", user);
+    }, [userRole, user]);
 
     // Cache management functions
     const getCachedData = useCallback((key) => {
@@ -174,9 +183,10 @@ export const NotificationSystem = () => {
         }
     }, []);
 
-    // Enhanced notification navigation
+    // Enhanced notification navigation with proper role-based paths
     const handleNotificationNavigation = useCallback((notification) => {
         console.log("Navigating with notification:", notification);
+        console.log("User role:", userRole);
         
         setNotificationOpen(false);
         
@@ -189,62 +199,65 @@ export const NotificationSystem = () => {
             markAsRead(notification.id);
         }
 
-        if (notification.relatedEntityId) {
-            if (notification.type === "load_washed" || 
-                notification.type === "load_dried" || 
-                notification.type === "load_completed" ||
-                notification.type === "new_laundry_service") {
-                
-                navigate("/staff/tracking");
-                
-                setTimeout(() => {
-                    const element = document.getElementById(`job-${notification.relatedEntityId}`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        element.classList.add('highlight-pulse');
-                        setTimeout(() => element.classList.remove('highlight-pulse'), 3000);
-                    }
-                }, 500);
-                
-            } else if (notification.type === "stock_alert" || 
-                     notification.type === "inventory_update" || 
-                     notification.type === "stock_info" ||
-                     notification.type === "low_stock_warning" ||
-                     notification.type === "adequate_stock_level") {
-                
-                navigate("/staff/inventory");
-                
-                setTimeout(() => {
-                    const element = document.getElementById(`stock-${notification.relatedEntityId}`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        element.classList.add('highlight-pulse');
-                        setTimeout(() => element.classList.remove('highlight-pulse'), 3000);
-                    }
-                }, 500);
+        // Determine navigation path based on notification type and user role
+        let targetPath = "";
+        
+        // Stock-related notifications
+        const isStockNotification = 
+            notification.type === "stock_alert" || 
+            notification.type === "inventory_update" || 
+            notification.type === "stock_info" ||
+            notification.type === "low_stock_warning" ||
+            notification.type === "adequate_stock_level";
+
+        // Laundry-related notifications  
+        const isLaundryNotification =
+            notification.type === "load_washed" || 
+            notification.type === "load_dried" || 
+            notification.type === "load_completed" ||
+            notification.type === "new_laundry_service";
+
+        if (isStockNotification) {
+            // Proper role-based routing for stock notifications
+            if (userRole === "ADMIN") {
+                targetPath = "/manageinventory";
+            } else {
+                targetPath = "/staff/inventory";
+            }
+        } else if (isLaundryNotification) {
+            // Laundry notifications
+            if (userRole === "STAFF") {
+                targetPath = "/staff/tracking";
+            } else {
+                targetPath = "/manageinventory";
             }
         } else {
-            switch (notification.type) {
-                case "load_washed":
-                case "load_dried":
-                case "load_completed":
-                case "new_laundry_service":
-                    navigate("/staff/tracking");
-                    break;
-                case "stock_alert":
-                case "inventory_update":
-                case "stock_info":
-                case "low_stock_warning":
-                case "adequate_stock_level":
-                case "expired_laundry":
-                case "warning":
-                    navigate("/staff/inventory");
-                    break;
-                default:
-                    console.log("No specific navigation for notification type:", notification.type);
-            }
+            // Default fallback
+            targetPath = userRole === "ADMIN" ? "/manageinventory" : "/staff/dashboard";
         }
-    }, [navigate]);
+
+        console.log(`Navigating to: ${targetPath} for ${notification.type}`);
+        navigate(targetPath);
+
+        // Scroll to specific element if relatedEntityId exists
+        if (notification.relatedEntityId) {
+            setTimeout(() => {
+                let elementId = "";
+                if (isStockNotification) {
+                    elementId = `stock-${notification.relatedEntityId}`;
+                } else if (isLaundryNotification) {
+                    elementId = `job-${notification.relatedEntityId}`;
+                }
+                
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('highlight-pulse');
+                    setTimeout(() => element.classList.remove('highlight-pulse'), 3000);
+                }
+            }, 500);
+        }
+    }, [navigate, userRole]);
 
     // Fetch unread count with caching
     const fetchUnreadCount = useCallback(async (forceRefresh = false) => {

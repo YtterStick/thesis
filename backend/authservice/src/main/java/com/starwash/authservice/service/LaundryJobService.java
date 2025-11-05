@@ -1,4 +1,3 @@
-
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.dto.LaundryJobDto;
@@ -173,6 +172,7 @@ public class LaundryJobService {
         load.setDurationMinutes(finalDuration);
         load.setEndTime(now.plusMinutes(finalDuration));
 
+        // FIX: Update machine status to "In Use" for both washing and drying
         MachineItem machine = machineRepository.findById(load.getMachineId())
                 .orElseThrow(() -> new RuntimeException("Machine not found"));
         machine.setStatus(STATUS_IN_USE);
@@ -181,6 +181,7 @@ public class LaundryJobService {
         job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
+        System.out.println("🔄 Machine " + load.getMachineId() + " set to IN USE for " + transactionId + " load " + loadNumber);
         System.out.println("⏰ TIMING DEBUG - startLoad:");
         System.out.println("   Transaction: " + transactionId);
         System.out.println("   Load: " + loadNumber);
@@ -188,8 +189,7 @@ public class LaundryJobService {
         System.out.println("   Duration: " + finalDuration + " minutes");
         System.out.println("   Start Time (Manila): " + now);
         System.out.println("   End Time (Manila): " + load.getEndTime());
-        System.out.println("   Current System Time: " + LocalDateTime.now());
-        System.out.println("   Manila Zone: " + getManilaTimeZone());
+        System.out.println("   Machine ID: " + load.getMachineId());
 
         System.out.println("⏰ Scheduled auto-advance for " + transactionId + " load " + loadNumber + 
                           " in " + finalDuration + " minutes. EndTime: " + load.getEndTime());
@@ -237,6 +237,7 @@ public class LaundryJobService {
                 load.setMachineId(dryer.getId());
                 dryer.setStatus(STATUS_IN_USE);
                 machineRepository.save(dryer);
+                System.out.println("🔄 Auto-assigned dryer " + dryer.getId() + " for dry again");
             } else {
                 throw new RuntimeException("No available dryers found");
             }
@@ -244,6 +245,7 @@ public class LaundryJobService {
             machineRepository.findById(load.getMachineId()).ifPresent(machine -> {
                 machine.setStatus(STATUS_IN_USE);
                 machineRepository.save(machine);
+                System.out.println("🔄 Machine " + load.getMachineId() + " set to IN USE for dry again");
             });
         }
 
@@ -257,6 +259,7 @@ public class LaundryJobService {
         System.out.println("   Duration: " + duration + " minutes");
         System.out.println("   Start Time (Manila): " + now);
         System.out.println("   End Time (Manila): " + load.getEndTime());
+        System.out.println("   Machine ID: " + load.getMachineId());
 
         scheduler.schedule(() -> {
             System.out.println("🏃‍♂️ Executing scheduled drying task for " + transactionId + " load " + loadNumber);
@@ -304,11 +307,13 @@ public class LaundryJobService {
         String previousStatus = load.getStatus();
         load.setStatus(newStatus);
 
-        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
-
-        if (STATUS_WASHED.equalsIgnoreCase(newStatus) || STATUS_DRIED.equalsIgnoreCase(newStatus)) {
+        // FIX: Only release machines when moving to FOLDING or COMPLETED
+        if (STATUS_FOLDING.equalsIgnoreCase(newStatus) || STATUS_COMPLETED.equalsIgnoreCase(newStatus)) {
             releaseMachine(load);
+            System.out.println("🔄 Released machine " + load.getMachineId() + " for " + transactionId + " load " + loadNumber);
         }
+
+        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
 
         job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
@@ -361,13 +366,15 @@ public class LaundryJobService {
                 switch (previousStatus.toUpperCase()) {
                     case STATUS_WASHING:
                         load.setStatus(STATUS_WASHED);
-                        releaseMachine(load);
+                        // FIX: Don't release washing machine here - keep it in use until folding/completed
                         System.out.println("🕒 Auto-advanced from WASHING to WASHED for " + transactionId + " load " + loadNumber);
+                        System.out.println("💡 Machine " + load.getMachineId() + " remains IN USE for next step");
                         break;
                     case STATUS_DRYING:
                         load.setStatus(STATUS_DRIED);
-                        releaseMachine(load);
+                        // FIX: Don't release dryer here - keep it in use until folding/completed
                         System.out.println("🕒 Auto-advanced from DRYING to DRIED for " + transactionId + " load " + loadNumber);
+                        System.out.println("💡 Machine " + load.getMachineId() + " remains IN USE for next step");
                         break;
                     default:
                         System.out.println("❓ No auto-advance logic for status: " + previousStatus);
@@ -708,8 +715,10 @@ public class LaundryJobService {
             machineRepository.findById(load.getMachineId()).ifPresent(machine -> {
                 machine.setStatus(STATUS_AVAILABLE);
                 machineRepository.save(machine);
-                System.out.println("🔄 Released machine: " + load.getMachineId());
+                System.out.println("🔄 Released machine: " + load.getMachineId() + " back to AVAILABLE");
             });
+            // Clear the machine ID from the load
+            load.setMachineId(null);
         }
     }
 
@@ -932,20 +941,24 @@ public class LaundryJobService {
         switch (currentStatus.toUpperCase()) {
             case STATUS_WASHING:
                 newStatus = STATUS_WASHED;
-                releaseMachine(load);
+                // Don't release machine in force advance
+                System.out.println("⚡ Force advanced from WASHING to WASHED - machine remains in use");
                 break;
             case STATUS_DRYING:
                 newStatus = STATUS_DRIED;
-                releaseMachine(load);
+                // Don't release machine in force advance
+                System.out.println("⚡ Force advanced from DRYING to DRIED - machine remains in use");
                 break;
             case STATUS_WASHED:
                 newStatus = STATUS_DRYING;
                 break;
             case STATUS_DRIED:
                 newStatus = STATUS_FOLDING;
+                releaseMachine(load);
                 break;
             case STATUS_FOLDING:
                 newStatus = STATUS_COMPLETED;
+                releaseMachine(load);
                 break;
             default:
                 throw new RuntimeException("Cannot force advance from status: " + currentStatus);
@@ -975,5 +988,30 @@ public class LaundryJobService {
         } catch (Exception e) {
             System.err.println("❌ Error checking timer states: " + e.getMessage());
         }
+    }
+
+    // Debug method to check machine status
+    public void debugMachineStatus(String machineId) {
+        machineRepository.findById(machineId).ifPresent(machine -> {
+            System.out.println("🔧 Machine Debug: " + machine.getName() + 
+                              " | Status: " + machine.getStatus() + 
+                              " | Type: " + machine.getType());
+        });
+    }
+
+    // Method to manually release a machine
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob releaseMachine(String transactionId, int loadNumber, String processedBy) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        releaseMachine(load);
+
+        job.setLaundryProcessedBy(processedBy);
+        return laundryJobRepository.save(job);
     }
 }
