@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/hooks/use-theme";
-import { Info } from "lucide-react";
+import { Info, AlertCircle } from "lucide-react";
 
 const ConsumablesSection = ({
   stockItems,
@@ -19,6 +19,7 @@ const ConsumablesSection = ({
   setFabricOverrides,
   supplySource,
   isLocked,
+  insufficientStockItems = []
 }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -77,47 +78,87 @@ const ConsumablesSection = ({
     return false;
   };
 
-  const renderInput = (item, type = "other") => (
-    <div key={item.id} className="relative">
-      <div className="flex items-center justify-between mb-1">
-        <Label style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{item.name}</Label>
-        {isManuallySet(item.name, type) && (
-          <div className="flex items-center gap-1 text-xs" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }}>
-            <Info size={12} />
-            <span>Manual</span>
+  // Check if an item has insufficient stock
+  const isInsufficientStock = (itemName) => {
+    return insufficientStockItems.some(item => 
+      item.toLowerCase().includes(itemName.toLowerCase()) || 
+      itemName.toLowerCase().includes(item.toLowerCase())
+    );
+  };
+
+  const renderInput = (item, type = "other") => {
+    const insufficient = isInsufficientStock(item.name);
+    
+    return (
+      <div key={item.id} className="relative">
+        <div className="flex items-center justify-between mb-1">
+          <Label 
+            style={{ 
+              color: insufficient 
+                ? '#ef4444' 
+                : (isDarkMode ? '#f1f5f9' : '#0f172a') 
+            }}
+          >
+            {item.name}
+          </Label>
+          <div className="flex items-center gap-1">
+            {insufficient && (
+              <div className="flex items-center gap-1 text-xs text-red-500">
+                <AlertCircle size={12} />
+                <span>Insufficient</span>
+              </div>
+            )}
+            {isManuallySet(item.name, type) && !insufficient && (
+              <div className="flex items-center gap-1 text-xs" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }}>
+                <Info size={12} />
+                <span>Manual</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={consumables[item.name]?.toString() ?? "0"}
+          onChange={(e) => {
+            const raw = e.target.value;
+            const cleaned = raw.replace(/^0+/, "") || "0";
+            const numeric = parseInt(cleaned, 10);
+
+            if (type === "plastic") {
+              handlePlasticChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
+            } else if (type === "detergent") {
+              handleDetergentChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
+            } else if (type === "fabric") {
+              handleFabricChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
+            } else {
+              onConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
+            }
+          }}
+          disabled={isLocked}
+          className={`rounded-lg border-2 focus-visible:ring-2 ${
+            insufficient 
+              ? 'border-red-500 focus-visible:ring-red-500' 
+              : 'focus-visible:ring-blue-500'
+          }`}
+          style={{
+            borderColor: insufficient 
+              ? '#ef4444' 
+              : (isDarkMode ? '#334155' : '#cbd5e1'),
+            backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+            color: isDarkMode ? '#f1f5f9' : '#0f172a'
+          }}
+        />
+        {insufficient && (
+          <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
+            <AlertCircle size={10} />
+            <span>Not enough stock available</span>
           </div>
         )}
       </div>
-      <Input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        value={consumables[item.name]?.toString() ?? "0"}
-        onChange={(e) => {
-          const raw = e.target.value;
-          const cleaned = raw.replace(/^0+/, "") || "0";
-          const numeric = parseInt(cleaned, 10);
-
-          if (type === "plastic") {
-            handlePlasticChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
-          } else if (type === "detergent") {
-            handleDetergentChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
-          } else if (type === "fabric") {
-            handleFabricChange(item.name, isNaN(numeric) ? 0 : numeric, raw);
-          } else {
-            onConsumableChange(item.name, isNaN(numeric) ? 0 : numeric);
-          }
-        }}
-        disabled={isLocked}
-        className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
-        style={{
-          borderColor: isDarkMode ? '#334155' : '#cbd5e1',
-          backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
-          color: isDarkMode ? '#f1f5f9' : '#0f172a'
-        }}
-      />
-    </div>
-  );
+    );
+  };
 
   // Show different content based on supply source
   if (supplySource === "customer") {
@@ -225,6 +266,7 @@ ConsumablesSection.propTypes = {
   setFabricOverrides: PropTypes.func.isRequired,
   supplySource: PropTypes.string.isRequired,
   isLocked: PropTypes.bool,
+  insufficientStockItems: PropTypes.array,
 };
 
 export default ConsumablesSection;

@@ -73,6 +73,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const [stockItems, setStockItems] = useState([]);
     const [paymentMethods, setPaymentMethods] = useState(["Cash"]);
     const [initialLoad, setInitialLoad] = useState(!transactionFormCache);
+    const [insufficientStockItems, setInsufficientStockItems] = useState([]);
     const { toast } = useToast();
     const pollingIntervalRef = useRef(null);
     const isMountedRef = useRef(true);
@@ -106,6 +107,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             setPlasticOverrides({});
             setDetergentOverrides({});
             setFabricOverrides({});
+            setInsufficientStockItems([]);
             
             const initialConsumables = {};
             stockItems.forEach((item) => {
@@ -330,7 +332,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     }, [supplySource, stockItems]);
 
-    // NEW: Handle switching back to in-store - reset detergent and fabric to match loads
+    // Handle switching back to in-store - reset detergent and fabric to match loads
     useEffect(() => {
         if (supplySource === "in-store" && stockItems.length > 0) {
             console.log("🔄 In-store selected - resetting detergent and fabric to match loads");
@@ -466,9 +468,52 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         });
     }, [form.amountGiven, totalAmount]);
 
+    // NEW: Function to extract stock items from error response
+    const extractInsufficientStockItems = (error) => {
+        // Try to get the response data if available
+        if (error.response && error.response.data) {
+            const responseData = error.response.data;
+            
+            // If backend returns structured error with insufficientItems
+            if (responseData.insufficientItems && Array.isArray(responseData.insufficientItems)) {
+                return responseData.insufficientItems;
+            }
+            
+            // If backend returns message with item names
+            if (responseData.message && responseData.message.includes("Insufficient stock")) {
+                const itemsMatch = responseData.message.match(/Insufficient stock for: (.+)$/);
+                if (itemsMatch && itemsMatch[1]) {
+                    return itemsMatch[1].split(', ').map(item => item.split(' (')[0].trim());
+                }
+            }
+        }
+        
+        // Fallback: try to extract from error message
+        if (error.message && error.message.includes("Insufficient stock")) {
+            const itemsMatch = error.message.match(/Insufficient stock for: (.+)$/);
+            if (itemsMatch && itemsMatch[1]) {
+                return itemsMatch[1].split(', ').map(item => item.split(' (')[0].trim());
+            }
+        }
+        
+        // If we can't extract specific items, check all consumables against stock
+        const insufficientItems = [];
+        Object.entries(consumables).forEach(([itemName, quantity]) => {
+            const stockItem = stockItems.find(item => item.name === itemName);
+            if (stockItem && quantity > stockItem.quantity) {
+                insufficientItems.push(itemName);
+            }
+        });
+        
+        return insufficientItems;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (isSubmitting) return;
+
+        // Clear previous insufficient stock errors
+        setInsufficientStockItems([]);
 
         if (!form.name || !form.contact || !form.serviceId) {
             toast({
@@ -575,8 +620,15 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         try {
             await onSubmit(payload);
         } catch (error) {
-            // Error is handled in MainPage component
-            throw error;
+            // Extract insufficient stock items from error
+            const insufficientItems = extractInsufficientStockItems(error);
+            if (insufficientItems.length > 0) {
+                setInsufficientStockItems(insufficientItems);
+                // Don't show toast for insufficient stock - we handle it visually
+            } else {
+                // For other errors, let MainPage handle the toast
+                throw error;
+            }
         }
     };
 
@@ -709,6 +761,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         setFabricOverrides={setFabricOverrides}
                         supplySource={supplySource}
                         isLocked={isLocked}
+                        insufficientStockItems={insufficientStockItems}
                     />
 
                     {/* 💳 Payment Section */}

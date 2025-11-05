@@ -59,9 +59,9 @@ public class TransactionController {
      * Create a transaction and corresponding laundry job
      */
     @PostMapping
-    public ResponseEntity<ServiceInvoiceDto> createTransaction(@RequestBody TransactionRequestDto request,
-                                                               @RequestHeader("Authorization") String authHeader,
-                                                               HttpServletRequest httpRequest) {
+    public ResponseEntity<?> createTransaction(@RequestBody TransactionRequestDto request,
+                                               @RequestHeader("Authorization") String authHeader,
+                                               HttpServletRequest httpRequest) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -133,9 +133,27 @@ public class TransactionController {
             log.info("📝 Transaction logged to audit trail | staff={} | role={} | invoice={}", staffId, staffRole, invoice.getInvoiceNumber());
 
             return ResponseEntity.ok(invoice);
+            
+        } catch (TransactionService.InsufficientStockException e) {
+            // Return structured error response for insufficient stock
+            log.error("❌ Insufficient stock for transaction: {}", e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Insufficient stock");
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("insufficientItems", e.getInsufficientItems());
+            
+            return ResponseEntity.status(400).body(errorResponse);
+            
         } catch (RuntimeException e) {
             log.error("❌ Transaction creation failed: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
+            
+            // Return generic error response
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Transaction failed");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 
@@ -143,8 +161,8 @@ public class TransactionController {
      * Get service invoice by transaction ID
      */
     @GetMapping("/{id}/service-invoice")
-    public ResponseEntity<ServiceInvoiceDto> getServiceInvoice(@PathVariable String id,
-                                                               @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getServiceInvoice(@PathVariable String id,
+                                               @RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -154,7 +172,12 @@ public class TransactionController {
             return ResponseEntity.ok(invoice);
         } catch (RuntimeException e) {
             log.error("❌ Failed to fetch service invoice for id={}: {}", id, e.getMessage());
-            return ResponseEntity.notFound().build();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Service invoice not found");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.status(404).body(errorResponse);
         }
     }
 
@@ -162,7 +185,7 @@ public class TransactionController {
      * Get pending GCash transactions
      */
     @GetMapping("/pending-gcash")
-    public ResponseEntity<List<PendingGcashDto>> getPendingGcashTransactions(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getPendingGcashTransactions(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -185,7 +208,12 @@ public class TransactionController {
             return ResponseEntity.ok(dtos);
         } catch (RuntimeException e) {
             log.error("❌ Failed to fetch pending GCash transactions: {}", e.getMessage());
-            return ResponseEntity.internalServerError().build();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch pending GCash transactions");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 
@@ -208,7 +236,10 @@ public class TransactionController {
             Transaction transaction = transactionService.findTransactionById(id);
             
             if (!"GCash".equals(transaction.getPaymentMethod())) {
-                return ResponseEntity.badRequest().body("Transaction is not a GCash payment");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Invalid payment method");
+                errorResponse.put("message", "Transaction is not a GCash payment");
+                return ResponseEntity.badRequest().body(errorResponse);
             }
             
             boolean wasVerified = Boolean.TRUE.equals(transaction.getGcashVerified());
@@ -240,7 +271,12 @@ public class TransactionController {
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             log.error("❌ Failed to verify GCash payment for id={}: {}", id, e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "GCash verification failed");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 
@@ -251,75 +287,191 @@ public class TransactionController {
     public ResponseEntity<Map<String, Object>> validateDueDates() {
         Map<String, Object> response = new HashMap<>();
         
-        List<LaundryJob> jobsWithoutDueDate = laundryJobRepository.findAll().stream()
-                .filter(job -> job.getDueDate() == null)
-                .collect(Collectors.toList());
-        
-        List<Transaction> transactionsWithoutDueDate = transactionRepository.findAll().stream()
-                .filter(txn -> txn.getDueDate() == null)
-                .collect(Collectors.toList());
-        
-        response.put("jobsWithoutDueDate", jobsWithoutDueDate.size());
-        response.put("transactionsWithoutDueDate", transactionsWithoutDueDate.size());
-        response.put("message", "Validation completed");
-        
-        return ResponseEntity.ok(response);
+        try {
+            List<LaundryJob> jobsWithoutDueDate = laundryJobRepository.findAll().stream()
+                    .filter(job -> job.getDueDate() == null)
+                    .collect(Collectors.toList());
+            
+            List<Transaction> transactionsWithoutDueDate = transactionRepository.findAll().stream()
+                    .filter(txn -> txn.getDueDate() == null)
+                    .collect(Collectors.toList());
+            
+            response.put("jobsWithoutDueDate", jobsWithoutDueDate.size());
+            response.put("transactionsWithoutDueDate", transactionsWithoutDueDate.size());
+            response.put("message", "Validation completed");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ Failed to validate due dates: {}", e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Due date validation failed");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
     }
 
     /**
      * Fix due dates for all transactions and laundry jobs with null dueDate
      */
     @PostMapping("/fix-due-dates")
-    public ResponseEntity<Map<String, Object>> fixDueDates() {
+    public ResponseEntity<?> fixDueDates() {
         Map<String, Object> response = new HashMap<>();
         
-        List<LaundryJob> allJobs = laundryJobRepository.findAll();
-        List<Transaction> allTransactions = transactionRepository.findAll();
-        
-        int fixedJobs = 0;
-        int fixedTransactions = 0;
-        
-        // Check and fix LaundryJobs with null dueDate
-        for (LaundryJob job : allJobs) {
-            if (job.getDueDate() == null) {
-                log.info("Fixing null dueDate for laundry job: {}", job.getTransactionId());
-                
-                // Try to get dueDate from transaction
-                Transaction txn = transactionRepository.findByInvoiceNumber(job.getTransactionId()).orElse(null);
-                if (txn != null && txn.getDueDate() != null) {
-                    job.setDueDate(txn.getDueDate());
-                } else {
-                    // Fallback: set to 7 days from creation
-                    job.setDueDate(LocalDateTime.now().plusDays(7));
+        try {
+            List<LaundryJob> allJobs = laundryJobRepository.findAll();
+            List<Transaction> allTransactions = transactionRepository.findAll();
+            
+            int fixedJobs = 0;
+            int fixedTransactions = 0;
+            
+            // Check and fix LaundryJobs with null dueDate
+            for (LaundryJob job : allJobs) {
+                if (job.getDueDate() == null) {
+                    log.info("Fixing null dueDate for laundry job: {}", job.getTransactionId());
+                    
+                    // Try to get dueDate from transaction
+                    Transaction txn = transactionRepository.findByInvoiceNumber(job.getTransactionId()).orElse(null);
+                    if (txn != null && txn.getDueDate() != null) {
+                        job.setDueDate(txn.getDueDate());
+                    } else {
+                        // Fallback: set to 7 days from creation
+                        job.setDueDate(LocalDateTime.now().plusDays(7));
+                    }
+                    
+                    laundryJobRepository.save(job);
+                    fixedJobs++;
                 }
-                
-                laundryJobRepository.save(job);
-                fixedJobs++;
             }
-        }
-        
-        // Check and fix Transactions with null dueDate
-        for (Transaction txn : allTransactions) {
-            if (txn.getDueDate() == null) {
-                log.info("Fixing null dueDate for transaction: {}", txn.getInvoiceNumber());
-                
-                // Set to 7 days from issue date or creation date
-                if (txn.getIssueDate() != null) {
-                    txn.setDueDate(txn.getIssueDate().plusDays(7));
-                } else {
-                    txn.setDueDate(txn.getCreatedAt().plusDays(7));
+            
+            // Check and fix Transactions with null dueDate
+            for (Transaction txn : allTransactions) {
+                if (txn.getDueDate() == null) {
+                    log.info("Fixing null dueDate for transaction: {}", txn.getInvoiceNumber());
+                    
+                    // Set to 7 days from issue date or creation date
+                    if (txn.getIssueDate() != null) {
+                        txn.setDueDate(txn.getIssueDate().plusDays(7));
+                    } else {
+                        txn.setDueDate(txn.getCreatedAt().plusDays(7));
+                    }
+                    
+                    transactionRepository.save(txn);
+                    fixedTransactions++;
                 }
-                
-                transactionRepository.save(txn);
-                fixedTransactions++;
             }
+            
+            response.put("fixedJobs", fixedJobs);
+            response.put("fixedTransactions", fixedTransactions);
+            response.put("message", "Fixed " + fixedJobs + " laundry jobs and " + 
+                          fixedTransactions + " transactions with null dueDate");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ Failed to fix due dates: {}", e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Due date fix failed");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
-        
-        response.put("fixedJobs", fixedJobs);
-        response.put("fixedTransactions", fixedTransactions);
-        response.put("message", "Fixed " + fixedJobs + " laundry jobs and " + 
-                      fixedTransactions + " transactions with null dueDate");
-        
-        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get all transactions
+     */
+    @GetMapping
+    public ResponseEntity<?> getAllTransactions(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            List<Transaction> transactions = transactionRepository.findAll();
+            return ResponseEntity.ok(transactions);
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch transactions: {}", e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch transactions");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * Get transaction by ID
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTransactionById(@PathVariable String id,
+                                                @RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            Transaction transaction = transactionService.findTransactionById(id);
+            return ResponseEntity.ok(transaction);
+        } catch (RuntimeException e) {
+            log.error("❌ Failed to fetch transaction for id={}: {}", id, e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Transaction not found");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.status(404).body(errorResponse);
+        }
+    }
+
+    /**
+     * Get transactions by customer name
+     */
+    @GetMapping("/customer/{customerName}")
+    public ResponseEntity<?> getTransactionsByCustomerName(@PathVariable String customerName,
+                                                           @RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            List<Transaction> transactions = transactionRepository.findByCustomerNameIgnoreCase(customerName);
+            return ResponseEntity.ok(transactions);
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch transactions for customer={}: {}", customerName, e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch customer transactions");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * Get transactions by date range
+     */
+    @GetMapping("/date-range")
+    public ResponseEntity<?> getTransactionsByDateRange(@RequestParam LocalDateTime from,
+                                                        @RequestParam LocalDateTime to,
+                                                        @RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            List<Transaction> transactions = transactionRepository.findByCreatedAtBetween(from, to);
+            return ResponseEntity.ok(transactions);
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch transactions in date range {}-{}: {}", from, to, e.getMessage());
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch transactions by date range");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
     }
 }

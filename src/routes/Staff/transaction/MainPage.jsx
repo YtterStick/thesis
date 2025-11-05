@@ -193,14 +193,11 @@ const MainPage = () => {
         } catch (error) {
             console.error("❌ Transaction failed:", error);
             
-            // Handle insufficient stock errors specifically
+            // Handle insufficient stock errors specifically - DON'T show toast for these
             if (error.message && error.message.includes("Insufficient stock")) {
+                // Just set the error message but don't show toast
                 setErrorMessage(error.message);
-                toast({
-                    title: "Insufficient Stock",
-                    description: error.message,
-                    variant: "destructive",
-                });
+                // Don't show toast for insufficient stock - let TransactionForm handle it visually
             } else {
                 setErrorMessage(error.message || "Transaction failed");
                 toast({
