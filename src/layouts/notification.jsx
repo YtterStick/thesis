@@ -9,6 +9,8 @@ import {
     Info,
     RefreshCw,
     Sun,
+    Clock,
+    AlertTriangle,
 } from "lucide-react";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
@@ -46,7 +48,7 @@ export const NotificationSystem = () => {
     const autoNotificationTimeoutRef = useRef(new Map());
     const shownNotificationIdsRef = useRef(new Set());
     const lastFetchedIdsRef = useRef(new Set());
-    const processedNotificationIdsRef = useRef(new Set()); // NEW: Track processed notifications for popups
+    const processedNotificationIdsRef = useRef(new Set());
 
     // Calculate isDarkMode based on theme
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -98,7 +100,7 @@ export const NotificationSystem = () => {
     // Add notification ID to shown set and save to localStorage
     const markNotificationAsShown = useCallback((notificationId) => {
         shownNotificationIdsRef.current.add(notificationId);
-        processedNotificationIdsRef.current.add(notificationId); // NEW: Also mark as processed
+        processedNotificationIdsRef.current.add(notificationId);
         const idsArray = Array.from(shownNotificationIdsRef.current);
         
         let timestampsMap = {};
@@ -132,7 +134,7 @@ export const NotificationSystem = () => {
                     });
                     
                     shownNotificationIdsRef.current = new Set(validIds);
-                    processedNotificationIdsRef.current = new Set(validIds); // NEW: Initialize processed IDs
+                    processedNotificationIdsRef.current = new Set(validIds);
                     
                     if (validIds.length !== idsArray.length) {
                         saveShownNotificationIds(validIds, timestampsMap);
@@ -182,7 +184,7 @@ export const NotificationSystem = () => {
             removeAutoNotification(notification.id);
         }
 
-        // MARK AS READ when notification is clicked - FIXED
+        // MARK AS READ when notification is clicked
         if (!notification.read) {
             markAsRead(notification.id);
         }
@@ -206,7 +208,9 @@ export const NotificationSystem = () => {
                 
             } else if (notification.type === "stock_alert" || 
                      notification.type === "inventory_update" || 
-                     notification.type === "stock_info") {
+                     notification.type === "stock_info" ||
+                     notification.type === "low_stock_warning" ||
+                     notification.type === "adequate_stock_level") {
                 
                 navigate("/staff/inventory");
                 
@@ -230,7 +234,11 @@ export const NotificationSystem = () => {
                 case "stock_alert":
                 case "inventory_update":
                 case "stock_info":
-                    navigate("staff/inventory");
+                case "low_stock_warning":
+                case "adequate_stock_level":
+                case "expired_laundry":
+                case "warning":
+                    navigate("/staff/inventory");
                     break;
                 default:
                     console.log("No specific navigation for notification type:", notification.type);
@@ -238,7 +246,7 @@ export const NotificationSystem = () => {
         }
     }, [navigate]);
 
-    // Fetch unread count with caching - FIXED to ensure proper count updates
+    // Fetch unread count with caching
     const fetchUnreadCount = useCallback(async (forceRefresh = false) => {
         if (!forceRefresh) {
             const cachedCount = getCachedData(STORAGE_KEYS.UNREAD_COUNT_CACHE);
@@ -430,7 +438,7 @@ export const NotificationSystem = () => {
         }
     }, [getCachedData, setCachedData, smartRefreshNotifications]);
 
-    // Mark notification as read - FIXED to properly update count
+    // Mark notification as read
     const markAsRead = useCallback(async (id) => {
         try {
             await api.post(`api/notifications/${id}/read`);
@@ -462,7 +470,7 @@ export const NotificationSystem = () => {
         }
     }, [fetchUnreadCount, getCachedData, setCachedData]);
 
-    // Mark all as read - FIXED to properly update count
+    // Mark all as read
     const markAllAsRead = useCallback(async () => {
         try {
             await api.post("api/notifications/read-all");
@@ -500,7 +508,7 @@ export const NotificationSystem = () => {
         );
     }, []);
 
-    // Show auto notifications - FIXED: Only show once per notification lifetime
+    // Show auto notifications - Only show once per notification lifetime
     const showAutoNotifications = useCallback((newNotifications) => {
         if (!newNotifications || newNotifications.length === 0) return;
 
@@ -520,7 +528,7 @@ export const NotificationSystem = () => {
             const isAlreadyFetched = lastFetchedIdsRef.current.has(notification.id);
             if (isAlreadyFetched) {
                 console.log(`📭 Skipping - already in notification list: ${notification.id}`);
-                processedNotificationIdsRef.current.add(notification.id); // Mark as processed
+                processedNotificationIdsRef.current.add(notification.id);
                 return false;
             }
             
@@ -571,7 +579,7 @@ export const NotificationSystem = () => {
         fetchUnreadCount(true);
     }, [removeAutoNotification, markNotificationAsShown, fetchUnreadCount]);
 
-    // Enhanced notification click handler - FIXED to properly mark as read
+    // Enhanced notification click handler
     const handleNotificationClick = useCallback((notification) => {
         console.log('📝 Notification clicked, marking as read:', notification.id);
         
@@ -584,13 +592,28 @@ export const NotificationSystem = () => {
     // Helper functions for notification styling
     const getNotificationColor = useCallback((type) => {
         switch (type) {
-            case "stock_alert": return "#ef4444";
-            case "inventory_update": return "#10b981";
-            case "stock_info": return "#3b82f6";
-            case "load_washed": return "#3b82f6";
-            case "load_dried": return "#f59e0b";
-            case "load_completed": return "#10b981";
-            default: return "#6b7280";
+            case "stock_alert": 
+            case "low_stock_warning": 
+                return "#ef4444"; // red
+            case "inventory_update": 
+                return "#10b981"; // green
+            case "stock_info": 
+            case "adequate_stock_level": 
+                return "#3b82f6"; // blue
+            case "expired_laundry": 
+                return "#dc2626"; // dark red
+            case "warning": 
+                return "#f59e0b"; // amber
+            case "load_washed": 
+                return "#3b82f6"; // blue
+            case "load_dried": 
+                return "#f59e0b"; // amber
+            case "load_completed": 
+                return "#10b981"; // green
+            case "new_laundry_service":
+                return "#8b5cf6"; // purple
+            default: 
+                return "#6b7280"; // gray
         }
     }, []);
 
@@ -598,23 +621,31 @@ export const NotificationSystem = () => {
         const iconProps = { size: 18 };
         switch (type) {
             case "stock_alert":
+            case "low_stock_warning":
                 return <AlertCircle {...iconProps} className="text-red-500" />;
             case "inventory_update":
                 return <CheckCircle {...iconProps} className="text-green-500" />;
             case "stock_info":
+            case "adequate_stock_level":
                 return <Info {...iconProps} className="text-blue-500" />;
+            case "expired_laundry":
+                return <Clock {...iconProps} className="text-red-600" />;
+            case "warning":
+                return <AlertTriangle {...iconProps} className="text-amber-500" />;
             case "load_washed":
                 return <RefreshCw {...iconProps} className="text-blue-500" />;
             case "load_dried":
                 return <Sun {...iconProps} className="text-orange-500" />;
             case "load_completed":
                 return <CheckCircle {...iconProps} className="text-green-500" />;
+            case "new_laundry_service":
+                return <Bell {...iconProps} className="text-purple-500" />;
             default:
                 return <Bell {...iconProps} className="text-gray-500" />;
         }
     }, []);
 
-    // Real-time polling for notifications (only for popups when dropdown is closed) - FIXED
+    // Real-time polling for notifications (only for popups when dropdown is closed)
     const startRealTimePolling = useCallback(() => {
         if (realTimePollingRef.current) {
             clearInterval(realTimePollingRef.current);

@@ -90,12 +90,20 @@ public class StockService {
 
             StockItem savedItem = stockRepository.save(item);
 
-            String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s",
-                    item.getName(), amount, item.getUnit(), item.getQuantity(), item.getUnit());
+            // Send specific restock notification to both ADMIN and STAFF
+            if (amount > 0) {
+                String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s", 
+                    item.getName(), amount, item.getUnit(), savedItem.getQuantity(), item.getUnit());
+                notificationService.notifyAllUsers(
+                    NotificationService.INVENTORY_UPDATE, 
+                    "📦 Restock Completed", 
+                    message, 
+                    item.getId()
+                );
+                System.out.println("📢 Restock notification sent: " + message);
+            }
 
-            notificationService.notifyAllUsers("inventory_update",
-                    "Restock Completed", message, item.getId());
-
+            // Also check for stock level status changes
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
 
             return savedItem;

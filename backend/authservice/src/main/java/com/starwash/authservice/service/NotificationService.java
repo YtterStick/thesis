@@ -24,6 +24,19 @@ public class NotificationService {
     
     private final ConcurrentHashMap<String, String> lastStockStatus = new ConcurrentHashMap<>();
 
+    // Notification types
+    public static final String TYPE_LOAD_WASHED = "load_washed";
+    public static final String TYPE_LOAD_DRIED = "load_dried";
+    public static final String TYPE_LOAD_COMPLETED = "load_completed";
+    public static final String NEW_LAUNDRY_SERVICE = "new_laundry_service";
+    public static final String STOCK_ALERT = "stock_alert";
+    public static final String INVENTORY_UPDATE = "inventory_update";
+    public static final String STOCK_INFO = "stock_info";
+    public static final String EXPIRED_LAUNDRY = "expired_laundry";
+    public static final String WARNING = "warning";
+    public static final String LOW_STOCK_WARNING = "low_stock_warning";
+    public static final String ADEQUATE_STOCK_LEVEL = "adequate_stock_level";
+
     public NotificationService(NotificationRepository notificationRepository, 
                              UserRepository userRepository, 
                              StockRepository stockRepository) {
@@ -86,13 +99,13 @@ public class NotificationService {
 
     // Check if notification is stock-related (ADMIN should receive these)
     private boolean isStockRelatedNotification(String notificationType) {
-        return notificationType.equals(Notification.STOCK_ALERT) ||
-               notificationType.equals(Notification.INVENTORY_UPDATE) ||
-               notificationType.equals(Notification.STOCK_INFO) ||
-               notificationType.equals(Notification.EXPIRED_LAUNDRY) ||
-               notificationType.equals(Notification.WARNING) ||
-               notificationType.equals(Notification.LOW_STOCK_WARNING) ||
-               notificationType.equals(Notification.ADEQUATE_STOCK_LEVEL);
+        return notificationType.equals(STOCK_ALERT) ||
+               notificationType.equals(INVENTORY_UPDATE) ||
+               notificationType.equals(STOCK_INFO) ||
+               notificationType.equals(EXPIRED_LAUNDRY) ||
+               notificationType.equals(WARNING) ||
+               notificationType.equals(LOW_STOCK_WARNING) ||
+               notificationType.equals(ADEQUATE_STOCK_LEVEL);
     }
 
     // Stock monitoring methods
@@ -161,19 +174,19 @@ public class NotificationService {
             case "OUT_OF_STOCK":
                 title = "🚨 Out of Stock Alert";
                 message = String.format("%s is completely out of stock. Please restock immediately!", item.getName());
-                type = Notification.STOCK_ALERT;
+                type = STOCK_ALERT;
                 break;
             case "LOW_STOCK":
                 if (isImprovement && "OUT_OF_STOCK".equals(previousStatus)) {
                     title = "🔄 Stock Restocked";
                     message = String.format("%s has been restocked from out of stock. Current quantity: %d %s", 
                         item.getName(), currentQuantity, item.getUnit());
-                    type = Notification.INVENTORY_UPDATE;
+                    type = INVENTORY_UPDATE;
                 } else {
                     title = "⚠️ Low Stock Warning";
                     message = String.format("%s is running low. Current quantity: %d %s. Low threshold: %d %s", 
                         item.getName(), currentQuantity, item.getUnit(), item.getLowStockThreshold(), item.getUnit());
-                    type = Notification.LOW_STOCK_WARNING;
+                    type = LOW_STOCK_WARNING;
                 }
                 break;
             case "ADEQUATE_STOCK":
@@ -181,19 +194,19 @@ public class NotificationService {
                     title = "📈 Stock Level Improved";
                     message = String.format("%s is now at adequate level. Current quantity: %d %s.", 
                         item.getName(), currentQuantity, item.getUnit());
-                    type = Notification.STOCK_INFO;
+                    type = STOCK_INFO;
                 } else {
                     title = "ℹ️ Adequate Stock Level";
                     message = String.format("%s is at adequate level. Current quantity: %d %s.", 
                         item.getName(), currentQuantity, item.getUnit());
-                    type = Notification.ADEQUATE_STOCK_LEVEL;
+                    type = ADEQUATE_STOCK_LEVEL;
                 }
                 break;
             case "FULLY_STOCKED":
                 title = "✅ Fully Stocked";
                 message = String.format("%s is fully stocked. Current quantity: %d %s.", 
                     item.getName(), currentQuantity, item.getUnit());
-                type = Notification.STOCK_INFO;
+                type = STOCK_INFO;
                 break;
             default:
                 return;
@@ -231,7 +244,7 @@ public class NotificationService {
             loadNumber, customerName);
         
         // Only notify STAFF for laundry updates
-        notifyAllStaff(Notification.TYPE_LOAD_WASHED, title, message, transactionId);
+        notifyAllStaff(TYPE_LOAD_WASHED, title, message, transactionId);
         System.out.println("📢 Load washed notification sent to STAFF: " + message);
     }
 
@@ -241,7 +254,7 @@ public class NotificationService {
             loadNumber, customerName);
         
         // Only notify STAFF for laundry updates
-        notifyAllStaff(Notification.TYPE_LOAD_DRIED, title, message, transactionId);
+        notifyAllStaff(TYPE_LOAD_DRIED, title, message, transactionId);
         System.out.println("📢 Load dried notification sent to STAFF: " + message);
     }
 
@@ -251,7 +264,7 @@ public class NotificationService {
             loadNumber, customerName);
         
         // Only notify STAFF for laundry updates
-        notifyAllStaff(Notification.TYPE_LOAD_COMPLETED, title, message, transactionId);
+        notifyAllStaff(TYPE_LOAD_COMPLETED, title, message, transactionId);
         System.out.println("📢 Load completed notification sent to STAFF: " + message);
     }
 
@@ -260,7 +273,7 @@ public class NotificationService {
         String message = String.format("New %s service started for %s", serviceType, customerName);
         
         // Only notify STAFF for new laundry services
-        notifyAllStaff(Notification.NEW_LAUNDRY_SERVICE, title, message, transactionId);
+        notifyAllStaff(NEW_LAUNDRY_SERVICE, title, message, transactionId);
         System.out.println("📢 New laundry service notification sent to STAFF: " + message);
     }
 
@@ -271,7 +284,7 @@ public class NotificationService {
             itemName, location, expiryDate.toString());
         
         // Both ADMIN and STAFF receive expired laundry notifications
-        notifyAllUsers(Notification.EXPIRED_LAUNDRY, title, message, null);
+        notifyAllUsers(EXPIRED_LAUNDRY, title, message, null);
         System.out.println("📢 Expired laundry notification sent: " + message);
     }
 
@@ -280,7 +293,7 @@ public class NotificationService {
         String message = String.format("%s: %s", subject, details);
         
         // Both ADMIN and STAFF receive general warnings
-        notifyAllUsers(Notification.WARNING, title, message, null);
+        notifyAllUsers(WARNING, title, message, null);
         System.out.println("📢 General warning notification sent: " + message);
     }
 
@@ -290,7 +303,7 @@ public class NotificationService {
             item.getName(), currentQuantity, item.getUnit(), threshold, item.getUnit());
         
         // Both ADMIN and STAFF receive low stock warnings
-        notifyAllUsers(Notification.LOW_STOCK_WARNING, title, message, item.getId());
+        notifyAllUsers(LOW_STOCK_WARNING, title, message, item.getId());
         System.out.println("📢 Low stock warning sent: " + message);
     }
 
@@ -300,7 +313,7 @@ public class NotificationService {
             item.getName(), currentQuantity, item.getUnit());
         
         // Both ADMIN and STAFF receive adequate stock notifications
-        notifyAllUsers(Notification.ADEQUATE_STOCK_LEVEL, title, message, item.getId());
+        notifyAllUsers(ADEQUATE_STOCK_LEVEL, title, message, item.getId());
         System.out.println("📢 Adequate stock notification sent: " + message);
     }
 
@@ -310,7 +323,7 @@ public class NotificationService {
             itemName, requestedQuantity, availableQuantity);
         
         // Both ADMIN and STAFF receive transaction issues
-        notifyAllUsers(Notification.STOCK_ALERT, title, message, transactionId);
+        notifyAllUsers(STOCK_ALERT, title, message, transactionId);
         System.out.println("📢 Transaction stock issue notification sent: " + message);
     }
 
@@ -334,17 +347,11 @@ public class NotificationService {
             lastStockStatus.put(itemKey, currentStatus);
         }
         
-        if (previousQuantity != null) {
-            handleStockLevelTransitions(item, previousQuantity, currentQuantity, lowThreshold, adequateThreshold);
-        }
-    }
-
-    private void handleStockLevelTransitions(StockItem item, int previousQuantity, int currentQuantity, 
-                                           int lowThreshold, int adequateThreshold) {
-        if (currentQuantity > previousQuantity && (currentQuantity - previousQuantity) >= 10) {
-            String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s", 
+        // Handle large restocks (for significant quantity changes)
+        if (previousQuantity != null && currentQuantity > previousQuantity && (currentQuantity - previousQuantity) >= 10) {
+            String message = String.format("%s had a bulk restock. Added %d %s. New quantity: %d %s", 
                 item.getName(), (currentQuantity - previousQuantity), item.getUnit(), currentQuantity, item.getUnit());
-            notifyAllUsers(Notification.INVENTORY_UPDATE, "📦 Restock Completed", message, item.getId());
+            notifyAllUsers(INVENTORY_UPDATE, "📦 Bulk Restock Completed", message, item.getId());
         }
     }
 
@@ -365,22 +372,22 @@ public class NotificationService {
             if (currentQuantity == 0) {
                 title = "🚨 Out of Stock Alert";
                 message = String.format("%s is out of stock. Please restock immediately.", item.getName());
-                type = Notification.STOCK_ALERT;
+                type = STOCK_ALERT;
             } else if (currentQuantity <= lowThreshold) {
                 title = "⚠️ Low Stock Alert";
                 message = String.format("%s is running low. Current quantity: %d %s. Threshold: %d %s", 
                     item.getName(), currentQuantity, item.getUnit(), lowThreshold, item.getUnit());
-                type = Notification.LOW_STOCK_WARNING;
+                type = LOW_STOCK_WARNING;
             } else if (currentQuantity <= adequateThreshold) {
                 title = "ℹ️ Adequate Stock";
                 message = String.format("%s is at adequate level. Current quantity: %d %s.", 
                     item.getName(), currentQuantity, item.getUnit());
-                type = Notification.ADEQUATE_STOCK_LEVEL;
+                type = ADEQUATE_STOCK_LEVEL;
             } else {
                 title = "✅ Fully Stocked";
                 message = String.format("%s is fully stocked. Current quantity: %d %s.", 
                     item.getName(), currentQuantity, item.getUnit());
-                type = Notification.STOCK_INFO;
+                type = STOCK_INFO;
             }
             
             notifyAllUsers(type, title, message, item.getId());

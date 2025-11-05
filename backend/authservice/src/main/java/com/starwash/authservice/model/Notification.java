@@ -19,19 +19,6 @@ public class Notification {
     private LocalDateTime createdAt;
     private LocalDateTime readAt;
 
-    // Notification types
-    public static final String TYPE_LOAD_WASHED = "load_washed";
-    public static final String TYPE_LOAD_DRIED = "load_dried";
-    public static final String TYPE_LOAD_COMPLETED = "load_completed";
-    public static final String NEW_LAUNDRY_SERVICE = "new_laundry_service";
-    public static final String STOCK_ALERT = "stock_alert";
-    public static final String INVENTORY_UPDATE = "inventory_update";
-    public static final String STOCK_INFO = "stock_info";
-    public static final String EXPIRED_LAUNDRY = "expired_laundry";
-    public static final String WARNING = "warning";
-    public static final String LOW_STOCK_WARNING = "low_stock_warning";
-    public static final String ADEQUATE_STOCK_LEVEL = "adequate_stock_level";
-
     public Notification() {}
 
     public Notification(String userId, String type, String title, String message, String relatedEntityId) {
