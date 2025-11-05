@@ -193,12 +193,16 @@ const MainPage = () => {
         } catch (error) {
             console.error("❌ Transaction failed:", error);
             
-            // Handle insufficient stock errors specifically - DON'T show toast for these
-            if (error.message && error.message.includes("Insufficient stock")) {
-                // Just set the error message but don't show toast
-                setErrorMessage(error.message);
-                // Don't show toast for insufficient stock - let TransactionForm handle it visually
+            // Check if it's an insufficient stock error by looking at the response data
+            const isInsufficientStock = error.response?.data?.error === "Insufficient stock" || 
+                                       (error.message && error.message.includes("Insufficient stock"));
+            
+            if (isInsufficientStock) {
+                // Don't set error message and don't show toast for insufficient stock
+                // TransactionForm will handle the visual display of insufficient items
+                console.log("📦 Insufficient stock detected - handled by TransactionForm");
             } else {
+                // For other errors, show the error message and toast
                 setErrorMessage(error.message || "Transaction failed");
                 toast({
                     title: "Transaction Failed",
@@ -265,11 +269,11 @@ const MainPage = () => {
     };
 
     return (
-        <div className="px-6 pb-5 pt-4 overflow-hidden" style={{ // Removed space-y-6
+        <div className="px-6 pb-5 pt-4 overflow-hidden" style={{
             backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
         }}>
             {/* Main content with manual spacing */}
-            <div className="mb-6"> {/* Added manual margin instead of space-y-6 */}
+            <div className="mb-6">
                 <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
                     <TransactionForm
                         ref={formRef}
@@ -292,7 +296,7 @@ const MainPage = () => {
                         )}
 
                     {invoice && (
-                        <div> {/* Removed space-y-4 */}
+                        <div>
                             <ServiceInvoiceCard
                                 transaction={invoice}
                                 settings={invoice.formatSettings}
@@ -302,7 +306,8 @@ const MainPage = () => {
                 </div>
             </div>
 
-            {errorMessage && (
+            {/* Only show error message for non-stock related errors */}
+            {errorMessage && !errorMessage.includes("Insufficient stock") && (
                 <div className="mt-6 text-sm" style={{ color: isDarkMode ? '#F87171' : '#DC2626' }}>
                     ❌ {errorMessage}
                 </div>
