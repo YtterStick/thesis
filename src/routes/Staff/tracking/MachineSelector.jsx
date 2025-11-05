@@ -7,11 +7,20 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
     const shouldDisableSelection = ["FOLDING", "COMPLETED", "DRIED"].includes(load.status);
     const currentMachine = load.machineId ? options.find((m) => m.id === load.machineId) : null;
     
+    // Debug current machine status
+    console.log("🔧 MachineSelector Debug:", {
+        loadStatus: load.status,
+        machineId: load.machineId,
+        currentMachine: currentMachine,
+        machineStatus: currentMachine?.status,
+        options: options
+    });
+    
     // If status is FOLDING or COMPLETED and there's a machine assigned, show it as released
     const displayValue = (load.status === "FOLDING" || load.status === "COMPLETED") && currentMachine 
         ? `Released (${currentMachine.name})` 
         : currentMachine 
-            ? currentMachine.name
+            ? `${currentMachine.name} - ${currentMachine.status || 'Unknown'}`
             : "Select machine";
 
     return (
@@ -44,9 +53,15 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                 {options.map((m) => {
                     const assignedElsewhere = jobs.some((j) =>
                         j.loads.some(
-                            (l) => l.machineId === m.id && l.status !== "COMPLETED" && l !== load,
+                            (l) => l.machineId === m.id && 
+                                  l.status !== "COMPLETED" && 
+                                  l !== load &&
+                                  (l.status === "WASHING" || l.status === "DRYING"),
                         ),
                     );
+                    
+                    console.log(`🔧 Machine ${m.name}: status=${m.status}, assignedElsewhere=${assignedElsewhere}`);
+                    
                     return (
                         <SelectItem
                             key={m.id}
@@ -65,7 +80,7 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                                 whileHover={shouldDisableSelection ? {} : { scale: 1.02 }}
                                 className="block"
                             >
-                                {m.name}
+                                {m.name} - {m.status || 'Available'}
                             </motion.span>
                         </SelectItem>
                     );
