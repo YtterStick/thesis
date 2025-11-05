@@ -62,9 +62,13 @@ public class TransactionService {
 
         List<String> insufficientStockItems = new ArrayList<>();
 
+        // Check stock availability for all consumables
         for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
             String itemName = entry.getKey();
             int quantity = entry.getValue();
+
+            // Skip if quantity is 0
+            if (quantity <= 0) continue;
 
             StockItem item = stockRepository.findByName(itemName)
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
@@ -83,9 +87,13 @@ public class TransactionService {
             throw new InsufficientStockException(errorMessage, insufficientStockItems);
         }
 
+        // Process consumables and update stock
         for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
             String itemName = entry.getKey();
             int quantity = entry.getValue();
+
+            // Skip if quantity is 0
+            if (quantity <= 0) continue;
 
             StockItem item = stockRepository.findByName(itemName)
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
@@ -401,7 +409,6 @@ public class TransactionService {
 
         return summary;
     }
-
 
     public List<AdminRecordResponseDto> getAllAdminRecords() {
         List<Transaction> allTransactions = transactionRepository.findAll();

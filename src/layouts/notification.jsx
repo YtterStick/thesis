@@ -956,10 +956,6 @@ export const NotificationSystem = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                        Real-time updates active
-                                    </div>
-                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                                 </div>
                             </div>
 

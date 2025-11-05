@@ -18,7 +18,8 @@ import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { api } from "@/lib/api-config";
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const POLLING_INTERVAL = 1000; // 1 second polling
+const CACHE_DURATION = 10 * 1000; // Reduced to 10 seconds since we're polling every second
 
 // Initialize cache properly
 const initializeCache = () => {
@@ -459,6 +460,7 @@ export default function MachineMainPage() {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [error, setError] = useState(null);
+  const [isPolling, setIsPolling] = useState(false);
   
   // Load view mode from localStorage or default to 'grid'
   const [viewMode, setViewMode] = useState(() => {
@@ -469,6 +471,8 @@ export default function MachineMainPage() {
   });
   
   const { toast } = useToast();
+  const pollingIntervalRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   // Save view mode to localStorage whenever it changes
   useEffect(() => {
@@ -488,6 +492,8 @@ export default function MachineMainPage() {
   };
 
   const fetchMachines = useCallback(async (forceRefresh = false) => {
+    if (!isMountedRef.current || isPolling) return;
+
     try {
       const now = Date.now();
       
@@ -517,11 +523,12 @@ export default function MachineMainPage() {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, []);
+  }, [isPolling]);
 
   // Separate function for actual API call using the api utility
   const fetchFreshMachines = async () => {
     console.log("🔄 Fetching fresh machines data");
+    setIsPolling(true);
     setLoading(true);
 
     try {
@@ -562,10 +569,15 @@ export default function MachineMainPage() {
       setLoading(false);
       setInitialLoad(false);
       throw error;
+    } finally {
+      setIsPolling(false);
     }
   };
 
+  // Setup polling interval
   useEffect(() => {
+    isMountedRef.current = true;
+    
     // Always show cached data immediately if available
     if (machinesCache) {
       console.log("🚀 Showing cached machines data immediately");
@@ -574,8 +586,21 @@ export default function MachineMainPage() {
       setInitialLoad(false);
     }
     
-    // Then fetch fresh data
+    // Initial fetch
     fetchMachines();
+    
+    // Setup polling interval
+    pollingIntervalRef.current = setInterval(() => {
+      console.log("🔄 Polling machines data...");
+      fetchMachines(false);
+    }, POLLING_INTERVAL);
+
+    return () => {
+      isMountedRef.current = false;
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, [fetchMachines]);
 
   const handleSubmit = async () => {

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api-config";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
-const POLLING_INTERVAL = 15000;
+const POLLING_INTERVAL = 1000; // Changed from 15000 to 1000ms (1 second)
 
 const initializeCache = () => {
   try {
@@ -107,7 +107,7 @@ const StaffDashboardPage = () => {
         
         setInitialLoad(false);
         
-        if (now - cacheTimestamp > 30000) {
+        if (now - cacheTimestamp > 1000) {
           console.log("🔄 Fetching fresh staff data in background");
           fetchFreshData();
         }
