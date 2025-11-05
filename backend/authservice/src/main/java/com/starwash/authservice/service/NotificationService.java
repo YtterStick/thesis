@@ -7,17 +7,22 @@ import com.starwash.authservice.repository.StockRepository;
 import com.starwash.authservice.repository.UserRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final StockRepository stockRepository;
+    
+    // Store active SSE emitters
+    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
     private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
     
@@ -38,7 +43,12 @@ public class NotificationService {
     public Notification createNotification(String userId, String type, String title, String message, String relatedEntityId) {
         Notification notification = new Notification(userId, type, title, message, relatedEntityId);
         notification.setCreatedAt(getCurrentManilaTime());
-        return notificationRepository.save(notification);
+        Notification savedNotification = notificationRepository.save(notification);
+        
+        // Broadcast to all connected clients
+        broadcastNotification(savedNotification);
+        
+        return savedNotification;
     }
 
     public void notifyAllUsers(String type, String title, String message, String relatedEntityId) {
@@ -61,7 +71,7 @@ public class NotificationService {
         });
     }
 
-    @Scheduled(fixedRate = 1800000)
+    @Scheduled(fixedRate = 1800000) // 30 minutes
     public void autoCheckStockLevels() {
         try {
             System.out.println("🔄 Auto-checking stock levels at: " + getCurrentManilaTime());
@@ -267,7 +277,7 @@ public class NotificationService {
         autoCheckStockLevels();
     }
 
-    @Scheduled(fixedRate = 300000)
+    @Scheduled(fixedRate = 300000) // 5 minutes
     public void initializeStockStatusTracking() {
         try {
             List<StockItem> allItems = stockRepository.findAll();
@@ -294,6 +304,7 @@ public class NotificationService {
         }
     }
 
+    // 🧼 LAUNDRY SERVICE NOTIFICATIONS
     public void notifyLoadWashed(String customerName, String transactionId, int loadNumber) {
         String title = "🧼 Load Washed - Ready for Drying";
         String message = String.format("Load %d for %s has been washed and is ready for drying.", 
@@ -321,6 +332,15 @@ public class NotificationService {
         System.out.println("📢 Load completed notification sent: " + message);
     }
 
+    public void notifyNewLaundryService(String customerName, String transactionId, String serviceType) {
+        String title = "🆕 New Laundry Service";
+        String message = String.format("New %s service for %s has been created.", 
+            serviceType, customerName);
+        
+        notifyAllUsers(Notification.TYPE_NEW_LAUNDRY_SERVICE, title, message, transactionId);
+        System.out.println("📢 New laundry service notification sent: " + message);
+    }
+
     public void notifyTransactionStockIssue(String itemName, int requestedQuantity, int availableQuantity, String transactionId) {
         String title = "🚨 Transaction Stock Issue";
         String message = String.format("Cannot complete transaction for %s. Requested: %d, Available: %d", 
@@ -330,6 +350,7 @@ public class NotificationService {
         System.out.println("📢 Transaction stock issue notification sent: " + message);
     }
 
+    // 📊 NOTIFICATION MANAGEMENT
     public List<Notification> getUserNotifications(String userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
@@ -353,10 +374,43 @@ public class NotificationService {
         return notificationRepository.countByUserIdAndRead(userId, false);
     }
 
+    // 🔄 REAL-TIME NOTIFICATION BROADCASTING
+    public void broadcastNotification(Notification notification) {
+        // This would be called by the controller to broadcast to all connected clients
+        System.out.println("📢 Broadcasting notification: " + notification.getTitle());
+    }
+
     public void printStockStatusTracking() {
         System.out.println("📊 Current Stock Status Tracking:");
         lastStockStatus.forEach((itemId, status) -> {
             System.out.println("   Item: " + itemId + " → Status: " + status);
         });
+    }
+
+    // 🆕 GET NOTIFICATIONS BY TYPE
+    public List<Notification> getUserNotificationsByType(String userId, String type) {
+        return notificationRepository.findByUserIdAndTypeOrderByCreatedAtDesc(userId, type);
+    }
+
+    // 🆕 GET UNREAD NOTIFICATIONS
+    public List<Notification> getUnreadNotifications(String userId) {
+        return notificationRepository.findByUserIdAndReadOrderByCreatedAtDesc(userId, false);
+    }
+
+    // 🆕 DELETE NOTIFICATION
+    public boolean deleteNotification(String id, String userId) {
+        return notificationRepository.findById(id)
+                .filter(notification -> notification.getUserId().equals(userId))
+                .map(notification -> {
+                    notificationRepository.delete(notification);
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    // 🆕 CLEAR ALL NOTIFICATIONS
+    public void clearAllNotifications(String userId) {
+        List<Notification> userNotifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        notificationRepository.deleteAll(userNotifications);
     }
 }
