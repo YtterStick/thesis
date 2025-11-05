@@ -1,3 +1,4 @@
+
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.dto.LaundryJobDto;
@@ -152,17 +153,6 @@ public class LaundryJobService {
             throw new RuntimeException("No machine assigned");
         }
 
-        // Add detailed logging for machine status
-        MachineItem machine = machineRepository.findById(load.getMachineId())
-                .orElseThrow(() -> new RuntimeException("Machine not found"));
-        
-        System.out.println("🔧 MACHINE DEBUG - Before startLoad:");
-        System.out.println("   Machine ID: " + machine.getId());
-        System.out.println("   Machine Name: " + machine.getName());
-        System.out.println("   Machine Type: " + machine.getType());
-        System.out.println("   Current Status: " + machine.getStatus());
-        System.out.println("   Load Status: " + load.getStatus());
-
         Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
         String serviceType = (txn != null ? txn.getServiceName() : "wash");
 
@@ -183,13 +173,10 @@ public class LaundryJobService {
         load.setDurationMinutes(finalDuration);
         load.setEndTime(now.plusMinutes(finalDuration));
 
-        // Ensure machine status is updated to IN_USE
+        MachineItem machine = machineRepository.findById(load.getMachineId())
+                .orElseThrow(() -> new RuntimeException("Machine not found"));
         machine.setStatus(STATUS_IN_USE);
-        MachineItem savedMachine = machineRepository.save(machine);
-        
-        System.out.println("🔧 MACHINE DEBUG - After startLoad:");
-        System.out.println("   Machine Status Updated To: " + savedMachine.getStatus());
-        System.out.println("   Load Status Updated To: " + nextStatus);
+        machineRepository.save(machine);
 
         job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
@@ -721,7 +708,7 @@ public class LaundryJobService {
             machineRepository.findById(load.getMachineId()).ifPresent(machine -> {
                 machine.setStatus(STATUS_AVAILABLE);
                 machineRepository.save(machine);
-                System.out.println("🔄 Released machine: " + load.getMachineId() + " (now Available)");
+                System.out.println("🔄 Released machine: " + load.getMachineId());
             });
         }
     }
