@@ -3,16 +3,22 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { motion } from "framer-motion";
 
 const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkMode }) => {
-    // For DRIED status, show current machine but disable selection
-    // Machine will only be released when advancing to FOLDING
-    const isDriedStatus = load.status === "DRIED";
+    // For FOLDING and COMPLETED status, show current machine but disable selection
+    const shouldDisableSelection = ["FOLDING", "COMPLETED", "DRIED"].includes(load.status);
     const currentMachine = load.machineId ? options.find((m) => m.id === load.machineId) : null;
     
+    // If status is FOLDING or COMPLETED and there's a machine assigned, show it as released
+    const displayValue = (load.status === "FOLDING" || load.status === "COMPLETED") && currentMachine 
+        ? `Released (${currentMachine.name})` 
+        : currentMachine 
+            ? currentMachine.name
+            : "Select machine";
+
     return (
         <Select
             value={load.machineId ?? ""}
-            onValueChange={isDriedStatus ? undefined : assignMachine} // Disable changes for DRIED status
-            disabled={disabled || isDriedStatus} // Disable selector for DRIED status
+            onValueChange={shouldDisableSelection ? undefined : assignMachine}
+            disabled={disabled || shouldDisableSelection}
         >
             <SelectTrigger 
                 className="w-[160px] transition-all"
@@ -20,13 +26,11 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                     borderColor: isDarkMode ? "#475569" : "#cbd5e1",
                     color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                    opacity: isDriedStatus ? 0.7 : 1, // Slightly dim when disabled
+                    opacity: shouldDisableSelection ? 0.7 : 1,
                 }}
             >
                 <SelectValue placeholder="Select machine">
-                    {currentMachine 
-                        ? currentMachine.name
-                        : "Select machine"}
+                    {displayValue}
                 </SelectValue>
             </SelectTrigger>
             <SelectContent 
@@ -50,7 +54,7 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                             disabled={
                                 (m.status || "").toLowerCase() !== "available" ||
                                 assignedElsewhere ||
-                                isDriedStatus // Disable all options for DRIED status
+                                shouldDisableSelection
                             }
                             className="cursor-pointer transition-colors"
                             style={{
@@ -58,7 +62,7 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                             }}
                         >
                             <motion.span
-                                whileHover={isDriedStatus ? {} : { scale: 1.02 }} // No hover effect when disabled
+                                whileHover={shouldDisableSelection ? {} : { scale: 1.02 }}
                                 className="block"
                             >
                                 {m.name}

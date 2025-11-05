@@ -13,11 +13,11 @@ export const Profile = () => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: user?.name || "John Doe",
-    email: user?.email || "john.doe@example.com",
-    phone: user?.phone || "+1 (555) 123-4567",
-    role: role || "Administrator",
-    joinDate: user?.joinDate || "January 15, 2023",
+    name: user?.name || "Andrei",
+    email: user?.email || "awdadwadf@gmaul.com",
+    phone: user?.phone || "09150475513",
+    role: role || "Admin",
+    joinDate: user?.joinDate || "June 12, 2004",
   });
 
   const handleInputChange = (e) => {
