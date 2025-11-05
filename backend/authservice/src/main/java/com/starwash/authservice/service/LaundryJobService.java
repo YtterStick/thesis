@@ -172,24 +172,28 @@ public class LaundryJobService {
         load.setDurationMinutes(finalDuration);
         load.setEndTime(now.plusMinutes(finalDuration));
 
-        // FIX: Update machine status to "In Use" for both washing and drying
+        // FIX: SPECIFIC FIX FOR WASHING MACHINE STATUS
         MachineItem machine = machineRepository.findById(load.getMachineId())
                 .orElseThrow(() -> new RuntimeException("Machine not found"));
+        
+        // Set machine to "In Use" for both washing and drying
         machine.setStatus(STATUS_IN_USE);
         machineRepository.save(machine);
 
         job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
-        System.out.println("🔄 Machine " + load.getMachineId() + " set to IN USE for " + transactionId + " load " + loadNumber);
-        System.out.println("⏰ TIMING DEBUG - startLoad:");
+        System.out.println("🔄 MACHINE STATUS UPDATE: Machine " + load.getMachineId() + 
+                          " set to IN USE for " + transactionId + " load " + loadNumber + 
+                          " with status: " + nextStatus);
+        
+        System.out.println("⏰ WASHING DEBUG - startLoad:");
         System.out.println("   Transaction: " + transactionId);
         System.out.println("   Load: " + loadNumber);
         System.out.println("   Status: " + nextStatus);
-        System.out.println("   Duration: " + finalDuration + " minutes");
-        System.out.println("   Start Time (Manila): " + now);
-        System.out.println("   End Time (Manila): " + load.getEndTime());
         System.out.println("   Machine ID: " + load.getMachineId());
+        System.out.println("   Machine Type: " + machine.getType());
+        System.out.println("   Machine Status After Update: " + machine.getStatus());
 
         System.out.println("⏰ Scheduled auto-advance for " + transactionId + " load " + loadNumber + 
                           " in " + finalDuration + " minutes. EndTime: " + load.getEndTime());
@@ -237,7 +241,7 @@ public class LaundryJobService {
                 load.setMachineId(dryer.getId());
                 dryer.setStatus(STATUS_IN_USE);
                 machineRepository.save(dryer);
-                System.out.println("🔄 Auto-assigned dryer " + dryer.getId() + " for dry again");
+                System.out.println("🔄 Auto-assigned dryer " + dryer.getId() + " for dry again - set to IN USE");
             } else {
                 throw new RuntimeException("No available dryers found");
             }
@@ -245,20 +249,16 @@ public class LaundryJobService {
             machineRepository.findById(load.getMachineId()).ifPresent(machine -> {
                 machine.setStatus(STATUS_IN_USE);
                 machineRepository.save(machine);
-                System.out.println("🔄 Machine " + load.getMachineId() + " set to IN USE for dry again");
+                System.out.println("🔄 Dryer " + load.getMachineId() + " set to IN USE for dry again");
             });
         }
 
         job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
-        // Enhanced logging for drying
         System.out.println("🔥 DRY AGAIN DEBUG:");
         System.out.println("   Transaction: " + transactionId);
         System.out.println("   Load: " + loadNumber);
-        System.out.println("   Duration: " + duration + " minutes");
-        System.out.println("   Start Time (Manila): " + now);
-        System.out.println("   End Time (Manila): " + load.getEndTime());
         System.out.println("   Machine ID: " + load.getMachineId());
 
         scheduler.schedule(() -> {
@@ -307,10 +307,18 @@ public class LaundryJobService {
         String previousStatus = load.getStatus();
         load.setStatus(newStatus);
 
-        // FIX: Only release machines when moving to FOLDING or COMPLETED
+        // FIX: SPECIFIC LOGIC FOR WASHING MACHINE RELEASE
+        // Only release washing machine when moving to FOLDING or COMPLETED
+        // For Wash & Dry service, washing machine should stay in use until drying starts
         if (STATUS_FOLDING.equalsIgnoreCase(newStatus) || STATUS_COMPLETED.equalsIgnoreCase(newStatus)) {
             releaseMachine(load);
-            System.out.println("🔄 Released machine " + load.getMachineId() + " for " + transactionId + " load " + loadNumber);
+            System.out.println("🔄 RELEASED Machine " + load.getMachineId() + " for " + transactionId + 
+                             " load " + loadNumber + " when moving to " + newStatus);
+        } else if (STATUS_DRYING.equalsIgnoreCase(newStatus) && STATUS_WASHED.equalsIgnoreCase(previousStatus)) {
+            // When moving from WASHED to DRYING in Wash & Dry service, release the washing machine
+            releaseMachine(load);
+            System.out.println("🔄 RELEASED Washing Machine " + load.getMachineId() + " for " + transactionId + 
+                             " load " + loadNumber + " when moving to DRYING");
         }
 
         sendStatusChangeNotifications(job, load, previousStatus, newStatus);
@@ -366,15 +374,15 @@ public class LaundryJobService {
                 switch (previousStatus.toUpperCase()) {
                     case STATUS_WASHING:
                         load.setStatus(STATUS_WASHED);
-                        // FIX: Don't release washing machine here - keep it in use until folding/completed
+                        // FIX: Washing machine stays IN USE after auto-advance from WASHING to WASHED
                         System.out.println("🕒 Auto-advanced from WASHING to WASHED for " + transactionId + " load " + loadNumber);
-                        System.out.println("💡 Machine " + load.getMachineId() + " remains IN USE for next step");
+                        System.out.println("💡 Washing Machine " + load.getMachineId() + " remains IN USE");
                         break;
                     case STATUS_DRYING:
                         load.setStatus(STATUS_DRIED);
-                        // FIX: Don't release dryer here - keep it in use until folding/completed
+                        // Dryer stays IN USE after auto-advance from DRYING to DRIED
                         System.out.println("🕒 Auto-advanced from DRYING to DRIED for " + transactionId + " load " + loadNumber);
-                        System.out.println("💡 Machine " + load.getMachineId() + " remains IN USE for next step");
+                        System.out.println("💡 Dryer " + load.getMachineId() + " remains IN USE");
                         break;
                     default:
                         System.out.println("❓ No auto-advance logic for status: " + previousStatus);
@@ -715,7 +723,7 @@ public class LaundryJobService {
             machineRepository.findById(load.getMachineId()).ifPresent(machine -> {
                 machine.setStatus(STATUS_AVAILABLE);
                 machineRepository.save(machine);
-                System.out.println("🔄 Released machine: " + load.getMachineId() + " back to AVAILABLE");
+                System.out.println("🔄 RELEASED: Machine " + load.getMachineId() + " set back to AVAILABLE");
             });
             // Clear the machine ID from the load
             load.setMachineId(null);
@@ -941,16 +949,19 @@ public class LaundryJobService {
         switch (currentStatus.toUpperCase()) {
             case STATUS_WASHING:
                 newStatus = STATUS_WASHED;
-                // Don't release machine in force advance
-                System.out.println("⚡ Force advanced from WASHING to WASHED - machine remains in use");
+                // Don't release washing machine in force advance
+                System.out.println("⚡ Force advanced from WASHING to WASHED - washing machine remains in use");
                 break;
             case STATUS_DRYING:
                 newStatus = STATUS_DRIED;
-                // Don't release machine in force advance
-                System.out.println("⚡ Force advanced from DRYING to DRIED - machine remains in use");
+                // Don't release dryer in force advance
+                System.out.println("⚡ Force advanced from DRYING to DRIED - dryer remains in use");
                 break;
             case STATUS_WASHED:
                 newStatus = STATUS_DRYING;
+                // Release washing machine when moving to drying
+                releaseMachine(load);
+                System.out.println("⚡ Force advanced from WASHED to DRYING - released washing machine");
                 break;
             case STATUS_DRIED:
                 newStatus = STATUS_FOLDING;
