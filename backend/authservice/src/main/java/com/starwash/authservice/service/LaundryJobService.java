@@ -1,4 +1,3 @@
-
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.dto.LaundryJobDto;
@@ -130,6 +129,11 @@ public class LaundryJobService {
             throw new RuntimeException("Machine is not available");
         }
 
+        // Validate machine type for current load status
+        if (!isCorrectMachineTypeForLoad(job, loadNumber, machine)) {
+            throw new RuntimeException("Invalid machine type for current load status");
+        }
+
         job.getLoadAssignments().stream()
                 .filter(load -> load.getLoadNumber() == loadNumber)
                 .findFirst()
@@ -138,6 +142,46 @@ public class LaundryJobService {
 
         job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
+    }
+
+    private boolean isCorrectMachineTypeForLoad(LaundryJob job, int loadNumber, MachineItem machine) {
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElse(null);
+        
+        if (load == null) return false;
+        
+        String requiredType = getRequiredMachineType(load.getStatus(), job.getServiceType());
+        return requiredType == null || requiredType.equalsIgnoreCase(machine.getType());
+    }
+
+    private String getRequiredMachineType(String status, String serviceType) {
+        if (status == null) return null;
+        
+        switch (status.toUpperCase()) {
+            case STATUS_WASHING:
+                return "WASHER";
+            case STATUS_DRYING:
+                return "DRYER";
+            case STATUS_WASHED:
+            case STATUS_DRIED:
+            case STATUS_FOLDING:
+            case STATUS_COMPLETED:
+                return null; // No machine required
+            case STATUS_NOT_STARTED:
+                // For NOT_STARTED, determine based on service type
+                if (serviceType != null) {
+                    if (serviceType.toLowerCase().contains("wash") && !serviceType.toLowerCase().contains("dry")) {
+                        return "WASHER";
+                    } else if (serviceType.toLowerCase().contains("dry") && !serviceType.toLowerCase().contains("wash")) {
+                        return "DRYER";
+                    }
+                }
+                return null;
+            default:
+                return null;
+        }
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
@@ -153,10 +197,20 @@ public class LaundryJobService {
             throw new RuntimeException("No machine assigned");
         }
 
-        Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
-        String serviceType = (txn != null ? txn.getServiceName() : "wash");
+        // Enhanced validation: Ensure correct machine type
+        MachineItem machine = machineRepository.findById(load.getMachineId())
+                .orElseThrow(() -> new RuntimeException("Machine not found"));
 
+        Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
+        String serviceType = (txn != null ? txn.getServiceName() : job.getServiceType());
         String nextStatus = determineNextStatus(serviceType, load);
+
+        // Validate machine type matches the required step
+        String requiredMachineType = getRequiredMachineType(nextStatus, serviceType);
+        if (requiredMachineType != null && !requiredMachineType.equalsIgnoreCase(machine.getType())) {
+            throw new RuntimeException("Invalid machine type for this step. Expected " + 
+                requiredMachineType + " but got " + machine.getType());
+        }
 
         int defaultDuration;
         switch (nextStatus) {
@@ -173,8 +227,6 @@ public class LaundryJobService {
         load.setDurationMinutes(finalDuration);
         load.setEndTime(now.plusMinutes(finalDuration));
 
-        MachineItem machine = machineRepository.findById(load.getMachineId())
-                .orElseThrow(() -> new RuntimeException("Machine not found"));
         machine.setStatus(STATUS_IN_USE);
         machineRepository.save(machine);
 
@@ -185,14 +237,10 @@ public class LaundryJobService {
         System.out.println("   Transaction: " + transactionId);
         System.out.println("   Load: " + loadNumber);
         System.out.println("   Status: " + nextStatus);
+        System.out.println("   Machine Type: " + machine.getType());
         System.out.println("   Duration: " + finalDuration + " minutes");
         System.out.println("   Start Time (Manila): " + now);
         System.out.println("   End Time (Manila): " + load.getEndTime());
-        System.out.println("   Current System Time: " + LocalDateTime.now());
-        System.out.println("   Manila Zone: " + getManilaTimeZone());
-
-        System.out.println("⏰ Scheduled auto-advance for " + transactionId + " load " + loadNumber + 
-                          " in " + finalDuration + " minutes. EndTime: " + load.getEndTime());
 
         scheduler.schedule(() -> {
             System.out.println("🏃‍♂️ Executing scheduled task for " + transactionId + " load " + loadNumber);
@@ -226,6 +274,7 @@ public class LaundryJobService {
 
         load.setEndTime(now.plusMinutes(duration));
 
+        // Ensure we have a dryer machine assigned
         if (load.getMachineId() == null) {
             Optional<MachineItem> availableDryer = machineRepository.findAll().stream()
                     .filter(m -> "DRYER".equalsIgnoreCase(m.getType()))
@@ -241,22 +290,26 @@ public class LaundryJobService {
                 throw new RuntimeException("No available dryers found");
             }
         } else {
-            machineRepository.findById(load.getMachineId()).ifPresent(machine -> {
-                machine.setStatus(STATUS_IN_USE);
-                machineRepository.save(machine);
-            });
+            // Validate existing machine is a dryer
+            MachineItem machine = machineRepository.findById(load.getMachineId())
+                    .orElseThrow(() -> new RuntimeException("Machine not found"));
+            
+            if (!"DRYER".equalsIgnoreCase(machine.getType())) {
+                throw new RuntimeException("Assigned machine is not a dryer");
+            }
+            
+            machine.setStatus(STATUS_IN_USE);
+            machineRepository.save(machine);
         }
 
         job.setLaundryProcessedBy(processedBy);
         LaundryJob saved = laundryJobRepository.save(job);
 
-        // Enhanced logging for drying
         System.out.println("🔥 DRY AGAIN DEBUG:");
         System.out.println("   Transaction: " + transactionId);
         System.out.println("   Load: " + loadNumber);
         System.out.println("   Duration: " + duration + " minutes");
-        System.out.println("   Start Time (Manila): " + now);
-        System.out.println("   End Time (Manila): " + load.getEndTime());
+        System.out.println("   Machine: " + load.getMachineId());
 
         scheduler.schedule(() -> {
             System.out.println("🏃‍♂️ Executing scheduled drying task for " + transactionId + " load " + loadNumber);
@@ -304,11 +357,13 @@ public class LaundryJobService {
         String previousStatus = load.getStatus();
         load.setStatus(newStatus);
 
-        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
-
-        if (STATUS_WASHED.equalsIgnoreCase(newStatus) || STATUS_DRIED.equalsIgnoreCase(newStatus)) {
+        // Release machine when moving from washing/drying to next steps
+        if ((STATUS_WASHING.equals(previousStatus) && STATUS_WASHED.equals(newStatus)) ||
+            (STATUS_DRYING.equals(previousStatus) && STATUS_DRIED.equals(newStatus))) {
             releaseMachine(load);
         }
+
+        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
 
         job.setLaundryProcessedBy(processedBy);
         return laundryJobRepository.save(job);
@@ -709,6 +764,7 @@ public class LaundryJobService {
                 machine.setStatus(STATUS_AVAILABLE);
                 machineRepository.save(machine);
                 System.out.println("🔄 Released machine: " + load.getMachineId());
+                load.setMachineId(null); // Clear machine reference
             });
         }
     }
@@ -725,29 +781,6 @@ public class LaundryJobService {
 
     public List<LaundryJob> getExpiredJobs() {
         return laundryJobRepository.findByExpiredTrueAndDisposedFalse();
-    }
-
-    @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob disposeJob(String id, String processedBy) {
-        LaundryJob job = laundryJobRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Laundry job not found: " + id));
-
-        if (!job.isExpired()) {
-            throw new RuntimeException("Cannot dispose non-expired job");
-        }
-
-        if (job.isDisposed()) {
-            throw new RuntimeException("Job already disposed");
-        }
-
-        job.setDisposed(true);
-        job.setDisposedBy(processedBy);
-        job.setDisposedDate(getCurrentManilaTime());
-        return laundryJobRepository.save(job);
-    }
-
-    public List<LaundryJob> getDisposedJobs() {
-        return laundryJobRepository.findByDisposedTrue();
     }
 
     @Scheduled(cron = "0 0 7 * * ?", zone = "Asia/Manila")
@@ -975,5 +1008,20 @@ public class LaundryJobService {
         } catch (Exception e) {
             System.err.println("❌ Error checking timer states: " + e.getMessage());
         }
+    }
+
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob releaseMachine(String transactionId, int loadNumber, String processedBy) {
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        releaseMachine(load);
+
+        job.setLaundryProcessedBy(processedBy);
+        return laundryJobRepository.save(job);
     }
 }
