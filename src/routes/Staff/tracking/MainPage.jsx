@@ -13,7 +13,60 @@ const POLLING_INTERVAL = 10000;
 const ACTIVE_POLLING_INTERVAL = 5000;
 const TIMER_CHECK_INTERVAL = 1000;
 
-export default function ServiceTrackingPage() {
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error("Error caught by boundary:", error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div
+                    className="flex min-h-screen items-center justify-center"
+                    style={{
+                        backgroundColor: this.props.isDarkMode ? "#0f172a" : "#f8fafc",
+                    }}
+                >
+                    <div className="max-w-md p-8 text-center">
+                        <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" />
+                        <h2
+                            className="mb-2 text-2xl font-bold"
+                            style={{ color: this.props.isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                        >
+                            Something went wrong
+                        </h2>
+                        <p
+                            className="mb-4"
+                            style={{ color: this.props.isDarkMode ? "#cbd5e1" : "#475569" }}
+                        >
+                            {this.state.error?.message || "An unexpected error occurred"}
+                        </p>
+                        <button
+                            onClick={() => this.setState({ hasError: false, error: null })}
+                            className="rounded-lg bg-red-500 px-6 py-2 text-white transition-colors hover:bg-red-600"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
+function ServiceTrackingContent() {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
@@ -38,7 +91,7 @@ export default function ServiceTrackingPage() {
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
     const hasActiveJobs = useMemo(() => {
-        return jobs.some((job) => job.loads.some((load) => load.status === "WASHING" || load.status === "DRYING"));
+        return jobs.some((job) => job.loads?.some((load) => load.status === "WASHING" || load.status === "DRYING"));
     }, [jobs]);
 
     const getPollingInterval = () => {
@@ -136,15 +189,16 @@ export default function ServiceTrackingPage() {
     }, []);
 
     const fetchMachines = async () => {
-        try {
-            const data = await api.get("api/machines");
-            setMachines(data);
-            return true;
-        } catch (err) {
-            console.error("Failed to fetch machines:", err);
-            return false;
-        }
-    };
+    try {
+        const data = await api.get("api/machines");
+        console.log("📦 Machines API Response:", data);
+        setMachines(data);
+        return true;
+    } catch (err) {
+        console.error("Failed to fetch machines:", err);
+        return false;
+    }
+};
 
     // Fetch completed count along with other data
     const fetchData = async (force = false) => {
@@ -177,7 +231,7 @@ export default function ServiceTrackingPage() {
         const currentTime = Date.now();
 
         jobs.forEach((job) => {
-            job.loads.forEach((load) => {
+            job.loads?.forEach((load) => {
                 if (load.status === "WASHING" || load.status === "DRYING") {
                     const timerKey = `${job.id}-${load.loadNumber}`;
 
@@ -260,7 +314,7 @@ export default function ServiceTrackingPage() {
     const getJobKey = (job) => job.id ?? `${job.customerName}-${job.issueDate}`;
 
     const getRemainingTime = (load) => {
-        if (!load.startTime || !load.duration) return null;
+        if (!load?.startTime || !load?.duration) return null;
         const end = new Date(load.startTime).getTime() + load.duration * 60000;
         return Math.max(Math.floor((end - now) / 1000), 0);
     };
@@ -337,25 +391,47 @@ export default function ServiceTrackingPage() {
         }
     };
 
+    const checkAndFixMachineSync = async (jobKey, loadIndex) => {
+        const job = jobs.find((j) => getJobKey(j) === jobKey);
+        if (!job?.id) return;
+
+        const load = job.loads[loadIndex];
+        const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
+        const requiredMachineType = getMachineTypeForStep(load?.status, normalizedServiceType);
+
+        const currentMachine = load?.machineId ? machines.find((m) => m.id === load.machineId) : null;
+
+        // If machine exists but is wrong type, clear it
+        if (currentMachine && requiredMachineType && currentMachine.type?.toUpperCase() !== requiredMachineType) {
+            console.log(`Fixing wrong machine type: ${currentMachine.type} for status ${load.status}`);
+            await assignMachine(jobKey, loadIndex, null);
+        }
+    };
+
     const startAction = async (jobKey, loadIndex) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
         if (!job?.id) return;
         const load = job.loads[loadIndex];
 
         // Prevent multiple clicks
-        if (load.pending || isLoadRunning(load)) {
+        if (load?.pending || isLoadRunning(load)) {
             console.log("Start action prevented: load is pending or running");
             return;
         }
+
+        // Check and fix machine sync issues first
+        await checkAndFixMachineSync(jobKey, loadIndex);
 
         const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
 
         let status = load.status;
 
+        // CORRECTED: Proper status transitions based on service type
+        // In the startAction function, update this part:
         if (normalizedServiceType === "Wash") {
             if (load.status === "UNWASHED") status = "WASHING";
         } else if (normalizedServiceType === "Dry") {
-            if (load.status === "UNWASHED") status = "DRYING";
+            if (load.status === "UNWASHED") status = "DRYING"; // Direct to DRYING for Dry service
         } else if (normalizedServiceType === "Wash & Dry") {
             if (load.status === "UNWASHED") status = "WASHING";
             else if (load.status === "WASHED") status = "DRYING";
@@ -460,104 +536,134 @@ export default function ServiceTrackingPage() {
     };
 
     const advanceStatus = async (jobKey, loadIndex) => {
-    const job = jobs.find((j) => getJobKey(j) === jobKey);
-    if (!job?.id) return;
+        const job = jobs.find((j) => getJobKey(j) === jobKey);
+        if (!job?.id) return;
 
-    const load = job.loads[loadIndex];
+        const load = job.loads[loadIndex];
+        const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
 
-    const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
+        let flow;
+        if (normalizedServiceType === "Wash") {
+            flow = SERVICE_FLOWS.Wash;
+        } else if (normalizedServiceType === "Dry") {
+            flow = SERVICE_FLOWS.Dry;
+        } else if (normalizedServiceType === "Wash & Dry") {
+            flow = SERVICE_FLOWS["Wash & Dry"];
+        } else {
+            flow = ["UNWASHED", "COMPLETED"];
+        }
 
-    let flow;
-    if (normalizedServiceType === "Wash") {
-        flow = SERVICE_FLOWS.Wash;
-    } else if (normalizedServiceType === "Dry") {
-        flow = SERVICE_FLOWS.Dry;
-    } else if (normalizedServiceType === "Wash & Dry") {
-        flow = SERVICE_FLOWS["Wash & Dry"];
-    } else {
-        flow = ["UNWASHED", "COMPLETED"];
-    }
+        const currentIndex = flow.indexOf(load.status);
+        const nextStatus = currentIndex < flow.length - 1 ? flow[currentIndex + 1] : load.status;
 
-    const currentIndex = flow.indexOf(load.status);
-    const nextStatus = currentIndex < flow.length - 1 ? flow[currentIndex + 1] : load.status;
+        // Store the current machine ID before potentially clearing it
+        const currentMachineId = load.machineId;
 
-    // Store the current machine ID before potentially clearing it
-    const currentMachineId = load.machineId;
+        if (load.status === "WASHING" || load.status === "DRYING") {
+            const timerKey = `${job.id}-${load.loadNumber}`;
+            activeTimersRef.current.delete(timerKey);
+            completedTimersRef.current.delete(timerKey);
+        }
 
-    if (load.status === "WASHING" || load.status === "DRYING") {
-        const timerKey = `${job.id}-${load.loadNumber}`;
-        activeTimersRef.current.delete(timerKey);
-        completedTimersRef.current.delete(timerKey);
-    }
+        let updatedLoad = { ...load, status: nextStatus, pending: true };
 
-    let updatedLoad = { ...load, status: nextStatus, pending: true };
-
-    // ONLY clear machine when moving to FOLDING (not when moving to DRIED)
-    // This is the key fix - remove the machine clearing for DRIED status
-    if (nextStatus === "FOLDING" && currentMachineId) {
-        updatedLoad.machineId = null;
-    }
-    // Keep the machine assigned for DRIED status - don't clear machineId
-
-    setJobs((prev) =>
-        prev.map((j) =>
-            getJobKey(j) === jobKey
-                ? {
-                      ...j,
-                      loads: j.loads.map((l, idx) => (idx === loadIndex ? updatedLoad : l)),
-                  }
-                : j,
-        ),
-    );
-
-    try {
-        // Add 5-second delay before making the API call
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        // Make API call to advance status
-        await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`));
-
-        // ONLY release machine when moving to FOLDING (not for DRIED)
-        if (nextStatus === "FOLDING" && currentMachineId) {
-            try {
-                await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/release-machine?loadNumber=${load.loadNumber}`));
-                console.log(`Machine ${currentMachineId} released for load ${load.loadNumber}`);
-            } catch (releaseError) {
-                console.error("Failed to release machine:", releaseError);
-                // Don't throw here, as the main status update succeeded
+        // CORRECTED: Machine release logic for all service types
+        if (normalizedServiceType === "Wash") {
+            if (load.status === "WASHING" && nextStatus === "WASHED") {
+                // Release washer when washing is done in Wash service
+                updatedLoad.machineId = null;
+            }
+        } else if (normalizedServiceType === "Dry") {
+            if (load.status === "DRYING" && nextStatus === "DRIED") {
+                // Release dryer when drying is done in Dry service
+                updatedLoad.machineId = null;
+            }
+        } else if (normalizedServiceType === "Wash & Dry") {
+            if (load.status === "WASHING" && nextStatus === "WASHED") {
+                // Release washer when washing is done
+                updatedLoad.machineId = null;
+            } else if (load.status === "DRYING" && nextStatus === "DRIED") {
+                // Release dryer when drying is done
+                updatedLoad.machineId = null;
             }
         }
 
+        // CRITICAL FIX: COMPLETELY REMOVE machine assignment when moving to FOLDING or COMPLETED
+        if (nextStatus === "FOLDING" || nextStatus === "COMPLETED") {
+            updatedLoad.machineId = null; // This completely unselects the machine
+        }
+
         setJobs((prev) =>
             prev.map((j) =>
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false } : l)),
+                          loads: j.loads.map((l, idx) => (idx === loadIndex ? updatedLoad : l)),
                       }
                     : j,
             ),
         );
 
-        if (nextStatus === "COMPLETED") {
-            sendSmsNotification(job, normalizedServiceType);
+        try {
+            // Add 5-second delay before making the API call
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+
+            // Make API call to advance status
+            await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`));
+
+            // Release machine in backend when appropriate
+            let shouldReleaseMachine = false;
+
+            if (normalizedServiceType === "Wash") {
+                shouldReleaseMachine = load.status === "WASHING" && nextStatus === "WASHED";
+            } else if (normalizedServiceType === "Dry") {
+                shouldReleaseMachine = load.status === "DRYING" && nextStatus === "DRIED";
+            } else if (normalizedServiceType === "Wash & Dry") {
+                shouldReleaseMachine = (load.status === "WASHING" && nextStatus === "WASHED") || (load.status === "DRYING" && nextStatus === "DRIED");
+            }
+
+            // ALWAYS release machine when moving to FOLDING or COMPLETED
+            shouldReleaseMachine = shouldReleaseMachine || nextStatus === "FOLDING" || nextStatus === "COMPLETED";
+
+            if (shouldReleaseMachine && currentMachineId) {
+                try {
+                    await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/release-machine?loadNumber=${load.loadNumber}`));
+                    console.log(`✅ Machine ${currentMachineId} RELEASED and UNSELECTED for load ${load.loadNumber} when moving to ${nextStatus}`);
+                } catch (releaseError) {
+                    console.error("Failed to release machine:", releaseError);
+                }
+            }
+
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false } : l)),
+                          }
+                        : j,
+                ),
+            );
+
+            if (nextStatus === "COMPLETED") {
+                sendSmsNotification(job, normalizedServiceType);
+            }
+        } catch (err) {
+            console.error("Failed to advance load status:", err);
+            // Revert changes on error - include the machine ID in the revert
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false, machineId: currentMachineId } : l)),
+                          }
+                        : j,
+                ),
+            );
+            fetchData(true);
         }
-    } catch (err) {
-        console.error("Failed to advance load status:", err);
-        // Revert changes on error - include the machine ID in the revert
-        setJobs((prev) =>
-            prev.map((j) =>
-                getJobKey(j) === jobKey
-                    ? {
-                          ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false, machineId: currentMachineId } : l)),
-                      }
-                    : j,
-            ),
-        );
-        fetchData(true);
-    }
-};
+    };
 
     const startDryingAgain = async (jobKey, loadIndex) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
@@ -565,7 +671,7 @@ export default function ServiceTrackingPage() {
         const load = job.loads[loadIndex];
 
         // Prevent multiple clicks
-        if (load.pending) {
+        if (load?.pending) {
             return;
         }
 
@@ -629,31 +735,54 @@ export default function ServiceTrackingPage() {
     };
 
     const getMachineTypeForStep = (status, serviceType) => {
+        if (!status) return null;
+
         const normalizedServiceType = serviceType?.replace(" Only", "") || serviceType;
 
-        if (normalizedServiceType === "Wash") return "WASHER";
-        if (normalizedServiceType === "Dry") return "DRYER";
+        // For Wash service: only need washer for washing
+        if (normalizedServiceType === "Wash") {
+            if (status === "UNWASHED" || status === "WASHING") return "WASHER";
+            return null; // No machine needed for WASHED or COMPLETED
+        }
+
+        // For Dry service: only need dryer for drying (FIXED)
+        if (normalizedServiceType === "Dry") {
+            if (status === "UNWASHED" || status === "DRYING") return "DRYER";
+            return null; // No machine needed for DRIED, FOLDING or COMPLETED
+        }
+
+        // For Wash & Dry service: washer for washing, dryer for drying
         if (normalizedServiceType === "Wash & Dry") {
             if (status === "UNWASHED" || status === "WASHING") return "WASHER";
             if (status === "WASHED" || status === "DRYING") return "DRYER";
         }
+
         return null;
     };
 
     const isLoadRunning = (load) => {
         const remaining = getRemainingTime(load);
-        return remaining !== null && remaining > 0 && (load.status === "WASHING" || load.status === "DRYING");
+        return remaining !== null && remaining > 0 && (load?.status === "WASHING" || load?.status === "DRYING");
     };
 
     const machineOptions = useMemo(() => {
-        const byType = { WASHER: [], DRYER: [] };
-        machines.forEach((m) => {
-            const t = (m.type || "")?.toString().toUpperCase();
-            if (t === "WASHER") byType.WASHER.push(m);
-            if (t === "DRYER") byType.DRYER.push(m);
-        });
-        return byType;
-    }, [machines]);
+    const byType = { WASHER: [], DRYER: [] };
+    machines.forEach((m) => {
+        const t = (m.type || "")?.toString().toUpperCase();
+        if (t === "WASHER") byType.WASHER.push(m);
+        if (t === "DRYER") byType.DRYER.push(m);
+    });
+    
+    console.log("🔄 Machine Options:", {
+        totalMachines: machines.length,
+        washers: byType.WASHER.length,
+        dryers: byType.DRYER.length,
+        washerNames: byType.WASHER.map(w => w.name),
+        dryerNames: byType.DRYER.map(d => d.name)
+    });
+    
+    return byType;
+}, [machines]);
 
     const toggleAutoRefresh = () => {
         setAutoRefresh(!autoRefresh);
@@ -813,7 +942,7 @@ export default function ServiceTrackingPage() {
                     {
                         label: "Active Loads",
                         value: jobs.reduce(
-                            (acc, job) => acc + job.loads.filter((load) => load.status === "WASHING" || load.status === "DRYING").length,
+                            (acc, job) => acc + (job.loads?.filter((load) => load.status === "WASHING" || load.status === "DRYING").length || 0),
                             0,
                         ),
                         color: "#60A5FA",
@@ -821,7 +950,7 @@ export default function ServiceTrackingPage() {
                     },
                     {
                         label: "Pending",
-                        value: jobs.reduce((acc, job) => acc + job.loads.filter((load) => load.status === "UNWASHED").length, 0),
+                        value: jobs.reduce((acc, job) => acc + (job.loads?.filter((load) => load.status === "UNWASHED").length || 0), 0),
                         color: "#FB923C",
                         description: "Waiting to start",
                     },
@@ -899,26 +1028,28 @@ export default function ServiceTrackingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                 >
-                    <TrackingTable
-                        jobs={currentItems}
-                        expandedJobs={expandedJobs}
-                        setExpandedJobs={setExpandedJobs}
-                        machines={machineOptions}
-                        now={now}
-                        assignMachine={assignMachine}
-                        updateDuration={updateDuration}
-                        startAction={startAction}
-                        advanceStatus={advanceStatus}
-                        startDryingAgain={startDryingAgain}
-                        getJobKey={getJobKey}
-                        getRemainingTime={getRemainingTime}
-                        getMachineTypeForStep={getMachineTypeForStep}
-                        isLoadRunning={isLoadRunning}
-                        maskContact={maskContact}
-                        smsStatus={smsStatus}
-                        sendSmsNotification={sendSmsNotification}
-                        isDarkMode={isDarkMode}
-                    />
+                    <ErrorBoundary isDarkMode={isDarkMode}>
+                        <TrackingTable
+                            jobs={currentItems}
+                            expandedJobs={expandedJobs}
+                            setExpandedJobs={setExpandedJobs}
+                            machines={machineOptions}
+                            now={now}
+                            assignMachine={assignMachine}
+                            updateDuration={updateDuration}
+                            startAction={startAction}
+                            advanceStatus={advanceStatus}
+                            startDryingAgain={startDryingAgain}
+                            getJobKey={getJobKey}
+                            getRemainingTime={getRemainingTime}
+                            getMachineTypeForStep={getMachineTypeForStep}
+                            isLoadRunning={isLoadRunning}
+                            maskContact={maskContact}
+                            smsStatus={smsStatus}
+                            sendSmsNotification={sendSmsNotification}
+                            isDarkMode={isDarkMode}
+                        />
+                    </ErrorBoundary>
                 </motion.div>
             </TooltipProvider>
 
@@ -1031,7 +1162,19 @@ export default function ServiceTrackingPage() {
 
 const DEFAULT_DURATION = { washing: 35, drying: 40 };
 const SERVICE_FLOWS = {
-    Wash: ["UNWASHED", "WASHING", "WASHED", "COMPLETED"],
-    Dry: ["UNWASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"],
+    Wash: ["UNWASHED", "WASHING", "WASHED", "COMPLETED"], // Wash: UNWASHED → WASHING → WASHED → COMPLETED
+    Dry: ["UNWASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"], // Dry: UNWASHED → DRYING → DRIED → FOLDING → COMPLETED
     "Wash & Dry": ["UNWASHED", "WASHING", "WASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"],
 };
+
+// Main export with error boundary
+export default function ServiceTrackingPage() {
+    const { theme } = useTheme();
+    const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    return (
+        <ErrorBoundary isDarkMode={isDarkMode}>
+            <ServiceTrackingContent />
+        </ErrorBoundary>
+    );
+}

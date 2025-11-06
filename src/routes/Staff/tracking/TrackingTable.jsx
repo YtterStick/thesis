@@ -28,6 +28,15 @@ const TrackingTable = ({
 }) => {
   const [completingLoads, setCompletingLoads] = useState({});
 
+  // Debug logging for machines prop
+  console.log("🔄 TrackingTable Machines:", {
+    machinesProp: machines,
+    washers: machines?.WASHER?.length || 0,
+    dryers: machines?.DRYER?.length || 0,
+    washerNames: machines?.WASHER?.map(w => w.name) || [],
+    dryerNames: machines?.DRYER?.map(d => d.name) || []
+  });
+
   const handleCompletionAnimation = (jobKey, loadIndex) => {
     const completionKey = `${jobKey}-${loadIndex}`;
     setCompletingLoads(prev => ({
@@ -134,6 +143,19 @@ const TrackingTable = ({
                         const machineType = getMachineTypeForStep(load.status, normalizedServiceType);
                         const options = machineType === "WASHER" ? machines.WASHER : machineType === "DRYER" ? machines.DRYER : [];
 
+                        // Debug logging for each load
+                        console.log("🔍 TrackingTable Load Debug:", {
+                          jobKey,
+                          customerName: job.customerName,
+                          serviceType: job.serviceType,
+                          normalizedServiceType,
+                          loadStatus: load.status,
+                          loadNumber: load.loadNumber,
+                          machineType,
+                          optionsLength: options?.length || 0,
+                          options: options
+                        });
+
                         return (
                           <motion.tr
                             key={`${jobKey}-load${load.loadNumber}`}
@@ -205,6 +227,7 @@ const TrackingTable = ({
                                   assignMachine={(machineId) => assignMachine(jobKey, originalIndex, machineId)}
                                   disabled={isLoadRunning(load) || load.status === "FOLDING" || load.status === "COMPLETED"}
                                   isDarkMode={isDarkMode}
+                                  job={job}
                                 />
                               )}
                             </td>

@@ -611,6 +611,31 @@ public class LaundryJobService {
         return true;
     }
 
+    // ADDED BACK: Dispose job method
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob disposeJob(String id, String processedBy) {
+        LaundryJob job = laundryJobRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Laundry job not found: " + id));
+
+        if (!job.isExpired()) {
+            throw new RuntimeException("Cannot dispose non-expired job");
+        }
+
+        if (job.isDisposed()) {
+            throw new RuntimeException("Job already disposed");
+        }
+
+        job.setDisposed(true);
+        job.setDisposedBy(processedBy);
+        job.setDisposedDate(getCurrentManilaTime());
+        return laundryJobRepository.save(job);
+    }
+
+    // ADDED BACK: Get disposed jobs method
+    public List<LaundryJob> getDisposedJobs() {
+        return laundryJobRepository.findByDisposedTrue();
+    }
+
     @Cacheable(value = "laundryJobs", key = "'allJobs-' + #page + '-' + #size")
     public List<LaundryJobDto> getAllJobs(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("dueDate").ascending());
