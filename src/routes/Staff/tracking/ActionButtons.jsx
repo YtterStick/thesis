@@ -22,18 +22,9 @@ const ActionButtons = ({
         return (
             <div className="flex justify-end">
                 <div className="flex items-center justify-center min-w-[80px] h-10">
-                    {load.pending && !isLoadRunning(load) ? (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700">
-                            <div className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                            <span className="text-sm font-medium whitespace-nowrap">
-                                Starting...
-                            </span>
-                        </div>
-                    ) : (
-                        <div style={{ transform: "scale(0.5)" }}>
-                            <Loader />
-                        </div>
-                    )}
+                    <div style={{ transform: "scale(0.5)" }}>
+                        <Loader />
+                    </div>
                 </div>
             </div>
         );
@@ -127,6 +118,15 @@ const ActionButtons = ({
                         Fold
                     </CustomButton>
                 </div>
+            ) : load.status === "FOLDING" ? (
+                <CustomButton
+                    onClick={() => advanceStatus(jobKey, loadIndex)}
+                    disabled={load.pending}
+                    icon={Check}
+                    variant="success"
+                >
+                    Done
+                </CustomButton>
             ) : normalizedServiceType === "Wash" && load.status === "WASHED" ? (
                 <CustomButton
                     onClick={() => advanceStatus(jobKey, loadIndex)}
@@ -146,15 +146,15 @@ const ActionButtons = ({
                 >
                     Start
                 </CustomButton>
-            ) : ["DRYING", "FOLDING"].includes(load.status) ? (
-                <CustomButton
-                    onClick={() => advanceStatus(jobKey, loadIndex)}
-                    disabled={load.pending}
-                    icon={ArrowRight}
-                    variant="primary"
-                >
-                    Next
-                </CustomButton>
+            ) : load.status === "DRYING" ? (
+                // Show loader animation during DRYING
+                <div className="flex justify-end">
+                    <div className="flex items-center justify-center min-w-[80px] h-10">
+                        <div style={{ transform: "scale(0.5)" }}>
+                            <Loader />
+                        </div>
+                    </div>
+                </div>
             ) : load.status === "COMPLETED" ? (
                 <span className="flex items-center gap-1 text-green-600 font-medium">
                     <Check className="h-4 w-4" /> 

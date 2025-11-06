@@ -26,6 +26,25 @@ const MainPage = () => {
     const [isSendingWarnings, setIsSendingWarnings] = useState(false);
     const { toast } = useToast();
 
+    // Handle URL parameters for auto-search
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchParam = urlParams.get('search');
+        
+        if (searchParam) {
+            setSearchTerm(searchParam);
+            // Clear the URL parameter after using it
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+            
+            toast({
+                title: "Auto-search activated",
+                description: `Searching for: ${searchParam}`,
+                duration: 3000,
+            });
+        }
+    }, []);
+
     useEffect(() => {
         if (!hasFetched) {
             fetchCompletedTransactions();
@@ -213,6 +232,10 @@ const MainPage = () => {
         fetchPendingWarnings();
     };
 
+    const clearSearch = () => {
+        setSearchTerm("");
+    };
+
     return (
         <div 
             className="space-y-5 px-6 pb-5 pt-4 overflow-visible min-h-screen"
@@ -307,6 +330,18 @@ const MainPage = () => {
                                     {filteredTransactions.length} item{filteredTransactions.length !== 1 ? "s" : ""}{" "}
                                     {activeTab === "unclaimed" ? "ready for pickup" : "past due and need disposal"}
                                     {pendingWarnings > 0 && ` • ${pendingWarnings} need disposal warnings`}
+                                    {searchTerm && (
+                                        <span className="ml-2">
+                                            • Searching for: "<strong>{searchTerm}</strong>"
+                                            <button 
+                                                onClick={clearSearch}
+                                                className="ml-2 text-xs underline hover:no-underline"
+                                                style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}
+                                            >
+                                                clear
+                                            </button>
+                                        </span>
+                                    )}
                                 </CardDescription>
                             </div>
                             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
@@ -357,12 +392,21 @@ const MainPage = () => {
                                             className="w-full border-2 pl-8 transition-all sm:w-64"
                                             style={{
                                                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                                borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                                borderColor: searchTerm ? (isDarkMode ? "#3DD9B6" : "#0891B2") : (isDarkMode ? "#475569" : "#cbd5e1"),
                                                 color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                             }}
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                         />
+                                        {searchTerm && (
+                                            <button
+                                                onClick={clearSearch}
+                                                className="absolute right-2 top-2.5"
+                                                style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
+                                            >
+                                                ×
+                                            </button>
+                                        )}
                                     </div>
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}

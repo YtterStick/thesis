@@ -3,16 +3,25 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { motion } from "framer-motion";
 
 const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkMode }) => {
-    // For FOLDING and COMPLETED status, show current machine but disable selection
+    // For FOLDING, COMPLETED, and DRIED status, show current machine but disable selection
     const shouldDisableSelection = ["FOLDING", "COMPLETED", "DRIED"].includes(load.status);
     const currentMachine = load.machineId ? options.find((m) => m.id === load.machineId) : null;
     
-    // If status is FOLDING or COMPLETED and there's a machine assigned, show it as released
-    const displayValue = (load.status === "FOLDING" || load.status === "COMPLETED") && currentMachine 
-        ? `Released (${currentMachine.name})` 
-        : currentMachine 
-            ? currentMachine.name
-            : "Select machine";
+    // Display logic:
+    // - For FOLDING/COMPLETED: show "Released (Machine Name)" 
+    // - For DRIED: show the machine name (since it's still assigned but can't be changed)
+    // - For others: show machine name or "Select machine"
+    const getDisplayValue = () => {
+        if ((load.status === "FOLDING" || load.status === "COMPLETED") && currentMachine) {
+            return `Released (${currentMachine.name})`;
+        } else if (load.status === "DRIED" && currentMachine) {
+            return currentMachine.name; // Show the machine that was used for drying
+        } else if (currentMachine) {
+            return currentMachine.name;
+        } else {
+            return "Select machine";
+        }
+    };
 
     return (
         <Select
@@ -30,7 +39,7 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                 }}
             >
                 <SelectValue placeholder="Select machine">
-                    {displayValue}
+                    {getDisplayValue()}
                 </SelectValue>
             </SelectTrigger>
             <SelectContent 

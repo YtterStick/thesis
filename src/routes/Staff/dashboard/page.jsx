@@ -3,6 +3,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { PackageX, PhilippinePeso, Package, Clock8, Timer, AlertCircle, LineChart } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api-config";
+import { useNavigate } from "react-router-dom";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 1000; // Changed from 15000 to 1000ms (1 second)
@@ -41,6 +42,7 @@ const saveCacheToStorage = (data) => {
 
 const StaffDashboardPage = () => {
   const { theme } = useTheme();
+  const navigate = useNavigate();
   
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
@@ -576,6 +578,8 @@ const StaffDashboardPage = () => {
       value: formatCurrency(displayData.todayIncome),
       color: "#3DD9B6",
       description: "Revenue generated today",
+      clickable: true,
+      onClick: () => navigate("/staff/records")
     },
     {
       title: "Today's Loads",
@@ -583,6 +587,8 @@ const StaffDashboardPage = () => {
       value: displayData.todayLoads.toLocaleString(),
       color: "#60A5FA",
       description: "Loads processed today",
+      clickable: true,
+      onClick: () => navigate("/staff/records")
     },
     {
       title: "Unwashed",
@@ -590,6 +596,8 @@ const StaffDashboardPage = () => {
       value: displayData.unwashedCount.toLocaleString(),
       color: "#FB923C",
       description: "Waiting to be washed",
+      clickable: true,
+      onClick: () => navigate("/staff/tracking")
     },
     {
       title: "Unclaimed",
@@ -597,6 +605,8 @@ const StaffDashboardPage = () => {
       value: displayData.completedUnclaimedTransactions.length.toLocaleString(),
       color: "#F87171",
       description: "Completed but not claimed",
+      clickable: true,
+      onClick: () => navigate("/staff/claiming")
     },
   ];
 
@@ -637,7 +647,7 @@ const StaffDashboardPage = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {summaryCards.map(({ title, icon, value, color, description }, index) => (
+        {summaryCards.map(({ title, icon, value, color, description, clickable, onClick }, index) => (
           <motion.div
             key={title}
             initial={{ opacity: 0, y: 20 }}
@@ -648,11 +658,15 @@ const StaffDashboardPage = () => {
               y: -2,
               transition: { duration: 0.2 }
             }}
-            className="rounded-xl border-2 p-5 transition-all cursor-pointer h-[140px] flex flex-col"
+            className={`rounded-xl border-2 p-5 transition-all cursor-pointer h-[140px] flex flex-col ${
+              clickable ? 'hover:shadow-lg' : ''
+            }`}
             style={{
               backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
               borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+              cursor: clickable ? 'pointer' : 'default',
             }}
+            onClick={clickable ? onClick : undefined}
           >
             <div className="flex items-center justify-between mb-4">
               <motion.div
@@ -680,6 +694,11 @@ const StaffDashboardPage = () => {
             <div className="flex-1 flex flex-col justify-between">
               <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                 {title}
+                {clickable && (
+                  <span className="ml-2 text-xs" style={{ color: color }}>
+                    ↗
+                  </span>
+                )}
               </h3>
               <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                 {description}
@@ -916,13 +935,21 @@ const StaffDashboardPage = () => {
                       borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                       backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.5)" : "rgba(248, 250, 252, 0.9)",
                     }}
+                    onClick={() => {
+                      // Navigate to claiming page with customer name search
+                      const searchParams = new URLSearchParams();
+                      if (transaction.customerName) {
+                        searchParams.set('search', transaction.customerName);
+                      }
+                      navigate(`/staff/claiming?${searchParams.toString()}`);
+                    }}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <p className="font-semibold text-sm mb-1" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                           {transaction.customerName}
                         </p>
-                        <p className="text-sm mb-1" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                        <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                           {transaction.serviceType} • {transaction.loadAssignments?.length || 0} loads
                         </p>
                       </div>

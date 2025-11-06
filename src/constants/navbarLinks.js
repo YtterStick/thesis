@@ -35,7 +35,7 @@ export const navbarLinks = [
     title: "User Management",
     Links: [
       { label: "User Accounts", icon: UserCog, path: "/managestaff" },
-      { label: "Audit Trail", icon: History, path: "/audittrail" }, // NEW
+      { label: "Audit Trail", icon: History, path: "/audittrail" },
     ],
   },
   {
@@ -43,7 +43,7 @@ export const navbarLinks = [
     Links: [
       { label: "Services & Pricing", icon: Sliders, path: "/serviceoption" },
       { label: "Receipts & Invoice", icon: ScrollText, path: "/documentsettings" },
-      { label: "Payment Methods", icon: CreditCard, path: "/paymentmethod" },
+      { label: "Payment Method", icon: CreditCard, path: "/paymentmethod" },
     ],
   },
   {

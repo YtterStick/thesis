@@ -1,4 +1,3 @@
-
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.dto.LaundryJobDto;
@@ -57,7 +56,11 @@ public class LaundryJobService {
     private static final String STATUS_FOLDING = "FOLDING";
     private static final String STATUS_COMPLETED = "COMPLETED";
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+
+    // Sync tracking - using HashMap instead of ConcurrentHashMap
+    private final Map<String, LocalDateTime> lastOperationTime = new HashMap<>();
+    private final Map<String, String> lastOperationType = new HashMap<>();
 
     private static final Map<String, List<String>> SERVICE_FLOWS = Map.of(
             "wash & dry", List.of(STATUS_NOT_STARTED, STATUS_WASHING, STATUS_WASHED,
@@ -116,6 +119,7 @@ public class LaundryJobService {
         System.out.println("🆕 Creating laundry job with dueDate: " + job.getDueDate() +
                 " for transaction: " + dto.getTransactionId());
 
+        trackOperation(job.getTransactionId(), "CREATE_JOB");
         return laundryJobRepository.save(job);
     }
 
@@ -137,6 +141,8 @@ public class LaundryJobService {
                 .setMachineId(machineId);
 
         job.setLaundryProcessedBy(processedBy);
+        
+        trackOperation(transactionId, "ASSIGN_MACHINE");
         return laundryJobRepository.save(job);
     }
 
@@ -188,8 +194,6 @@ public class LaundryJobService {
         System.out.println("   Duration: " + finalDuration + " minutes");
         System.out.println("   Start Time (Manila): " + now);
         System.out.println("   End Time (Manila): " + load.getEndTime());
-        System.out.println("   Current System Time: " + LocalDateTime.now());
-        System.out.println("   Manila Zone: " + getManilaTimeZone());
 
         System.out.println("⏰ Scheduled auto-advance for " + transactionId + " load " + loadNumber + 
                           " in " + finalDuration + " minutes. EndTime: " + load.getEndTime());
@@ -199,6 +203,7 @@ public class LaundryJobService {
             autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber);
         }, finalDuration, TimeUnit.MINUTES);
 
+        trackOperation(transactionId, "START_LOAD");
         return saved;
     }
 
@@ -263,6 +268,7 @@ public class LaundryJobService {
             autoAdvanceAfterStepEnds("dry", transactionId, loadNumber);
         }, duration, TimeUnit.MINUTES);
 
+        trackOperation(transactionId, "DRY_AGAIN");
         return saved;
     }
 
@@ -311,6 +317,8 @@ public class LaundryJobService {
         }
 
         job.setLaundryProcessedBy(processedBy);
+        
+        trackOperation(transactionId, "ADVANCE_LOAD");
         return laundryJobRepository.save(job);
     }
 
@@ -524,6 +532,8 @@ public class LaundryJobService {
         }
 
         job.setLaundryProcessedBy(processedBy);
+        
+        trackOperation(transactionId, "UPDATE_DURATION");
         return laundryJobRepository.save(job);
     }
 
@@ -532,12 +542,16 @@ public class LaundryJobService {
         LaundryJob job = findSingleJobByTransaction(transactionId);
         job.setCurrentStep(newStep);
         job.setLaundryProcessedBy(processedBy);
+        
+        trackOperation(transactionId, "UPDATE_STEP");
         return laundryJobRepository.save(job);
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob updateJob(LaundryJob job, String processedBy) {
         job.setLaundryProcessedBy(processedBy);
+        
+        trackOperation(job.getTransactionId(), "UPDATE_JOB");
         return laundryJobRepository.save(job);
     }
 
@@ -743,6 +757,8 @@ public class LaundryJobService {
         job.setDisposed(true);
         job.setDisposedBy(processedBy);
         job.setDisposedDate(getCurrentManilaTime());
+        
+        trackOperation(job.getTransactionId(), "DISPOSE_JOB");
         return laundryJobRepository.save(job);
     }
 
@@ -956,9 +972,257 @@ public class LaundryJobService {
         load.setEndTime(null);
 
         job.setLaundryProcessedBy(processedBy);
+        
+        trackOperation(transactionId, "FORCE_ADVANCE");
         return laundryJobRepository.save(job);
     }
 
+    // ========== AUTO-HEALING SYNC SYSTEM ==========
+
+    /**
+     * Track operation for sync monitoring
+     */
+    private synchronized void trackOperation(String transactionId, String operationType) {
+        lastOperationTime.put(transactionId, getCurrentManilaTime());
+        lastOperationType.put(transactionId, operationType);
+        System.out.println("📝 Tracked operation: " + operationType + " for " + transactionId);
+    }
+
+    /**
+     * Get sync status for a specific transaction
+     */
+    public Map<String, Object> getSyncStatus(String transactionId) {
+        Map<String, Object> status = new HashMap<>();
+        try {
+            LaundryJob job = findSingleJobByTransaction(transactionId);
+            status.put("transactionId", transactionId);
+            status.put("exists", true);
+            status.put("lastUpdated", getCurrentManilaTime());
+            status.put("loadCount", job.getLoadAssignments().size());
+            status.put("lastOperation", lastOperationType.get(transactionId));
+            status.put("lastOperationTime", lastOperationTime.get(transactionId));
+            
+            // Load details for sync verification
+            List<Map<String, Object>> loadDetails = new ArrayList<>();
+            for (LoadAssignment load : job.getLoadAssignments()) {
+                Map<String, Object> loadInfo = new HashMap<>();
+                loadInfo.put("loadNumber", load.getLoadNumber());
+                loadInfo.put("status", load.getStatus());
+                loadInfo.put("machineId", load.getMachineId());
+                loadInfo.put("startTime", load.getStartTime());
+                loadInfo.put("endTime", load.getEndTime());
+                loadInfo.put("duration", load.getDurationMinutes());
+                loadDetails.add(loadInfo);
+            }
+            status.put("loads", loadDetails);
+            
+        } catch (Exception e) {
+            status.put("exists", false);
+            status.put("error", e.getMessage());
+        }
+        return status;
+    }
+
+    /**
+     * Auto-healing: Check and fix stuck timers and inconsistent states
+     */
+    @Scheduled(fixedRate = 30000) // Run every 30 seconds
+    public void autoHealStuckJobs() {
+        System.out.println("🔧 AUTO-HEAL: Checking for stuck jobs and inconsistent states...");
+        
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
+        int fixedCount = 0;
+        
+        for (LaundryJob job : allJobs) {
+            try {
+                if (checkAndFixJobState(job)) {
+                    fixedCount++;
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Auto-heal failed for job " + job.getTransactionId() + ": " + e.getMessage());
+            }
+        }
+        
+        if (fixedCount > 0) {
+            System.out.println("✅ AUTO-HEAL: Fixed " + fixedCount + " jobs");
+        }
+    }
+
+    /**
+     * Check and fix individual job state inconsistencies
+     */
+    private boolean checkAndFixJobState(LaundryJob job) {
+        boolean wasFixed = false;
+        LocalDateTime now = getCurrentManilaTime();
+        
+        for (LoadAssignment load : job.getLoadAssignments()) {
+            // Fix 1: Stuck in WASHING/DRYING but timer expired
+            if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus())) 
+                && load.getEndTime() != null && now.isAfter(load.getEndTime())) {
+                
+                System.out.println("🔧 Fixing stuck timer for " + job.getTransactionId() + " load " + load.getLoadNumber());
+                
+                if (STATUS_WASHING.equals(load.getStatus())) {
+                    load.setStatus(STATUS_WASHED);
+                    releaseMachine(load);
+                    System.out.println("✅ Auto-advanced from WASHING to WASHED");
+                } else if (STATUS_DRYING.equals(load.getStatus())) {
+                    load.setStatus(STATUS_DRIED);
+                    releaseMachine(load);
+                    System.out.println("✅ Auto-advanced from DRYING to DRIED");
+                }
+                
+                wasFixed = true;
+            }
+            
+            // Fix 2: Machine assigned but status doesn't match
+            if (load.getMachineId() != null) {
+                MachineItem machine = machineRepository.findById(load.getMachineId()).orElse(null);
+                if (machine != null) {
+                    boolean shouldBeInUse = STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus());
+                    boolean isInUse = STATUS_IN_USE.equals(machine.getStatus());
+                    
+                    if (shouldBeInUse && !isInUse) {
+                        // Machine should be in use but isn't
+                        machine.setStatus(STATUS_IN_USE);
+                        machineRepository.save(machine);
+                        System.out.println("🔧 Fixed machine state for " + machine.getId() + " - set to IN_USE");
+                        wasFixed = true;
+                    } else if (!shouldBeInUse && isInUse) {
+                        // Machine shouldn't be in use but is
+                        machine.setStatus(STATUS_AVAILABLE);
+                        machineRepository.save(machine);
+                        System.out.println("🔧 Fixed machine state for " + machine.getId() + " - set to AVAILABLE");
+                        wasFixed = true;
+                    }
+                }
+            }
+            
+            // Fix 3: Invalid status sequences
+            if (isInvalidStatusSequence(job, load)) {
+                System.out.println("🔧 Fixing invalid status sequence for " + job.getTransactionId() + " load " + load.getLoadNumber());
+                String correctStatus = determineCorrectStatus(job, load);
+                if (correctStatus != null && !correctStatus.equals(load.getStatus())) {
+                    load.setStatus(correctStatus);
+                    wasFixed = true;
+                    System.out.println("✅ Corrected status from " + load.getStatus() + " to " + correctStatus);
+                }
+            }
+        }
+        
+        if (wasFixed) {
+            laundryJobRepository.save(job);
+            System.out.println("💾 Saved fixes for job: " + job.getTransactionId());
+        }
+        
+        return wasFixed;
+    }
+
+    /**
+     * Check if a load has an invalid status sequence based on service type
+     */
+    private boolean isInvalidStatusSequence(LaundryJob job, LoadAssignment load) {
+        List<String> expectedFlow = getFlowByServiceType(job.getServiceType());
+        int currentIndex = expectedFlow.indexOf(load.getStatus());
+        
+        // If status is not in expected flow, it's invalid
+        if (currentIndex == -1) {
+            return true;
+        }
+        
+        // Check if previous statuses make sense
+        // This is a simplified check - you can enhance this based on your business logic
+        return false;
+    }
+
+    /**
+     * Determine the correct status for a load based on service flow
+     */
+    private String determineCorrectStatus(LaundryJob job, LoadAssignment load) {
+        List<String> expectedFlow = getFlowByServiceType(job.getServiceType());
+        
+        // Simple heuristic: move to next logical step or stay in current if uncertain
+        int currentIndex = expectedFlow.indexOf(load.getStatus());
+        if (currentIndex == -1) {
+            // If current status is invalid, start from beginning
+            return expectedFlow.get(0);
+        }
+        
+        return expectedFlow.get(currentIndex); // Keep current if valid
+    }
+
+    /**
+     * Manual trigger for state verification and healing
+     */
+    public Map<String, Object> verifyAndHealJob(String transactionId) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("transactionId", transactionId);
+        result.put("timestamp", getCurrentManilaTime());
+        
+        try {
+            LaundryJob job = findSingleJobByTransaction(transactionId);
+            boolean wasFixed = checkAndFixJobState(job);
+            
+            result.put("success", true);
+            result.put("wasFixed", wasFixed);
+            result.put("currentState", getSyncStatus(transactionId));
+            
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        
+        return result;
+    }
+
+    /**
+     * Bulk verification of all jobs
+     */
+    public Map<String, Object> verifyAllJobs() {
+        Map<String, Object> result = new HashMap<>();
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
+        int totalJobs = allJobs.size();
+        int fixedJobs = 0;
+        int errorJobs = 0;
+        
+        List<Map<String, Object>> jobResults = new ArrayList<>();
+        
+        for (LaundryJob job : allJobs) {
+            Map<String, Object> jobResult = new HashMap<>();
+            jobResult.put("transactionId", job.getTransactionId());
+            
+            try {
+                boolean wasFixed = checkAndFixJobState(job);
+                jobResult.put("status", wasFixed ? "FIXED" : "OK");
+                jobResult.put("wasFixed", wasFixed);
+                
+                if (wasFixed) fixedJobs++;
+                
+            } catch (Exception e) {
+                jobResult.put("status", "ERROR");
+                jobResult.put("error", e.getMessage());
+                errorJobs++;
+            }
+            
+            jobResults.add(jobResult);
+        }
+        
+        result.put("totalJobs", totalJobs);
+        result.put("fixedJobs", fixedJobs);
+        result.put("errorJobs", errorJobs);
+        result.put("healthyJobs", totalJobs - fixedJobs - errorJobs);
+        result.put("jobResults", jobResults);
+        result.put("timestamp", getCurrentManilaTime());
+        
+        System.out.println("🔍 BULK VERIFICATION: " + fixedJobs + " fixed, " + errorJobs + " errors, " + 
+                          (totalJobs - fixedJobs - errorJobs) + " healthy out of " + totalJobs + " total jobs");
+        
+        return result;
+    }
+
+    /**
+     * Check and fix timer states for a specific job
+     */
     public void checkAndFixTimerStates(String transactionId) {
         try {
             LaundryJob job = findSingleJobByTransaction(transactionId);

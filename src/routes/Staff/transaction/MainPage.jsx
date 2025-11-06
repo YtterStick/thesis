@@ -205,8 +205,7 @@ const MainPage = () => {
                 // For other errors, show the error message and toast
                 setErrorMessage(error.message || "Transaction failed");
                 toast({
-                    title: "Transaction Failed",
-                    description: error.message || "Please try again",
+                    title: "Insufficient stock",
                     variant: "destructive",
                 });
             }
@@ -306,12 +305,6 @@ const MainPage = () => {
                 </div>
             </div>
 
-            {/* Only show error message for non-stock related errors */}
-            {errorMessage && !errorMessage.includes("Insufficient stock") && (
-                <div className="mt-6 text-sm" style={{ color: isDarkMode ? '#F87171' : '#DC2626' }}>
-                    ❌ {errorMessage}
-                </div>
-            )}
 
             {/* Transaction Complete Modal */}
             {showActions && (

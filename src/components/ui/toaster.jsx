@@ -22,16 +22,12 @@ export function Toaster() {
         >
           <div className="grid gap-1">
             {title && (
-              <ToastTitle
-                className={variant === "destructive" ? "text-red-100" : ""}
-              >
+              <ToastTitle>
                 {title}
               </ToastTitle>
             )}
             {description && (
-              <ToastDescription
-                className={variant === "destructive" ? "text-red-200" : ""}
-              >
+              <ToastDescription>
                 {description}
               </ToastDescription>
             )}
