@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/laundry-jobs")
@@ -168,75 +167,6 @@ public class LaundryJobController {
         }
     }
 
-    // ========== AUTO-HEALING SYNC ENDPOINTS ==========
-
-    /**
-     * Get sync status for a specific job
-     */
-    @GetMapping("/{transactionId}/sync-status")
-    public ResponseEntity<Map<String, Object>> getSyncStatus(@PathVariable String transactionId) {
-        try {
-            Map<String, Object> status = laundryJobService.getSyncStatus(transactionId);
-            return ResponseEntity.ok(status);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Failed to get sync status: " + e.getMessage(),
-                "transactionId", transactionId
-            ));
-        }
-    }
-
-    /**
-     * Manually trigger verification and healing for a specific job
-     */
-    @PostMapping("/{transactionId}/verify-and-heal")
-    public ResponseEntity<Map<String, Object>> verifyAndHealJob(@PathVariable String transactionId) {
-        try {
-            Map<String, Object> result = laundryJobService.verifyAndHealJob(transactionId);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Failed to verify and heal job: " + e.getMessage(),
-                "transactionId", transactionId
-            ));
-        }
-    }
-
-    /**
-     * Bulk verify and heal all jobs
-     */
-    @PostMapping("/bulk-verify-and-heal")
-    public ResponseEntity<Map<String, Object>> verifyAllJobs() {
-        try {
-            Map<String, Object> result = laundryJobService.verifyAllJobs();
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Failed to bulk verify jobs: " + e.getMessage()
-            ));
-        }
-    }
-
-    /**
-     * Check and fix timer states for a specific job
-     */
-    @PostMapping("/{transactionId}/fix-timers")
-    public ResponseEntity<Map<String, Object>> fixTimerStates(@PathVariable String transactionId) {
-        try {
-            laundryJobService.checkAndFixTimerStates(transactionId);
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "Timer states checked and fixed for " + transactionId,
-                "transactionId", transactionId
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Failed to fix timer states: " + e.getMessage(),
-                "transactionId", transactionId
-            ));
-        }
-    }
-
     // ========== DTO Conversion ==========
     private LaundryJobDto toDto(LaundryJob job) {
         LaundryJobDto dto = new LaundryJobDto();
@@ -263,4 +193,4 @@ public class LaundryJobController {
         List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
         return ResponseEntity.ok(jobs);
     }
-}
+}//
