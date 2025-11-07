@@ -495,12 +495,27 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
         }
     }
 
-   @CacheEvict(value = "laundryJobs", allEntries = true)
+  @CacheEvict(value = "laundryJobs", allEntries = true)
 public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
     LaundryJob job = advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
 
-    // This will check if all loads are completed and send SMS only once
-    sendCompletionSmsNotification(job, loadNumber);
+    // Check if this completion resulted in ALL loads being completed
+    boolean allLoadsCompleted = job.getLoadAssignments().stream()
+            .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
+
+    System.out.println("🔍 CompleteLoad - All loads completed: " + allLoadsCompleted);
+    System.out.println("🔍 Load statuses after completion:");
+    job.getLoadAssignments().forEach(load -> {
+        System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus());
+    });
+
+    // Only send SMS notification if ALL loads are now completed
+    if (allLoadsCompleted) {
+        System.out.println("🎉 FINAL LOAD COMPLETED! Triggering SMS notification...");
+        sendCompletionSmsNotification(job, loadNumber);
+    } else {
+        System.out.println("📝 Load completed, but waiting for other loads. No SMS sent.");
+    }
 
     try {
         String title = "Load Completed";
@@ -541,6 +556,7 @@ public LaundryJob completeLoad(String transactionId, int loadNumber, String proc
                     " (Machine: " + load.getMachineId() + ")");
         });
 
+        // ONLY send SMS if ALL loads are completed
         if (allLoadsCompleted) {
             System.out.println("🚀 ALL LOADS COMPLETED! Sending SMS notification...");
 
@@ -555,12 +571,12 @@ public LaundryJob completeLoad(String transactionId, int loadNumber, String proc
             System.out.println("   🛠️ Service: " + serviceType);
             System.out.println("   📦 Transaction: " + job.getTransactionId());
 
-            // Simply send the SMS - it will only be called once when all loads are completed
+            // Send SMS only when ALL loads are done
             smsService.sendLoadCompletedNotification(
                     job.getContact(),
                     job.getCustomerName(),
                     serviceType,
-                    job.getTransactionId()); // Added transaction ID parameter
+                    job.getTransactionId());
 
             System.out.println("✅ SMS notification sent for job: " + job.getTransactionId());
 
@@ -569,7 +585,10 @@ public LaundryJob completeLoad(String transactionId, int loadNumber, String proc
             int completedCount = (int) job.getLoadAssignments().stream()
                     .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
                     .count();
-            System.out.println("⏳ Completed: " + completedCount + "/" + job.getLoadAssignments().size());
+            int totalLoads = job.getLoadAssignments().size();
+            System.out.println("⏳ Completed: " + completedCount + "/" + totalLoads);
+            
+            // Don't send SMS here - wait until all are completed
         }
     } catch (Exception e) {
         System.err.println("❌ Error in sendCompletionSmsNotification: " + e.getMessage());
