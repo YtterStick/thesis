@@ -806,15 +806,38 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
         }
     }
 
-    public List<LaundryJob> getCompletedUnclaimedJobs() {
-        return laundryJobRepository.findAll().stream()
-                .filter(job -> job.getLoadAssignments() != null &&
-                        job.getLoadAssignments().stream()
-                                .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())))
-                .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
-                .filter(job -> !job.isExpired())
-                .collect(Collectors.toList());
-    }
+   // In LaundryJobService.java - Update getCompletedUnclaimedJobs method
+public List<LaundryJob> getCompletedUnclaimedJobs() {
+    List<LaundryJob> allJobs = laundryJobRepository.findAll();
+    
+    List<LaundryJob> completedUnclaimed = allJobs.stream()
+        .filter(job -> job.getLoadAssignments() != null)
+        .filter(job -> job.getLoadAssignments().stream()
+            .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+        .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+        .filter(job -> !job.isExpired())
+        .filter(job -> !job.isDisposed())
+        // Add GCash verification filter
+        .filter(job -> {
+            try {
+                Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
+                    .orElse(null);
+                
+                if (transaction != null && "GCash".equals(transaction.getPaymentMethod())) {
+                    return Boolean.TRUE.equals(transaction.getGcashVerified());
+                }
+                return true; // Keep non-GCash transactions
+            } catch (Exception e) {
+                System.err.println("Error checking transaction for job " + job.getTransactionId() + ": " + e.getMessage());
+                return true;
+            }
+        })
+        .collect(Collectors.toList());
+
+    System.out.println("✅ Found " + completedUnclaimed.size() + " completed unclaimed jobs (excluding unverified GCash)");
+    
+    return completedUnclaimed;
+}
 
     public List<LaundryJob> getExpiredJobs() {
         return laundryJobRepository.findByExpiredTrueAndDisposedFalse();
