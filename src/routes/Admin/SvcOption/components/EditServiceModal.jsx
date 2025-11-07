@@ -21,7 +21,8 @@ export default function EditServiceModal({ service, onClose, onSave }) {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isPermanentService = PERMANENT_SERVICES.includes(service?.name);
+  // Check if this is a permanent service (Wash, Dry, or Wash & Dry)
+  const isPermanentService = service?.name && PERMANENT_SERVICES.includes(service.name);
   const isEditing = !!service?.id;
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function EditServiceModal({ service, onClose, onSave }) {
   };
 
   const handleChange = (field, value) => {
-    // Don't allow name changes for permanent services
+    // Don't allow name changes for permanent services (Wash, Dry, Wash & Dry)
     if (field === "name" && isPermanentService) return;
     
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -148,7 +149,7 @@ export default function EditServiceModal({ service, onClose, onSave }) {
               </Label>
               
               {isPermanentService ? (
-                // Display-only field for permanent services
+                // Display-only field for permanent services (Wash, Dry, Wash & Dry)
                 <div 
                   className="flex items-center gap-2 rounded-lg border-2 p-2 transition-all"
                   style={{
@@ -185,10 +186,13 @@ export default function EditServiceModal({ service, onClose, onSave }) {
               )}
             </div>
 
-            {/* Description - Always Editable */}
+            {/* Description - Always Editable for ALL services */}
             <div>
               <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                 Description
+                <span className="ml-2 text-xs" style={{ color: isDarkMode ? '#60A5FA' : '#0E7490' }}>
+                  (Editable)
+                </span>
               </Label>
               <Input
                 className="rounded-lg border-2 transition-all"
@@ -203,10 +207,13 @@ export default function EditServiceModal({ service, onClose, onSave }) {
               />
             </div>
 
-            {/* Price with Peso Sign - Always Editable */}
+            {/* Price with Peso Sign - Always Editable for ALL services */}
             <div>
               <Label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
                 Price
+                <span className="ml-2 text-xs" style={{ color: isDarkMode ? '#60A5FA' : '#0E7490' }}>
+                  (Editable)
+                </span>
               </Label>
               <div 
                 className="flex items-center rounded-lg border-2 transition-all focus-within:ring-2 focus-within:ring-offset-2"

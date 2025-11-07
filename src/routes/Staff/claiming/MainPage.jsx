@@ -58,64 +58,48 @@ const MainPage = () => {
     }, [transactions, expiredTransactions, searchTerm, activeTab]);
 
     const fetchCompletedTransactions = async () => {
-    try {
-        setIsLoading(true);
-        const data = await api.get("api/claiming/completed-unclaimed");
+        try {
+            setIsLoading(true);
+            const data = await api.get("api/claiming/completed-unclaimed");
 
-        // Enhanced filtering - also check the transaction data
-        const enhancedData = await Promise.all(
-            data.map(async (transaction) => {
-                try {
-                    // Fetch the actual transaction to check payment verification
-                    const txDetail = await api.get(`api/transactions/${transaction.id}/detail`);
-                    return {
-                        ...transaction,
-                        paymentMethod: txDetail.paymentMethod,
-                        gcashVerified: txDetail.gcashVerified
-                    };
-                } catch (error) {
-                    console.error(`Error fetching details for transaction ${transaction.id}:`, error);
-                    return transaction;
+            // REMOVED the unnecessary transaction detail fetching
+            // Just use the data as-is from the completed-unclaimed endpoint
+            const filteredData = data.filter((transaction) => {
+                // Filter out unverified GCash transactions if payment info is already in the response
+                if (transaction.paymentMethod === "GCash") {
+                    return transaction.gcashVerified === true;
                 }
-            })
-        );
+                return true;
+            });
 
-        // Filter out unverified GCash transactions
-        const filteredData = enhancedData.filter((transaction) => {
-            if (transaction.paymentMethod === "GCash") {
-                return transaction.gcashVerified === true;
-            }
-            return true;
-        });
+            // Sort by completion date (newest first)
+            const sortedData = filteredData.sort((a, b) => {
+                const getLatestCompletionDate = (transaction) => {
+                    return transaction.loadAssignments?.reduce(
+                        (latest, load) => (load.endTime ? Math.max(latest, new Date(load.endTime).getTime()) : latest),
+                        0,
+                    );
+                };
 
-        // Sort by completion date (newest first)
-        const sortedData = filteredData.sort((a, b) => {
-            const getLatestCompletionDate = (transaction) => {
-                return transaction.loadAssignments?.reduce(
-                    (latest, load) => (load.endTime ? Math.max(latest, new Date(load.endTime).getTime()) : latest),
-                    0,
-                );
-            };
+                const aDate = getLatestCompletionDate(a);
+                const bDate = getLatestCompletionDate(b);
 
-            const aDate = getLatestCompletionDate(a);
-            const bDate = getLatestCompletionDate(b);
+                return bDate - aDate;
+            });
 
-            return bDate - aDate;
-        });
-
-        setTransactions(sortedData);
-        setHasFetched(true);
-    } catch (error) {
-        console.error(error);
-        toast({ 
-            title: "Error", 
-            description: "Failed to load completed transactions", 
-            variant: "destructive" 
-        });
-    } finally {
-        setIsLoading(false);
-    }
-};
+            setTransactions(sortedData);
+            setHasFetched(true);
+        } catch (error) {
+            console.error(error);
+            toast({ 
+                title: "Error", 
+                description: "Failed to load completed transactions", 
+                variant: "destructive" 
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const fetchExpiredTransactions = async () => {
         try {
