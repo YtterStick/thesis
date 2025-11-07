@@ -342,33 +342,33 @@ public class LaundryJobService {
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus, String processedBy) {
-        if ("COMPLETE".equalsIgnoreCase(newStatus)) {
-            newStatus = STATUS_COMPLETED;
-        }
-
-        LaundryJob job = findSingleJobByTransaction(transactionId);
-
-        LoadAssignment load = job.getLoadAssignments().stream()
-                .filter(l -> l.getLoadNumber() == loadNumber)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
-
-        String previousStatus = load.getStatus();
-        load.setStatus(newStatus);
-
-        // Release machine when moving from washing/drying to next steps
-        if ((STATUS_WASHING.equals(previousStatus) && STATUS_WASHED.equals(newStatus)) ||
-            (STATUS_DRYING.equals(previousStatus) && STATUS_DRIED.equals(newStatus))) {
-            releaseMachine(load);
-        }
-
-        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
-
-        job.setLaundryProcessedBy(processedBy);
-        return laundryJobRepository.save(job);
+public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus, String processedBy) {
+    if ("COMPLETE".equalsIgnoreCase(newStatus)) {
+        newStatus = STATUS_COMPLETED;
     }
 
+    LaundryJob job = findSingleJobByTransaction(transactionId);
+
+    LoadAssignment load = job.getLoadAssignments().stream()
+            .filter(l -> l.getLoadNumber() == loadNumber)
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+    String previousStatus = load.getStatus();
+    load.setStatus(newStatus);
+
+    // FIXED: Only release machine when moving from washing to washed or drying to folding/completed
+    // Do NOT release machine for DRIED status
+    if ((STATUS_WASHING.equals(previousStatus) && STATUS_WASHED.equals(newStatus)) ||
+        (STATUS_DRYING.equals(previousStatus) && (STATUS_FOLDING.equals(newStatus) || STATUS_COMPLETED.equals(newStatus)))) {
+        releaseMachine(load);
+    }
+
+    sendStatusChangeNotifications(job, load, previousStatus, newStatus);
+
+    job.setLaundryProcessedBy(processedBy);
+    return laundryJobRepository.save(job);
+}
     @CacheEvict(value = "laundryJobs", allEntries = true)
     private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
         try {

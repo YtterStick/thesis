@@ -9,7 +9,8 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
     const normalizedServiceType = safeJob.serviceType?.replace(" Only", "") || safeJob.serviceType || "Wash & Dry";
     const requiredMachineType = getMachineTypeForStep(load?.status, normalizedServiceType);
     
-    const shouldDisableSelection = ["FOLDING", "COMPLETED", "DRIED"].includes(load?.status);
+    // FIXED: Only disable selection for FOLDING and COMPLETED, NOT for DRIED
+    const shouldDisableSelection = ["FOLDING", "COMPLETED"].includes(load?.status);
     const currentMachine = load?.machineId ? options.find((m) => m.id === load.machineId) : null;
     
     // Check if current machine is correct type
@@ -24,10 +25,9 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
         } else if ((load.status === "FOLDING" || load.status === "COMPLETED") && currentMachine) {
             return `Unassigned (was ${currentMachine.name})`;
         } else if (load.status === "FOLDING" || load.status === "COMPLETED") {
-            return "Unassigned"; // Show "Unassigned" when machine is completely removed
-        } else if ((load.status === "WASHED" || load.status === "DRIED") && currentMachine) {
-            return currentMachine.name; // Show machine name for intermediate states
+            return "Unassigned";
         } else if (currentMachine) {
+            // Show machine name for DRIED status too
             return currentMachine.name;
         } else {
             return "Select machine";
@@ -182,16 +182,16 @@ const getMachineTypeForStep = (status, serviceType) => {
         return null; // No machine needed for WASHED or COMPLETED
     }
     
-    // For Dry service: only need dryer for drying
+    // For Dry service: only need dryer for drying and dried status
     if (normalizedServiceType === "Dry") {
-        if (status === "UNWASHED" || status === "DRYING") return "DRYER";
-        return null; // No machine needed for DRIED, FOLDING or COMPLETED
+        if (status === "UNWASHED" || status === "DRYING" || status === "DRIED") return "DRYER";
+        return null; // No machine needed for FOLDING or COMPLETED
     }
     
-    // For Wash & Dry service: washer for washing, dryer for drying
+    // For Wash & Dry service: washer for washing, dryer for drying and dried
     if (normalizedServiceType === "Wash & Dry") {
         if (status === "UNWASHED" || status === "WASHING") return "WASHER";
-        if (status === "WASHED" || status === "DRYING") return "DRYER";
+        if (status === "WASHED" || status === "DRYING" || status === "DRIED") return "DRYER";
     }
     
     return null;

@@ -44,24 +44,22 @@ const ActionButtons = ({
         icon: Icon, 
         variant = "primary",
         title,
-        size = "md"
+        size = "md",
+        isLoading = false
     }) => (
         <motion.button
             whileHover={{ scale: disabled ? 1 : 1.05 }}
             whileTap={{ scale: disabled ? 1 : 0.95 }}
             onClick={() => {
-                if (!disabled) {
-                    if (onCompletion && variant === "success") {
-                        onCompletion(jobKey, loadIndex);
-                    }
+                if (!disabled && !isLoading) {
                     onClick();
                 }
             }}
-            disabled={disabled}
+            disabled={disabled || isLoading}
             title={title}
             className={`
                 flex items-center gap-2 font-medium transition-all rounded-lg
-                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'}
+                ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'}
                 ${size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm'}
                 ${
                     variant === 'primary' 
@@ -91,10 +89,32 @@ const ActionButtons = ({
                     '#f1f5f9'
             }}
         >
-            {Icon && <Icon className={size === 'sm' ? "h-3 w-3" : "h-4 w-4"} />}
-            {children}
+            {isLoading ? (
+                <div className="flex items-center gap-2">
+                    <div style={{ transform: "scale(0.4)" }}>
+                        <Loader />
+                    </div>
+                    <span>Loading...</span>
+                </div>
+            ) : (
+                <>
+                    {Icon && <Icon className={size === 'sm' ? "h-3 w-3" : "h-4 w-4"} />}
+                    {children}
+                </>
+            )}
         </motion.button>
     );
+
+    // Handle completion with immediate UI update
+    const handleCompletion = async () => {
+        // Trigger completion animation immediately
+        if (onCompletion) {
+            onCompletion(jobKey, loadIndex);
+        }
+        
+        // Call advanceStatus to mark as COMPLETED
+        await advanceStatus(jobKey, loadIndex);
+    };
 
     return (
         <div className="flex flex-col items-end gap-2">
@@ -120,19 +140,21 @@ const ActionButtons = ({
                 </div>
             ) : load.status === "FOLDING" ? (
                 <CustomButton
-                    onClick={() => advanceStatus(jobKey, loadIndex)}
+                    onClick={handleCompletion}
                     disabled={load.pending}
                     icon={Check}
                     variant="success"
+                    isLoading={load.pending}
                 >
                     Done
                 </CustomButton>
             ) : normalizedServiceType === "Wash" && load.status === "WASHED" ? (
                 <CustomButton
-                    onClick={() => advanceStatus(jobKey, loadIndex)}
+                    onClick={handleCompletion}
                     disabled={load.pending}
                     icon={Check}
                     variant="success"
+                    isLoading={load.pending}
                 >
                     Done
                 </CustomButton>
@@ -143,6 +165,7 @@ const ActionButtons = ({
                     icon={Play}
                     variant="primary"
                     title={!hasCorrectMachine ? `Please assign a ${machineType?.toLowerCase() || "machine"} first` : ""}
+                    isLoading={load.pending}
                 >
                     Start
                 </CustomButton>

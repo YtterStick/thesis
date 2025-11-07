@@ -33,14 +33,15 @@ const PaymentSection = ({
 
   const handleInputChange = (e) => {
     const raw = e.target.value;
-    const cleaned = raw.replace(/[^\d.]/g, "");
+    // Remove leading zeros and non-numeric characters except decimal point
+    const cleaned = raw.replace(/^0+(?=\d)/, '').replace(/[^\d.]/g, "");
     onAmountChange(cleaned);
   };
 
   const handleInputBlur = (e) => {
-    const cleaned = e.target.value.replace(/[^\d.]/g, "");
+    const cleaned = e.target.value.replace(/^0+(?=\d)/, '').replace(/[^\d.]/g, "");
     const numeric = parseFloat(cleaned);
-    onAmountChange(isNaN(numeric) ? "0" : numeric.toString());
+    onAmountChange(isNaN(numeric) ? "" : numeric.toString());
   };
 
   const handleGcashReferenceChange = (value) => {

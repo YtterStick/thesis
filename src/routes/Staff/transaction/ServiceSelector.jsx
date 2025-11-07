@@ -14,12 +14,16 @@ const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
+  const handleValueChange = (value) => {
+    onChange("serviceId", value);
+  };
+
   return (
     <div className="space-y-2 pt-4">
       <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Service Type</Label>
       <Select
         value={serviceId}
-        onValueChange={(value) => onChange("serviceId", value)}
+        onValueChange={handleValueChange}
         disabled={isLocked}
       >
         <SelectTrigger className="rounded-lg border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"

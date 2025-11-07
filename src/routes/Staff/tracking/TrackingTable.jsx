@@ -66,6 +66,8 @@ const TrackingTable = ({
       );
       const isCompleting = isLoadCompleting(jobKey, loadIndex);
       
+      // FIXED: Only show COMPLETED loads if they're currently completing
+      // Otherwise, hide them immediately
       return load.status !== "COMPLETED" || isCompleting;
     });
 

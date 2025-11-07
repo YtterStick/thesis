@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Receipt } from "lucide-react";
+import { Receipt, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import PaymentSection from "./PaymentSection";
@@ -16,23 +16,67 @@ import { useTheme } from "@/hooks/use-theme";
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
 const POLLING_INTERVAL = 60000; // 1 minute polling
 
+// Enhanced Manila time utility functions with detailed debugging
+const getManilaTime = (date = new Date()) => {
+    // Method 1: Direct calculation (UTC+8)
+    const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+    const manilaOffset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+    const manilaTime = new Date(utc + manilaOffset);
+    
+    // Method 2: Using toLocaleString for verification
+    const localeManilaTime = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    
+    console.log("🕒 Manila Time Calculation:");
+    console.log("   Original Local:", date.toString());
+    console.log("   Original ISO:", date.toISOString());
+    console.log("   Calculated Manila:", manilaTime.toString());
+    console.log("   Locale Manila:", localeManilaTime.toString());
+    console.log("   Difference (ms):", manilaTime.getTime() - localeManilaTime.getTime());
+    
+    return manilaTime;
+};
+
+const formatToManilaISOString = (date = new Date()) => {
+    const manilaDate = getManilaTime(date);
+    const isoString = manilaDate.toISOString();
+    
+    console.log("🕒 Formatting Manila to ISO:");
+    console.log("   Manila Date:", manilaDate.toString());
+    console.log("   ISO String:", isoString);
+    
+    return isoString;
+};
+
+const addDaysManilaTime = (days, date = new Date()) => {
+    const manilaDate = getManilaTime(date);
+    const result = new Date(manilaDate.getTime() + days * 24 * 60 * 60 * 1000);
+    
+    console.log("🕒 Adding days to Manila time:");
+    console.log("   Original Manila:", manilaDate.toString());
+    console.log("   Added Days:", days);
+    console.log("   Result:", result.toString());
+    console.log("   Result ISO:", result.toISOString());
+    
+    return result;
+};
+
 // Cache initialization
 const initializeCache = () => {
-  try {
-    const stored = localStorage.getItem('transactionFormCache');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
-        console.log("📦 Initializing transaction form from stored cache");
-        return parsed;
-      } else {
-        console.log("🗑️ Stored transaction form cache expired");
-      }
+    try {
+        const stored = localStorage.getItem('transactionFormCache');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+                console.log("📦 Initializing transaction form from stored cache");
+                return parsed;
+            } else {
+                console.log("🗑️ Stored transaction form cache expired");
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to load transaction form cache from storage:', error);
     }
-  } catch (error) {
-    console.warn('Failed to load transaction form cache from storage:', error);
-  }
-  return null;
+    return null;
 };
 
 // Global cache instance
@@ -40,14 +84,14 @@ let transactionFormCache = initializeCache();
 let cacheTimestamp = transactionFormCache?.timestamp || null;
 
 const saveCacheToStorage = (data) => {
-  try {
-    localStorage.setItem('transactionFormCache', JSON.stringify({
-      ...data,
-      timestamp: Date.now()
-    }));
-  } catch (error) {
-    console.warn('Failed to save transaction form cache to storage:', error);
-  }
+    try {
+        localStorage.setItem('transactionFormCache', JSON.stringify({
+            ...data,
+            timestamp: Date.now()
+        }));
+    } catch (error) {
+        console.warn('Failed to save transaction form cache to storage:', error);
+    }
 };
 
 const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, isLocked }, ref) => {
@@ -58,7 +102,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         name: "",
         contact: "",
         serviceId: "",
-        amountGiven: 0,
+        amountGiven: "",
         paymentMethod: "Cash",
         gcashReference: "",
     });
@@ -74,15 +118,36 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const [paymentMethods, setPaymentMethods] = useState(["Cash"]);
     const [initialLoad, setInitialLoad] = useState(!transactionFormCache);
     const [insufficientStockItems, setInsufficientStockItems] = useState([]);
+    
+    // Confirmation dialog states
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [pendingPayload, setPendingPayload] = useState(null);
+    
     const { toast } = useToast();
     const pollingIntervalRef = useRef(null);
     const isMountedRef = useRef(true);
+
+    const selectedService = services.find((s) => s.id === form.serviceId);
+    const isDryOnlyService = selectedService && selectedService.name.toLowerCase().includes("dry") && !selectedService.name.toLowerCase().includes("wash");
 
     const handleChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
 
         if (field === "paymentMethod" && value !== "GCash") {
             setForm((prev) => ({ ...prev, gcashReference: "" }));
+        }
+    };
+
+    const handleServiceChange = (field, value) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+        
+        // Check if this is a Dry Only service and auto-set supply source to customer
+        if (field === "serviceId" && services.length > 0) {
+            const selectedService = services.find(s => s.id === value);
+            if (selectedService && selectedService.name.toLowerCase().includes("dry") && !selectedService.name.toLowerCase().includes("wash")) {
+                console.log("🔄 Dry Only service selected - auto-setting supply source to customer");
+                setSupplySource("customer");
+            }
         }
     };
 
@@ -98,7 +163,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 name: "",
                 contact: "",
                 serviceId: defaultService?.id || "",
-                amountGiven: 0,
+                amountGiven: "",
                 paymentMethod: "Cash",
                 gcashReference: "",
             });
@@ -292,6 +357,17 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         };
     }, [fetchData]);
 
+    // Auto-set supply source based on service type
+    useEffect(() => {
+        if (form.serviceId && services.length > 0) {
+            const selectedService = services.find(s => s.id === form.serviceId);
+            if (selectedService && selectedService.name.toLowerCase().includes("dry") && !selectedService.name.toLowerCase().includes("wash")) {
+                console.log("🔄 Dry Only service detected - setting supply source to customer");
+                setSupplySource("customer");
+            }
+        }
+    }, [form.serviceId, services]);
+
     // Handle supply source changes - set detergent and fabric to 0 when customer-provided
     useEffect(() => {
         if (supplySource === "customer" && stockItems.length > 0) {
@@ -446,7 +522,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     };
 
-    const selectedService = services.find((s) => s.id === form.serviceId);
     const servicePrice = selectedService?.price || 0;
     const serviceTotal = servicePrice * parseInt(loads);
 
@@ -468,7 +543,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         });
     }, [form.amountGiven, totalAmount]);
 
-    // NEW: Function to extract stock items from error response
+    // Function to extract stock items from error response
     const extractInsufficientStockItems = (error) => {
         // Try to get the response data if available
         if (error.response && error.response.data) {
@@ -587,6 +662,21 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             return acc;
         }, {});
 
+        // Enhanced Manila time debugging
+        console.log("🕒 ========== DATE DEBUGGING START ==========");
+        
+        const currentLocal = new Date();
+        const currentManila = getManilaTime();
+        const manilaIssueDate = formatToManilaISOString();
+        const manilaDueDate = addDaysManilaTime(7).toISOString();
+
+        console.log("🕒 CURRENT TIME COMPARISON:");
+        console.log("   Local Time:", currentLocal.toString());
+        console.log("   Local ISO:", currentLocal.toISOString());
+        console.log("   Manila Time:", currentManila.toString());
+        console.log("   Manila ISO:", manilaIssueDate);
+        console.log("   Due Date Manila:", manilaDueDate);
+
         const payload = {
             customerName: form.name,
             contact: form.contact,
@@ -610,26 +700,46 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             gcashReference: form.paymentMethod === "GCash" ? form.gcashReference : null,
             change: parseFloat(form.amountGiven || 0) - totalAmount,
             totalPrice: totalAmount,
-            issueDate: new Date().toISOString(),
-            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            // Use Manila time for dates
+            issueDate: manilaIssueDate,
+            dueDate: manilaDueDate,
             staffId: localStorage.getItem("staffId") || "Unknown",
         };
 
-        console.log("📝 Submitting transaction with staffId:", payload.staffId);
+        console.log("📝 FINAL PAYLOAD DATES:");
+        console.log("   Issue Date:", payload.issueDate);
+        console.log("   Due Date:", payload.dueDate);
+        console.log("🕒 ========== DATE DEBUGGING END ==========");
 
+        // Show confirmation dialog instead of submitting immediately
+        setPendingPayload(payload);
+        setShowConfirmation(true);
+    };
+
+    // New function to handle confirmed submission
+    const handleConfirmedSubmit = async () => {
+        if (!pendingPayload) return;
+        
+        setShowConfirmation(false);
+        
         try {
-            await onSubmit(payload);
+            await onSubmit(pendingPayload);
         } catch (error) {
             // Extract insufficient stock items from error
             const insufficientItems = extractInsufficientStockItems(error);
             if (insufficientItems.length > 0) {
                 setInsufficientStockItems(insufficientItems);
-                // Don't show toast for insufficient stock - we handle it visually
             } else {
-                // For other errors, let MainPage handle the toast
                 throw error;
             }
+        } finally {
+            setPendingPayload(null);
         }
+    };
+
+    const handleCancelSubmit = () => {
+        setShowConfirmation(false);
+        setPendingPayload(null);
     };
 
     return (
@@ -699,17 +809,25 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                     <ServiceSelector
                         services={services}
                         serviceId={form.serviceId}
-                        onChange={handleChange}
+                        onChange={handleServiceChange}
                         isLocked={isLocked}
                     />
 
                     {/* 🧺 Supply Source Selector */}
                     <div className="space-y-2 pt-4">
-                        <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Supply Source</Label>
+                        <div className="flex items-center gap-2">
+                            <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Supply Source</Label>
+                            {isDryOnlyService && (
+                                <div className="flex items-center gap-1 text-xs" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }}>
+                                    <Info size={12} />
+                                    <span>Auto-set for Dry Only service</span>
+                                </div>
+                            )}
+                        </div>
                         <Select
                             value={supplySource}
                             onValueChange={setSupplySource}
-                            disabled={isLocked}
+                            disabled={isLocked || isDryOnlyService}
                         >
                             <SelectTrigger className="rounded-lg border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                           style={{
@@ -744,6 +862,11 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                                 </SelectItem>
                             </SelectContent>
                         </Select>
+                        {isDryOnlyService && (
+                            <div className="text-xs" style={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                                Supply source is automatically set to Customer-provided for Dry Only services
+                            </div>
+                        )}
                     </div>
 
                     {/* 🧼 Loads + Consumables */}
@@ -789,6 +912,111 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         {isSubmitting ? "Processing..." : "Save Transaction"}
                     </Button>
                 </form>
+
+                {/* Confirmation Dialog */}
+                {showConfirmation && pendingPayload && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        {/* Backdrop */}
+                        <div 
+                            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                            onClick={handleCancelSubmit}
+                        />
+                        
+                        {/* Modal Content */}
+                        <div className="relative z-50 w-full max-w-md mx-4 rounded-xl border-2 p-6 shadow-xl"
+                            style={{
+                                borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                            }}
+                        >
+                            <div className="text-center mb-4">
+                                <h3 className="text-lg font-semibold mb-2" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                    Confirm Transaction
+                                </h3>
+                                <p style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>
+                                    Please review the transaction details before proceeding:
+                                </p>
+                            </div>
+
+                            {/* Transaction Summary */}
+                            <div className="space-y-3 mb-6 p-4 rounded-lg" 
+                                style={{ 
+                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(241, 245, 249, 0.5)',
+                                    border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`
+                                }}>
+                                <div className="flex justify-between">
+                                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Customer:</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.customerName}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Contact:</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.contact}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Service:</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.serviceName}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Loads:</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.loads}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Payment Method:</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.paymentMethod}</span>
+                                </div>
+                                {pendingPayload.paymentMethod === "GCash" && (
+                                    <div className="flex justify-between">
+                                        <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>GCash Reference:</span>
+                                        <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.gcashReference}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-lg font-semibold pt-2 border-t" 
+                                    style={{ borderColor: isDarkMode ? '#334155' : '#e2e8f0' }}>
+                                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Total Amount:</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>₱{pendingPayload.totalPrice.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Amount Given:</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>₱{pendingPayload.amountGiven.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Change:</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>₱{pendingPayload.change.toFixed(2)}</span>
+                                </div>
+                                {/* Date Information */}
+                                <div className="pt-2 border-t" style={{ borderColor: isDarkMode ? '#334155' : '#e2e8f0' }}>
+                                    <div className="text-xs" style={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                                        <div>Issue Date: {new Date(pendingPayload.issueDate).toLocaleString()}</div>
+                                        <div>Due Date: {new Date(pendingPayload.dueDate).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={handleCancelSubmit}
+                                    style={{
+                                        borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleConfirmedSubmit}
+                                    style={{
+                                        backgroundColor: isDarkMode ? '#0f172a' : '#0f172a',
+                                        color: '#f1f5f9'
+                                    }}
+                                >
+                                    Confirm & Proceed
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
