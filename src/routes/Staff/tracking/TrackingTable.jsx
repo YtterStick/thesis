@@ -28,14 +28,14 @@ const TrackingTable = ({
 }) => {
   const [completingLoads, setCompletingLoads] = useState({});
 
-  // Debug logging for machines prop
-  console.log("🔄 TrackingTable Machines:", {
-    machinesProp: machines,
-    washers: machines?.WASHER?.length || 0,
-    dryers: machines?.DRYER?.length || 0,
-    washerNames: machines?.WASHER?.map(w => w.name) || [],
-    dryerNames: machines?.DRYER?.map(d => d.name) || []
-  });
+  // // Debug logging for machines prop
+  // console.log("🔄 TrackingTable Machines:", {
+  //   machinesProp: machines,
+  //   washers: machines?.WASHER?.length || 0,
+  //   dryers: machines?.DRYER?.length || 0,
+  //   washerNames: machines?.WASHER?.map(w => w.name) || [],
+  //   dryerNames: machines?.DRYER?.map(d => d.name) || []
+  // });
 
   const handleCompletionAnimation = (jobKey, loadIndex) => {
     const completionKey = `${jobKey}-${loadIndex}`;
@@ -72,6 +72,13 @@ const TrackingTable = ({
     });
 
     return expanded ? visibleLoads : visibleLoads.slice(0, 1);
+  };
+
+  // Helper function to determine if machine selector should be shown
+  const shouldShowMachineSelector = (loadStatus) => {
+    // Show machine selector for all statuses EXCEPT FOLDING and COMPLETED
+    // This includes DRIED status which should keep the machine visible
+    return !["FOLDING", "COMPLETED"].includes(loadStatus);
   };
 
   return (
@@ -146,17 +153,17 @@ const TrackingTable = ({
                         const options = machineType === "WASHER" ? machines.WASHER : machineType === "DRYER" ? machines.DRYER : [];
 
                         // Debug logging for each load
-                        console.log("🔍 TrackingTable Load Debug:", {
-                          jobKey,
-                          customerName: job.customerName,
-                          serviceType: job.serviceType,
-                          normalizedServiceType,
-                          loadStatus: load.status,
-                          loadNumber: load.loadNumber,
-                          machineType,
-                          optionsLength: options?.length || 0,
-                          options: options
-                        });
+                        // console.log("🔍 TrackingTable Load Debug:", {
+                        //   jobKey,
+                        //   customerName: job.customerName,
+                        //   serviceType: job.serviceType,
+                        //   normalizedServiceType,
+                        //   loadStatus: load.status,
+                        //   loadNumber: load.loadNumber,
+                        //   machineType,
+                        //   optionsLength: options?.length || 0,
+                        //   options: options
+                        // });
 
                         return (
                           <motion.tr
@@ -221,7 +228,8 @@ const TrackingTable = ({
                               />
                             </td>
                             <td className="p-2">
-                              {!["FOLDING", "COMPLETED"].includes(load.status) && (
+                              {/* UPDATED: Use helper function for clarity */}
+                              {shouldShowMachineSelector(load.status) && (
                                 <MachineSelector
                                   load={load}
                                   options={options}
@@ -231,6 +239,13 @@ const TrackingTable = ({
                                   isDarkMode={isDarkMode}
                                   job={job}
                                 />
+                              )}
+                              {/* Show message when machine selector is hidden */}
+                              {!shouldShowMachineSelector(load.status) && (
+                                <div className="w-[160px] text-xs text-green-600 flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3" />
+                                  Machine released
+                                </div>
                               )}
                             </td>
                             <td className="p-2 text-center">

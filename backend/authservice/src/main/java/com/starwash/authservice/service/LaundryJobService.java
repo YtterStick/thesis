@@ -149,16 +149,18 @@ public class LaundryJobService {
                 .filter(l -> l.getLoadNumber() == loadNumber)
                 .findFirst()
                 .orElse(null);
-        
-        if (load == null) return false;
-        
+
+        if (load == null)
+            return false;
+
         String requiredType = getRequiredMachineType(load.getStatus(), job.getServiceType());
         return requiredType == null || requiredType.equalsIgnoreCase(machine.getType());
     }
 
     private String getRequiredMachineType(String status, String serviceType) {
-        if (status == null) return null;
-        
+        if (status == null)
+            return null;
+
         switch (status.toUpperCase()) {
             case STATUS_WASHING:
                 return "WASHER";
@@ -174,7 +176,8 @@ public class LaundryJobService {
                 if (serviceType != null) {
                     if (serviceType.toLowerCase().contains("wash") && !serviceType.toLowerCase().contains("dry")) {
                         return "WASHER";
-                    } else if (serviceType.toLowerCase().contains("dry") && !serviceType.toLowerCase().contains("wash")) {
+                    } else if (serviceType.toLowerCase().contains("dry")
+                            && !serviceType.toLowerCase().contains("wash")) {
                         return "DRYER";
                     }
                 }
@@ -208,8 +211,8 @@ public class LaundryJobService {
         // Validate machine type matches the required step
         String requiredMachineType = getRequiredMachineType(nextStatus, serviceType);
         if (requiredMachineType != null && !requiredMachineType.equalsIgnoreCase(machine.getType())) {
-            throw new RuntimeException("Invalid machine type for this step. Expected " + 
-                requiredMachineType + " but got " + machine.getType());
+            throw new RuntimeException("Invalid machine type for this step. Expected " +
+                    requiredMachineType + " but got " + machine.getType());
         }
 
         int defaultDuration;
@@ -264,7 +267,7 @@ public class LaundryJobService {
         }
 
         load.setStatus(STATUS_DRYING);
-        
+
         LocalDateTime now = getCurrentManilaTime();
         load.setStartTime(now);
 
@@ -293,11 +296,11 @@ public class LaundryJobService {
             // Validate existing machine is a dryer
             MachineItem machine = machineRepository.findById(load.getMachineId())
                     .orElseThrow(() -> new RuntimeException("Machine not found"));
-            
+
             if (!"DRYER".equalsIgnoreCase(machine.getType())) {
                 throw new RuntimeException("Assigned machine is not a dryer");
             }
-            
+
             machine.setStatus(STATUS_IN_USE);
             machineRepository.save(machine);
         }
@@ -342,38 +345,39 @@ public class LaundryJobService {
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
-public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus, String processedBy) {
-    if ("COMPLETE".equalsIgnoreCase(newStatus)) {
-        newStatus = STATUS_COMPLETED;
+    public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus, String processedBy) {
+        if ("COMPLETE".equalsIgnoreCase(newStatus)) {
+            newStatus = STATUS_COMPLETED;
+        }
+
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        String previousStatus = load.getStatus();
+        load.setStatus(newStatus);
+
+        // FIXED: Only release machine when moving to FOLDING or COMPLETED
+        // Do NOT release machine for DRIED status - keep it "In Use"
+        if ((STATUS_WASHING.equals(previousStatus) && STATUS_WASHED.equals(newStatus)) ||
+                (STATUS_DRYING.equals(previousStatus)
+                        && (STATUS_FOLDING.equals(newStatus) || STATUS_COMPLETED.equals(newStatus)))) {
+            releaseMachine(load);
+        }
+
+        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
+
+        job.setLaundryProcessedBy(processedBy);
+        return laundryJobRepository.save(job);
     }
 
-    LaundryJob job = findSingleJobByTransaction(transactionId);
-
-    LoadAssignment load = job.getLoadAssignments().stream()
-            .filter(l -> l.getLoadNumber() == loadNumber)
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
-
-    String previousStatus = load.getStatus();
-    load.setStatus(newStatus);
-
-    // FIXED: Only release machine when moving from washing to washed or drying to folding/completed
-    // Do NOT release machine for DRIED status
-    if ((STATUS_WASHING.equals(previousStatus) && STATUS_WASHED.equals(newStatus)) ||
-        (STATUS_DRYING.equals(previousStatus) && (STATUS_FOLDING.equals(newStatus) || STATUS_COMPLETED.equals(newStatus)))) {
-        releaseMachine(load);
-    }
-
-    sendStatusChangeNotifications(job, load, previousStatus, newStatus);
-
-    job.setLaundryProcessedBy(processedBy);
-    return laundryJobRepository.save(job);
-}
-    @CacheEvict(value = "laundryJobs", allEntries = true)
     private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
         try {
             System.out.println("🔄 autoAdvanceAfterStepEnds called for " + transactionId + " load " + loadNumber);
-            
+
             LaundryJob job = findSingleJobByTransaction(transactionId);
             Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
             String svc = (txn != null ? txn.getServiceName() : serviceType);
@@ -389,8 +393,9 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
             }
 
             String previousStatus = load.getStatus();
-            System.out.println("📊 Current status: " + previousStatus + " for " + transactionId + " load " + loadNumber);
-            
+            System.out
+                    .println("📊 Current status: " + previousStatus + " for " + transactionId + " load " + loadNumber);
+
             if (STATUS_COMPLETED.equals(previousStatus) || STATUS_FOLDING.equals(previousStatus)) {
                 System.out.println("⏩ Skipping auto-advance - already in final state: " + previousStatus);
                 return;
@@ -398,13 +403,13 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
 
             LocalDateTime currentManilaTime = getCurrentManilaTime();
             boolean shouldAdvance = false;
-            
+
             if (load.getEndTime() != null) {
                 boolean isPastEndTime = currentManilaTime.isAfter(load.getEndTime());
-                System.out.println("⏰ Time Check - Current: " + currentManilaTime + 
-                                 ", EndTime: " + load.getEndTime() + 
-                                 ", IsPastEndTime: " + isPastEndTime);
-                
+                System.out.println("⏰ Time Check - Current: " + currentManilaTime +
+                        ", EndTime: " + load.getEndTime() +
+                        ", IsPastEndTime: " + isPastEndTime);
+
                 if (isPastEndTime) {
                     shouldAdvance = true;
                 }
@@ -416,13 +421,15 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
                 switch (previousStatus.toUpperCase()) {
                     case STATUS_WASHING:
                         load.setStatus(STATUS_WASHED);
-                        releaseMachine(load);
-                        System.out.println("🕒 Auto-advanced from WASHING to WASHED for " + transactionId + " load " + loadNumber);
+                        releaseMachine(load); // Release washer when moving to WASHED
+                        System.out.println(
+                                "🕒 Auto-advanced from WASHING to WASHED for " + transactionId + " load " + loadNumber);
                         break;
                     case STATUS_DRYING:
                         load.setStatus(STATUS_DRIED);
-                        releaseMachine(load);
-                        System.out.println("🕒 Auto-advanced from DRYING to DRIED for " + transactionId + " load " + loadNumber);
+                        // DO NOT release dryer when moving to DRIED - keep it "In Use"
+                        System.out.println(
+                                "🕒 Auto-advanced from DRYING to DRIED for " + transactionId + " load " + loadNumber);
                         break;
                     default:
                         System.out.println("❓ No auto-advance logic for status: " + previousStatus);
@@ -440,9 +447,10 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
                 }
             } else {
                 System.out.println("⏰ Not yet time to auto-advance for " + transactionId + " load " + loadNumber);
-                
+
                 if (load.getEndTime() != null) {
-                    long secondsUntilEnd = java.time.Duration.between(currentManilaTime, load.getEndTime()).getSeconds();
+                    long secondsUntilEnd = java.time.Duration.between(currentManilaTime, load.getEndTime())
+                            .getSeconds();
                     if (secondsUntilEnd > 0 && secondsUntilEnd <= 300) {
                         System.out.println("🔄 Rescheduling check in " + (secondsUntilEnd + 10) + " seconds");
                         scheduler.schedule(() -> autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber),
@@ -451,7 +459,8 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
                 }
             }
         } catch (Exception e) {
-            System.err.println("❌ Error in autoAdvanceAfterStepEnds for " + transactionId + " load " + loadNumber + ": " + e.getMessage());
+            System.err.println("❌ Error in autoAdvanceAfterStepEnds for " + transactionId + " load " + loadNumber + ": "
+                    + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -517,44 +526,44 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
         System.out.println("🎯 Customer: " + job.getCustomerName());
         System.out.println("🎯 Contact: " + job.getContact());
         System.out.println("🎯 Load that triggered completion: " + loadNumber);
-        
+
         try {
             boolean allLoadsCompleted = job.getLoadAssignments().stream()
-                .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
+                    .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
 
             System.out.println("🎯 All loads completed: " + allLoadsCompleted);
-            
+
             System.out.println("🎯 Load statuses:");
             job.getLoadAssignments().forEach(load -> {
-                System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus() + 
-                                 " (Machine: " + load.getMachineId() + ")");
+                System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus() +
+                        " (Machine: " + load.getMachineId() + ")");
             });
-            
+
             if (allLoadsCompleted) {
                 System.out.println("🚀 ALL LOADS COMPLETED! Sending SMS notification...");
-                
+
                 Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
                         .orElse(null);
 
                 String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
-                
+
                 System.out.println("📱 SMS Details:");
                 System.out.println("   📞 Phone: " + job.getContact());
                 System.out.println("   👤 Customer: " + job.getCustomerName());
                 System.out.println("   🛠️ Service: " + serviceType);
-                
+
                 smsService.sendLoadCompletedNotification(
                         job.getContact(),
                         job.getCustomerName(),
                         serviceType);
-                        
+
                 System.out.println("✅ SMS notification process completed for job: " + job.getTransactionId());
-                
+
             } else {
                 System.out.println("⏳ Not all loads completed yet. Skipping SMS.");
                 int completedCount = (int) job.getLoadAssignments().stream()
-                    .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-                    .count();
+                        .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
+                        .count();
                 System.out.println("⏳ Completed: " + completedCount + "/" + job.getLoadAssignments().size());
             }
         } catch (Exception e) {
@@ -667,9 +676,9 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
     @Cacheable(value = "completedCount", key = "'allCompleted'")
     public int getAllCompletedCount() {
         List<LaundryJob> allJobs = laundryJobRepository.findAll();
-        
+
         int count = 0;
-        
+
         for (LaundryJob job : allJobs) {
             if (job.getLoadAssignments() != null) {
                 for (LoadAssignment load : job.getLoadAssignments()) {
@@ -679,7 +688,7 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
                 }
             }
         }
-        
+
         System.out.println("📊 ALL Completed loads count: " + count + " (scanned " + allJobs.size() + " total jobs)");
         return count;
     }
@@ -689,29 +698,31 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
         List<LaundryJob> allJobs = laundryJobRepository.findAll();
         LocalDateTime todayStart = getCurrentManilaTime().toLocalDate().atStartOfDay();
         LocalDateTime tomorrowStart = todayStart.plusDays(1);
-        
+
         int count = 0;
-        
+
         for (LaundryJob job : allJobs) {
             if (job.getLoadAssignments() != null) {
                 for (LoadAssignment load : job.getLoadAssignments()) {
                     if (STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())) {
                         // Check if completed today
                         if (load.getEndTime() != null) {
-                            if (!load.getEndTime().isBefore(todayStart) && 
-                                load.getEndTime().isBefore(tomorrowStart)) {
+                            if (!load.getEndTime().isBefore(todayStart) &&
+                                    load.getEndTime().isBefore(tomorrowStart)) {
                                 count++;
-                                System.out.println("✅ Counted today: " + job.getTransactionId() + " load " + load.getLoadNumber() + " completed at " + load.getEndTime());
+                                System.out.println("✅ Counted today: " + job.getTransactionId() + " load "
+                                        + load.getLoadNumber() + " completed at " + load.getEndTime());
                             }
                         } else {
                             count++;
-                            System.out.println("✅ Counted today (no endTime): " + job.getTransactionId() + " load " + load.getLoadNumber());
+                            System.out.println("✅ Counted today (no endTime): " + job.getTransactionId() + " load "
+                                    + load.getLoadNumber());
                         }
                     }
                 }
             }
         }
-        
+
         System.out.println("📊 Completed today count: " + count + " (as of " + getCurrentManilaTime() + ")");
         return count;
     }
@@ -812,48 +823,48 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
     public void checkAndSendDisposalWarnings() {
         LocalDateTime now = getCurrentManilaTime();
         List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
-        
+
         System.out.println("⏰ [7:00 AM] Checking disposal warnings for " + unclaimedJobs.size() + " unclaimed jobs");
         System.out.println("📍 Current Manila Time: " + now);
-        
+
         int warningsSent = 0;
-        
+
         for (LaundryJob job : unclaimedJobs) {
             if (job.isDisposed() || job.isExpired()) {
                 continue;
             }
-            
+
             if (job.getDueDate() != null) {
                 long daysUntilDue = java.time.Duration.between(now, job.getDueDate()).toDays();
-                
+
                 long hoursUntilDue = java.time.Duration.between(now, job.getDueDate()).toHours();
-                
-                System.out.println("📅 Job: " + job.getTransactionId() + 
-                                 " | Customer: " + job.getCustomerName() +
-                                 " | Due: " + job.getDueDate() + 
-                                 " | Days until due: " + daysUntilDue +
-                                 " | Hours until due: " + hoursUntilDue);
-                
+
+                System.out.println("📅 Job: " + job.getTransactionId() +
+                        " | Customer: " + job.getCustomerName() +
+                        " | Due: " + job.getDueDate() +
+                        " | Days until due: " + daysUntilDue +
+                        " | Hours until due: " + hoursUntilDue);
+
                 if (daysUntilDue == 3 || daysUntilDue == 1 || daysUntilDue == 0) {
                     try {
                         smsService.sendDisposalWarningNotification(
-                            job.getContact(),
-                            job.getCustomerName(),
-                            job.getTransactionId(),
-                            (int) daysUntilDue
-                        );
+                                job.getContact(),
+                                job.getCustomerName(),
+                                job.getTransactionId(),
+                                (int) daysUntilDue);
                         warningsSent++;
-                        System.out.println("✅ Sent disposal warning for: " + job.getTransactionId() + 
-                                         " | Days left: " + daysUntilDue);
+                        System.out.println("✅ Sent disposal warning for: " + job.getTransactionId() +
+                                " | Days left: " + daysUntilDue);
                     } catch (Exception e) {
-                        System.err.println("❌ Failed to send disposal warning for " + job.getTransactionId() + 
-                                         ": " + e.getMessage());
+                        System.err.println("❌ Failed to send disposal warning for " + job.getTransactionId() +
+                                ": " + e.getMessage());
                     }
                 }
             }
         }
-        
-        System.out.println("📊 Disposal Warning Summary: " + warningsSent + " warnings sent out of " + unclaimedJobs.size() + " unclaimed jobs");
+
+        System.out.println("📊 Disposal Warning Summary: " + warningsSent + " warnings sent out of "
+                + unclaimedJobs.size() + " unclaimed jobs");
     }
 
     @Scheduled(fixedRate = 3600000)
@@ -874,22 +885,21 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
                 laundryJobRepository.save(job);
                 expiredCount++;
                 System.out.println("⏰ Job expired: " + job.getTransactionId() + " - " + job.getCustomerName());
-                
+
                 try {
                     smsService.sendDisposalWarningNotification(
-                        job.getContact(),
-                        job.getCustomerName(),
-                        job.getTransactionId(),
-                        0 
-                    );
+                            job.getContact(),
+                            job.getCustomerName(),
+                            job.getTransactionId(),
+                            0);
                     System.out.println("✅ Sent final expiration notice for: " + job.getTransactionId());
                 } catch (Exception e) {
-                    System.err.println("❌ Failed to send final expiration notice for " + job.getTransactionId() + 
-                                     ": " + e.getMessage());
+                    System.err.println("❌ Failed to send final expiration notice for " + job.getTransactionId() +
+                            ": " + e.getMessage());
                 }
             }
         }
-        
+
         if (expiredCount > 0) {
             System.out.println("📊 Expiration Check Summary: " + expiredCount + " jobs marked as expired");
         }
@@ -898,7 +908,7 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
     public List<LaundryJob> getJobsNeedingDisposalWarnings() {
         LocalDateTime now = getCurrentManilaTime();
         List<LaundryJob> unclaimedJobs = laundryJobRepository.findByPickupStatus("UNCLAIMED");
-        
+
         return unclaimedJobs.stream()
                 .filter(job -> !job.isDisposed() && !job.isExpired())
                 .filter(job -> job.getDueDate() != null)
@@ -912,31 +922,30 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
     // Helper method for manual triggering
     public void checkAndSendDisposalWarningsForJob(LaundryJob job) {
         LocalDateTime now = getCurrentManilaTime();
-        
+
         if (job.isDisposed() || job.isExpired() || job.getDueDate() == null) {
             return;
         }
-        
+
         long daysUntilDue = java.time.Duration.between(now, job.getDueDate()).toDays();
-        
-        System.out.println("📅 Manual Check - Job: " + job.getTransactionId() + 
-                         " | Due: " + job.getDueDate() + 
-                         " | Days until due: " + daysUntilDue);
-        
+
+        System.out.println("📅 Manual Check - Job: " + job.getTransactionId() +
+                " | Due: " + job.getDueDate() +
+                " | Days until due: " + daysUntilDue);
+
         // Send warnings at 3 days, 1 day, and on due date
         if (daysUntilDue == 3 || daysUntilDue == 1 || daysUntilDue == 0) {
             try {
                 smsService.sendDisposalWarningNotification(
-                    job.getContact(),
-                    job.getCustomerName(),
-                    job.getTransactionId(),
-                    (int) daysUntilDue
-                );
-                System.out.println("✅ Sent disposal warning for: " + job.getTransactionId() + 
-                                 " | Days left: " + daysUntilDue);
+                        job.getContact(),
+                        job.getCustomerName(),
+                        job.getTransactionId(),
+                        (int) daysUntilDue);
+                System.out.println("✅ Sent disposal warning for: " + job.getTransactionId() +
+                        " | Days left: " + daysUntilDue);
             } catch (Exception e) {
-                System.err.println("❌ Failed to send disposal warning for " + job.getTransactionId() + 
-                                 ": " + e.getMessage());
+                System.err.println("❌ Failed to send disposal warning for " + job.getTransactionId() +
+                        ": " + e.getMessage());
             }
         }
     }
@@ -946,28 +955,29 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
         List<LaundryJob> jobsNeedingWarnings = getJobsNeedingDisposalWarnings();
         int warningsSent = 0;
         int errors = 0;
-        
+
         System.out.println("🔔 MANUAL TRIGGER: Checking " + jobsNeedingWarnings.size() + " jobs for disposal warnings");
         System.out.println("📍 Current Manila Time: " + now);
-        
+
         for (LaundryJob job : jobsNeedingWarnings) {
             try {
                 checkAndSendDisposalWarningsForJob(job);
                 warningsSent++;
             } catch (Exception e) {
                 errors++;
-                System.err.println("❌ Failed to send warning for job " + job.getTransactionId() + ": " + e.getMessage());
+                System.err
+                        .println("❌ Failed to send warning for job " + job.getTransactionId() + ": " + e.getMessage());
             }
         }
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("totalJobsChecked", jobsNeedingWarnings.size());
         result.put("warningsSent", warningsSent);
         result.put("errors", errors);
         result.put("timestamp", now.toString());
-        
+
         System.out.println("📊 Manual Trigger Summary: " + warningsSent + " warnings sent, " + errors + " errors");
-        
+
         return result;
     }
 
@@ -1021,11 +1031,11 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
         try {
             LaundryJob job = findSingleJobByTransaction(transactionId);
             LocalDateTime now = getCurrentManilaTime();
-            
+
             for (LoadAssignment load : job.getLoadAssignments()) {
-                if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus())) 
-                    && load.getEndTime() != null && now.isAfter(load.getEndTime())) {
-                    
+                if ((STATUS_WASHING.equals(load.getStatus()) || STATUS_DRYING.equals(load.getStatus()))
+                        && load.getEndTime() != null && now.isAfter(load.getEndTime())) {
+
                     System.out.println("🔧 Fixing stuck timer for " + transactionId + " load " + load.getLoadNumber());
                     autoAdvanceAfterStepEnds(job.getServiceType(), transactionId, load.getLoadNumber());
                 }

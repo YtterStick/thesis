@@ -11,7 +11,13 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
     
     // FIXED: Only disable selection for FOLDING and COMPLETED, NOT for DRIED
     const shouldDisableSelection = ["FOLDING", "COMPLETED"].includes(load?.status);
-    const currentMachine = load?.machineId ? options.find((m) => m.id === load.machineId) : null;
+    
+    // IMPORTANT: Find current machine from ALL machines, not just filtered options
+    const currentMachine = load?.machineId ? 
+        (options.find((m) => m.id === load.machineId) || 
+         // Fallback: try to find machine in all available machines if not in filtered options
+         { id: load.machineId, name: `Machine ${load.machineId}`, type: "UNKNOWN" }) 
+        : null;
     
     // Check if current machine is correct type
     const isWrongMachineType = currentMachine && requiredMachineType && 
@@ -78,6 +84,17 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
         );
     }
 
+    // DEBUG: Log current state
+    console.log("🔧 MachineSelector Debug:", {
+        loadStatus: load.status,
+        machineId: load.machineId,
+        currentMachine: currentMachine,
+        requiredMachineType: requiredMachineType,
+        optionsCount: options?.length,
+        availableMachinesCount: availableMachines.length,
+        shouldDisableSelection: shouldDisableSelection
+    });
+
     return (
         <div className="flex flex-col gap-1">
             <Select
@@ -125,13 +142,16 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                     ) : (
                         availableMachines.map((m) => {
                             const isCorrectType = !requiredMachineType || m.type?.toUpperCase() === requiredMachineType;
+                            const isCurrentMachine = m.id === load.machineId;
                             
                             return (
                                 <SelectItem
                                     key={m.id}
                                     value={m.id}
                                     disabled={false}
-                                    className="cursor-pointer transition-colors"
+                                    className={`cursor-pointer transition-colors ${
+                                        isCurrentMachine ? 'bg-blue-100 dark:bg-blue-900' : ''
+                                    }`}
                                     style={{
                                         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                                     }}
@@ -140,7 +160,7 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                                         whileHover={shouldDisableSelection ? {} : { scale: 1.02 }}
                                         className="block"
                                     >
-                                        {m.name}
+                                        {m.name} {isCurrentMachine && ' (current)'}
                                     </motion.span>
                                 </SelectItem>
                             );
@@ -166,6 +186,13 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
                     Select a {requiredMachineType.toLowerCase()}
                 </span>
             )}
+            
+            {/* DEBUG INFO - Remove in production */}
+            {process.env.NODE_ENV === 'development' && (
+                <span className="text-xs text-gray-500">
+                    Status: {load.status} | Machine: {load.machineId || 'None'} | Type: {requiredMachineType}
+                </span>
+            )}
         </div>
     );
 };
@@ -182,13 +209,13 @@ const getMachineTypeForStep = (status, serviceType) => {
         return null; // No machine needed for WASHED or COMPLETED
     }
     
-    // For Dry service: only need dryer for drying and dried status
+    // For Dry service: need dryer for drying AND dried status
     if (normalizedServiceType === "Dry") {
         if (status === "UNWASHED" || status === "DRYING" || status === "DRIED") return "DRYER";
         return null; // No machine needed for FOLDING or COMPLETED
     }
     
-    // For Wash & Dry service: washer for washing, dryer for drying and dried
+    // For Wash & Dry service: washer for washing, dryer for drying AND dried
     if (normalizedServiceType === "Wash & Dry") {
         if (status === "UNWASHED" || status === "WASHING") return "WASHER";
         if (status === "WASHED" || status === "DRYING" || status === "DRIED") return "DRYER";

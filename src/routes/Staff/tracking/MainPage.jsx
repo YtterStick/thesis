@@ -189,16 +189,16 @@ function ServiceTrackingContent() {
     }, []);
 
     const fetchMachines = async () => {
-    try {
-        const data = await api.get("api/machines");
-        console.log("📦 Machines API Response:", data);
-        setMachines(data);
-        return true;
-    } catch (err) {
-        console.error("Failed to fetch machines:", err);
-        return false;
-    }
-};
+        try {
+            const data = await api.get("api/machines");
+            console.log("📦 Machines API Response:", data);
+            setMachines(data);
+            return true;
+        } catch (err) {
+            console.error("Failed to fetch machines:", err);
+            return false;
+        }
+    };
 
     // Fetch completed count along with other data
     const fetchData = async (force = false) => {
@@ -535,202 +535,194 @@ function ServiceTrackingContent() {
     };
 
     const advanceStatus = async (jobKey, loadIndex) => {
-    const job = jobs.find((j) => getJobKey(j) === jobKey);
-    if (!job?.id) return;
+        const job = jobs.find((j) => getJobKey(j) === jobKey);
+        if (!job?.id) return;
 
-    const load = job.loads[loadIndex];
-    const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
+        const load = job.loads[loadIndex];
+        const normalizedServiceType = job.serviceType?.replace(" Only", "") || job.serviceType;
 
-    let flow;
-    if (normalizedServiceType === "Wash") {
-        flow = SERVICE_FLOWS.Wash;
-    } else if (normalizedServiceType === "Dry") {
-        flow = SERVICE_FLOWS.Dry;
-    } else if (normalizedServiceType === "Wash & Dry") {
-        flow = SERVICE_FLOWS["Wash & Dry"];
-    } else {
-        flow = ["UNWASHED", "COMPLETED"];
-    }
-
-    const currentIndex = flow.indexOf(load.status);
-    const nextStatus = currentIndex < flow.length - 1 ? flow[currentIndex + 1] : load.status;
-
-    // Store the current machine ID before potentially clearing it
-    const currentMachineId = load.machineId;
-
-    if (load.status === "WASHING" || load.status === "DRYING") {
-        const timerKey = `${job.id}-${load.loadNumber}`;
-        activeTimersRef.current.delete(timerKey);
-        completedTimersRef.current.delete(timerKey);
-    }
-
-    let updatedLoad = { ...load, status: nextStatus, pending: true };
-
-    // FIXED: Only release machines when moving to FOLDING or COMPLETED
-    // Keep machine assigned for DRIED status so it can be used for drying again
-    let shouldReleaseMachine = false;
-
-    if (normalizedServiceType === "Wash") {
-        if (load.status === "WASHING" && nextStatus === "WASHED") {
-            shouldReleaseMachine = true;
+        let flow;
+        if (normalizedServiceType === "Wash") {
+            flow = SERVICE_FLOWS.Wash;
+        } else if (normalizedServiceType === "Dry") {
+            flow = SERVICE_FLOWS.Dry;
+        } else if (normalizedServiceType === "Wash & Dry") {
+            flow = SERVICE_FLOWS["Wash & Dry"];
+        } else {
+            flow = ["UNWASHED", "COMPLETED"];
         }
-    } else if (normalizedServiceType === "Dry") {
-        // For Dry service, only release when moving to FOLDING or COMPLETED
-        if (load.status === "DRYING" && (nextStatus === "FOLDING" || nextStatus === "COMPLETED")) {
-            shouldReleaseMachine = true;
+
+        const currentIndex = flow.indexOf(load.status);
+        const nextStatus = currentIndex < flow.length - 1 ? flow[currentIndex + 1] : load.status;
+
+        // Store the current machine ID before potentially clearing it
+        const currentMachineId = load.machineId;
+
+        if (load.status === "WASHING" || load.status === "DRYING") {
+            const timerKey = `${job.id}-${load.loadNumber}`;
+            activeTimersRef.current.delete(timerKey);
+            completedTimersRef.current.delete(timerKey);
         }
-    } else if (normalizedServiceType === "Wash & Dry") {
-        if (load.status === "WASHING" && nextStatus === "WASHED") {
-            shouldReleaseMachine = true;
-        } else if (load.status === "DRYING" && (nextStatus === "FOLDING" || nextStatus === "COMPLETED")) {
-            shouldReleaseMachine = true;
-        }
-    }
 
-    // ALWAYS release machine when moving to COMPLETED, but NOT for DRIED
-    shouldReleaseMachine = shouldReleaseMachine || nextStatus === "COMPLETED";
+        let updatedLoad = { ...load, status: nextStatus, pending: true };
 
-    if (shouldReleaseMachine) {
-        updatedLoad.machineId = null;
-    } else {
-        // Keep the current machine assigned
-        updatedLoad.machineId = currentMachineId;
-    }
+        // FIXED: Only release machines when moving to FOLDING or COMPLETED
+        // Keep machine assigned for DRIED status so it can be used for drying again
+        let shouldReleaseMachine = false;
 
-    setJobs((prev) =>
-        prev.map((j) =>
-            getJobKey(j) === jobKey
-                ? {
-                      ...j,
-                      loads: j.loads.map((l, idx) => (idx === loadIndex ? updatedLoad : l)),
-                  }
-                : j,
-        ),
-    );
-
-    try {
-        // Make API call to advance status immediately
-        await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`));
-
-        // Release machine in backend when appropriate
-        if (shouldReleaseMachine && currentMachineId) {
-            try {
-                await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/release-machine?loadNumber=${load.loadNumber}`));
-                console.log(`✅ Machine ${currentMachineId} RELEASED for load ${load.loadNumber} when moving to ${nextStatus}`);
-            } catch (releaseError) {
-                console.error("Failed to release machine:", releaseError);
+        if (normalizedServiceType === "Wash") {
+            if (load.status === "WASHING" && nextStatus === "WASHED") {
+                shouldReleaseMachine = true;
+            }
+        } else if (normalizedServiceType === "Dry") {
+            // For Dry service, only release when moving to FOLDING or COMPLETED
+            if (load.status === "DRYING" && (nextStatus === "FOLDING" || nextStatus === "COMPLETED")) {
+                shouldReleaseMachine = true;
+            }
+        } else if (normalizedServiceType === "Wash & Dry") {
+            if (load.status === "WASHING" && nextStatus === "WASHED") {
+                shouldReleaseMachine = true;
+            } else if (load.status === "DRYING" && (nextStatus === "FOLDING" || nextStatus === "COMPLETED")) {
+                shouldReleaseMachine = true;
             }
         }
 
+        // ALWAYS release machine when moving to COMPLETED, but NOT for DRIED
+        shouldReleaseMachine = shouldReleaseMachine || nextStatus === "COMPLETED";
+
+        if (shouldReleaseMachine) {
+            updatedLoad.machineId = null;
+        } else {
+            // Keep the current machine assigned
+            updatedLoad.machineId = currentMachineId;
+        }
+
         setJobs((prev) =>
             prev.map((j) =>
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false } : l)),
+                          loads: j.loads.map((l, idx) => (idx === loadIndex ? updatedLoad : l)),
                       }
                     : j,
             ),
         );
 
-        if (nextStatus === "COMPLETED") {
-            sendSmsNotification(job, normalizedServiceType);
+        try {
+            // Make API call to advance status immediately
+            await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`));
+
+            // Release machine in backend when appropriate
+            if (shouldReleaseMachine && currentMachineId) {
+                try {
+                    await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/release-machine?loadNumber=${load.loadNumber}`));
+                    console.log(`✅ Machine ${currentMachineId} RELEASED for load ${load.loadNumber} when moving to ${nextStatus}`);
+                } catch (releaseError) {
+                    console.error("Failed to release machine:", releaseError);
+                }
+            }
+
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false } : l)),
+                          }
+                        : j,
+                ),
+            );
+
+            if (nextStatus === "COMPLETED") {
+                sendSmsNotification(job, normalizedServiceType);
+            }
+        } catch (err) {
+            console.error("Failed to advance load status:", err);
+            // Revert changes on error - include the machine ID in the revert
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false, machineId: currentMachineId } : l)),
+                          }
+                        : j,
+                ),
+            );
+            fetchData(true);
         }
-    } catch (err) {
-        console.error("Failed to advance load status:", err);
-        // Revert changes on error - include the machine ID in the revert
-        setJobs((prev) =>
-            prev.map((j) =>
-                getJobKey(j) === jobKey
-                    ? {
-                          ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false, machineId: currentMachineId } : l)),
-                      }
-                    : j,
-            ),
-        );
-        fetchData(true);
-    }
-};
+    };
 
     const startDryingAgain = async (jobKey, loadIndex) => {
-    const job = jobs.find((j) => getJobKey(j) === jobKey);
-    if (!job?.id) return;
-    const load = job.loads[loadIndex];
+        const job = jobs.find((j) => getJobKey(j) === jobKey);
+        if (!job?.id) return;
+        const load = job.loads[loadIndex];
 
-    // Prevent multiple clicks
-    if (load?.pending) {
-        return;
-    }
+        // Prevent multiple clicks
+        if (load?.pending) {
+            return;
+        }
 
-    // Set pending state immediately
-    setJobs((prev) =>
-        prev.map((j) =>
-            getJobKey(j) === jobKey
-                ? {
-                      ...j,
-                      loads: j.loads.map((l, idx) => 
-                          idx === loadIndex 
-                              ? { ...l, pending: true, status: "DRYING" } 
-                              : l
-                      ),
-                  }
-                : j,
-        ),
-    );
-
-    try {
-        const startTime = new Date().toISOString();
-
-        const timerKey = `${job.id}-${load.loadNumber}`;
-        activeTimersRef.current.set(timerKey, startTime);
-        completedTimersRef.current.delete(timerKey);
-
-        await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`));
-
-        // Update with the correct machine assignment and timer data
+        // Set pending state immediately
         setJobs((prev) =>
             prev.map((j) =>
                 getJobKey(j) === jobKey
                     ? {
                           ...j,
-                          loads: j.loads.map((l, idx) =>
-                              idx === loadIndex
-                                  ? {
-                                        ...l,
-                                        status: "DRYING",
-                                        startTime,
-                                        pending: false,
-                                        // Keep the existing machineId - don't clear it
-                                        machineId: load.machineId
-                                    }
-                                  : l,
-                          ),
+                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: true, status: "DRYING" } : l)),
                       }
                     : j,
             ),
         );
-    } catch (err) {
-        console.error("Failed to start drying again:", err);
 
-        // Revert on error - keep the original machine assignment
-        setJobs((prev) =>
-            prev.map((j) =>
-                getJobKey(j) === jobKey
-                    ? {
-                          ...j,
-                          loads: j.loads.map((l, idx) => 
-                              idx === loadIndex 
-                                  ? { ...l, pending: false, status: "DRIED" } 
-                                  : l
-                          ),
-                      }
-                    : j,
-            ),
-        );
-        fetchData(true);
-    }
-};
+        try {
+            const startTime = new Date().toISOString();
+
+            const timerKey = `${job.id}-${load.loadNumber}`;
+            activeTimersRef.current.set(timerKey, startTime);
+            completedTimersRef.current.delete(timerKey);
+
+            await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`));
+
+            // Update with the correct machine assignment and timer data
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) =>
+                                  idx === loadIndex
+                                      ? {
+                                            ...l,
+                                            status: "DRYING",
+                                            startTime,
+                                            pending: false,
+                                            // Keep the existing machineId - don't clear it
+                                            machineId: load.machineId,
+                                        }
+                                      : l,
+                              ),
+                          }
+                        : j,
+                ),
+            );
+        } catch (err) {
+            console.error("Failed to start drying again:", err);
+
+            // Revert on error - keep the original machine assignment
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false, status: "DRIED" } : l)),
+                          }
+                        : j,
+                ),
+            );
+            fetchData(true);
+        }
+    };
 
     const getMachineTypeForStep = (status, serviceType) => {
         if (!status) return null;
@@ -743,16 +735,16 @@ function ServiceTrackingContent() {
             return null; // No machine needed for WASHED or COMPLETED
         }
 
-        // For Dry service: only need dryer for drying (FIXED)
+        // For Dry service: need dryer for drying AND dried status
         if (normalizedServiceType === "Dry") {
-            if (status === "UNWASHED" || status === "DRYING") return "DRYER";
-            return null; // No machine needed for DRIED, FOLDING or COMPLETED
+            if (status === "UNWASHED" || status === "DRYING" || status === "DRIED") return "DRYER";
+            return null; // No machine needed for FOLDING or COMPLETED
         }
 
-        // For Wash & Dry service: washer for washing, dryer for drying
+        // For Wash & Dry service: washer for washing, dryer for drying AND dried
         if (normalizedServiceType === "Wash & Dry") {
             if (status === "UNWASHED" || status === "WASHING") return "WASHER";
-            if (status === "WASHED" || status === "DRYING") return "DRYER";
+            if (status === "WASHED" || status === "DRYING" || status === "DRIED") return "DRYER";
         }
 
         return null;
@@ -764,23 +756,23 @@ function ServiceTrackingContent() {
     };
 
     const machineOptions = useMemo(() => {
-    const byType = { WASHER: [], DRYER: [] };
-    machines.forEach((m) => {
-        const t = (m.type || "")?.toString().toUpperCase();
-        if (t === "WASHER") byType.WASHER.push(m);
-        if (t === "DRYER") byType.DRYER.push(m);
-    });
-    
-    console.log("🔄 Machine Options:", {
-        totalMachines: machines.length,
-        washers: byType.WASHER.length,
-        dryers: byType.DRYER.length,
-        washerNames: byType.WASHER.map(w => w.name),
-        dryerNames: byType.DRYER.map(d => d.name)
-    });
-    
-    return byType;
-}, [machines]);
+        const byType = { WASHER: [], DRYER: [] };
+        machines.forEach((m) => {
+            const t = (m.type || "")?.toString().toUpperCase();
+            if (t === "WASHER") byType.WASHER.push(m);
+            if (t === "DRYER") byType.DRYER.push(m);
+        });
+
+        console.log("🔄 Machine Options:", {
+            totalMachines: machines.length,
+            washers: byType.WASHER.length,
+            dryers: byType.DRYER.length,
+            washerNames: byType.WASHER.map((w) => w.name),
+            dryerNames: byType.DRYER.map((d) => d.name),
+        });
+
+        return byType;
+    }, [machines]);
 
     const toggleAutoRefresh = () => {
         setAutoRefresh(!autoRefresh);
