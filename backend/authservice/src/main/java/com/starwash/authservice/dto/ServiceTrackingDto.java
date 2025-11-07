@@ -21,6 +21,10 @@ public class ServiceTrackingDto {
     private LocalDateTime createdAt;
     private String staffId;
 
+    // ✅ ADDED: Amount Given and Change fields
+    private Double amountGiven;
+    private Double change;
+
     // Consumables
     private Integer detergentQty;
     private Integer fabricQty;
@@ -56,6 +60,32 @@ public class ServiceTrackingDto {
         this.dueDate = dueDate;
         this.createdAt = createdAt;
         this.staffId = staffId;
+        this.detergentQty = detergentQty;
+        this.fabricQty = fabricQty;
+    }
+
+    // ✅ UPDATED: Constructor with amountGiven and change
+    public ServiceTrackingDto(String invoiceNumber, String customerName, String contact, 
+                             String serviceName, Double servicePrice, Integer loads, 
+                             Double totalPrice, String paymentMethod, 
+                             LocalDateTime issueDate, LocalDateTime dueDate, 
+                             LocalDateTime createdAt, String staffId,
+                             Double amountGiven, Double change,
+                             Integer detergentQty, Integer fabricQty) {
+        this.invoiceNumber = invoiceNumber;
+        this.customerName = customerName;
+        this.contact = contact;
+        this.serviceName = serviceName;
+        this.servicePrice = servicePrice;
+        this.loads = loads;
+        this.totalPrice = totalPrice;
+        this.paymentMethod = paymentMethod;
+        this.issueDate = issueDate;
+        this.dueDate = dueDate;
+        this.createdAt = createdAt;
+        this.staffId = staffId;
+        this.amountGiven = amountGiven;
+        this.change = change;
         this.detergentQty = detergentQty;
         this.fabricQty = fabricQty;
     }
@@ -97,6 +127,13 @@ public class ServiceTrackingDto {
     public String getStaffId() { return staffId; }
     public void setStaffId(String staffId) { this.staffId = staffId; }
 
+    // ✅ ADDED: Getters and Setters for amountGiven and change
+    public Double getAmountGiven() { return amountGiven; }
+    public void setAmountGiven(Double amountGiven) { this.amountGiven = amountGiven; }
+
+    public Double getChange() { return change; }
+    public void setChange(Double change) { this.change = change; }
+
     public Integer getDetergentQty() { return detergentQty; }
     public void setDetergentQty(Integer detergentQty) { this.detergentQty = detergentQty; }
 
@@ -126,4 +163,26 @@ public class ServiceTrackingDto {
 
     public boolean isDisposed() { return disposed; }
     public void setDisposed(boolean disposed) { this.disposed = disposed; }
+
+    // ✅ ADDED: toString method for debugging
+    @Override
+    public String toString() {
+        return "ServiceTrackingDto{" +
+                "invoiceNumber='" + invoiceNumber + '\'' +
+                ", customerName='" + customerName + '\'' +
+                ", contact='" + contact + '\'' +
+                ", serviceName='" + serviceName + '\'' +
+                ", servicePrice=" + servicePrice +
+                ", loads=" + loads +
+                ", totalPrice=" + totalPrice +
+                ", paymentMethod='" + paymentMethod + '\'' +
+                ", amountGiven=" + amountGiven +
+                ", change=" + change +
+                ", detergentQty=" + detergentQty +
+                ", fabricQty=" + fabricQty +
+                ", pickupStatus='" + pickupStatus + '\'' +
+                ", expired=" + expired +
+                ", disposed=" + disposed +
+                '}';
+    }
 }

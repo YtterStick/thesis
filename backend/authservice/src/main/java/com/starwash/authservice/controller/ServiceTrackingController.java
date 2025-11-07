@@ -8,6 +8,8 @@ import com.starwash.authservice.model.LaundryJob;
 import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.repository.LaundryJobRepository;
 import com.starwash.authservice.repository.TransactionRepository;
+import com.starwash.authservice.repository.FormatSettingsRepository;
+import com.starwash.authservice.model.FormatSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -26,11 +28,14 @@ public class ServiceTrackingController {
 
     private final TransactionRepository transactionRepository;
     private final LaundryJobRepository laundryJobRepository;
+    private final FormatSettingsRepository formatSettingsRepository;
 
     public ServiceTrackingController(TransactionRepository transactionRepository,
-                                    LaundryJobRepository laundryJobRepository) {
+                                    LaundryJobRepository laundryJobRepository,
+                                    FormatSettingsRepository formatSettingsRepository) {
         this.transactionRepository = transactionRepository;
         this.laundryJobRepository = laundryJobRepository;
+        this.formatSettingsRepository = formatSettingsRepository;
     }
 
     /**
@@ -89,7 +94,7 @@ public class ServiceTrackingController {
 
             Transaction transaction = transactionOpt.get();
             
-            // Convert to ServiceInvoiceDto
+            // Convert to ServiceInvoiceDto with proper format settings
             ServiceInvoiceDto invoiceDto = convertToServiceInvoiceDto(transaction);
             
             log.info("✅ Receipt data retrieved for: {}", invoiceNumber);
@@ -182,6 +187,10 @@ public class ServiceTrackingController {
         dto.setDueDate(transaction.getDueDate());
         dto.setCreatedAt(transaction.getCreatedAt());
         dto.setStaffId(transaction.getStaffId());
+        
+        // ✅ FIX: Add amountGiven and change to tracking data
+        dto.setAmountGiven(transaction.getAmountGiven());
+        dto.setChange(transaction.getChange());
 
         // Calculate consumable quantities
         if (transaction.getConsumables() != null) {
@@ -222,6 +231,7 @@ public class ServiceTrackingController {
 
     /**
      * Convert Transaction to ServiceInvoiceDto for receipt printing
+     * ✅ FIXED: Now properly handles format settings and amount given
      */
     private ServiceInvoiceDto convertToServiceInvoiceDto(Transaction transaction) {
         ServiceInvoiceDto dto = new ServiceInvoiceDto();
@@ -235,8 +245,12 @@ public class ServiceTrackingController {
         dto.setDueDate(transaction.getDueDate());
         dto.setPaymentMethod(transaction.getPaymentMethod());
         
-        // Use total instead of totalPrice to match your ServiceInvoiceDto
+        // ✅ FIX: Use proper total field
         dto.setTotal(transaction.getTotalPrice());
+        
+        // ✅ FIX: Properly set amountGiven and change from transaction
+        dto.setAmountGiven(transaction.getAmountGiven() != null ? transaction.getAmountGiven() : transaction.getTotalPrice());
+        dto.setChange(transaction.getChange() != null ? transaction.getChange() : 0.0);
         
         // Service information
         ServiceEntryDto serviceEntry = new ServiceEntryDto();
@@ -259,12 +273,8 @@ public class ServiceTrackingController {
             dto.setConsumables(consumableEntries);
         }
         
-        // Format settings
-        FormatSettingsDto formatSettings = new FormatSettingsDto();
-        formatSettings.setStoreName("STARWASH LAUNDRY");
-        formatSettings.setAddress("123 Laundry Street, City, State 12345");
-        formatSettings.setPhone("Tel: (123) 456-7890");
-        formatSettings.setFooterNote("Thank you for your business!");
+        // ✅ FIX: Get format settings from database instead of hardcoding
+        FormatSettingsDto formatSettings = getFormatSettings();
         dto.setFormatSettings(formatSettings);
         
         // Calculate consumable quantities for display
@@ -283,10 +293,6 @@ public class ServiceTrackingController {
             dto.setLoads(transaction.getServiceQuantity());
         }
         
-        // Set amount given and change
-        dto.setAmountGiven(transaction.getTotalPrice()); // Default to total price
-        dto.setChange(0.0); // Default change
-        
         // Set subtotal, tax, discount
         dto.setSubtotal(transaction.getTotalPrice());
         dto.setTax(0.0); // Adjust based on your tax calculation
@@ -296,5 +302,35 @@ public class ServiceTrackingController {
         dto.setPlasticQty(0);
         
         return dto;
+    }
+
+    /**
+     * ✅ NEW: Get format settings from database
+     */
+    private FormatSettingsDto getFormatSettings() {
+        try {
+            Optional<FormatSettings> settingsOpt = formatSettingsRepository.findTopByOrderByIdDesc();
+            if (settingsOpt.isPresent()) {
+                FormatSettings settings = settingsOpt.get();
+                return new FormatSettingsDto(
+                    settings.getStoreName(),
+                    settings.getAddress(),
+                    settings.getPhone(),
+                    settings.getFooterNote(),
+                    settings.getTrackingUrl()
+                );
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Could not load format settings from database, using defaults");
+        }
+        
+        // Default settings if none found in database
+        return new FormatSettingsDto(
+            "STARWASH LAUNDRY",
+            "53 A Bonifacio Street, Sta Lucia, Novaliches",
+            "Tel: 09150475513",
+            "Thank you for your business!",
+            "https://www.starwashph.com/"
+        );
     }
 }

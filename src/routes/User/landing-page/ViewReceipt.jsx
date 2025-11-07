@@ -247,12 +247,13 @@ const ViewReceipt = ({
   };
 
   // Calculate totals with proper null checks - UPDATED TO MATCH PrintableReceipt
-  const calculateTotals = () => {
+  // Calculate totals with proper null checks - FIXED VERSION
+const calculateTotals = () => {
     if (!receiptData) return { consumableTotal: 0, loadsTotal: 0, finalTotal: 0 };
 
     const consumableTotal = (receiptData.consumables || []).reduce(
-      (sum, item) => sum + (item.price || 0) * (item.quantity || 0), 
-      0
+        (sum, item) => sum + (item.price || 0) * (item.quantity || 0), 
+        0
     );
     
     const servicePrice = receiptData.service?.price || 0;
@@ -265,7 +266,13 @@ const ViewReceipt = ({
                       consumableTotal + loadsTotal;
 
     return { consumableTotal, loadsTotal, finalTotal };
-  };
+};
+
+const { consumableTotal, loadsTotal, finalTotal } = calculateTotals();
+
+// Get amount given and change from receiptData (not from trackingData)
+const amountGiven = receiptData?.amountGiven || 0;
+const change = receiptData?.change || 0;
 
   const { consumableTotal, loadsTotal, finalTotal } = calculateTotals();
 
