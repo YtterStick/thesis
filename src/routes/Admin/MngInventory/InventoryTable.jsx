@@ -6,12 +6,13 @@ import {
   Plus,
   Pencil,
   Trash2,
-  XCircle,
-  AlertCircle,
-  CircleCheck,
-  CheckCircle2,
   Search,
   Boxes,
+  Package,
+  Clock,
+  AlertTriangle,
+  Layers,
+  XCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,8 +26,62 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+
+const getStatusIcon = (quantity, low, adequate) => {
+  if (quantity === 0) {
+    return {
+      icon: <XCircle className="h-4 w-4" />,
+      label: "Out of Stock",
+      color: "text-red-500",
+      labelColor: "text-red-600",
+      darkLabelColor: "text-red-400",
+      bgColor: "bg-red-100",
+      darkBgColor: "bg-red-900/30",
+      borderColor: "border-red-200",
+      darkBorderColor: "border-red-800",
+    };
+  }
+  if (quantity <= low) {
+    return {
+      icon: <AlertTriangle className="h-4 w-4" />,
+      label: "Low Stock",
+      color: "text-orange-500",
+      labelColor: "text-orange-600",
+      darkLabelColor: "text-orange-400",
+      bgColor: "bg-orange-100",
+      darkBgColor: "bg-orange-900/30",
+      borderColor: "border-orange-200",
+      darkBorderColor: "border-orange-800",
+    };
+  }
+  if (quantity <= adequate) {
+    return {
+      icon: <Clock className="h-4 w-4" />,
+      label: "Adequate Stock",
+      color: "text-blue-500",
+      labelColor: "text-blue-600",
+      darkLabelColor: "text-blue-400",
+      bgColor: "bg-blue-100",
+      darkBgColor: "bg-blue-900/30",
+      borderColor: "border-blue-200",
+      darkBorderColor: "border-blue-800",
+    };
+  }
+  return {
+    icon: <Layers className="h-4 w-4" />,
+    label: "Full Stock",
+    color: "text-green-600",
+    labelColor: "text-green-600",
+    darkLabelColor: "text-green-400",
+    bgColor: "bg-green-100",
+    darkBgColor: "bg-green-900/30",
+    borderColor: "border-green-200",
+    darkBorderColor: "border-green-800",
+  };
+};
 
 const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
   const { theme } = useTheme();
@@ -36,6 +91,17 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
   const filteredItems = items.filter(item =>
     item.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Never restocked";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <TooltipProvider>
@@ -96,8 +162,9 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
               backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
             }}>
               <tr>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Name</th>
+                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Supply Item</th>
                 <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Quantity</th>
+                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Status</th>
                 <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Price</th>
                 <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Last Restock</th>
                 <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Restock Qty</th>
@@ -108,63 +175,11 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
               {filteredItems.length > 0 ? (
                 filteredItems.map((item, index) => {
                   const id = item._id || item.id;
-                  const quantity = item.quantity;
-                  const unit = item.unit;
-                  const low = item.lowStockThreshold ?? 0;
-                  const adequate = item.adequateStockThreshold ?? 0;
-
-                  let statusIcon = null;
-                  let tooltipClass = "";
-
-                  if (quantity === 0) {
-                    tooltipClass = "border-red-500 text-red-600 dark:border-red-400 dark:text-red-400";
-                    statusIcon = (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <XCircle className="ml-2 h-4 w-4 cursor-help text-red-500 dark:text-red-400" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className={tooltipClass}>
-                          Out of Stock
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  } else if (quantity <= low) {
-                    tooltipClass = "border-orange-500 text-orange-600 dark:border-orange-400 dark:text-orange-400";
-                    statusIcon = (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertCircle className="ml-2 h-4 w-4 cursor-help text-orange-500 dark:text-orange-400" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className={tooltipClass}>
-                          Low Stock
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  } else if (quantity <= adequate) {
-                    tooltipClass = "border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400";
-                    statusIcon = (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <CircleCheck className="ml-2 h-4 w-4 cursor-help text-blue-500 dark:text-blue-400" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className={tooltipClass}>
-                          Adequate Stock
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  } else {
-                    tooltipClass = "border-green-600 text-green-600 dark:border-green-400 dark:text-green-400";
-                    statusIcon = (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <CheckCircle2 className="ml-2 h-4 w-4 cursor-help text-green-600 dark:text-green-400" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className={tooltipClass}>
-                          Stocked
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  }
+                  const status = getStatusIcon(
+                    item.quantity,
+                    item.lowStockThreshold ?? 0,
+                    item.adequateStockThreshold ?? 0,
+                  );
 
                   return (
                     <motion.tr
@@ -178,20 +193,92 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                         backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
                       }}
                     >
-                      <td className="p-3 font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                        {item.name}
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="rounded-lg p-2"
+                            style={{
+                              backgroundColor: isDarkMode
+                                ? "rgba(51, 65, 85, 0.3)"
+                                : "rgba(11, 43, 38, 0.1)",
+                            }}
+                          >
+                            <Package
+                              className="h-4 w-4"
+                              style={{ color: isDarkMode ? "#3DD9B6" : "#0f172a" }}
+                            />
+                          </div>
+                          <div>
+                            <p className="font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                              {item.name}
+                            </p>
+                            {item.category && (
+                              <p className="text-xs" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                                {item.category}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </td>
-                      <td className="flex items-center p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                        {quantity} {unit}
-                        {statusIcon}
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            {item.quantity}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="rounded-lg border-2 capitalize"
+                            style={{
+                              borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                              color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                              backgroundColor: isDarkMode
+                                ? "rgba(51, 65, 85, 0.3)"
+                                : "rgba(243, 237, 227, 0.9)",
+                            }}
+                          >
+                            {item.unit || "units"}
+                          </Badge>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex justify-center">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                className="flex min-w-[140px] cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-1 transition-all"
+                                style={{
+                                  backgroundColor: isDarkMode ? status.darkBgColor : status.bgColor,
+                                  borderColor: isDarkMode ? status.darkBorderColor : status.borderColor,
+                                }}
+                              >
+                                <span className={isDarkMode ? status.color : status.color}>
+                                  {status.icon}
+                                </span>
+                                <span className={isDarkMode ? status.darkLabelColor : status.labelColor}>
+                                  {status.label}
+                                </span>
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                Current stock level: {item.quantity} {item.unit}
+                              </p>
+                              {item.lowStockThreshold && (
+                                <p>Low stock threshold: {item.lowStockThreshold}</p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                       </td>
                       <td className="p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                         ₱{item.price?.toFixed(2) ?? "—"}
                       </td>
-                      <td className="p-3 text-xs" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                        {item.lastRestock
-                          ? new Date(item.lastRestock).toLocaleString()
-                          : "—"}
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            {formatDate(item.lastRestock)}
+                          </span>
+                        </div>
                       </td>
                       <td className="p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                         {item.lastRestockAmount != null ? `+${item.lastRestockAmount}` : "—"}
@@ -258,7 +345,7 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
               ) : (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="p-8 text-center"
                     style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}
                   >

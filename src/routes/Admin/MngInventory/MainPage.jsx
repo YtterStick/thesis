@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { Plus, Boxes, PackageX, Package, Clock8, Calendar, TrendingUp, Trash2, Layers } from "lucide-react";
+import { Plus, Boxes, PackageX, Package, Clock8, Calendar, TrendingUp, Trash2, Layers, Clock, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import InventoryForm from "./InventoryForm";
 import StockModal from "./StockModal";
 import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-config";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,6 +42,59 @@ const getStockStatusCounts = (items) => {
   }
 
   return { out, low, adequate, full };
+};
+
+const getStatusIcon = (quantity, low, adequate) => {
+  if (quantity === 0) {
+    return {
+      icon: <XCircle className="h-4 w-4" />,
+      label: "Out of Stock",
+      color: "text-red-500",
+      labelColor: "text-red-600",
+      darkLabelColor: "text-red-400",
+      bgColor: "bg-red-100",
+      darkBgColor: "bg-red-900/30",
+      borderColor: "border-red-200",
+      darkBorderColor: "border-red-800",
+    };
+  }
+  if (quantity <= low) {
+    return {
+      icon: <AlertTriangle className="h-4 w-4" />,
+      label: "Low Stock",
+      color: "text-orange-500",
+      labelColor: "text-orange-600",
+      darkLabelColor: "text-orange-400",
+      bgColor: "bg-orange-100",
+      darkBgColor: "bg-orange-900/30",
+      borderColor: "border-orange-200",
+      darkBorderColor: "border-orange-800",
+    };
+  }
+  if (quantity <= adequate) {
+    return {
+      icon: <Clock className="h-4 w-4" />,
+      label: "Adequate Stock",
+      color: "text-blue-500",
+      labelColor: "text-blue-600",
+      darkLabelColor: "text-blue-400",
+      bgColor: "bg-blue-100",
+      darkBgColor: "bg-blue-900/30",
+      borderColor: "border-blue-200",
+      darkBorderColor: "border-blue-800",
+    };
+  }
+  return {
+    icon: <Layers className="h-4 w-4" />,
+    label: "Full Stock",
+    color: "text-green-600",
+    labelColor: "text-green-600",
+    darkLabelColor: "text-green-400",
+    bgColor: "bg-green-100",
+    darkBgColor: "bg-green-900/30",
+    borderColor: "border-green-200",
+    darkBorderColor: "border-green-800",
+  };
 };
 
 const MainPage = () => {
@@ -264,6 +318,17 @@ const MainPage = () => {
     },
   ];
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "Never restocked";
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
       backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
@@ -432,6 +497,7 @@ const MainPage = () => {
                       }}>
                         <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Supply Item</th>
                         <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Quantity</th>
+                        <th className="p-4 text-center font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Status</th>
                         <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Price</th>
                         <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Last Restock</th>
                         <th className="p-4 text-left font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Restock Qty</th>
@@ -440,16 +506,11 @@ const MainPage = () => {
                     </thead>
                     <tbody>
                       {items.map((item, index) => {
-                        const formatDate = (dateString) => {
-                          if (!dateString) return "Never restocked";
-                          return new Date(dateString).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          });
-                        };
+                        const status = getStatusIcon(
+                          item.quantity,
+                          item.lowStockThreshold ?? 0,
+                          item.adequateStockThreshold ?? 0,
+                        );
 
                         return (
                           <tr
@@ -471,6 +532,11 @@ const MainPage = () => {
                                   <p className="font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                     {item.name}
                                   </p>
+                                  {item.category && (
+                                    <p className="text-xs" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                                      {item.category}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             </td>
@@ -479,9 +545,49 @@ const MainPage = () => {
                                 <span className="font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                   {item.quantity}
                                 </span>
-                                <span style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                                  {item.unit}
-                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="rounded-lg border-2 capitalize"
+                                  style={{
+                                    borderColor: isDarkMode ? "#475569" : "#cbd5e1",
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                    backgroundColor: isDarkMode
+                                      ? "rgba(51, 65, 85, 0.3)"
+                                      : "rgba(243, 237, 227, 0.9)",
+                                  }}
+                                >
+                                  {item.unit || "units"}
+                                </Badge>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex justify-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      className="flex min-w-[140px] cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-1 transition-all"
+                                      style={{
+                                        backgroundColor: isDarkMode ? status.darkBgColor : status.bgColor,
+                                        borderColor: isDarkMode ? status.darkBorderColor : status.borderColor,
+                                      }}
+                                    >
+                                      <span className={isDarkMode ? status.color : status.color}>
+                                        {status.icon}
+                                      </span>
+                                      <span className={isDarkMode ? status.darkLabelColor : status.labelColor}>
+                                        {status.label}
+                                      </span>
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      Current stock level: {item.quantity} {item.unit}
+                                    </p>
+                                    {item.lowStockThreshold && (
+                                      <p>Low stock threshold: {item.lowStockThreshold}</p>
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
                               </div>
                             </td>
                             <td className="p-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>

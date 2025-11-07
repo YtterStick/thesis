@@ -2,6 +2,7 @@ package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.MissingItem;
 import com.starwash.authservice.repository.MissingItemRepository;
+import com.starwash.authservice.security.ManilaTimeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -28,6 +29,7 @@ public class MissingItemService {
 
     public MissingItem createMissingItem(MissingItem missingItem, String staffId) {
         missingItem.setFoundByStaffId(staffId);
+        missingItem.setFoundDate(ManilaTimeUtil.now()); // Use PH time
         return missingItemRepository.save(missingItem);
     }
 
@@ -37,7 +39,7 @@ public class MissingItemService {
             MissingItem item = optionalItem.get();
             item.setClaimed(true);
             item.setClaimedByName(claimedByName);
-            item.setClaimDate(LocalDateTime.now());
+            item.setClaimDate(ManilaTimeUtil.now()); // Use PH time for claiming
             return Optional.of(missingItemRepository.save(item));
         }
         return Optional.empty();

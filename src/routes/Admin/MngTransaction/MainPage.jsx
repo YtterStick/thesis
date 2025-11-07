@@ -4,10 +4,13 @@ import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
 import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter, Droplets, Flower } from "lucide-react";
 import { api } from "@/lib/api-config";
+import { useNavigate, useLocation } from "react-router-dom"; // Replace Next.js imports with React Router
 
 const MainPage = () => {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const navigate = useNavigate();
+    const location = useLocation();
     
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -15,6 +18,9 @@ const MainPage = () => {
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [filteredRecordsCount, setFilteredRecordsCount] = useState(0);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    
+    // ADD AUTO SEARCH STATE
+    const [autoSearchTerm, setAutoSearchTerm] = useState("");
 
     const filterDropdownRef = useRef(null);
 
@@ -27,13 +33,33 @@ const MainPage = () => {
             }
         }
         return {
-            sortBy: "date", // Default to date sorting
-            sortOrder: "desc", // Default to descending
+            sortBy: "date",
+            sortOrder: "desc",
             statusFilters: [],
             paymentFilters: [],
             serviceFilters: []
         };
     });
+
+    // ADD AUTO SEARCH EFFECT - UPDATED FOR REACT ROUTER
+    useEffect(() => {
+        // Check for auto search parameter from URL or sessionStorage
+        const urlParams = new URLSearchParams(location.search);
+        const searchName = urlParams.get('search') || sessionStorage.getItem('autoSearchName');
+        
+        if (searchName) {
+            console.log("🔍 Auto-searching for:", searchName);
+            setAutoSearchTerm(searchName);
+            // Clear the stored value so it doesn't persist on refresh
+            sessionStorage.removeItem('autoSearchName');
+            
+            // Clear URL parameter without page reload
+            if (urlParams.get('search')) {
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+    }, [location.search]);
 
     // Save filters to localStorage whenever they change
     useEffect(() => {
@@ -804,6 +830,7 @@ const MainPage = () => {
                         onDateRangeChange={setSelectedRange}
                         onFilteredCountChange={handleFilteredCountChange}
                         activeFilters={activeFilters}
+                        autoSearchTerm={autoSearchTerm} // PASS AUTO SEARCH TERM
                     />
                 </motion.div>
             )}

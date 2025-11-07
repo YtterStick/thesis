@@ -146,6 +146,7 @@ const AdminRecordTable = ({
     onDateRangeChange,
     onFilteredCountChange,
     activeFilters,
+    autoSearchTerm = "", // ADD THIS PROP
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [localSelectedRange, setLocalSelectedRange] = useState(selectedRange || { from: null, to: null });
@@ -155,10 +156,19 @@ const AdminRecordTable = ({
     const [printData, setPrintData] = useState(null);
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
-    const [allGcashReferences, setAllGcashReferences] = useState({}); // Store ALL GCash references
+    const [allGcashReferences, setAllGcashReferences] = useState({});
 
     const rowsPerPage = 10;
     const calendarRef = useRef(null);
+
+    // ADD AUTO SEARCH EFFECT
+    useEffect(() => {
+        if (autoSearchTerm) {
+            console.log("🎯 Applying auto-search:", autoSearchTerm);
+            setSearchTerm(autoSearchTerm);
+            setCurrentPage(1);
+        }
+    }, [autoSearchTerm]);
 
     // Format currency with commas
     const formatCurrency = (amount) => {
@@ -660,12 +670,27 @@ const AdminRecordTable = ({
                                         setSearchTerm(e.target.value);
                                         setCurrentPage(1);
                                     }}
-                                    placeholder="Search by name"
+                                    placeholder={autoSearchTerm ? `Searching: ${autoSearchTerm}` : "Search by name"}
                                     className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
                                     style={{
                                         color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                     }}
                                 />
+                                {/* SHOW AUTO SEARCH INDICATOR */}
+                                {autoSearchTerm && searchTerm === autoSearchTerm && (
+                                    <div className="flex items-center">
+                                        <div 
+                                            className="w-2 h-2 rounded-full bg-green-500 animate-pulse mr-2"
+                                            title="Auto-searching"
+                                        />
+                                        <span 
+                                            className="text-xs text-green-500 font-medium"
+                                            style={{ color: '#10B981' }}
+                                        >
+                                            Auto
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

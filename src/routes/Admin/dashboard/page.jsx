@@ -5,6 +5,7 @@ import { PackageX, PhilippinePeso, Package, Clock8, LineChart, AlertCircle, Tren
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-config";
+import { useNavigate } from "react-router-dom";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 10000;
@@ -113,6 +114,7 @@ const calculateTotals = (records) => {
 export default function AdminDashboardPage() {
     const { theme } = useTheme();
     const { isAuthenticated, user, logout } = useAuth();
+    const navigate = useNavigate();
 
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
@@ -423,6 +425,14 @@ export default function AdminDashboardPage() {
 
     const formatCurrency = (amount) => {
         return `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
+    };
+
+    // Add this function to handle card click - UPDATED TO MAKE ENTIRE CARD CLICKABLE
+    const handleTransactionClick = (customerName) => {
+        // Store the search term in sessionStorage to be used in MainPage
+        sessionStorage.setItem('autoSearchName', customerName);
+        // Redirect to manage transactions page
+        navigate('/managetransaction');
     };
 
     const SkeletonCard = () => (
@@ -963,7 +973,7 @@ export default function AdminDashboardPage() {
                     </div>
                 </motion.div>
 
-                {/* Today's Transactions Card */}
+                {/* Today's Transactions Card - UPDATED WITH FULLY CLICKABLE CARDS */}
                 <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -1030,7 +1040,7 @@ export default function AdminDashboardPage() {
                         ) : (
                             <div className="space-y-3">
                                 {(displayData.todayTransactions || []).map((transaction, index) => (
-                                    <motion.div
+                                    <motion.button
                                         key={transaction.id}
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -1040,7 +1050,9 @@ export default function AdminDashboardPage() {
                                             backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
                                             transition: { duration: 0.2 },
                                         }}
-                                        className="cursor-pointer rounded-lg border p-3 transition-all"
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => handleTransactionClick(transaction.name || transaction.customerName)}
+                                        className="w-full text-left rounded-lg border p-3 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         style={{
                                             borderColor: isDarkMode ? "#475569" : "#e2e8f0",
                                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(248, 250, 252, 0.8)",
@@ -1049,9 +1061,12 @@ export default function AdminDashboardPage() {
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start mb-2">
+                                                    {/* REMOVED BUTTON FROM NAME - NOW ENTIRE CARD IS CLICKABLE */}
                                                     <p
                                                         className="text-sm font-semibold"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                        style={{ 
+                                                            color: isDarkMode ? "#3DD9B6" : "#059669",
+                                                        }}
                                                     >
                                                         {transaction.name || transaction.customerName}
                                                     </p>
@@ -1084,7 +1099,7 @@ export default function AdminDashboardPage() {
                                                 )}
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </motion.button>
                                 ))}
                             </div>
                         )}

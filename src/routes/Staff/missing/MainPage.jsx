@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Package } from "lucide-react";
+import { Search, Package, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
@@ -29,6 +29,7 @@ const MissingItemsPage = () => {
     });
     const [claimName, setClaimName] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const [currentPHTime, setCurrentPHTime] = useState("");
 
     const [itemsPerPage, setItemsPerPage] = useState(() => {
         const saved = localStorage.getItem("missingItemsPerPage");
@@ -37,9 +38,32 @@ const MissingItemsPage = () => {
 
     const { toast } = useToast();
 
+    // Function to get current PH time
+    const getCurrentPHTime = () => {
+        const now = new Date();
+        const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // UTC+8
+        return phTime.toLocaleString("en-US", {
+            timeZone: 'Asia/Manila',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
+
     useEffect(() => {
         fetchMissingItems();
         fetchMachines();
+        
+        // Update PH time every second
+        setCurrentPHTime(getCurrentPHTime());
+        const timer = setInterval(() => {
+            setCurrentPHTime(getCurrentPHTime());
+        }, 1000);
+
+        return () => clearInterval(timer);
     }, []);
 
     useEffect(() => {
@@ -200,32 +224,53 @@ const MissingItemsPage = () => {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-3 flex items-center gap-3"
+                className="mb-3 flex items-center justify-between"
             >
+                <div className="flex items-center gap-3">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="rounded-lg p-2"
+                        style={{
+                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                            color: "#f1f5f9",
+                        }}
+                    >
+                        <Package size={22} />
+                    </motion.div>
+                    <div>
+                        <p
+                            className="text-xl font-bold"
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                        >
+                            Missing Items
+                        </p>
+                        <p
+                            className="text-sm"
+                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                        >
+                            Track and manage lost and found items
+                        </p>
+                    </div>
+                </div>
+                
+                {/* PH Time Display */}
                 <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="rounded-lg p-2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2"
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
-                        color: "#f1f5f9",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        border: `2px solid ${isDarkMode ? "#334155" : "#cbd5e1"}`,
                     }}
                 >
-                    <Package size={22} />
-                </motion.div>
-                <div>
-                    <p
-                        className="text-xl font-bold"
+                    <Clock className="h-4 w-4" style={{ color: isDarkMode ? "#3DD9B6" : "#0f172a" }} />
+                    <span 
+                        className="text-sm font-medium"
                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     >
-                        Missing Items
-                    </p>
-                    <p
-                        className="text-sm"
-                        style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                    >
-                        Track and manage lost and found items
-                    </p>
-                </div>
+                        PH Time: {currentPHTime}
+                    </span>
+                </motion.div>
             </motion.div>
 
             <motion.div
@@ -258,7 +303,7 @@ const MissingItemsPage = () => {
                                     className="text-sm"
                                     style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                 >
-                                    {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} found
+                                    {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} found • All times in PH Time (UTC+8)
                                 </CardDescription>
                             </div>
                             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
