@@ -23,7 +23,8 @@ public class SmsController {
             smsService.sendLoadCompletedNotification(
                 request.getPhoneNumber(),
                 request.getCustomerName(),
-                request.getServiceType()
+                request.getServiceType(),
+                request.getTransactionId() // Added transaction ID parameter
             );
             
             Map<String, String> response = new HashMap<>();
