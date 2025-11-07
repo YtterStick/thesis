@@ -58,45 +58,64 @@ const MainPage = () => {
     }, [transactions, expiredTransactions, searchTerm, activeTab]);
 
     const fetchCompletedTransactions = async () => {
-        try {
-            setIsLoading(true);
-            const data = await api.get("api/claiming/completed-unclaimed");
+    try {
+        setIsLoading(true);
+        const data = await api.get("api/claiming/completed-unclaimed");
 
-            const filteredData = data.filter((transaction) => {
-                if (transaction.paymentMethod === "GCash") {
-                    return transaction.gcashVerified === true;
+        // Enhanced filtering - also check the transaction data
+        const enhancedData = await Promise.all(
+            data.map(async (transaction) => {
+                try {
+                    // Fetch the actual transaction to check payment verification
+                    const txDetail = await api.get(`api/transactions/${transaction.id}/detail`);
+                    return {
+                        ...transaction,
+                        paymentMethod: txDetail.paymentMethod,
+                        gcashVerified: txDetail.gcashVerified
+                    };
+                } catch (error) {
+                    console.error(`Error fetching details for transaction ${transaction.id}:`, error);
+                    return transaction;
                 }
-                return true;
-            });
+            })
+        );
 
-            // Sort by completion date (newest first)
-            const sortedData = filteredData.sort((a, b) => {
-                const getLatestCompletionDate = (transaction) => {
-                    return transaction.loadAssignments?.reduce(
-                        (latest, load) => (load.endTime ? Math.max(latest, new Date(load.endTime).getTime()) : latest),
-                        0,
-                    );
-                };
+        // Filter out unverified GCash transactions
+        const filteredData = enhancedData.filter((transaction) => {
+            if (transaction.paymentMethod === "GCash") {
+                return transaction.gcashVerified === true;
+            }
+            return true;
+        });
 
-                const aDate = getLatestCompletionDate(a);
-                const bDate = getLatestCompletionDate(b);
+        // Sort by completion date (newest first)
+        const sortedData = filteredData.sort((a, b) => {
+            const getLatestCompletionDate = (transaction) => {
+                return transaction.loadAssignments?.reduce(
+                    (latest, load) => (load.endTime ? Math.max(latest, new Date(load.endTime).getTime()) : latest),
+                    0,
+                );
+            };
 
-                return bDate - aDate;
-            });
+            const aDate = getLatestCompletionDate(a);
+            const bDate = getLatestCompletionDate(b);
 
-            setTransactions(sortedData);
-            setHasFetched(true);
-        } catch (error) {
-            console.error(error);
-            toast({ 
-                title: "Error", 
-                description: "Failed to load completed transactions", 
-                variant: "destructive" 
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    };
+            return bDate - aDate;
+        });
+
+        setTransactions(sortedData);
+        setHasFetched(true);
+    } catch (error) {
+        console.error(error);
+        toast({ 
+            title: "Error", 
+            description: "Failed to load completed transactions", 
+            variant: "destructive" 
+        });
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     const fetchExpiredTransactions = async () => {
         try {

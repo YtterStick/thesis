@@ -1046,6 +1046,29 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
         }
     }
 
+    // In LaundryJobService.java
+public List<LaundryJob> getCompletedUnclaimedJobsWithVerifiedPayments() {
+    List<LaundryJob> completedJobs = getCompletedUnclaimedJobs();
+    
+    // Filter out unverified GCash transactions
+    return completedJobs.stream()
+        .filter(job -> {
+            try {
+                Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
+                    .orElse(null);
+                
+                if (transaction != null && "GCash".equals(transaction.getPaymentMethod())) {
+                    return Boolean.TRUE.equals(transaction.getGcashVerified());
+                }
+                return true; // Keep non-GCash transactions
+            } catch (Exception e) {
+                System.err.println("Error checking transaction for job " + job.getTransactionId() + ": " + e.getMessage());
+                return true; // In case of error, keep the job
+            }
+        })
+        .collect(Collectors.toList());
+}
+
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob releaseMachine(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);

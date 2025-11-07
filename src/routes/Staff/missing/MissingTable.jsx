@@ -127,21 +127,20 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
     };
 
     const formatDate = (dateString) => {
-        if (!dateString) return "Not available";
-        
-        // Convert to PH time (UTC+8)
-        const date = new Date(dateString);
-        const phTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
-        
-        return phTime.toLocaleDateString("en-US", {
-            timeZone: 'Asia/Manila',
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    };
+    if (!dateString) return "-";
+    
+    // The date from backend is already in PH time, just format it properly
+    const date = new Date(dateString);
+    
+    return date.toLocaleDateString("en-US", {
+        timeZone: 'Asia/Manila',
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
 
     if (!item) return null;
 
@@ -173,12 +172,6 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                                 >
                                     Item Details
                                 </h2>
-                                <p
-                                    className="mt-1 text-sm"
-                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                                >
-                                    Complete information about this missing item • All times in PH Time (UTC+8)
-                                </p>
                             </div>
                             <motion.button
                                 whileHover={{ scale: 1.1 }}
@@ -274,7 +267,7 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                                             style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                         >
                                             <Calendar className="mr-2 inline h-4 w-4" />
-                                            Found Date (PH Time)
+                                            Found Date
                                         </label>
                                         <div
                                             className="rounded-lg border-2 p-3"
@@ -337,7 +330,7 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                                                     style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                                 >
                                                     <Calendar className="mr-2 inline h-4 w-4" />
-                                                    Claimed Date (PH Time)
+                                                    Claimed Date
                                                 </label>
                                                 <div
                                                     className="rounded-lg border-2 p-3"
@@ -510,21 +503,20 @@ const MissingTable = ({
     };
 
     const formatDate = (dateString) => {
-        if (!dateString) return "-";
-        
-        // Convert to PH time (UTC+8)
-        const date = new Date(dateString);
-        const phTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
-        
-        return phTime.toLocaleDateString("en-US", {
-            timeZone: 'Asia/Manila',
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    };
+    if (!dateString) return "Not available";
+    
+    // The date from backend is already in PH time, just format it properly
+    const date = new Date(dateString);
+    
+    return date.toLocaleDateString("en-US", {
+        timeZone: 'Asia/Manila',
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
 
     const toggleNoteExpansion = (itemId) => {
         setExpandedNotes((prev) => ({
@@ -569,9 +561,9 @@ const MissingTable = ({
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Item Description</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found In Machine</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Reported By</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found Date (PH Time)</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found Date</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed By</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed Date (PH Time)</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed Date</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Notes</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Status</TableHead>
                             <TableHead
@@ -640,9 +632,9 @@ const MissingTable = ({
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Item Description</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found In Machine</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Reported By</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found Date (PH Time)</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Found Date</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed By</TableHead>
-                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed Date (PH Time)</TableHead>
+                            <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Claimed Date</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Notes</TableHead>
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Status</TableHead>
                             <TableHead
@@ -838,26 +830,10 @@ const MissingTable = ({
                                                                     className="text-sm"
                                                                     style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                                                 >
-                                                                    Enter the name of the person claiming this item. Claim will be recorded in PH Time (UTC+8).
+                                                                    Enter the name of the person claiming this item.
                                                                 </DialogDescription>
                                                             </DialogHeader>
                                                             <div className="space-y-4">
-                                                                {/* Current PH Time Display */}
-                                                                <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-                                                                    <div className="flex items-center gap-2 text-sm">
-                                                                        <Clock className="h-4 w-4 text-blue-600" />
-                                                                        <span className="font-medium text-blue-700 dark:text-blue-300">
-                                                                            Current PH Time: {new Date(new Date().getTime() + (8 * 60 * 60 * 1000)).toLocaleString("en-US", {
-                                                                                timeZone: 'Asia/Manila',
-                                                                                year: 'numeric',
-                                                                                month: 'short',
-                                                                                day: 'numeric',
-                                                                                hour: '2-digit',
-                                                                                minute: '2-digit',
-                                                                            })}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
 
                                                                 <div>
                                                                     <label

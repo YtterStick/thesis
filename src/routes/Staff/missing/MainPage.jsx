@@ -253,24 +253,6 @@ const MissingItemsPage = () => {
                     </div>
                 </div>
                 
-                {/* PH Time Display */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2"
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        border: `2px solid ${isDarkMode ? "#334155" : "#cbd5e1"}`,
-                    }}
-                >
-                    <Clock className="h-4 w-4" style={{ color: isDarkMode ? "#3DD9B6" : "#0f172a" }} />
-                    <span 
-                        className="text-sm font-medium"
-                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                    >
-                        PH Time: {currentPHTime}
-                    </span>
-                </motion.div>
             </motion.div>
 
             <motion.div
@@ -303,7 +285,7 @@ const MissingItemsPage = () => {
                                     className="text-sm"
                                     style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                 >
-                                    {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""} found • All times in PH Time (UTC+8)
+                                    {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""}
                                 </CardDescription>
                             </div>
                             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
