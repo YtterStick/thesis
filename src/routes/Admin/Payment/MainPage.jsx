@@ -34,7 +34,7 @@ const initializeCache = () => {
       const parsed = JSON.parse(stored);
       if (Date.now() - parsed.timestamp < CACHE_DURATION) {
         console.log("📦 Initializing payment management from stored cache");
-        return parsed;
+        return parsed.data; // Return just the data
       } else {
         console.log("🗑️ Stored payment management cache expired");
       }
@@ -195,18 +195,20 @@ const PaymentManagementPage = () => {
   const [activeTab, setActiveTab] = useState("methods");
   
   const [paymentData, setPaymentData] = useState(() => {
-    if (paymentManagementCache && paymentManagementCache.data) {
+    // If we have valid cached data, use it
+    if (paymentManagementCache) {
       console.log("🎯 Initializing payment state with cached data");
       return {
-        gcashEnabled: paymentManagementCache.data.gcashEnabled ?? true,
-        pendingTransactions: paymentManagementCache.data.pendingTransactions ?? [],
+        gcashEnabled: paymentManagementCache.gcashEnabled ?? true,
+        pendingTransactions: paymentManagementCache.pendingTransactions ?? [],
         loading: false,
         error: null,
-        lastUpdated: new Date(paymentManagementCache.timestamp),
+        lastUpdated: new Date(),
         dataVersion: 0
       };
     }
     
+    // Default state
     return {
       gcashEnabled: true,
       pendingTransactions: [],
@@ -235,6 +237,55 @@ const PaymentManagementPage = () => {
     );
   };
 
+  const fetchFreshData = async () => {
+    console.log("🔄 Fetching fresh payment data");
+    
+    if (isMountedRef.current) {
+      setPaymentData(prev => ({ ...prev, loading: true }));
+    }
+
+    try {
+      const [settingsData, transactionsData] = await Promise.all([
+        api.get("api/payment-settings"),
+        api.get("api/transactions/pending-gcash")
+      ]);
+      
+      const newPaymentData = {
+        gcashEnabled: settingsData?.gcashEnabled ?? true,
+        pendingTransactions: transactionsData || [],
+      };
+
+      // Always update cache with fresh data
+      paymentManagementCache = newPaymentData;
+      cacheTimestamp = Date.now();
+      
+      saveCacheToStorage(newPaymentData);
+      
+      if (isMountedRef.current) {
+        setPaymentData({
+          ...newPaymentData,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(),
+          dataVersion: (paymentData.dataVersion || 0) + 1
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching fresh payment data:', error);
+      if (isMountedRef.current) {
+        setPaymentData(prev => ({
+          ...prev,
+          loading: false,
+          error: error.message
+        }));
+      }
+    }
+
+    if (isMountedRef.current) {
+      setInitialLoad(false);
+    }
+  };
+
   const fetchPaymentData = useCallback(async (forceRefresh = false) => {
     if (!isMountedRef.current) return;
 
@@ -245,7 +296,7 @@ const PaymentManagementPage = () => {
         console.log("📦 Using cached payment data");
         
         setPaymentData(prev => ({
-          ...paymentManagementCache.data,
+          ...paymentManagementCache,
           loading: false,
           error: null,
           lastUpdated: new Date(cacheTimestamp),
@@ -269,7 +320,7 @@ const PaymentManagementPage = () => {
       if (paymentManagementCache) {
         console.log("⚠️ Fetch failed, falling back to cached data");
         setPaymentData(prev => ({
-          ...paymentManagementCache.data,
+          ...paymentManagementCache,
           loading: false,
           error: error.message,
           lastUpdated: new Date(cacheTimestamp),
@@ -286,84 +337,13 @@ const PaymentManagementPage = () => {
     }
   }, []);
 
-  const fetchFreshData = async () => {
-    console.log("🔄 Fetching fresh payment data");
-    
-    if (isMountedRef.current) {
-      setPaymentData(prev => ({ ...prev, loading: true }));
-    }
-
-    try {
-      const [settingsData, transactionsData] = await Promise.all([
-        api.get("api/payment-settings"),
-        api.get("api/transactions/pending-gcash")
-      ]);
-      
-      const newPaymentData = {
-        gcashEnabled: settingsData?.gcashEnabled ?? true,
-        pendingTransactions: transactionsData || [],
-      };
-
-      const currentTime = Date.now();
-
-      if (!paymentManagementCache || hasDataChanged(newPaymentData, paymentManagementCache.data)) {
-        console.log("🔄 Payment data updated with fresh data");
-        
-        paymentManagementCache = {
-          data: newPaymentData,
-          timestamp: currentTime
-        };
-        cacheTimestamp = currentTime;
-        
-        saveCacheToStorage(paymentManagementCache);
-        
-        if (isMountedRef.current) {
-          setPaymentData({
-            ...newPaymentData,
-            loading: false,
-            error: null,
-            lastUpdated: new Date(),
-            dataVersion: (paymentData.dataVersion || 0) + 1
-          });
-        }
-      } else {
-        console.log("✅ No changes in payment data, updating timestamp only");
-        cacheTimestamp = currentTime;
-        paymentManagementCache.timestamp = currentTime;
-        saveCacheToStorage(paymentManagementCache);
-        
-        if (isMountedRef.current) {
-          setPaymentData(prev => ({
-            ...prev,
-            loading: false,
-            error: null,
-            lastUpdated: new Date()
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching fresh payment data:', error);
-      if (isMountedRef.current) {
-        setPaymentData(prev => ({
-          ...prev,
-          loading: false,
-          error: error.message
-        }));
-      }
-    }
-
-    if (isMountedRef.current) {
-      setInitialLoad(false);
-    }
-  };
-
   useEffect(() => {
     isMountedRef.current = true;
     
     if (paymentManagementCache) {
       console.log("🚀 Showing cached payment data immediately");
       setPaymentData(prev => ({
-        ...paymentManagementCache.data,
+        ...paymentManagementCache,
         loading: false,
         error: null,
         lastUpdated: new Date(cacheTimestamp),
@@ -372,7 +352,8 @@ const PaymentManagementPage = () => {
       setInitialLoad(false);
     }
     
-    fetchPaymentData();
+    // Always fetch fresh data on mount to ensure consistency
+    fetchFreshData();
     
     pollingIntervalRef.current = setInterval(() => {
       console.log("🔄 Auto-refreshing payment data...");
@@ -388,6 +369,8 @@ const PaymentManagementPage = () => {
   }, [fetchPaymentData]);
 
   const handleToggleGcash = () => {
+    console.log("🔄 Toggle clicked - Current state:", paymentData.gcashEnabled);
+    console.log("💾 Current cache:", paymentManagementCache);
     setShowGcashConfirm(true);
   };
 
@@ -396,8 +379,10 @@ const PaymentManagementPage = () => {
       setIsUpdating(true);
       const newStatus = !paymentData.gcashEnabled;
 
+      console.log("📡 Updating GCash setting to:", newStatus);
       await api.put("api/payment-settings", { gcashEnabled: newStatus });
 
+      // Update local state
       const updatedData = {
         ...paymentData,
         gcashEnabled: newStatus
@@ -405,12 +390,17 @@ const PaymentManagementPage = () => {
       
       setPaymentData(updatedData);
       
-      paymentManagementCache = {
-        data: updatedData,
-        timestamp: Date.now()
+      // Update cache with correct structure
+      const updatedCacheData = {
+        gcashEnabled: newStatus,
+        pendingTransactions: paymentData.pendingTransactions
       };
+      
+      paymentManagementCache = updatedCacheData;
       cacheTimestamp = Date.now();
-      saveCacheToStorage(paymentManagementCache);
+      saveCacheToStorage(updatedCacheData);
+      
+      console.log("✅ GCash setting updated successfully. New cache:", paymentManagementCache);
       
       toast({
         title: "Success",
@@ -454,12 +444,15 @@ const PaymentManagementPage = () => {
       
       setPaymentData(updatedData);
       
-      paymentManagementCache = {
-        data: updatedData,
-        timestamp: Date.now()
+      // Update cache
+      const updatedCacheData = {
+        gcashEnabled: paymentData.gcashEnabled,
+        pendingTransactions: updatedTransactions
       };
+      
+      paymentManagementCache = updatedCacheData;
       cacheTimestamp = Date.now();
-      saveCacheToStorage(paymentManagementCache);
+      saveCacheToStorage(updatedCacheData);
       
     } catch (error) {
       console.error("Error verifying payment:", error);

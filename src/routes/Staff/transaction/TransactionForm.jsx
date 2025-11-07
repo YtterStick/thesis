@@ -13,8 +13,9 @@ import ConsumablesSection from "./ConsumablesSection";
 import { api } from "@/lib/api-config";
 import { useTheme } from "@/hooks/use-theme";
 
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
-const POLLING_INTERVAL = 60000; // 1 minute polling
+// In TransactionForm
+const CACHE_DURATION = 30 * 1000;
+const POLLING_INTERVAL = 1000;
 
 // Enhanced Manila time utility functions with detailed debugging
 const getManilaTime = (date = new Date()) => {
@@ -238,80 +239,89 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     }, []);
 
     const fetchFreshData = async () => {
-        console.log("🔄 Fetching fresh transaction form data");
+    console.log("🔄 Fetching fresh transaction form data");
+    
+    try {
+        // Use the api utility instead of direct fetch calls
+        const [servicesData, stockData, paymentData] = await Promise.all([
+            api.get("api/services"),
+            api.get("api/stock"),
+            api.get("api/payment-settings")
+        ]);
+
+        const safeStockItems = Array.isArray(stockData) ? stockData : (stockData.items ?? []);
+
+        // FIXED: Properly handle payment settings response
+        let paymentMethodsData = ["Cash"];
+        console.log("💳 Payment settings response:", paymentData);
         
-        try {
-            // Use the api utility instead of direct fetch calls
-            const [servicesData, stockData, paymentData] = await Promise.all([
-                api.get("api/services"),
-                api.get("api/stock"),
-                api.get("api/payment-settings")
-            ]);
-
-            const safeStockItems = Array.isArray(stockData) ? stockData : (stockData.items ?? []);
-
-            let paymentMethodsData = ["Cash"];
-            if (paymentData && paymentData.gcashEnabled) {
-                paymentMethodsData.push("GCash");
-            }
-
-            const newData = {
-                services: servicesData,
-                stockItems: safeStockItems,
-                paymentMethods: paymentMethodsData,
-            };
-
-            const currentTime = Date.now();
-
-            if (!transactionFormCache || hasDataChanged(newData, transactionFormCache.data)) {
-                console.log("🔄 Transaction form data updated with fresh data");
-                
-                transactionFormCache = {
-                    data: newData,
-                    timestamp: currentTime
-                };
-                cacheTimestamp = currentTime;
-                saveCacheToStorage(transactionFormCache);
-            } else {
-                console.log("✅ No changes in transaction form data, updating timestamp only");
-                cacheTimestamp = currentTime;
-                transactionFormCache.timestamp = currentTime;
-                saveCacheToStorage(transactionFormCache);
-            }
-
-            if (isMountedRef.current) {
-                setServices(servicesData);
-                setStockItems(safeStockItems);
-                setPaymentMethods(paymentMethodsData);
-                
-                if (servicesData.length > 0) {
-                    setForm((prev) => ({ 
-                        ...prev, 
-                        serviceId: prev.serviceId || servicesData[0]?.id || "" 
-                    }));
-                }
-                
-                const initialConsumables = {};
-                safeStockItems.forEach((item) => {
-                    initialConsumables[item.name] = 
-                        item.name.toLowerCase().includes("plastic") || 
-                        item.name.toLowerCase().includes("detergent") || 
-                        item.name.toLowerCase().includes("fabric") ? loads : 0;
-                });
-                setConsumables(initialConsumables);
-                
-                setInitialLoad(false);
-            }
-
-        } catch (error) {
-            console.error("Failed to fetch data:", error);
-            toast({
-                title: "Data Fetch Error",
-                description: "Unable to load required data.",
-                variant: "destructive",
-            });
+        // Check if GCash is enabled in the payment settings
+        if (paymentData && (paymentData.gcashEnabled === true || paymentData.gcashEnabled === "true")) {
+            console.log("✅ GCash is enabled - adding to payment methods");
+            paymentMethodsData.push("GCash");
+        } else {
+            console.log("❌ GCash is disabled - only Cash available");
         }
-    };
+
+        console.log("💰 Available payment methods:", paymentMethodsData);
+
+        const newData = {
+            services: servicesData,
+            stockItems: safeStockItems,
+            paymentMethods: paymentMethodsData,
+        };
+
+        const currentTime = Date.now();
+
+        if (!transactionFormCache || hasDataChanged(newData, transactionFormCache.data)) {
+            console.log("🔄 Transaction form data updated with fresh data");
+            
+            transactionFormCache = {
+                data: newData,
+                timestamp: currentTime
+            };
+            cacheTimestamp = currentTime;
+            saveCacheToStorage(transactionFormCache);
+        } else {
+            console.log("✅ No changes in transaction form data, updating timestamp only");
+            cacheTimestamp = currentTime;
+            transactionFormCache.timestamp = currentTime;
+            saveCacheToStorage(transactionFormCache);
+        }
+
+        if (isMountedRef.current) {
+            setServices(servicesData);
+            setStockItems(safeStockItems);
+            setPaymentMethods(paymentMethodsData);
+            
+            if (servicesData.length > 0) {
+                setForm((prev) => ({ 
+                    ...prev, 
+                    serviceId: prev.serviceId || servicesData[0]?.id || "" 
+                }));
+            }
+            
+            const initialConsumables = {};
+            safeStockItems.forEach((item) => {
+                initialConsumables[item.name] = 
+                    item.name.toLowerCase().includes("plastic") || 
+                    item.name.toLowerCase().includes("detergent") || 
+                    item.name.toLowerCase().includes("fabric") ? loads : 0;
+            });
+            setConsumables(initialConsumables);
+            
+            setInitialLoad(false);
+        }
+
+    } catch (error) {
+        console.error("Failed to fetch data:", error);
+        toast({
+            title: "Data Fetch Error",
+            description: "Unable to load required data.",
+            variant: "destructive",
+        });
+    }
+};
 
     useEffect(() => {
         isMountedRef.current = true;
