@@ -53,7 +53,8 @@ public class SecurityConfig {
                         "/api/machines",
                         "/api/machines/**",
                         "/api/terms",
-                        "/api/track/**"
+                        "/api/track/**",
+                        "/api/transactions/**"
                     ).permitAll()
                     
                     // OPTIONS preflight requests

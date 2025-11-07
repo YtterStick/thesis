@@ -246,7 +246,7 @@ const ViewReceipt = ({
     pdf.save(`receipt-${receiptData?.invoiceNumber || 'unknown'}.pdf`);
   };
 
-  // Calculate totals with proper null checks
+  // Calculate totals with proper null checks - UPDATED TO MATCH PrintableReceipt
   const calculateTotals = () => {
     if (!receiptData) return { consumableTotal: 0, loadsTotal: 0, finalTotal: 0 };
 
@@ -259,14 +259,17 @@ const ViewReceipt = ({
     const loadsCount = receiptData.loads || 0;
     const loadsTotal = loadsCount * servicePrice;
     
-    const finalTotal = receiptData.total != null ? receiptData.total : consumableTotal + loadsTotal;
+    // Use totalPrice if available, otherwise calculate from components
+    const finalTotal = receiptData.totalPrice != null ? receiptData.totalPrice : 
+                      receiptData.total != null ? receiptData.total : 
+                      consumableTotal + loadsTotal;
 
     return { consumableTotal, loadsTotal, finalTotal };
   };
 
   const { consumableTotal, loadsTotal, finalTotal } = calculateTotals();
 
-  // Settings for receipt
+  // Settings for receipt - UPDATED TO MATCH PrintableReceipt STRUCTURE
   const settings = receiptData?.formatSettings || {
     storeName: "STAR WASH",
     address: "53 A Bonifacio Street, Sta Lucia, Novaliches",
@@ -274,281 +277,305 @@ const ViewReceipt = ({
     footerNote: "Thank you for choosing Star Wash",
   };
 
+  // Get amount given and change - UPDATED TO MATCH PrintableReceipt
+  const amountGiven = receiptData?.amountGiven || 0;
+  const change = receiptData?.change || 0;
+
   // Don't render anything if not visible
   if (!showReceiptOptions) return null;
 
   return (
     <>
-      {/* Receipt Modal with Printable Receipt */}
+      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isVisible ? 1 : 0 }}
-        className="inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+        onClick={closeReceiptOptions}
       >
-        <div 
-          className="p-4 rounded-xl max-w-xs w-full mx-4 relative border-2 printable-area"
-          style={{
-            backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D',
-            borderColor: isDarkMode ? '#2A524C' : '#183D3D',
-            color: isDarkMode ? '#13151B' : '#F3EDE3'
-          }}
+        {/* Modal Container */}
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl"
+          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
         >
-          <button
-            onClick={closeReceiptOptions}
-            className="absolute top-2 right-2 transition-colors hover:opacity-70 print:hidden"
-            style={{ color: isDarkMode ? '#13151B' : '#F3EDE3' }}
-          >
-            <X className="w-4 h-4" />
-          </button>
-          
-          {/* Printable Receipt - Now above the buttons */}
+          {/* Modal Content */}
           <div 
-            ref={receiptRef}
-            className="mx-auto max-w-xs space-y-1 rounded border border-dashed border-gray-300 bg-white p-2 font-mono text-xs shadow-md mb-4"
+            className="rounded-xl p-4"
+            style={{
+              backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D',
+              borderColor: isDarkMode ? '#2A524C' : '#183D3D',
+              color: isDarkMode ? '#13151B' : '#F3EDE3'
+            }}
           >
-            {/* Store Header */}
-            <div className="text-center">
-              <div className="text-sm font-bold uppercase text-gray-900">{settings.storeName}</div>
-              <div className="text-[9px] text-gray-600">{settings.address}</div>
-              <div className="text-[9px] text-gray-600">{settings.phone}</div>
-            </div>
-
-            <hr className="my-1 border-gray-300" />
-
-            {/* Invoice Meta */}
-            <div className="grid grid-cols-2 gap-1 text-[9px]">
-              <div className="text-gray-700">
-                Invoice #: <span className="font-bold text-gray-900">{receiptData?.invoiceNumber || "—"}</span>
-              </div>
-              <div className="text-right text-gray-700">
-                Date: <span className="font-bold text-gray-900">{receiptData?.issueDate ? formatDate(receiptData.issueDate) : "—"}</span>
-              </div>
-              <div className="text-gray-700">
-                Customer: <span className="font-bold text-gray-900">{receiptData?.customerName || "—"}</span>
-              </div>
-              <div className="text-right text-gray-700">
-                Contact: <span className="font-bold text-gray-900">{receiptData?.contact || "—"}</span>
-              </div>
-              <div className="text-gray-700">
-                Staff: <span className="font-bold text-gray-900">{receiptData?.staffId || "—"}</span>
-              </div>
-              <div className="text-right text-gray-700">
-                Payment: <span className="font-bold text-gray-900">{receiptData?.paymentMethod || "—"}</span>
+            {/* Close Button */}
+            <button
+              onClick={closeReceiptOptions}
+              className="absolute right-3 top-3 z-10 transition-colors hover:opacity-70 print:hidden"
+              style={{ color: isDarkMode ? '#13151B' : '#F3EDE3' }}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            {/* Printable Receipt */}
+            <div 
+              ref={receiptRef}
+              className="mx-auto max-w-xs space-y-1 rounded border border-dashed border-gray-300 bg-white p-2 font-mono text-xs shadow-md mb-4"
+            >
+              {/* Store Header */}
+              <div className="text-center">
+                <div className="text-sm font-bold uppercase text-gray-900">{settings.storeName}</div>
+                <div className="text-[9px] text-gray-600">{settings.address}</div>
+                <div className="text-[9px] text-gray-600">{settings.phone}</div>
               </div>
 
-              {receiptData?.paymentMethod === "GCash" && receiptData?.gcashReference && (
-                <div className="col-span-2 flex justify-between rounded bg-yellow-50 px-1 py-0.5 text-[8px]">
-                  <span className="text-gray-700">GCash Ref:</span>
-                  <span className="font-mono text-gray-900">{receiptData.gcashReference}</span>
+              <hr className="my-1 border-gray-300" />
+
+              {/* Invoice Meta */}
+              <div className="grid grid-cols-2 gap-1 text-[9px]">
+                <div className="text-gray-700">
+                  Invoice #: <span className="font-bold text-gray-900">{receiptData?.invoiceNumber || "—"}</span>
+                </div>
+                <div className="text-right text-gray-700">
+                  Date: <span className="font-bold text-gray-900">{receiptData?.issueDate ? formatDate(receiptData.issueDate) : "—"}</span>
+                </div>
+                <div className="text-gray-700">
+                  Customer: <span className="font-bold text-gray-900">{receiptData?.customerName || "—"}</span>
+                </div>
+                <div className="text-right text-gray-700">
+                  Contact: <span className="font-bold text-gray-900">{receiptData?.contact || "—"}</span>
+                </div>
+                <div className="text-gray-700">
+                  Staff: <span className="font-bold text-gray-900">{receiptData?.staffId || "—"}</span>
+                </div>
+                <div className="text-right text-gray-700">
+                  Payment: <span className="font-bold text-gray-900">{receiptData?.paymentMethod || "—"}</span>
+                </div>
+
+                {receiptData?.paymentMethod === "GCash" && receiptData?.gcashReference && (
+                  <div className="col-span-2 flex justify-between rounded bg-yellow-50 px-1 py-0.5 text-[8px]">
+                    <span className="text-gray-700">GCash Ref:</span>
+                    <span className="font-mono text-gray-900">{receiptData.gcashReference}</span>
+                  </div>
+                )}
+
+                <div className="col-span-2 flex justify-between text-[9px] font-bold text-red-600">
+                  <span>Due Date:</span>
+                  <span>{receiptData?.dueDate ? formatDate(receiptData.dueDate) : "—"}</span>
+                </div>
+              </div>
+
+              <hr className="my-1 border-gray-300" />
+
+              {/* Service Details */}
+              <div>
+                <div className="mb-0.5 text-[9px] font-bold uppercase text-gray-900">Service Details</div>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between text-gray-700">
+                    <span>
+                      {receiptData?.service?.name || "Service"}: {receiptData?.loads || 0}
+                    </span>
+                    <span className="text-gray-900">{formatCurrency(loadsTotal)}</span>
+                  </div>
+                  {(receiptData?.service?.price || 0) > 0 && (
+                    <div className="pl-1 text-[8px] text-gray-600">
+                      Rate: {formatCurrency(receiptData.service.price)} per load
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Consumables */}
+              {receiptData?.consumables && receiptData.consumables.length > 0 && (
+                <div>
+                  <div className="mb-0.5 text-[9px] font-bold uppercase text-gray-900">Consumables</div>
+                  <div className="space-y-0.5">
+                    {receiptData.consumables.map((item, index) => (
+                      <div key={index} className="flex justify-between text-gray-700">
+                        <span>
+                          {item.name}: {item.quantity || 0}
+                        </span>
+                        <span className="text-gray-900">
+                          {formatCurrency((item.price || 0) * (item.quantity || 0))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <div className="col-span-2 flex justify-between text-[9px] font-bold text-red-600">
-                <span>Due Date:</span>
-                <span>{receiptData?.dueDate ? formatDate(receiptData.dueDate) : "—"}</span>
-              </div>
-            </div>
+              <hr className="my-1 border-gray-300" />
 
-            <hr className="my-1 border-gray-300" />
-
-            {/* Service Details */}
-            <div>
-              <div className="mb-0.5 text-[9px] font-bold uppercase text-gray-900">Service Details</div>
+              {/* Totals - UPDATED TO MATCH PrintableReceipt */}
               <div className="space-y-0.5">
-                <div className="flex justify-between text-gray-700">
-                  <span>
-                    {receiptData?.service?.name || "Service"}: {receiptData?.loads || 0}
-                  </span>
-                  <span className="text-gray-900">{formatCurrency(loadsTotal)}</span>
+                <div className="flex justify-between font-bold text-gray-900">
+                  <span>Total Amount:</span>
+                  <span>{formatCurrency(finalTotal)}</span>
                 </div>
-                {(receiptData?.service?.price || 0) > 0 && (
-                  <div className="pl-1 text-[8px] text-gray-600">
-                    Rate: {formatCurrency(receiptData.service.price)} per load
-                  </div>
+                
+                {/* Amount Given and Change - UPDATED TO MATCH PrintableReceipt */}
+                {amountGiven > 0 && (
+                  <>
+                    <div className="flex justify-between text-[9px] text-gray-700">
+                      <span>Amount Given:</span>
+                      <span className="font-semibold">{formatCurrency(amountGiven)}</span>
+                    </div>
+                    <div className="flex justify-between text-[9px] text-gray-700">
+                      <span>Change:</span>
+                      <span className="font-semibold">{formatCurrency(change)}</span>
+                    </div>
+                  </>
                 )}
               </div>
-            </div>
 
-            {/* Consumables */}
-            {receiptData?.consumables && receiptData.consumables.length > 0 && (
-              <div>
-                <div className="mb-0.5 text-[9px] font-bold uppercase text-gray-900">Consumables</div>
-                <div className="space-y-0.5">
-                  {receiptData.consumables.map((item, index) => (
-                    <div key={index} className="flex justify-between text-gray-700">
-                      <span>
-                        {item.name}: {item.quantity || 0}
-                      </span>
-                      <span className="text-gray-900">
-                        {formatCurrency((item.price || 0) * (item.quantity || 0))}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+              {/* Terms & Conditions */}
+              <div className="mt-1 rounded bg-gray-100 p-1 text-[8px]">
+                <div className="mb-0.5 font-bold text-gray-900">Terms & Conditions</div>
+                <p className="text-gray-700">
+                  Laundry must be claimed within 7 days. Unclaimed items may be subject to disposal. Please retain your invoice for verification.
+                </p>
               </div>
-            )}
 
-            <hr className="my-1 border-gray-300" />
-
-            {/* Totals */}
-            <div className="space-y-0.5">
-              <div className="flex justify-between font-bold text-gray-900">
-                <span>Total Amount:</span>
-                <span>{formatCurrency(finalTotal)}</span>
-              </div>
-              <div className="flex justify-between text-[9px] text-gray-700">
-                <span>Amount Given:</span>
-                <span>{formatCurrency(receiptData?.amountGiven || 0)}</span>
-              </div>
-              <div className="flex justify-between text-[9px] text-gray-700">
-                <span>Change:</span>
-                <span>{formatCurrency(receiptData?.change || 0)}</span>
-              </div>
-            </div>
-
-            {/* Terms & Conditions */}
-            <div className="mt-1 rounded bg-gray-100 p-1 text-[8px]">
-              <div className="mb-0.5 font-bold text-gray-900">Terms & Conditions</div>
-              <p className="text-gray-700">
-                Laundry must be claimed within 7 days. Unclaimed items may be subject to disposal. Please retain your invoice for verification.
-              </p>
-            </div>
-
-            {/* QR Code Section */}
-            {receiptData?.invoiceNumber && (
-              <div className="mt-1 text-center">
-                <div className="flex justify-center">
-                  <div className="rounded border border-gray-300 bg-white p-1">
-                    {/* Screen QR Code */}
-                    <div className="print:hidden">
-                      <QRCode
-                        value={`https://www.starwashph.com/?search=${encodeURIComponent(receiptData.invoiceNumber)}#service_tracking`}
-                        size={50}
-                      />
-                    </div>
-                    {/* Print QR Code */}
-                    {qrImage && (
-                      <div className="hidden print:block">
-                        <img 
-                          src={qrImage} 
-                          alt="QR Code" 
-                          className="h-[50px] w-[50px]"
+              {/* QR Code Section */}
+              {receiptData?.invoiceNumber && (
+                <div className="mt-1 text-center">
+                  <div className="flex justify-center">
+                    <div className="rounded border border-gray-300 bg-white p-1">
+                      {/* Screen QR Code */}
+                      <div className="print:hidden">
+                        <QRCode
+                          value={`https://www.starwashph.com/?search=${encodeURIComponent(receiptData.invoiceNumber)}#service_tracking`}
+                          size={50}
                         />
                       </div>
-                    )}
+                      {/* Print QR Code */}
+                      {qrImage && (
+                        <div className="hidden print:block">
+                          <img 
+                            src={qrImage} 
+                            alt="QR Code" 
+                            className="h-[50px] w-[50px]"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-0.5 text-[8px] text-gray-600">
+                    Scan to track your laundry status
                   </div>
                 </div>
-                <div className="mt-0.5 text-[8px] text-gray-600">
-                  Scan to track your laundry status
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Footer */}
-            <div className="mt-1 border-t border-gray-300 pt-1 text-center text-[8px] text-gray-600">
-              {settings.footerNote}
+              {/* Footer */}
+              <div className="mt-1 border-t border-gray-300 pt-1 text-center text-[8px] text-gray-600">
+                {settings.footerNote}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 print:hidden">
+              <button
+                onClick={handlePrint}
+                className="w-full py-2 px-3 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-xs"
+                style={{
+                  backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
+                  color: isDarkMode ? '#D5DCDB' : '#183D3D'
+                }}
+              >
+                <Printer className="w-4 h-4" />
+                Print Receipt
+              </button>
+              
+              <button
+                onClick={downloadAsPDF}
+                className="w-full py-2 px-3 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-xs"
+                style={{
+                  backgroundColor: isDarkMode ? '#2A524C' : '#F3EDE3',
+                  color: isDarkMode ? '#D5DCDB' : '#183D3D'
+                }}
+              >
+                <FileText className="w-4 h-4" />
+                Download PDF
+              </button>
             </div>
           </div>
-
-          {/* Action Buttons - Now below the receipt */}
-          <div className="space-y-2 print:hidden">
-            <button
-              onClick={handlePrint}
-              className="w-full py-2 px-3 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-xs"
-              style={{
-                backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
-                color: isDarkMode ? '#D5DCDB' : '#183D3D'
-              }}
-            >
-              <Printer className="w-4 h-4" />
-              Print Receipt
-            </button>
-            
-            <button
-              onClick={downloadAsPDF}
-              className="w-full py-2 px-3 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-xs"
-              style={{
-                backgroundColor: isDarkMode ? '#2A524C' : '#F3EDE3',
-                color: isDarkMode ? '#D5DCDB' : '#183D3D'
-              }}
-            >
-              <FileText className="w-4 h-4" />
-              Download PDF
-            </button>
-          </div>
-        </div>
-
-        {/* Print Styles */}
-        <style jsx>{`
-          @media print {
-            @page {
-              margin: 0.05in;
-              size: auto;
-            }
-
-            body * {
-              visibility: hidden;
-            }
-
-            .printable-area,
-            .printable-area * {
-              visibility: visible;
-            }
-
-            .printable-area {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              margin: 0;
-              padding: 0;
-              background: white !important;
-              border: none !important;
-              box-shadow: none !important;
-            }
-
-            .max-w-xs {
-              max-width: 100% !important;
-              margin: 0 auto;
-            }
-
-            .print\\:hidden {
-              display: none !important;
-            }
-
-            .text-xs {
-              font-size: 10px;
-            }
-            .text-\\[9px\\] {
-              font-size: 8px;
-            }
-            .text-\\[8px\\] {
-              font-size: 7px;
-            }
-
-            .text-gray-600,
-            .text-gray-700 {
-              color: #4b5563 !important;
-            }
-
-            .text-gray-900 {
-              color: #000 !important;
-            }
-
-            .bg-yellow-50,
-            .bg-gray-100 {
-              background: #f9fafb !important;
-            }
-
-            .hidden.print\\:block {
-              display: block !important;
-            }
-            .print\\:hidden {
-              display: none !important;
-            }
-          }
-        `}</style>
+        </motion.div>
       </motion.div>
+
+      {/* Print Styles */}
+      <style jsx>{`
+        @media print {
+          @page {
+            margin: 0.05in;
+            size: auto;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          .printable-area,
+          .printable-area * {
+            visibility: visible;
+          }
+
+          .printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: white !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+
+          .max-w-xs {
+            max-width: 100% !important;
+            margin: 0 auto;
+          }
+
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          .text-xs {
+            font-size: 10px;
+          }
+          .text-\\[9px\\] {
+            font-size: 8px;
+          }
+          .text-\\[8px\\] {
+            font-size: 7px;
+          }
+
+          .text-gray-600,
+          .text-gray-700 {
+            color: #4b5563 !important;
+          }
+
+          .text-gray-900 {
+            color: #000 !important;
+          }
+
+          .bg-yellow-50,
+          .bg-gray-100 {
+            background: #f9fafb !important;
+          }
+
+          .hidden.print\\:block {
+            display: block !important;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
     </>
   );
 };
