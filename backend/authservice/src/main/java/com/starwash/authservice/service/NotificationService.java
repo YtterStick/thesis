@@ -348,6 +348,7 @@ public class NotificationService {
         }
         
         // Handle large restocks (for significant quantity changes)
+        // This will only trigger during manual updates, not during addStock operations
         if (previousQuantity != null && currentQuantity > previousQuantity && (currentQuantity - previousQuantity) >= 10) {
             String message = String.format("%s had a bulk restock. Added %d %s. New quantity: %d %s", 
                 item.getName(), (currentQuantity - previousQuantity), item.getUnit(), currentQuantity, item.getUnit());

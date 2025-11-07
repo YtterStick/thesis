@@ -105,8 +105,8 @@ const calculateUnwashedLoads = (records) => {
 
 // Calculate total income and loads
 const calculateTotals = (records) => {
-    const totalIncome = records.reduce((acc, r) => acc + r.price, 0);
-    const totalLoads = records.reduce((acc, r) => acc + r.loads, 0);
+    const totalIncome = records.reduce((acc, r) => acc + (r.price || 0), 0);
+    const totalLoads = records.reduce((acc, r) => acc + (r.loads || 0), 0);
     return { totalIncome, totalLoads };
 };
 
@@ -133,10 +133,10 @@ export default function AdminDashboardPage() {
         return {
             totalIncome: 0,
             totalLoads: 0,
-            unwashedCount: 0,
+            pendingCount: 0,
             totalUnclaimed: 0,
             overviewData: [],
-            unclaimedList: [],
+            todayTransactions: [],
             loading: true,
             error: null,
             lastUpdated: null,
@@ -154,10 +154,10 @@ export default function AdminDashboardPage() {
         return (
             newData.totalIncome !== oldData.totalIncome ||
             newData.totalLoads !== oldData.totalLoads ||
-            newData.unwashedCount !== oldData.unwashedCount ||
+            newData.pendingCount !== oldData.pendingCount ||
             newData.totalUnclaimed !== oldData.totalUnclaimed ||
             JSON.stringify(newData.overviewData) !== JSON.stringify(oldData.overviewData) ||
-            JSON.stringify(newData.unclaimedList) !== JSON.stringify(oldData.unclaimedList)
+            JSON.stringify(newData.todayTransactions) !== JSON.stringify(oldData.todayTransactions)
         );
     };
 
@@ -242,10 +242,10 @@ export default function AdminDashboardPage() {
                 invoiceNumber: r.invoiceNumber,
                 name: r.customerName,
                 service: r.serviceName,
-                loads: r.loads,
+                loads: r.loads || 0,
                 detergent: r.detergent,
                 fabric: r.fabric || "—",
-                price: r.totalPrice,
+                price: r.totalPrice || 0,
                 paymentMethod: r.paymentMethod || "—",
                 pickupStatus: r.pickupStatus,
                 laundryStatus: r.laundryStatus,
@@ -265,12 +265,31 @@ export default function AdminDashboardPage() {
             const unwashedCount = calculateUnwashedLoads(mappedRecords);
             const { totalUnclaimed, unclaimedList } = calculateUnclaimedLoads(mappedRecords);
 
+            // Calculate today's transactions
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todayTransactions = mappedRecords
+                .filter(record => {
+                    if (!record.createdAt) return false;
+                    const recordDate = new Date(record.createdAt);
+                    recordDate.setHours(0, 0, 0, 0);
+                    return recordDate.getTime() === today.getTime();
+                })
+                // Sort by creation date - latest first
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            const pendingCount = todayTransactions.filter(t => 
+                t.laundryStatus !== "Completed" && t.pickupStatus !== "CLAIMED"
+            ).length;
+
             console.log("📈 Calculated metrics:", {
                 totalIncome,
                 totalLoads,
                 unwashedCount,
                 totalUnclaimed,
-                unclaimedListCount: unclaimedList.length
+                pendingCount,
+                todayTransactionsCount: todayTransactions.length
             });
 
             // Get the chart data from your existing backend endpoint
@@ -280,9 +299,10 @@ export default function AdminDashboardPage() {
             const newDashboardData = {
                 totalIncome: totalIncome || 0,
                 totalLoads: totalLoads || 0,
-                unwashedCount: unwashedCount || 0,
+                pendingCount: pendingCount || 0,
                 totalUnclaimed: totalUnclaimed || 0,
-                overviewData: dashboardApiData.overviewData || [], // Keep your working chart data
+                todayTransactions: todayTransactions || [],
+                overviewData: dashboardApiData.overviewData || [],
                 unclaimedList: unclaimedList || [],
             };
 
@@ -402,7 +422,7 @@ export default function AdminDashboardPage() {
     }, [fetchDashboardData, isAuthenticated, isAdmin, logout]);
 
     const formatCurrency = (amount) => {
-        return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
+        return `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
     };
 
     const SkeletonCard = () => (
@@ -480,7 +500,7 @@ export default function AdminDashboardPage() {
         </motion.div>
     );
 
-    const SkeletonUnclaimedList = () => (
+    const SkeletonTodayTransactions = () => (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -511,32 +531,34 @@ export default function AdminDashboardPage() {
                         className="flex items-center justify-between border-b py-3 last:border-none"
                         style={{ borderColor: isDarkMode ? "#334155" : "#e2e8f0" }}
                     >
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex-1">
+                            <div className="flex justify-between">
+                                <div
+                                    className="h-4 w-24 animate-pulse rounded"
+                                    style={{
+                                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                                    }}
+                                ></div>
+                                <div
+                                    className="h-4 w-16 animate-pulse rounded ml-4"
+                                    style={{
+                                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                                    }}
+                                ></div>
+                            </div>
                             <div
-                                className="h-4 w-36 animate-pulse rounded"
+                                className="h-3 w-32 animate-pulse rounded"
                                 style={{
                                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                                 }}
                             ></div>
                             <div
-                                className="h-3 w-44 animate-pulse rounded"
-                                style={{
-                                    backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
-                                }}
-                            ></div>
-                            <div
-                                className="h-3 w-28 animate-pulse rounded"
+                                className="h-3 w-40 animate-pulse rounded"
                                 style={{
                                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                                 }}
                             ></div>
                         </div>
-                        <div
-                            className="h-5 w-20 animate-pulse rounded"
-                            style={{
-                                backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
-                            }}
-                        ></div>
                     </div>
                 ))}
             </div>
@@ -631,10 +653,10 @@ export default function AdminDashboardPage() {
                     <SkeletonCard />
                 </div>
 
-                {/* Chart & Unclaimed List Skeleton */}
+                {/* Chart & Today's Transactions Skeleton */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
                     <SkeletonChart />
-                    <SkeletonUnclaimedList />
+                    <SkeletonTodayTransactions />
                 </div>
             </div>
         );
@@ -697,28 +719,28 @@ export default function AdminDashboardPage() {
         {
             title: "Total Income",
             icon: <PhilippinePeso size={26} />,
-            value: formatCurrency(displayData.totalIncome),
+            value: formatCurrency(displayData.totalIncome || 0),
             color: "#3DD9B6",
             description: "Total revenue generated",
         },
         {
             title: "Total Loads",
             icon: <Package size={26} />,
-            value: displayData.totalLoads.toLocaleString(),
+            value: (displayData.totalLoads || 0).toLocaleString(),
             color: "#60A5FA",
             description: "Laundry loads processed",
         },
         {
-            title: "Unwashed",
+            title: "Pending",
             icon: <Clock8 size={26} />,
-            value: displayData.unwashedCount.toLocaleString(),
+            value: (displayData.pendingCount || 0).toLocaleString(),
             color: "#FB923C",
-            description: "Waiting to be washed",
+            description: "Today's pending laundry",
         },
         {
             title: "Unclaimed",
             icon: <PackageX size={26} />,
-            value: displayData.totalUnclaimed.toLocaleString(),
+            value: (displayData.totalUnclaimed || 0).toLocaleString(),
             color: "#F87171",
             description: "Not picked up",
         },
@@ -821,7 +843,7 @@ export default function AdminDashboardPage() {
                 ))}
             </div>
 
-            {/* 📈 Chart & Unclaimed List */}
+            {/* 📈 Chart & Today's Transactions */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
                 {/* Chart Card */}
                 <motion.div
@@ -868,7 +890,7 @@ export default function AdminDashboardPage() {
                             height="100%"
                         >
                             <AreaChart
-                                data={displayData.overviewData}
+                                data={displayData.overviewData || []}
                                 margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
                             >
                                 <defs>
@@ -894,7 +916,7 @@ export default function AdminDashboardPage() {
                                 <Tooltip
                                     cursor={false}
                                     formatter={(value) => [
-                                        `₱${Number(value)
+                                        `₱${Number(value || 0)
                                             .toFixed(2)
                                             .replace(/\d(?=(\d{3})+\.)/g, "$&,")}`,
                                         "Revenue",
@@ -941,7 +963,7 @@ export default function AdminDashboardPage() {
                     </div>
                 </motion.div>
 
-                {/* Unclaimed List Card */}
+                {/* Today's Transactions Card */}
                 <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -959,13 +981,13 @@ export default function AdminDashboardPage() {
                                 className="mb-1 text-lg font-bold"
                                 style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                             >
-                                Unclaimed Laundry
+                                Today's Transactions
                             </p>
                             <span
                                 className="text-sm"
                                 style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                             >
-                                {displayData.unclaimedList.length} unclaimed loads
+                                {(displayData.todayTransactions?.length || 0)} transactions today
                             </span>
                         </div>
                         <motion.div
@@ -981,13 +1003,13 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div className="h-[260px] overflow-auto px-2">
-                        {displayData.unclaimedList.length === 0 ? (
+                        {!displayData.todayTransactions || displayData.todayTransactions.length === 0 ? (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 className="flex h-full flex-col items-center justify-center py-8 text-center"
                             >
-                                <PackageX
+                                <Package
                                     size={36}
                                     style={{ color: isDarkMode ? "#64748b" : "#94a3b8" }}
                                     className="mb-3"
@@ -996,18 +1018,18 @@ export default function AdminDashboardPage() {
                                     className="mb-1 text-base font-semibold"
                                     style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                 >
-                                    No Unclaimed Loads
+                                    No Transactions Today
                                 </p>
                                 <p
                                     className="text-sm"
                                     style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                 >
-                                    All completed laundry has been picked up
+                                    No transactions have been made today
                                 </p>
                             </motion.div>
                         ) : (
                             <div className="space-y-3">
-                                {displayData.unclaimedList.map((transaction, index) => (
+                                {(displayData.todayTransactions || []).map((transaction, index) => (
                                     <motion.div
                                         key={transaction.id}
                                         initial={{ opacity: 0, x: 20 }}
@@ -1026,41 +1048,41 @@ export default function AdminDashboardPage() {
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <p
-                                                    className="mb-1 text-sm font-semibold"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {transaction.customerName}
-                                                </p>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <p
+                                                        className="text-sm font-semibold"
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                    >
+                                                        {transaction.name || transaction.customerName}
+                                                    </p>
+                                                    <p
+                                                        className="text-sm font-bold ml-4"
+                                                        style={{ color: isDarkMode ? "#3DD9B6" : "#059669" }}
+                                                    >
+                                                        ₱{(transaction.price || transaction.totalPrice || 0).toFixed(2)}
+                                                    </p>
+                                                </div>
                                                 <p
                                                     className="mb-1 text-sm"
                                                     style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                                                 >
-                                                    {transaction.serviceType} • {transaction.loadCount || 0} loads
+                                                    {transaction.service} • {transaction.loads || transaction.loadCount || 0} loads
                                                 </p>
                                                 <p
                                                     className="text-xs"
                                                     style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
                                                 >
-                                                    Invoice: {transaction.invoiceNumber}
+                                                    Payment: {transaction.paymentMethod} • {transaction.pickupStatus}
                                                 </p>
-                                                <p
-                                                    className="text-xs"
-                                                    style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
-                                                >
-                                                    {transaction.date}
-                                                </p>
+                                                {transaction.invoiceNumber && (
+                                                    <p
+                                                        className="text-xs"
+                                                        style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
+                                                    >
+                                                        Invoice: {transaction.invoiceNumber}
+                                                    </p>
+                                                )}
                                             </div>
-                                            <motion.span
-                                                whileHover={{ scale: 1.05 }}
-                                                className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold"
-                                                style={{
-                                                    backgroundColor: "#FB923C20",
-                                                    color: "#FB923C",
-                                                }}
-                                            >
-                                                Unclaimed
-                                            </motion.span>
                                         </div>
                                     </motion.div>
                                 ))}

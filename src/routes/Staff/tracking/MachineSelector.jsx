@@ -10,7 +10,7 @@ const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkM
     const requiredMachineType = getMachineTypeForStep(load?.status, normalizedServiceType);
     
     // FIXED: Only disable selection for FOLDING and COMPLETED, NOT for DRIED
-    const shouldDisableSelection = ["FOLDING", "COMPLETED"].includes(load?.status);
+    const shouldDisableSelection = ["DRIED", "FOLDING", "COMPLETED"].includes(load?.status);
     
     // IMPORTANT: Find current machine from ALL machines, not just filtered options
     const currentMachine = load?.machineId ? 
