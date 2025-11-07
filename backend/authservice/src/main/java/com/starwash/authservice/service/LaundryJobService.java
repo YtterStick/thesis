@@ -344,36 +344,58 @@ public class LaundryJobService {
         return load.getStatus();
     }
 
-   @CacheEvict(value = "laundryJobs", allEntries = true)
-public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus, String processedBy) {
-    if ("COMPLETE".equalsIgnoreCase(newStatus)) {
-        newStatus = STATUS_COMPLETED;
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus, String processedBy) {
+        if ("COMPLETE".equalsIgnoreCase(newStatus)) {
+            newStatus = STATUS_COMPLETED;
+        }
+
+        LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        LoadAssignment load = job.getLoadAssignments().stream()
+                .filter(l -> l.getLoadNumber() == loadNumber)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
+
+        String previousStatus = load.getStatus();
+        load.setStatus(newStatus);
+
+        // FIXED: Release machine when moving to FOLDING or COMPLETED from any previous status
+        // This includes releasing from DRIED to FOLDING
+        if ((STATUS_WASHING.equals(previousStatus) && STATUS_WASHED.equals(newStatus)) ||
+            (STATUS_DRYING.equals(previousStatus) && STATUS_DRIED.equals(newStatus)) ||
+            (STATUS_DRIED.equals(previousStatus) && (STATUS_FOLDING.equals(newStatus) || STATUS_COMPLETED.equals(newStatus))) ||
+            STATUS_COMPLETED.equals(newStatus)) {
+            releaseMachine(load);
+        }
+
+        sendStatusChangeNotifications(job, load, previousStatus, newStatus);
+
+        job.setLaundryProcessedBy(processedBy);
+        LaundryJob savedJob = laundryJobRepository.save(job);
+
+        // ✅ ADDED: Check if all loads are completed and send SMS
+        if (STATUS_COMPLETED.equals(newStatus)) {
+            boolean allLoadsCompleted = savedJob.getLoadAssignments().stream()
+                    .allMatch(l -> STATUS_COMPLETED.equalsIgnoreCase(l.getStatus()));
+
+            System.out.println("🔍 AdvanceLoad - All loads completed: " + allLoadsCompleted);
+            System.out.println("🔍 Load statuses after advance:");
+            savedJob.getLoadAssignments().forEach(l -> {
+                System.out.println("   - Load " + l.getLoadNumber() + ": " + l.getStatus());
+            });
+
+            // Only send SMS notification if ALL loads are now completed
+            if (allLoadsCompleted) {
+                System.out.println("🎉 FINAL LOAD COMPLETED via advanceLoad! Triggering SMS notification...");
+                sendCompletionSmsNotification(savedJob, loadNumber);
+            } else {
+                System.out.println("📝 Load completed via advanceLoad, but waiting for other loads. No SMS sent.");
+            }
+        }
+
+        return savedJob;
     }
-
-    LaundryJob job = findSingleJobByTransaction(transactionId);
-
-    LoadAssignment load = job.getLoadAssignments().stream()
-            .filter(l -> l.getLoadNumber() == loadNumber)
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
-
-    String previousStatus = load.getStatus();
-    load.setStatus(newStatus);
-
-    // FIXED: Release machine when moving to FOLDING or COMPLETED from any previous status
-    // This includes releasing from DRIED to FOLDING
-    if ((STATUS_WASHING.equals(previousStatus) && STATUS_WASHED.equals(newStatus)) ||
-        (STATUS_DRYING.equals(previousStatus) && STATUS_DRIED.equals(newStatus)) ||
-        (STATUS_DRIED.equals(previousStatus) && (STATUS_FOLDING.equals(newStatus) || STATUS_COMPLETED.equals(newStatus))) ||
-        STATUS_COMPLETED.equals(newStatus)) {
-        releaseMachine(load);
-    }
-
-    sendStatusChangeNotifications(job, load, previousStatus, newStatus);
-
-    job.setLaundryProcessedBy(processedBy);
-    return laundryJobRepository.save(job);
-}
 
     private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
         try {
@@ -495,106 +517,106 @@ public LaundryJob advanceLoad(String transactionId, int loadNumber, String newSt
         }
     }
 
-  @CacheEvict(value = "laundryJobs", allEntries = true)
-public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
-    LaundryJob job = advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
+    @CacheEvict(value = "laundryJobs", allEntries = true)
+    public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
+        LaundryJob job = advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
 
-    // Check if this completion resulted in ALL loads being completed
-    boolean allLoadsCompleted = job.getLoadAssignments().stream()
-            .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
-
-    System.out.println("🔍 CompleteLoad - All loads completed: " + allLoadsCompleted);
-    System.out.println("🔍 Load statuses after completion:");
-    job.getLoadAssignments().forEach(load -> {
-        System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus());
-    });
-
-    // Only send SMS notification if ALL loads are now completed
-    if (allLoadsCompleted) {
-        System.out.println("🎉 FINAL LOAD COMPLETED! Triggering SMS notification...");
-        sendCompletionSmsNotification(job, loadNumber);
-    } else {
-        System.out.println("📝 Load completed, but waiting for other loads. No SMS sent.");
-    }
-
-    try {
-        String title = "Load Completed";
-        String message = String.format(
-                "Load %d for %s has been completed. Transaction: %s",
-                loadNumber,
-                job.getCustomerName(),
-                job.getTransactionId());
-
-        notificationService.notifyAllUsers(
-                "load_completed",
-                title,
-                message,
-                job.getTransactionId());
-    } catch (Exception e) {
-        System.err.println("❌ Failed to send completion notification: " + e.getMessage());
-    }
-
-    return job;
-}
-
-   private void sendCompletionSmsNotification(LaundryJob job, int loadNumber) {
-    System.out.println("🎯 sendCompletionSmsNotification called!");
-    System.out.println("🎯 Job: " + job.getTransactionId());
-    System.out.println("🎯 Customer: " + job.getCustomerName());
-    System.out.println("🎯 Contact: " + job.getContact());
-    System.out.println("🎯 Load that triggered completion: " + loadNumber);
-
-    try {
+        // Check if this completion resulted in ALL loads being completed
         boolean allLoadsCompleted = job.getLoadAssignments().stream()
                 .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
 
-        System.out.println("🎯 All loads completed: " + allLoadsCompleted);
-
-        System.out.println("🎯 Load statuses:");
+        System.out.println("🔍 CompleteLoad - All loads completed: " + allLoadsCompleted);
+        System.out.println("🔍 Load statuses after completion:");
         job.getLoadAssignments().forEach(load -> {
-            System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus() +
-                    " (Machine: " + load.getMachineId() + ")");
+            System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus());
         });
 
-        // ONLY send SMS if ALL loads are completed
+        // Only send SMS notification if ALL loads are now completed
         if (allLoadsCompleted) {
-            System.out.println("🚀 ALL LOADS COMPLETED! Sending SMS notification...");
+            System.out.println("🎉 FINAL LOAD COMPLETED! Triggering SMS notification...");
+            sendCompletionSmsNotification(job, loadNumber);
+        } else {
+            System.out.println("📝 Load completed, but waiting for other loads. No SMS sent.");
+        }
 
-            Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
-                    .orElse(null);
-
-            String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
-
-            System.out.println("📱 SMS Details:");
-            System.out.println("   📞 Phone: " + job.getContact());
-            System.out.println("   👤 Customer: " + job.getCustomerName());
-            System.out.println("   🛠️ Service: " + serviceType);
-            System.out.println("   📦 Transaction: " + job.getTransactionId());
-
-            // Send SMS only when ALL loads are done
-            smsService.sendLoadCompletedNotification(
-                    job.getContact(),
+        try {
+            String title = "Load Completed";
+            String message = String.format(
+                    "Load %d for %s has been completed. Transaction: %s",
+                    loadNumber,
                     job.getCustomerName(),
-                    serviceType,
                     job.getTransactionId());
 
-            System.out.println("✅ SMS notification sent for job: " + job.getTransactionId());
-
-        } else {
-            System.out.println("⏳ Not all loads completed yet. Skipping SMS.");
-            int completedCount = (int) job.getLoadAssignments().stream()
-                    .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
-                    .count();
-            int totalLoads = job.getLoadAssignments().size();
-            System.out.println("⏳ Completed: " + completedCount + "/" + totalLoads);
-            
-            // Don't send SMS here - wait until all are completed
+            notificationService.notifyAllUsers(
+                    "load_completed",
+                    title,
+                    message,
+                    job.getTransactionId());
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send completion notification: " + e.getMessage());
         }
-    } catch (Exception e) {
-        System.err.println("❌ Error in sendCompletionSmsNotification: " + e.getMessage());
-        e.printStackTrace();
+
+        return job;
     }
-}
+
+    private void sendCompletionSmsNotification(LaundryJob job, int loadNumber) {
+        System.out.println("🎯 sendCompletionSmsNotification called!");
+        System.out.println("🎯 Job: " + job.getTransactionId());
+        System.out.println("🎯 Customer: " + job.getCustomerName());
+        System.out.println("🎯 Contact: " + job.getContact());
+        System.out.println("🎯 Load that triggered completion: " + loadNumber);
+
+        try {
+            boolean allLoadsCompleted = job.getLoadAssignments().stream()
+                    .allMatch(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()));
+
+            System.out.println("🎯 All loads completed: " + allLoadsCompleted);
+
+            System.out.println("🎯 Load statuses:");
+            job.getLoadAssignments().forEach(load -> {
+                System.out.println("   - Load " + load.getLoadNumber() + ": " + load.getStatus() +
+                        " (Machine: " + load.getMachineId() + ")");
+            });
+
+            // ONLY send SMS if ALL loads are completed
+            if (allLoadsCompleted) {
+                System.out.println("🚀 ALL LOADS COMPLETED! Sending SMS notification...");
+
+                Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
+                        .orElse(null);
+
+                String serviceType = transaction != null ? transaction.getServiceName() : "laundry";
+
+                System.out.println("📱 SMS Details:");
+                System.out.println("   📞 Phone: " + job.getContact());
+                System.out.println("   👤 Customer: " + job.getCustomerName());
+                System.out.println("   🛠️ Service: " + serviceType);
+                System.out.println("   📦 Transaction: " + job.getTransactionId());
+
+                // Send SMS only when ALL loads are done
+                smsService.sendLoadCompletedNotification(
+                        job.getContact(),
+                        job.getCustomerName(),
+                        serviceType,
+                        job.getTransactionId());
+
+                System.out.println("✅ SMS notification sent for job: " + job.getTransactionId());
+
+            } else {
+                System.out.println("⏳ Not all loads completed yet. Skipping SMS.");
+                int completedCount = (int) job.getLoadAssignments().stream()
+                        .filter(load -> STATUS_COMPLETED.equalsIgnoreCase(load.getStatus()))
+                        .count();
+                int totalLoads = job.getLoadAssignments().size();
+                System.out.println("⏳ Completed: " + completedCount + "/" + totalLoads);
+                
+                // Don't send SMS here - wait until all are completed
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error in sendCompletionSmsNotification: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob updateLoadDuration(String transactionId, int loadNumber, int durationMinutes,
@@ -829,38 +851,38 @@ public LaundryJob completeLoad(String transactionId, int loadNumber, String proc
         }
     }
 
-   // In LaundryJobService.java - Update getCompletedUnclaimedJobs method
-public List<LaundryJob> getCompletedUnclaimedJobs() {
-    List<LaundryJob> allJobs = laundryJobRepository.findAll();
-    
-    List<LaundryJob> completedUnclaimed = allJobs.stream()
-        .filter(job -> job.getLoadAssignments() != null)
-        .filter(job -> job.getLoadAssignments().stream()
-            .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
-        .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
-        .filter(job -> !job.isExpired())
-        .filter(job -> !job.isDisposed())
-        // Add GCash verification filter
-        .filter(job -> {
-            try {
-                Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
-                    .orElse(null);
-                
-                if (transaction != null && "GCash".equals(transaction.getPaymentMethod())) {
-                    return Boolean.TRUE.equals(transaction.getGcashVerified());
+    // In LaundryJobService.java - Update getCompletedUnclaimedJobs method
+    public List<LaundryJob> getCompletedUnclaimedJobs() {
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
+        
+        List<LaundryJob> completedUnclaimed = allJobs.stream()
+            .filter(job -> job.getLoadAssignments() != null)
+            .filter(job -> job.getLoadAssignments().stream()
+                .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+            .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+            .filter(job -> !job.isExpired())
+            .filter(job -> !job.isDisposed())
+            // Add GCash verification filter
+            .filter(job -> {
+                try {
+                    Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
+                        .orElse(null);
+                    
+                    if (transaction != null && "GCash".equals(transaction.getPaymentMethod())) {
+                        return Boolean.TRUE.equals(transaction.getGcashVerified());
+                    }
+                    return true; // Keep non-GCash transactions
+                } catch (Exception e) {
+                    System.err.println("Error checking transaction for job " + job.getTransactionId() + ": " + e.getMessage());
+                    return true;
                 }
-                return true; // Keep non-GCash transactions
-            } catch (Exception e) {
-                System.err.println("Error checking transaction for job " + job.getTransactionId() + ": " + e.getMessage());
-                return true;
-            }
-        })
-        .collect(Collectors.toList());
+            })
+            .collect(Collectors.toList());
 
-    System.out.println("✅ Found " + completedUnclaimed.size() + " completed unclaimed jobs (excluding unverified GCash)");
-    
-    return completedUnclaimed;
-}
+        System.out.println("✅ Found " + completedUnclaimed.size() + " completed unclaimed jobs (excluding unverified GCash)");
+        
+        return completedUnclaimed;
+    }
 
     public List<LaundryJob> getExpiredJobs() {
         return laundryJobRepository.findByExpiredTrueAndDisposedFalse();
@@ -1093,27 +1115,27 @@ public List<LaundryJob> getCompletedUnclaimedJobs() {
     }
 
     // In LaundryJobService.java
-public List<LaundryJob> getCompletedUnclaimedJobsWithVerifiedPayments() {
-    List<LaundryJob> completedJobs = getCompletedUnclaimedJobs();
-    
-    // Filter out unverified GCash transactions
-    return completedJobs.stream()
-        .filter(job -> {
-            try {
-                Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
-                    .orElse(null);
-                
-                if (transaction != null && "GCash".equals(transaction.getPaymentMethod())) {
-                    return Boolean.TRUE.equals(transaction.getGcashVerified());
+    public List<LaundryJob> getCompletedUnclaimedJobsWithVerifiedPayments() {
+        List<LaundryJob> completedJobs = getCompletedUnclaimedJobs();
+        
+        // Filter out unverified GCash transactions
+        return completedJobs.stream()
+            .filter(job -> {
+                try {
+                    Transaction transaction = transactionRepository.findByInvoiceNumber(job.getTransactionId())
+                        .orElse(null);
+                    
+                    if (transaction != null && "GCash".equals(transaction.getPaymentMethod())) {
+                        return Boolean.TRUE.equals(transaction.getGcashVerified());
+                    }
+                    return true; // Keep non-GCash transactions
+                } catch (Exception e) {
+                    System.err.println("Error checking transaction for job " + job.getTransactionId() + ": " + e.getMessage());
+                    return true; // In case of error, keep the job
                 }
-                return true; // Keep non-GCash transactions
-            } catch (Exception e) {
-                System.err.println("Error checking transaction for job " + job.getTransactionId() + ": " + e.getMessage());
-                return true; // In case of error, keep the job
-            }
-        })
-        .collect(Collectors.toList());
-}
+            })
+            .collect(Collectors.toList());
+    }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
     public LaundryJob releaseMachine(String transactionId, int loadNumber, String processedBy) {
