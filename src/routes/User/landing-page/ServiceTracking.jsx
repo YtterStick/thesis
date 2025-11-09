@@ -171,87 +171,53 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         try {
             console.log(`📄 Fetching receipt data for: ${invoiceNumber}`);
             
-            // First try to get the transaction ID from the tracking data
-            let transactionId = trackingData?.id;
+            // Use the tracking receipt endpoint that now includes proper format settings and amount given
+            const response = await fetch(`${API_BASE_URL}/api/track/${invoiceNumber}/receipt`);
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch receipt data from tracking endpoint");
+            }
+
+            const data = await response.json();
+            console.log("✅ Receipt data received from tracking endpoint:", data);
             
-            if (!transactionId) {
-                console.log("⚠️ No transaction ID found in tracking data, trying to fetch transaction by invoice number");
-                // Try to find the transaction by invoice number
-                const transactionsResponse = await fetch(`${API_BASE_URL}/api/transactions`);
-                if (transactionsResponse.ok) {
-                    const allTransactions = await transactionsResponse.json();
-                    const transaction = allTransactions.find(tx => tx.invoiceNumber === invoiceNumber);
-                    if (transaction) {
-                        transactionId = transaction.id;
-                        console.log(`✅ Found transaction ID: ${transactionId}`);
-                    }
-                }
-            }
-
-            if (transactionId) {
-                // Use the same endpoint as AdminRecordTable - this returns ServiceInvoiceDto
-                const response = await fetch(`${API_BASE_URL}/api/transactions/${transactionId}/service-invoice`);
-
-                if (!response.ok) {
-                    throw new Error("Failed to fetch receipt data from service-invoice endpoint");
-                }
-
-                const data = await response.json();
-                console.log("✅ Receipt data received from service-invoice:", data);
-                
-                // Transform the data to match what ViewReceipt expects
-                const transformedData = {
-                    ...data,
-                    // Ensure all required fields are present
-                    invoiceNumber: data.invoiceNumber || invoiceNumber,
-                    customerName: data.customerName,
-                    contact: data.contact,
-                    issueDate: data.issueDate,
-                    dueDate: data.dueDate,
-                    staffId: data.staffId,
-                    totalPrice: data.total,
-                    paymentMethod: data.paymentMethod,
-                    amountGiven: data.amountGiven,
-                    change: data.change,
-                    service: data.service,
-                    consumables: data.consumables,
-                    formatSettings: data.formatSettings,
-                    loads: data.loads || trackingData?.loads || 0
-                };
-                
-                setReceiptData(transformedData);
-                return transformedData;
-            } else {
-                throw new Error("Could not find transaction ID for this invoice");
-            }
+            // Transform the data to match what ViewReceipt expects
+            const transformedData = {
+                ...data,
+                // Ensure all required fields are present
+                invoiceNumber: data.invoiceNumber || invoiceNumber,
+                customerName: data.customerName,
+                contact: data.contact,
+                issueDate: data.issueDate,
+                dueDate: data.dueDate,
+                staffId: data.staffId,
+                totalPrice: data.total,
+                paymentMethod: data.paymentMethod,
+                // ✅ FIX: Use the actual amountGiven and change from the response
+                amountGiven: data.amountGiven || data.total || 0,
+                change: data.change || 0,
+                service: data.service,
+                consumables: data.consumables,
+                formatSettings: data.formatSettings,
+                loads: data.loads || trackingData?.loads || 0,
+                // Include GCash reference if available
+                gcashReference: data.gcashReference || trackingData?.gcashReference
+            };
+            
+            setReceiptData(transformedData);
+            return transformedData;
         } catch (error) {
-            console.error("❌ Error fetching receipt data from service-invoice:", error);
-            // Fallback: try the original endpoint
-            try {
-                console.log("🔄 Trying fallback receipt endpoint...");
-                const fallbackResponse = await fetch(`${API_BASE_URL}/api/track/${invoiceNumber}/receipt`);
-                
-                if (fallbackResponse.ok) {
-                    const fallbackData = await fallbackResponse.json();
-                    console.log("✅ Fallback receipt data received:", fallbackData);
-                    setReceiptData(fallbackData);
-                    return fallbackData;
-                } else {
-                    throw new Error("Fallback endpoint also failed");
-                }
-            } catch (fallbackError) {
-                console.error("❌ Fallback receipt data also failed:", fallbackError);
-                // Final fallback: create receipt data from tracking data
-                const fallbackReceiptData = createReceiptDataFromTracking(trackingData);
-                setReceiptData(fallbackReceiptData);
-                return fallbackReceiptData;
-            }
+            console.error("❌ Error fetching receipt data from tracking endpoint:", error);
+            // Fallback: create receipt data from tracking data with proper amount given and change
+            const fallbackReceiptData = createReceiptDataFromTracking(trackingData);
+            setReceiptData(fallbackReceiptData);
+            return fallbackReceiptData;
         } finally {
             setIsLoadingReceipt(false);
         }
     };
 
-    // UPDATED: Create fallback receipt data from tracking data with proper fields
+    // UPDATED: Create fallback receipt data from tracking data with proper fields including amountGiven and change
     const createReceiptDataFromTracking = (trackingData) => {
         if (!trackingData) return null;
 
@@ -263,9 +229,10 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             dueDate: trackingData.dueDate,
             staffId: trackingData.staffId,
             totalPrice: trackingData.totalPrice,
-            total: trackingData.totalPrice, // Add both total and totalPrice for compatibility
+            total: trackingData.totalPrice,
             paymentMethod: trackingData.paymentMethod,
-            amountGiven: trackingData.amountGiven || trackingData.totalPrice, // Default to totalPrice if no amountGiven
+            // ✅ FIX: Use the actual amountGiven and change from tracking data
+            amountGiven: trackingData.amountGiven || trackingData.totalPrice,
             change: trackingData.change || 0,
             service: {
                 name: trackingData.serviceName,
@@ -406,6 +373,14 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             const receiptData = await fetchReceiptData(trackingData.invoiceNumber);
             setReceiptData(receiptData);
             setShowReceiptOptions(true);
+            
+            // Small delay to ensure state is updated before printing
+            setTimeout(() => {
+                const printButton = document.querySelector('[onClick*="handlePrint"]');
+                if (printButton) {
+                    printButton.click();
+                }
+            }, 100);
         } catch (error) {
             console.error("Error handling print receipt:", error);
             const fallbackData = createReceiptDataFromTracking(trackingData);
@@ -755,6 +730,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                         showFullCustomerInfo={showFullCustomerInfo}
                                         toggleFullCustomerInfo={toggleFullCustomerInfo}
                                         handleViewReceipt={handleViewReceipt}
+                                        handlePrintReceipt={handlePrintReceipt}
                                         customerData={trackingData}
                                     />
 

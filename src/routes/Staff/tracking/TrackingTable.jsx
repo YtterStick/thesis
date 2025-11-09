@@ -24,18 +24,11 @@ const TrackingTable = ({
   getMachineTypeForStep,
   isLoadRunning,
   maskContact,
-  isDarkMode
+  isDarkMode,
+  globalLoading,
+  pendingRequests
 }) => {
   const [completingLoads, setCompletingLoads] = useState({});
-
-  // // Debug logging for machines prop
-  // console.log("🔄 TrackingTable Machines:", {
-  //   machinesProp: machines,
-  //   washers: machines?.WASHER?.length || 0,
-  //   dryers: machines?.DRYER?.length || 0,
-  //   washerNames: machines?.WASHER?.map(w => w.name) || [],
-  //   dryerNames: machines?.DRYER?.map(d => d.name) || []
-  // });
 
   const handleCompletionAnimation = (jobKey, loadIndex) => {
     const completionKey = `${jobKey}-${loadIndex}`;
@@ -152,19 +145,6 @@ const TrackingTable = ({
                         const machineType = getMachineTypeForStep(load.status, normalizedServiceType);
                         const options = machineType === "WASHER" ? machines.WASHER : machineType === "DRYER" ? machines.DRYER : [];
 
-                        // Debug logging for each load
-                        // console.log("🔍 TrackingTable Load Debug:", {
-                        //   jobKey,
-                        //   customerName: job.customerName,
-                        //   serviceType: job.serviceType,
-                        //   normalizedServiceType,
-                        //   loadStatus: load.status,
-                        //   loadNumber: load.loadNumber,
-                        //   machineType,
-                        //   optionsLength: options?.length || 0,
-                        //   options: options
-                        // });
-
                         return (
                           <motion.tr
                             key={`${jobKey}-load${load.loadNumber}`}
@@ -235,9 +215,10 @@ const TrackingTable = ({
                                   options={options}
                                   jobs={jobs}
                                   assignMachine={(machineId) => assignMachine(jobKey, originalIndex, machineId)}
-                                  disabled={isLoadRunning(load) || load.status === "FOLDING" || load.status === "COMPLETED"}
+                                  disabled={isLoadRunning(load) || load.status === "FOLDING" || load.status === "COMPLETED" || globalLoading}
                                   isDarkMode={isDarkMode}
                                   job={job}
+                                  pendingRequests={pendingRequests}
                                 />
                               )}
                               {/* Show message when machine selector is hidden */}
@@ -268,7 +249,7 @@ const TrackingTable = ({
                                   <Select
                                     value={load.duration?.toString() ?? ""}
                                     onValueChange={(val) => updateDuration(jobKey, originalIndex, parseInt(val))}
-                                    disabled={load.status === "FOLDING" || load.status === "COMPLETED"}
+                                    disabled={load.status === "FOLDING" || load.status === "COMPLETED" || globalLoading}
                                   >
                                     <SelectTrigger 
                                       className="mx-auto w-[120px] transition-all"
@@ -276,6 +257,7 @@ const TrackingTable = ({
                                         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                                         borderColor: isDarkMode ? "#475569" : "#cbd5e1",
                                         color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                        opacity: (load.status === "FOLDING" || load.status === "COMPLETED" || globalLoading) ? 0.7 : 1,
                                       }}
                                     >
                                       <SelectValue placeholder="Duration" />
@@ -318,6 +300,8 @@ const TrackingTable = ({
                                 machines={machines}
                                 isDarkMode={isDarkMode}
                                 onCompletion={handleCompletionAnimation}
+                                globalLoading={globalLoading}
+                                pendingRequests={pendingRequests}
                               />
                             </td>
                           </motion.tr>

@@ -10,8 +10,13 @@ const Footer = ({ isDarkMode }) => {
           {/* Brand & Contact */}
           <div className="space-y-4 lg:col-span-1">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-[#F3EDE3] rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-[#0B2B26] font-bold text-sm">SW</span>
+              {/* Replace SW text with GIF logo */}
+              <div className="w-10 h-10 bg-[#F3EDE3] rounded-lg flex items-center justify-center shadow-lg overflow-hidden">
+                <img
+                  src="/logo.gif"
+                  alt="Star Wash Logo"
+                  className="h-full w-full object-cover"
+                />
               </div>
               <span className="font-deathstar text-2xl text-[#F3EDE3] tracking-wider">
                 STAR WASH
@@ -26,14 +31,14 @@ const Footer = ({ isDarkMode }) => {
                 <Mail className="w-4 h-4 text-[#F3EDE3] mt-1 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-[#F3EDE3]">Email</p>
-                  <p>AIGANGSHAR@SMACL.COM</p>
+                  <p>starwashph_stalucia@gmail.com</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <Phone className="w-4 h-4 text-[#F3EDE3] mt-1 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-[#F3EDE3]">Phone</p>
-                  <p>0999922497</p>
+                  <p>09150475513</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">

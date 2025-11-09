@@ -253,18 +253,23 @@ const LoginPage = () => {
                             className="flex justify-center"
                         >
                             <div className="relative">
+                                {/* Circular GIF Logo - slightly larger */}
                                 <motion.div
-                                    className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-[#1E3A8A] to-[#3B82F6] shadow-lg"
+                                    className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full"
                                     whileHover={{ rotate: 5 }}
                                     animate={{ rotate: [0, -2, 2, 0] }}
                                     transition={{ duration: 4, repeat: Infinity, repeatDelay: 5 }}
                                 >
-                                    <span className="text-lg font-bold text-[#F0F9FF]">SW</span>
+                                    <img
+                                        src="/logo.gif"
+                                        alt="Star Wash Logo"
+                                        className="h-full w-full object-cover"
+                                    />
                                 </motion.div>
                                 <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                                    className="pointer-events-none absolute -inset-3 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#DBEAFE] opacity-20 blur-md"
+                                    className="pointer-events-none absolute -inset-4 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#DBEAFE] opacity-20 blur-md"
                                 />
                             </div>
                         </motion.div>

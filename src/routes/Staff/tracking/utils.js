@@ -1,4 +1,3 @@
-
 export const ALLOWED_SKEW_MS = 5000;
 export const REQUEST_TIMEOUT = 10000;
 
@@ -12,9 +11,10 @@ export const isTokenExpired = (token) => {
     }
 };
 
+// UPDATED: Show complete contact number without masking
 export const maskContact = (contact) => {
-    if (!contact || contact.length < 7) return contact;
-    return `${contact.slice(0, 4)}****${contact.slice(-3)}`;
+    if (!contact) return "—";
+    return contact.toString(); // Return the complete number as-is
 };
 
 export const fetchWithTimeout = (url, options = {}, timeout = REQUEST_TIMEOUT) => {

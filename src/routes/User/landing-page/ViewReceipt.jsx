@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { X, Printer, FileText } from "lucide-react";
+import { X, FileText } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import QRCode from "react-qr-code";
 import QR from "qrcode";
@@ -11,7 +11,6 @@ const ViewReceipt = ({
   isDarkMode, 
   showReceiptOptions, 
   closeReceiptOptions, 
-  handlePrintReceipt, 
   handleDownloadReceipt, 
   receiptData 
 }) => {
@@ -59,11 +58,6 @@ const ViewReceipt = ({
       generateQR();
     }
   }, [receiptData?.invoiceNumber]);
-
-  // Handle print
-  const handlePrint = () => {
-    window.print();
-  };
 
   // Download as PDF - EXACT copy of receipt appearance
   const downloadAsPDF = async () => {
@@ -246,47 +240,33 @@ const ViewReceipt = ({
     pdf.save(`receipt-${receiptData?.invoiceNumber || 'unknown'}.pdf`);
   };
 
-  // Calculate totals with proper null checks - UPDATED TO MATCH PrintableReceipt
-  // Calculate totals with proper null checks - FIXED VERSION
-const calculateTotals = () => {
+  // Calculate totals with proper null checks
+  const calculateTotals = () => {
     if (!receiptData) return { consumableTotal: 0, loadsTotal: 0, finalTotal: 0 };
 
     const consumableTotal = (receiptData.consumables || []).reduce(
-        (sum, item) => sum + (item.price || 0) * (item.quantity || 0), 
-        0
+      (sum, item) => sum + (item.price || 0) * (item.quantity || 0), 
+      0
     );
     
     const servicePrice = receiptData.service?.price || 0;
     const loadsCount = receiptData.loads || 0;
     const loadsTotal = loadsCount * servicePrice;
     
-    // Use totalPrice if available, otherwise calculate from components
-    const finalTotal = receiptData.totalPrice != null ? receiptData.totalPrice : 
-                      receiptData.total != null ? receiptData.total : 
-                      consumableTotal + loadsTotal;
+    const finalTotal = receiptData.total != null ? receiptData.total : consumableTotal + loadsTotal;
 
     return { consumableTotal, loadsTotal, finalTotal };
-};
-
-const { consumableTotal, loadsTotal, finalTotal } = calculateTotals();
-
-// Get amount given and change from receiptData (not from trackingData)
-const amountGiven = receiptData?.amountGiven || 0;
-const change = receiptData?.change || 0;
+  };
 
   const { consumableTotal, loadsTotal, finalTotal } = calculateTotals();
 
-  // Settings for receipt - UPDATED TO MATCH PrintableReceipt STRUCTURE
+  // Settings for receipt
   const settings = receiptData?.formatSettings || {
     storeName: "STAR WASH",
     address: "53 A Bonifacio Street, Sta Lucia, Novaliches",
     phone: "09150475513",
     footerNote: "Thank you for choosing Star Wash",
   };
-
-  // Get amount given and change - UPDATED TO MATCH PrintableReceipt
-  const amountGiven = receiptData?.amountGiven || 0;
-  const change = receiptData?.change || 0;
 
   // Don't render anything if not visible
   if (!showReceiptOptions) return null;
@@ -322,7 +302,7 @@ const change = receiptData?.change || 0;
             {/* Close Button */}
             <button
               onClick={closeReceiptOptions}
-              className="absolute right-3 top-3 z-10 transition-colors hover:opacity-70 print:hidden"
+              className="absolute right-3 top-3 z-10 transition-colors hover:opacity-70"
               style={{ color: isDarkMode ? '#13151B' : '#F3EDE3' }}
             >
               <X className="w-5 h-5" />
@@ -417,26 +397,20 @@ const change = receiptData?.change || 0;
 
               <hr className="my-1 border-gray-300" />
 
-              {/* Totals - UPDATED TO MATCH PrintableReceipt */}
+              {/* Totals */}
               <div className="space-y-0.5">
                 <div className="flex justify-between font-bold text-gray-900">
                   <span>Total Amount:</span>
                   <span>{formatCurrency(finalTotal)}</span>
                 </div>
-                
-                {/* Amount Given and Change - UPDATED TO MATCH PrintableReceipt */}
-                {amountGiven > 0 && (
-                  <>
-                    <div className="flex justify-between text-[9px] text-gray-700">
-                      <span>Amount Given:</span>
-                      <span className="font-semibold">{formatCurrency(amountGiven)}</span>
-                    </div>
-                    <div className="flex justify-between text-[9px] text-gray-700">
-                      <span>Change:</span>
-                      <span className="font-semibold">{formatCurrency(change)}</span>
-                    </div>
-                  </>
-                )}
+                <div className="flex justify-between text-[9px] text-gray-700">
+                  <span>Amount Given:</span>
+                  <span>{formatCurrency(receiptData?.amountGiven || 0)}</span>
+                </div>
+                <div className="flex justify-between text-[9px] text-gray-700">
+                  <span>Change:</span>
+                  <span>{formatCurrency(receiptData?.change || 0)}</span>
+                </div>
               </div>
 
               {/* Terms & Conditions */}
@@ -452,23 +426,10 @@ const change = receiptData?.change || 0;
                 <div className="mt-1 text-center">
                   <div className="flex justify-center">
                     <div className="rounded border border-gray-300 bg-white p-1">
-                      {/* Screen QR Code */}
-                      <div className="print:hidden">
-                        <QRCode
-                          value={`https://www.starwashph.com/?search=${encodeURIComponent(receiptData.invoiceNumber)}#service_tracking`}
-                          size={50}
-                        />
-                      </div>
-                      {/* Print QR Code */}
-                      {qrImage && (
-                        <div className="hidden print:block">
-                          <img 
-                            src={qrImage} 
-                            alt="QR Code" 
-                            className="h-[50px] w-[50px]"
-                          />
-                        </div>
-                      )}
+                      <QRCode
+                        value={`https://www.starwashph.com/?search=${encodeURIComponent(receiptData.invoiceNumber)}#service_tracking`}
+                        size={50}
+                      />
                     </div>
                   </div>
                   <div className="mt-0.5 text-[8px] text-gray-600">
@@ -484,19 +445,7 @@ const change = receiptData?.change || 0;
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-2 print:hidden">
-              <button
-                onClick={handlePrint}
-                className="w-full py-2 px-3 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-xs"
-                style={{
-                  backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
-                  color: isDarkMode ? '#D5DCDB' : '#183D3D'
-                }}
-              >
-                <Printer className="w-4 h-4" />
-                Print Receipt
-              </button>
-              
+            <div className="space-y-2">
               <button
                 onClick={downloadAsPDF}
                 className="w-full py-2 px-3 rounded-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-xs"
@@ -512,77 +461,6 @@ const change = receiptData?.change || 0;
           </div>
         </motion.div>
       </motion.div>
-
-      {/* Print Styles */}
-      <style jsx>{`
-        @media print {
-          @page {
-            margin: 0.05in;
-            size: auto;
-          }
-
-          body * {
-            visibility: hidden;
-          }
-
-          .printable-area,
-          .printable-area * {
-            visibility: visible;
-          }
-
-          .printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            background: white !important;
-            border: none !important;
-            box-shadow: none !important;
-          }
-
-          .max-w-xs {
-            max-width: 100% !important;
-            margin: 0 auto;
-          }
-
-          .print\\:hidden {
-            display: none !important;
-          }
-
-          .text-xs {
-            font-size: 10px;
-          }
-          .text-\\[9px\\] {
-            font-size: 8px;
-          }
-          .text-\\[8px\\] {
-            font-size: 7px;
-          }
-
-          .text-gray-600,
-          .text-gray-700 {
-            color: #4b5563 !important;
-          }
-
-          .text-gray-900 {
-            color: #000 !important;
-          }
-
-          .bg-yellow-50,
-          .bg-gray-100 {
-            background: #f9fafb !important;
-          }
-
-          .hidden.print\\:block {
-            display: block !important;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-        }
-      `}</style>
     </>
   );
 };

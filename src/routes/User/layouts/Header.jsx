@@ -136,7 +136,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
               <motion.div 
-                className="w-9 h-9 rounded-lg flex items-center justify-center shadow-lg transition-colors"
+                className="w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden shadow-lg transition-colors"
                 style={{
                   backgroundColor: isDarkMode ? '#F3EDE3' : '#0B2B26'
                 }}
@@ -144,12 +144,12 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                 animate={{ rotate: [0, -2, 2, 0] }}
                 transition={{ duration: 4, repeat: Infinity, repeatDelay: 5 }}
               >
-                <span className="font-bold text-sm transition-colors"
-                  style={{
-                    color: isDarkMode ? '#0B2B26' : '#F3EDE3'
-                  }}>
-                  SW
-                </span>
+                {/* Replace SW text with GIF logo */}
+                <img
+                  src="/logo.gif"
+                  alt="Star Wash Logo"
+                  className="h-full w-full object-cover"
+                />
               </motion.div>
               <motion.span 
                 className="font-deathstar text-xl tracking-wider transition-colors"

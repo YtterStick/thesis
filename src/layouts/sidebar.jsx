@@ -117,15 +117,11 @@ export const Sidebar = forwardRef(({ collapsed, links, user, role, isLoading = f
                 "flex items-center p-3 min-h-[60px] flex-shrink-0",
                 collapsed ? "justify-center" : "gap-x-3"
             )}>
+                {/* Use GIF from public folder */}
                 <img
-                    src={logoLight}
+                    src="/logo.gif"
                     alt="Logo"
-                    className="h-6 dark:hidden"
-                />
-                <img
-                    src={logoDark}
-                    alt="Logo (dark)"
-                    className="hidden h-6 dark:block"
+                    className="h-6"
                 />
                 {!collapsed && (
                     <motion.p
