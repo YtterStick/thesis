@@ -2,19 +2,27 @@ package com.starwash.authservice.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Document(collection = "transactions")
+@CompoundIndex(name = "createdAt_idx", def = "{'createdAt': -1}")
+@CompoundIndex(name = "invoiceNumber_idx", def = "{'invoiceNumber': 1}")
+@CompoundIndex(name = "customerName_idx", def = "{'customerName': 1}")
+@CompoundIndex(name = "paymentMethod_idx", def = "{'paymentMethod': 1}")
 public class Transaction {
 
     @Id
     private String id;
 
+    @Indexed(unique = true)
     private String invoiceNumber;
 
+    @Indexed
     private String customerName;
     private String contact;
 
@@ -25,18 +33,22 @@ public class Transaction {
     private List<ServiceEntry> consumables;
     private Double totalPrice;
 
+    @Indexed
     private String paymentMethod;
     private Double amountGiven;
     private Double change;
 
     private LocalDateTime issueDate;
     private LocalDateTime dueDate; 
+    
+    @Indexed
     private String staffId;
 
     private Boolean gcashVerified;
     private String gcashReference;
     
     @CreatedDate
+    @Indexed
     private LocalDateTime createdAt;
 
     public Transaction() {}

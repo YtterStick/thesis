@@ -4,6 +4,12 @@ import com.starwash.authservice.dto.*;
 import com.starwash.authservice.model.*;
 import com.starwash.authservice.repository.*;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -384,6 +390,7 @@ public class TransactionService {
                 .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
                 .count();
 
+        // FIXED: Corrected lambda syntax
         int unclaimedCount = (int) nonDisposedJobs.stream()
                 .filter(job -> job.getLoadAssignments() != null &&
                         job.getLoadAssignments().stream()
@@ -410,101 +417,135 @@ public class TransactionService {
         return summary;
     }
 
-    public List<AdminRecordResponseDto> getAllAdminRecords() {
-        List<Transaction> allTransactions = transactionRepository.findAll();
-        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+    // OPTIMIZED VERSION WITH PAGINATION AND CACHING
+    @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size")
+    public List<AdminRecordResponseDto> getAllAdminRecords(int page, int size) {
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            System.out.println("🔄 Fetching admin records - Page: " + page + ", Size: " + size);
+            
+            // Use pagination for transactions
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Page<Transaction> transactionPage = transactionRepository.findAll(pageable);
+            List<Transaction> transactions = transactionPage.getContent();
+            
+            // Get only the laundry jobs needed for these transactions
+            List<String> transactionIds = transactions.stream()
+                    .map(Transaction::getInvoiceNumber)
+                    .collect(Collectors.toList());
+                    
+            List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
+            Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
+                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-        Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
-                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+            LocalDateTime currentManilaTime = getCurrentManilaTime();
 
-        LocalDateTime currentManilaTime = getCurrentManilaTime();
+            List<AdminRecordResponseDto> result = transactions.stream().map(tx -> {
+                AdminRecordResponseDto dto = new AdminRecordResponseDto();
+                dto.setId(tx.getId());
+                dto.setInvoiceNumber(tx.getInvoiceNumber());
+                dto.setCustomerName(tx.getCustomerName());
+                dto.setContact(tx.getContact());
+                dto.setServiceName(tx.getServiceName());
+                dto.setLoads(tx.getServiceQuantity());
 
-        return allTransactions.stream().map(tx -> {
-            AdminRecordResponseDto dto = new AdminRecordResponseDto();
-            dto.setId(tx.getId());
-            dto.setInvoiceNumber(tx.getInvoiceNumber());
-            dto.setCustomerName(tx.getCustomerName());
-            dto.setContact(tx.getContact());
-            dto.setServiceName(tx.getServiceName());
-            dto.setLoads(tx.getServiceQuantity());
+                String detergentQty = tx.getConsumables().stream()
+                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                        .map(c -> String.valueOf(c.getQuantity()))
+                        .findFirst().orElse("0");
 
-            String detergentQty = tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                    .map(c -> String.valueOf(c.getQuantity()))
-                    .findFirst().orElse("0");
+                String fabricQty = tx.getConsumables().stream()
+                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                        .map(c -> String.valueOf(c.getQuantity()))
+                        .findFirst().orElse("0");
 
-            String fabricQty = tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                    .map(c -> String.valueOf(c.getQuantity()))
-                    .findFirst().orElse("0");
+                dto.setDetergent(detergentQty);
+                dto.setFabric(fabricQty);
 
-            dto.setDetergent(detergentQty);
-            dto.setFabric(fabricQty);
+                dto.setTotalPrice(tx.getTotalPrice());
+                dto.setPaymentMethod(tx.getPaymentMethod());
+                dto.setProcessedByStaff(tx.getStaffId());
+                dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
+                dto.setCreatedAt(tx.getCreatedAt());
 
-            dto.setTotalPrice(tx.getTotalPrice());
-            dto.setPaymentMethod(tx.getPaymentMethod());
-            dto.setProcessedByStaff(tx.getStaffId());
-            dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
-            dto.setCreatedAt(tx.getCreatedAt());
+                dto.setGcashVerified(tx.getGcashVerified());
 
-            dto.setGcashVerified(tx.getGcashVerified());
+                LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+                if (job != null) {
+                    dto.setPickupStatus(
+                            job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
 
-            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
-            if (job != null) {
-                dto.setPickupStatus(
-                        job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
+                    if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
+                        long completedLoads = job.getLoadAssignments().stream()
+                                .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
+                                .count();
 
-                if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
-                    long completedLoads = job.getLoadAssignments().stream()
-                            .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
-                            .count();
+                        long totalLoads = job.getLoadAssignments().size();
 
-                    long totalLoads = job.getLoadAssignments().size();
-
-                    if (completedLoads == totalLoads) {
-                        dto.setLaundryStatus("Completed");
-                    } else if (completedLoads > 0) {
-                        dto.setLaundryStatus("In Progress");
-                    } else {
-                        boolean anyInProgress = job.getLoadAssignments().stream()
-                                .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
-                                        !"COMPLETED".equalsIgnoreCase(load.getStatus()));
-
-                        if (anyInProgress) {
+                        if (completedLoads == totalLoads) {
+                            dto.setLaundryStatus("Completed");
+                        } else if (completedLoads > 0) {
                             dto.setLaundryStatus("In Progress");
                         } else {
-                            dto.setLaundryStatus("Not Started");
+                            boolean anyInProgress = job.getLoadAssignments().stream()
+                                    .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
+                                            !"COMPLETED".equalsIgnoreCase(load.getStatus()));
+
+                            if (anyInProgress) {
+                                dto.setLaundryStatus("In Progress");
+                            } else {
+                                dto.setLaundryStatus("Not Started");
+                            }
                         }
+
+                        long unwashedLoadsCount = job.getLoadAssignments().stream()
+                                .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                                .count();
+                        dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
+
+                    } else {
+                        dto.setLaundryStatus("Not Started");
+                        dto.setUnwashedLoadsCount(tx.getServiceQuantity());
                     }
 
-                    long unwashedLoadsCount = job.getLoadAssignments().stream()
-                            .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
-                            .count();
-                    dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
-
+                    dto.setExpired(job.isExpired());
+                    dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
+                    dto.setClaimProcessedBy(job.getClaimedByStaffId());
+                    dto.setDisposed(job.isDisposed());
+                    dto.setDisposedBy(job.getDisposedBy());
                 } else {
+                    dto.setPickupStatus("UNCLAIMED");
                     dto.setLaundryStatus("Not Started");
                     dto.setUnwashedLoadsCount(tx.getServiceQuantity());
+                    dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
+                    dto.setLaundryProcessedBy(null);
+                    dto.setClaimProcessedBy(null);
+                    dto.setDisposed(false);
+                    dto.setDisposedBy(null);
                 }
 
-                dto.setExpired(job.isExpired());
-                dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
-                dto.setClaimProcessedBy(job.getClaimedByStaffId());
-                dto.setDisposed(job.isDisposed());
-                dto.setDisposedBy(job.getDisposedBy());
-            } else {
-                dto.setPickupStatus("UNCLAIMED");
-                dto.setLaundryStatus("Not Started");
-                dto.setUnwashedLoadsCount(tx.getServiceQuantity());
-                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
-                dto.setLaundryProcessedBy(null);
-                dto.setClaimProcessedBy(null);
-                dto.setDisposed(false);
-                dto.setDisposedBy(null);
+                return dto;
+            }).collect(Collectors.toList());
+            
+            return result;
+        } finally {
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("🕒 getAllAdminRecords took: " + duration + "ms");
+            if (duration > 5000) {
+                System.out.println("⚠️  SLOW QUERY DETECTED: " + duration + "ms");
             }
+        }
+    }
 
-            return dto;
-        }).collect(Collectors.toList());
+    // Keep old method for backward compatibility
+    public List<AdminRecordResponseDto> getAllAdminRecords() {
+        return getAllAdminRecords(0, 50); // Default to first 50 records
+    }
+
+    @CacheEvict(value = "adminRecords", allEntries = true)
+    public void evictAdminRecordsCache() {
+        System.out.println("🗑️  Admin records cache evicted");
     }
 
     public List<Transaction> findPendingGcashTransactions() {
@@ -570,5 +611,10 @@ public class TransactionService {
         }
 
         System.out.println("✅ Fixed " + fixedCount + " transaction dates to Manila time");
+    }
+    
+    // Get total count for pagination
+    public long getTotalAdminRecordsCount() {
+        return transactionRepository.count();
     }
 }

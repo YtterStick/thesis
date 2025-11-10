@@ -36,4 +36,8 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
     // In LaundryJobRepository.java
     @Query("{ 'loadAssignments.status': { $ne: 'COMPLETED' } }")
     List<LaundryJob> findIncompleteJobs();
+    
+    
+    @Query("{ 'transactionId': { $in: ?0 } }")
+    List<LaundryJob> findByTransactionIdIn(List<String> transactionIds);
 }
