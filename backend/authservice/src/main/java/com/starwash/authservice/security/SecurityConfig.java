@@ -60,8 +60,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     
                     // Role-based endpoints
-                    .requestMatchers("/api/dashboard/admin").hasRole("ADMIN")
-                    .requestMatchers("/api/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
+                    .requestMatchers("/dashboard/admin").hasRole("ADMIN")
+                    .requestMatchers("/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
                     .requestMatchers("/api/accounts/**").hasRole("ADMIN")
                     
                     // Authenticated endpoints

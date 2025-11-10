@@ -235,7 +235,7 @@ export default function AdminDashboardPage() {
             console.log("🔐 User authenticated, proceeding to dashboard data...");
 
             // Fetch records from the same endpoint as AdminRecordTable
-            const recordsData = await api.get("api/admin/records");
+            const recordsData = await api.get("/admin/records");
             console.log("📊 Raw records data:", recordsData);
 
             // Map the records to match AdminRecordTable structure
@@ -295,7 +295,7 @@ export default function AdminDashboardPage() {
             });
 
             // Get the chart data from your existing backend endpoint
-            const dashboardApiData = await api.get("/api/dashboard/admin");
+            const dashboardApiData = await api.get("/dashboard/admin");
             console.log("📊 Chart data from backend:", dashboardApiData.overviewData);
 
             const newDashboardData = {
