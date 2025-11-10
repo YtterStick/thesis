@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("")
 @CrossOrigin(origins = "http://localhost:3000")
 public class AccountController {
 

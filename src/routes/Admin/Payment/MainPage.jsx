@@ -246,8 +246,8 @@ const PaymentManagementPage = () => {
 
     try {
       const [settingsData, transactionsData] = await Promise.all([
-        api.get("api/payment-settings"),
-        api.get("api/transactions/pending-gcash")
+        api.get("/payment-settings"),
+        api.get("/transactions/pending-gcash")
       ]);
       
       const newPaymentData = {
@@ -380,7 +380,7 @@ const PaymentManagementPage = () => {
       const newStatus = !paymentData.gcashEnabled;
 
       console.log("📡 Updating GCash setting to:", newStatus);
-      await api.put("api/payment-settings", { gcashEnabled: newStatus });
+      await api.put("/payment-settings", { gcashEnabled: newStatus });
 
       // Update local state
       const updatedData = {
@@ -429,7 +429,7 @@ const PaymentManagementPage = () => {
 
     try {
       setIsVerifying(true);
-      await api.post(`api/transactions/${transactionToVerify.id}/verify-gcash`);
+      await api.post(`/transactions/${transactionToVerify.id}/verify-gcash`);
       
       toast({
         title: "Success",

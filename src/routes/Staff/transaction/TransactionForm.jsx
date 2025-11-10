@@ -244,9 +244,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     try {
         // Use the api utility instead of direct fetch calls
         const [servicesData, stockData, paymentData] = await Promise.all([
-            api.get("api/services"),
-            api.get("api/stock"),
-            api.get("api/payment-settings")
+            api.get("/services"),
+            api.get("/stock"),
+            api.get("/payment-settings")
         ]);
 
         const safeStockItems = Array.isArray(stockData) ? stockData : (stockData.items ?? []);

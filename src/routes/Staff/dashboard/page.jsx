@@ -150,7 +150,7 @@ const StaffDashboardPage = () => {
 
     try {
       // Use the api utility instead of direct fetch
-      const data = await api.get("api/dashboard/staff");
+      const data = await api.get("/dashboard/staff");
       
       const newDashboardData = {
         todayIncome: data.todayIncome || 0,

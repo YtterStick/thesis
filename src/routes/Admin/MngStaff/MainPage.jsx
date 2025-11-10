@@ -30,7 +30,7 @@ const MainPage = () => {
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        const data = await api.get("api/accounts");
+        const data = await api.get("/accounts");
         const enriched = data.map((acc) => ({
           ...acc,
           status: acc.status || "Active",
@@ -54,7 +54,7 @@ const MainPage = () => {
 
   const handleStatusChange = useCallback(async (id, newStatus) => {
     try {
-      await api.patch(`api/accounts/${id}/status`, { status: newStatus });
+      await api.patch(`/accounts/${id}/status`, { status: newStatus });
 
       setAccountList(prev => 
         prev.map(acc => 
@@ -105,7 +105,7 @@ const MainPage = () => {
     setDeleting(true);
     try {
       // First deactivate the account
-      await api.patch(`api/accounts/${accountToDelete.id}/status`, { status: "Inactive" });
+      await api.patch(`/accounts/${accountToDelete.id}/status`, { status: "Inactive" });
 
       // Update local state
       setAccountList(prev => 

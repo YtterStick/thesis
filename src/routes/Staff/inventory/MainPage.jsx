@@ -9,7 +9,7 @@ import { api } from "@/lib/api-config";
 
 const fetchInventory = async () => {
     try {
-        const data = await api.get("api/stock");
+        const data = await api.get("/stock");
         return Array.isArray(data) ? data : [];
     } catch (error) {
         console.error("Error fetching inventory:", error);

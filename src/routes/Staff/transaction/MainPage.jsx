@@ -62,7 +62,7 @@ const MainPage = () => {
     const checkUnclaimedLaundry = async (customerName, contact) => {
         try {
             // Get all records to check for unclaimed laundry
-            const response = await api.get("api/records");
+            const response = await api.get("/records");
             
             const currentTime = new Date();
             
@@ -131,7 +131,7 @@ const MainPage = () => {
 
             console.log("📝 Transaction payload staffId:", payloadWithStaff.staffId);
 
-            const response = await api.post("api/transactions", payloadWithStaff);
+            const response = await api.post("/transactions", payloadWithStaff);
             console.log("🧾 Full backend response:", response);
             console.log("🔍 Response structure keys:", Object.keys(response));
             

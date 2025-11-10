@@ -409,7 +409,7 @@ const SalesReportPage = () => {
                 }
 
                 // Use the api utility instead of direct fetch
-                const data = await api.get(`api/reports/sales?${params}`);
+                const data = await api.get(`/reports/sales?${params}`);
 
                 // Process sales data with smart grouping
                 let processedSalesData = processSalesData(data.salesTrend || [], dateRange, requestStartDate, requestEndDate);

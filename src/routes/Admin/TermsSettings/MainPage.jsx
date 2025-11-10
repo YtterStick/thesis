@@ -111,7 +111,7 @@ const MainPage = () => {
     }
 
     try {
-      const data = await api.get("api/terms");
+      const data = await api.get("/terms");
       const newTerms = data || [];
       
       const currentTime = Date.now();
@@ -171,7 +171,7 @@ const MainPage = () => {
 
   const handleAddTerm = async (newTerm) => {
     try {
-      const saved = await api.post("api/terms", newTerm);
+      const saved = await api.post("/terms", newTerm);
       
       setTerms((prev) => {
         const newTerms = [...prev, saved];
@@ -205,7 +205,7 @@ const MainPage = () => {
 
   const handleEditTerm = async (updatedTerm) => {
     try {
-      const saved = await api.put(`api/terms/${updatedTerm.id}`, updatedTerm);
+      const saved = await api.put(`/terms/${updatedTerm.id}`, updatedTerm);
       
       setTerms((prev) => {
         const newTerms = prev.map((term) => (term.id === saved.id ? saved : term));
@@ -240,7 +240,7 @@ const MainPage = () => {
 
   const handleDeleteTerm = async (id, title) => {
     try {
-      await api.delete(`api/terms/${id}`);
+      await api.delete(`/terms/${id}`);
       
       setTerms((prev) => {
         const newTerms = prev.filter((term) => term.id !== id);
