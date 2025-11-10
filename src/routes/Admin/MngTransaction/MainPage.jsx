@@ -14,7 +14,8 @@ const MainPage = () => {
     
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [timeFilter, setTimeFilter] = useState("all");
+    const [summaryLoading, setSummaryLoading] = useState(true);
+    const [timeFilter, setTimeFilter] = useState("today");
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [filteredRecordsCount, setFilteredRecordsCount] = useState(0);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -24,6 +25,17 @@ const MainPage = () => {
     const [pageSize, setPageSize] = useState(50);
     const [totalRecords, setTotalRecords] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    
+    // SUMMARY STATE
+    const [summaryData, setSummaryData] = useState({
+        totalIncome: 0,
+        totalLoads: 0,
+        totalFabric: 0,
+        totalDetergent: 0,
+        expiredCount: 0,
+        unclaimedCount: 0,
+        totalRecords: 0
+    });
     
     // AUTO SEARCH STATE
     const [autoSearchTerm, setAutoSearchTerm] = useState("");
@@ -70,6 +82,29 @@ const MainPage = () => {
             localStorage.setItem('adminRecordFilters', JSON.stringify(activeFilters));
         }
     }, [activeFilters]);
+
+    // FETCH SUMMARY DATA
+    const fetchSummaryData = async (timeFilter = "all") => {
+        try {
+            setSummaryLoading(true);
+            console.log(`📊 Fetching summary data for: ${timeFilter}`);
+            
+            let summary;
+            if (timeFilter === "all") {
+                summary = await api.get("/admin/records/summary");
+            } else {
+                summary = await api.get(`/admin/records/summary/${timeFilter}`);
+            }
+            
+            setSummaryData(summary);
+            console.log(`✅ Summary data loaded:`, summary);
+            
+        } catch (error) {
+            console.error("❌ Summary fetch error:", error);
+        } finally {
+            setSummaryLoading(false);
+        }
+    };
 
     // FETCH RECORDS WITH PAGINATION
     const fetchRecords = async (page = 0, size = pageSize) => {
@@ -124,8 +159,9 @@ const MainPage = () => {
         }
     };
 
-    // Load records and total count on component mount
+    // Load data on component mount
     useEffect(() => {
+        fetchSummaryData(timeFilter);
         fetchRecords(currentPage, pageSize);
         fetchTotalCount();
     }, []);
@@ -134,6 +170,11 @@ const MainPage = () => {
     useEffect(() => {
         fetchRecords(currentPage, pageSize);
     }, [currentPage, pageSize]);
+
+    // Load summary when time filter changes
+    useEffect(() => {
+        fetchSummaryData(timeFilter);
+    }, [timeFilter]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -144,61 +185,6 @@ const MainPage = () => {
         document.addEventListener("pointerdown", handlePointerDown);
         return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, []);
-
-    // Filter records based on time filter
-    const filterRecordsByTime = (records) => {
-        const now = new Date();
-        let filtered = [...records];
-
-        switch (timeFilter) {
-            case "today":
-                const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                filtered = records.filter((r) => new Date(r.createdAt) >= todayStart);
-                break;
-            case "week":
-                const weekStart = new Date(now);
-                const dayOfWeek = now.getDay();
-                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                weekStart.setDate(now.getDate() + diffToMonday);
-                weekStart.setHours(0, 0, 0, 0);
-                filtered = records.filter((r) => new Date(r.createdAt) >= weekStart);
-                break;
-            case "month":
-                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-                filtered = records.filter((r) => new Date(r.createdAt) >= monthStart);
-                break;
-            case "year":
-                const yearStart = new Date(now.getFullYear(), 0, 1);
-                filtered = records.filter((r) => new Date(r.createdAt) >= yearStart);
-                break;
-            case "all":
-            default:
-                break;
-        }
-
-        return filtered;
-    };
-
-    const filteredRecords = filterRecordsByTime(records);
-
-    // Update metrics calculation
-    const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
-    const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
-    const totalFabric = filteredRecords.reduce((acc, r) => {
-        const fabricQty = parseInt(r.fabric) || 0;
-        return acc + fabricQty;
-    }, 0);
-    const totalDetergent = filteredRecords.reduce((acc, r) => {
-        const detergentQty = parseInt(r.detergent) || 0;
-        return acc + detergentQty;
-    }, 0);
-    const expired = filteredRecords.filter((r) => r.expired && !r.disposed).length;
-    const unclaimed = filteredRecords.filter((r) => 
-        r.pickupStatus === "UNCLAIMED" && 
-        r.laundryStatus === "Completed" &&
-        !r.expired && 
-        !r.disposed
-    ).length;
 
     // Format total income with commas
     const formatCurrency = (amount) => {
@@ -224,53 +210,59 @@ const MainPage = () => {
         }
     };
 
-    // First row cards
+    // First row cards - USING SUMMARY DATA
     const firstRowCards = [
         {
             label: "Total Income",
-            value: formatCurrency(totalIncome),
+            value: formatCurrency(summaryData.totalIncome || 0),
             icon: <PhilippinePeso size={26} />,
             color: "#3DD9B6",
-            tooltip: "Total income from filtered transactions",
+            tooltip: `Total income from ${timeFilter} transactions`,
+            loading: summaryLoading
         },
         {
             label: "Total Fabric",
-            value: totalFabric.toLocaleString(),
+            value: (summaryData.totalFabric || 0).toLocaleString(),
             icon: <Flower size={26} />,
             color: "#FB923C",
-            tooltip: "Total fabric softener used",
+            tooltip: `Total fabric softener used in ${timeFilter}`,
+            loading: summaryLoading
         },
         {
             label: "Total Detergent",
-            value: totalDetergent.toLocaleString(),
+            value: (summaryData.totalDetergent || 0).toLocaleString(),
             icon: <Droplets size={26} />,
             color: "#A78BFA",
-            tooltip: "Total detergent used",
+            tooltip: `Total detergent used in ${timeFilter}`,
+            loading: summaryLoading
         },
     ];
 
-    // Second row cards
+    // Second row cards - USING SUMMARY DATA
     const secondRowCards = [
         {
             label: "Total Loads",
-            value: totalLoads.toLocaleString(),
+            value: (summaryData.totalLoads || 0).toLocaleString(),
             icon: <Package size={26} />,
             color: "#60A5FA",
-            tooltip: "Total number of laundry loads in filtered period",
+            tooltip: `Total number of laundry loads in ${timeFilter}`,
+            loading: summaryLoading
         },
         {
             label: "Unclaimed Loads",
-            value: unclaimed.toLocaleString(),
+            value: (summaryData.unclaimedCount || 0).toLocaleString(),
             icon: <AlertCircle size={26} />,
             color: "#FACC15",
             tooltip: "Completed loads that haven't been picked up yet (excluding expired and disposed loads)",
+            loading: summaryLoading
         },
         {
             label: "Expired Loads",
-            value: expired.toLocaleString(),
+            value: (summaryData.expiredCount || 0).toLocaleString(),
             icon: <TimerOff size={26} />,
             color: "#F87171",
             tooltip: "Loads that exceeded their pickup window (excluding disposed loads)",
+            loading: summaryLoading
         },
     ];
 
@@ -491,6 +483,91 @@ const MainPage = () => {
         </motion.div>
     );
 
+    // Card component that handles loading state
+    const SummaryCard = ({ label, value, icon, color, tooltip, loading }) => {
+        if (loading) {
+            return (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl border-2 p-5 transition-all"
+                    style={{
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                    }}
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <motion.div
+                            className="rounded-lg p-2 animate-pulse"
+                            style={{
+                                backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+                            }}
+                        >
+                            <div className="h-6 w-6"></div>
+                        </motion.div>
+                        <div className="h-6 w-20 rounded animate-pulse"
+                             style={{
+                                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+                             }} />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                        <div className="h-5 w-28 rounded animate-pulse"
+                             style={{
+                                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+                             }} />
+                    </div>
+                </motion.div>
+            );
+        }
+
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ 
+                    scale: 1.03,
+                    y: -2,
+                    transition: { duration: 0.2 }
+                }}
+                className="rounded-xl border-2 p-5 transition-all"
+                style={{
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                }}
+                title={tooltip}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="rounded-lg p-2"
+                        style={{
+                            backgroundColor: `${color}20`,
+                            color: color,
+                        }}
+                    >
+                        {icon}
+                    </motion.div>
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="text-right"
+                    >
+                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            {value}
+                        </p>
+                    </motion.div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                        {label}
+                    </h3>
+                </div>
+            </motion.div>
+        );
+    };
+
     return (
         <div 
             className="space-y-5 px-6 pb-5 pt-4 overflow-visible min-h-screen"
@@ -521,7 +598,7 @@ const MainPage = () => {
                         </p>
                         <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                             Manage and track all laundry transactions
-                            {totalRecords > 0 && ` • ${totalRecords.toLocaleString()} total records`}
+                            {summaryData.totalRecords > 0 && ` • ${summaryData.totalRecords.toLocaleString()} total records`}
                         </p>
                     </div>
                 </div>
@@ -760,118 +837,16 @@ const MainPage = () => {
             <div className="space-y-5">
                 {/* First Row - Total Income, Total Fabric, Total Detergent */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                    {loading ? (
-                        [...Array(3)].map((_, index) => (
-                            <SkeletonCard key={index} index={index} />
-                        ))
-                    ) : (
-                        firstRowCards.map(({ label, value, icon, color, tooltip }, index) => (
-                            <motion.div
-                                key={label}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                whileHover={{ 
-                                    scale: 1.03,
-                                    y: -2,
-                                    transition: { duration: 0.2 }
-                                }}
-                                className="rounded-xl border-2 p-5 transition-all"
-                                style={{
-                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                }}
-                                title={tooltip}
-                            >
-                                <div className="flex items-center justify-between mb-4">
-                                    <motion.div
-                                        whileHover={{ scale: 1.1, rotate: 5 }}
-                                        className="rounded-lg p-2"
-                                        style={{
-                                            backgroundColor: `${color}20`,
-                                            color: color,
-                                        }}
-                                    >
-                                        {icon}
-                                    </motion.div>
-                                    <motion.div
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ delay: index * 0.2 }}
-                                        className="text-right"
-                                    >
-                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                            {value}
-                                        </p>
-                                    </motion.div>
-                                </div>
-                                
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                        {label}
-                                    </h3>
-                                </div>
-                            </motion.div>
-                        ))
-                    )}
+                    {firstRowCards.map((card, index) => (
+                        <SummaryCard key={card.label} {...card} index={index} />
+                    ))}
                 </div>
 
                 {/* Second Row - Total Loads, Unclaimed Loads, Expired Loads */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                    {loading ? (
-                        [...Array(3)].map((_, index) => (
-                            <SkeletonCard key={index} index={index + 3} />
-                        ))
-                    ) : (
-                        secondRowCards.map(({ label, value, icon, color, tooltip }, index) => (
-                            <motion.div
-                                key={label}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: (index + 3) * 0.1 }}
-                                whileHover={{ 
-                                    scale: 1.03,
-                                    y: -2,
-                                    transition: { duration: 0.2 }
-                                }}
-                                className="rounded-xl border-2 p-5 transition-all"
-                                style={{
-                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                }}
-                                title={tooltip}
-                            >
-                                <div className="flex items-center justify-between mb-4">
-                                    <motion.div
-                                        whileHover={{ scale: 1.1, rotate: 5 }}
-                                        className="rounded-lg p-2"
-                                        style={{
-                                            backgroundColor: `${color}20`,
-                                            color: color,
-                                        }}
-                                    >
-                                        {icon}
-                                    </motion.div>
-                                    <motion.div
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ delay: (index + 3) * 0.2 }}
-                                        className="text-right"
-                                    >
-                                        <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                            {value}
-                                        </p>
-                                    </motion.div>
-                                </div>
-                                
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                        {label}
-                                    </h3>
-                                </div>
-                            </motion.div>
-                        ))
-                    )}
+                    {secondRowCards.map((card, index) => (
+                        <SummaryCard key={card.label} {...card} index={index + 3} />
+                    ))}
                 </div>
             </div>
 
@@ -900,12 +875,12 @@ const MainPage = () => {
                             </p>
                         </div>
                         <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                            {filteredRecordsCount > 0 ? filteredRecordsCount : filteredRecords.length} records found
+                            {filteredRecordsCount > 0 ? filteredRecordsCount : records.length} records found
                         </span>
                     </div>
                     
                     <AdminRecordTable
-                        items={filteredRecords}
+                        items={records}
                         allItems={records}
                         isDarkMode={isDarkMode}
                         timeFilter={timeFilter}

@@ -2,6 +2,7 @@ package com.starwash.authservice.controller;
 
 import com.starwash.authservice.dto.AdminRecordResponseDto;
 import com.starwash.authservice.service.TransactionService;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,6 +40,33 @@ public class AdminRecordController {
         return ResponseEntity.ok(records);
     }
 
+    // ✅ GET /api/admin/records/filtered — returns time-filtered paginated transaction records
+    @GetMapping("/records/filtered")
+    public ResponseEntity<List<AdminRecordResponseDto>> getAllAdminRecordsByTime(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "all") String timeFilter) {
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        // Validate pagination parameters
+        if (page < 0) page = 0;
+        if (size <= 0) size = 50;
+        if (size > 1000) size = 1000;
+
+        // Validate time filter
+        List<String> validFilters = Arrays.asList("all", "today", "week", "month", "year");
+        if (!validFilters.contains(timeFilter)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<AdminRecordResponseDto> records = transactionService.getAllAdminRecordsByTime(page, size, timeFilter);
+        return ResponseEntity.ok(records);
+    }
+
     // ✅ GET /api/admin/records/count — returns total count for pagination
     @GetMapping("/records/count")
     public ResponseEntity<Long> getTotalRecordsCount(
@@ -49,6 +77,26 @@ public class AdminRecordController {
         }
 
         long totalCount = transactionService.getTotalAdminRecordsCount();
+        return ResponseEntity.ok(totalCount);
+    }
+
+    // ✅ GET /api/admin/records/count/filtered — returns count for time-filtered records
+    @GetMapping("/records/count/filtered")
+    public ResponseEntity<Long> getTotalRecordsCountByTime(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "all") String timeFilter) {
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        // Validate time filter
+        List<String> validFilters = Arrays.asList("all", "today", "week", "month", "year");
+        if (!validFilters.contains(timeFilter)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        long totalCount = transactionService.getTotalAdminRecordsCountByTime(timeFilter);
         return ResponseEntity.ok(totalCount);
     }
 
@@ -85,8 +133,9 @@ public class AdminRecordController {
         return ResponseEntity.ok(summary);
     }
 
-    // ✅ POST /api/admin/records/cache/clear — clear cache (admin only)
+    // ✅ POST /api/admin/records/cache/clear — clear all cache (admin only)
     @PostMapping("/records/cache/clear")
+    @CacheEvict(value = {"adminRecords", "adminRecordsCount", "adminSummary"}, allEntries = true)
     public ResponseEntity<Void> clearAdminRecordsCache(
             @RequestHeader("Authorization") String authHeader) {
         
@@ -101,6 +150,7 @@ public class AdminRecordController {
 
     // ✅ POST /api/admin/records/cache/clear/records — clear only records cache
     @PostMapping("/records/cache/clear/records")
+    @CacheEvict(value = {"adminRecords", "adminRecordsCount"}, allEntries = true)
     public ResponseEntity<Void> clearAdminRecordsCacheOnly(
             @RequestHeader("Authorization") String authHeader) {
         
@@ -114,6 +164,7 @@ public class AdminRecordController {
 
     // ✅ POST /api/admin/records/cache/clear/summary — clear only summary cache
     @PostMapping("/records/cache/clear/summary")
+    @CacheEvict(value = "adminSummary", allEntries = true)
     public ResponseEntity<Void> clearAdminSummaryCacheOnly(
             @RequestHeader("Authorization") String authHeader) {
         
