@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/missing-items")
+@RequestMapping("/missing-items")
 @CrossOrigin(origins = "http://localhost:3000")
 public class MissingItemController {
 

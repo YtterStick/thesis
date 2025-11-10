@@ -44,16 +44,16 @@ public class SecurityConfig {
                         "/register",
                         "/",
                         "/health",
-                        "/api/health",
-                        "/api/laundry-jobs",
-                        "/api/services",
-                        "/api/services/**",
-                        "/api/stock",
-                        "/api/stock/**",
-                        "/api/machines",
-                        "/api/machines/**",
-                        "/api/terms",
-                        "/api/track/**"
+                        "/health",
+                        "/laundry-jobs",
+                        "/services",
+                        "/services/**",
+                        "/stock",
+                        "/stock/**",
+                        "/machines",
+                        "/machines/**",
+                        "/terms",
+                        "/track/**"
                     ).permitAll()
                     
                     // OPTIONS preflight requests

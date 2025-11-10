@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/audit-logs")
+@RequestMapping("/audit-logs")
 @CrossOrigin(origins = "http://localhost:3000")
 public class AuditController {
     private final AuditService auditService;

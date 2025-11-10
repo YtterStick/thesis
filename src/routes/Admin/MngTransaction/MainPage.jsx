@@ -71,7 +71,7 @@ const MainPage = () => {
     useEffect(() => {
         const fetchRecords = async () => {
             try {
-                const data = await api.get("api/admin/records");
+                const data = await api.get("/admin/records");
                 
                 const mapped = data.map((r) => ({
                     id: r.id,

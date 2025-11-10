@@ -182,7 +182,7 @@ const AdminRecordTable = ({
                 console.log("🔄 Fetching ALL GCash references...");
                 
                 // Use the same endpoint as your PaymentManagementPage
-                const pendingGcashData = await api.get("api/transactions/pending-gcash");
+                const pendingGcashData = await api.get("/transactions/pending-gcash");
                 console.log("📦 Received GCash data:", pendingGcashData);
                 
                 // Create a mapping of invoiceNumber -> gcashReference
@@ -425,7 +425,7 @@ const AdminRecordTable = ({
             setIsPrinting(true);
             
             // Use the api utility instead of direct fetch
-            const invoiceData = await api.get(`api/transactions/${record.id}/service-invoice`);
+            const invoiceData = await api.get(`/transactions/${record.id}/service-invoice`);
             
             console.log("📄 Invoice data:", invoiceData);
             setPrintData(invoiceData);

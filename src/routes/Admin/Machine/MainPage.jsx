@@ -533,7 +533,7 @@ export default function MachineMainPage() {
 
     try {
       // Use the api utility instead of direct fetch
-      const data = await api.get("api/machines");
+      const data = await api.get("/machines");
       const newMachines = data || [];
       
       const currentTime = Date.now();
@@ -626,13 +626,13 @@ export default function MachineMainPage() {
       let saved;
       if (form.id) {
         // Use the api utility for PUT request
-        saved = await api.put(`api/machines/${form.id}`, {
+        saved = await api.put(`/machines/${form.id}`, {
           ...form,
           capacityKg: parseFloat(form.capacityKg),
         });
       } else {
         // Use the api utility for POST request
-        saved = await api.post("api/machines", {
+        saved = await api.post("/machines", {
           ...form,
           capacityKg: parseFloat(form.capacityKg),
         });
@@ -693,7 +693,7 @@ export default function MachineMainPage() {
   const handleDelete = async (id) => {
     try {
       // Use the api utility for DELETE request
-      await api.delete(`api/machines/${id}`);
+      await api.delete(`/machines/${id}`);
 
       // Update local state and cache
       const updatedMachines = machines.filter(m => m.id !== id);

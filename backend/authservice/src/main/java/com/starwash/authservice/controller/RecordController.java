@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map; // Add this import
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("")
 public class RecordController {
 
     private final TransactionService transactionService;

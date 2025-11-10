@@ -120,7 +120,7 @@ const MainPage = () => {
 
   const fetchInventory = async () => {
     try {
-      const data = await api.get("api/stock");
+      const data = await api.get("/stock");
       const safeItems = Array.isArray(data) ? data : (data.items ?? []);
       setItems(safeItems);
     } catch (error) {
@@ -145,13 +145,13 @@ const MainPage = () => {
           ...data,
           id: editingItem.id
         };
-        await api.put(`api/stock/${editingItem.id}`, updateData);
+        await api.put(`/stock/${editingItem.id}`, updateData);
         toast({
           title: "Success",
           description: "Item updated successfully",
         });
       } else {
-        await api.post("api/stock", data);
+        await api.post("/stock", data);
         toast({
           title: "Success",
           description: "Item added successfully",
@@ -182,7 +182,7 @@ const MainPage = () => {
     
     setDeleting(true);
     try {
-      await api.delete(`api/stock/${item.id}`);
+      await api.delete(`/stock/${item.id}`);
       toast({
         title: "Success",
         description: `"${item.name}" has been deleted successfully`,
@@ -217,7 +217,7 @@ const MainPage = () => {
     
     setAddingStock(true);
     try {
-      await api.put(`api/stock/${selectedItem.id}/restock?amount=${amount}`);
+      await api.put(`/stock/${selectedItem.id}/restock?amount=${amount}`);
       toast({
         title: "Success",
         description: `Added ${amount} stock to ${selectedItem.name}`,

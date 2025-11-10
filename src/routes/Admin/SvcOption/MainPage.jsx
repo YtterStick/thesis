@@ -112,7 +112,7 @@ export default function MainPage() {
       setLoading(true);
 
       try {
-        const data = await api.get("api/services");
+        const data = await api.get("/services");
         const newServices = data || [];
         
         const currentTime = Date.now();
@@ -178,7 +178,7 @@ export default function MainPage() {
 
     const handleSave = async (updated) => {
         const method = updated.id ? "PUT" : "POST";
-        const endpoint = updated.id ? `api/services/${updated.id}` : "api/services";
+        const endpoint = updated.id ? `/services/${updated.id}` : "/services";
 
         try {
             let saved;
@@ -222,7 +222,7 @@ export default function MainPage() {
 
     const handleDelete = async (id) => {
         try {
-            await api.delete(`api/services/${id}`);
+            await api.delete(`/services/${id}`);
             
             setServices((prev) => {
                 const newServices = prev.filter((s) => s.id !== id);

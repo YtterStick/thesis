@@ -223,7 +223,7 @@ export default function ReceiptConfigPage() {
         footerNote: settings.footerNote,
       };
       
-      await api.post("api/format-settings", payload);
+      await api.post("/format-settings", payload);
       
       receiptSettingsCache = {
         data: payload,

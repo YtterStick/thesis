@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("/api/transactions")
+@RequestMapping("/transactions")
 @CrossOrigin(origins = "http://localhost:3000")
 public class TransactionController {
 

@@ -238,7 +238,7 @@ const AuditTrailPage = () => {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const data = await secureFetch("/api/accounts");
+      const data = await secureFetch("/accounts");
       console.log("👥 Users response:", data);
       
       const userList = data.users || data || [];
@@ -274,7 +274,7 @@ const AuditTrailPage = () => {
   const fetchAuditLogs = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await secureFetch("/api/audit-logs");
+      const data = await secureFetch("/audit-logs");
       console.log("📊 Audit logs response:", data);
       
       const logs = data.logs || data || [];

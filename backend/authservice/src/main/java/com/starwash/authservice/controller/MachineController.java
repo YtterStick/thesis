@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/machines")
+@RequestMapping("/machines")
 public class MachineController {
 
     @Autowired
