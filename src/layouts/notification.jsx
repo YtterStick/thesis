@@ -270,7 +270,7 @@ export const NotificationSystem = () => {
         }
 
         try {
-            const response = await api.get("api/notifications/unread-count");
+            const response = await api.get("/notifications/unread-count");
             
             let count = 0;
             if (typeof response === 'number') {
@@ -307,7 +307,7 @@ export const NotificationSystem = () => {
         try {
             console.log('🔄 Starting smart refresh...');
             
-            const response = await api.get(`api/notifications?page=1&limit=30`);
+            const response = await api.get(`/notifications?page=1&limit=30`);
             
             let notificationsData = [];
             let hasMoreData = false;
@@ -386,7 +386,7 @@ export const NotificationSystem = () => {
                 setLoading(true);
             }
 
-            const response = await api.get(`api/notifications?page=${pageNum}&limit=30`);
+            const response = await api.get(`/notifications?page=${pageNum}&limit=30`);
             
             let notificationsData = [];
             let hasMoreData = false;
@@ -454,7 +454,7 @@ export const NotificationSystem = () => {
     // Mark notification as read
     const markAsRead = useCallback(async (id) => {
         try {
-            await api.post(`api/notifications/${id}/read`);
+            await api.post(`/notifications/${id}/read`);
             
             setNotifications(prev => 
                 prev.map(notif => 
@@ -486,7 +486,7 @@ export const NotificationSystem = () => {
     // Mark all as read
     const markAllAsRead = useCallback(async () => {
         try {
-            await api.post("api/notifications/read-all");
+            await api.post("/notifications/read-all");
             
             setNotifications(prev => 
                 prev.map(notif => ({ ...notif, read: true }))
@@ -667,7 +667,7 @@ export const NotificationSystem = () => {
         realTimePollingRef.current = setInterval(async () => {
             try {
                 // Always check for new notifications, but only show popups when dropdown is closed
-                const response = await api.get("api/notifications?page=1&limit=10");
+                const response = await api.get("/notifications?page=1&limit=10");
                 let recentNotifications = [];
                 
                 if (Array.isArray(response)) {

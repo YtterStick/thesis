@@ -18,7 +18,7 @@ const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_BASE_URL}/api/terms`);
+      const response = await fetch(`${API_BASE_URL}/terms`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch terms: ${response.status}`);

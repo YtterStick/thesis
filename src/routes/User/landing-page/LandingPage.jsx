@@ -159,7 +159,7 @@ const LandingPage = () => {
             controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const response = await fetch(`${API_BASE_URL}/api/laundry-jobs`, {
+            const response = await fetch(`${API_BASE_URL}/laundry-jobs`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",

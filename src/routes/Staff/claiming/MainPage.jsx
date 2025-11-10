@@ -60,7 +60,7 @@ const MainPage = () => {
     const fetchCompletedTransactions = async () => {
         try {
             setIsLoading(true);
-            const data = await api.get("api/claiming/completed-unclaimed");
+            const data = await api.get("/claiming/completed-unclaimed");
 
             // REMOVED the unnecessary transaction detail fetching
             // Just use the data as-is from the completed-unclaimed endpoint
@@ -104,7 +104,7 @@ const MainPage = () => {
     const fetchExpiredTransactions = async () => {
         try {
             setIsLoadingExpired(true);
-            const data = await api.get("api/expired");
+            const data = await api.get("/expired");
 
             const sortedData = data.sort((a, b) => {
                 const aDate = a.dueDate ? new Date(a.dueDate).getTime() : 0;
@@ -127,7 +127,7 @@ const MainPage = () => {
 
     const fetchPendingWarnings = async () => {
         try {
-            const response = await api.get("api/disposal-warnings/pending");
+            const response = await api.get("/disposal-warnings/pending");
             setPendingWarnings(response.count || 0);
         } catch (error) {
             console.error("Failed to fetch pending warnings:", error);
@@ -137,7 +137,7 @@ const MainPage = () => {
     const sendManualWarnings = async () => {
         try {
             setIsSendingWarnings(true);
-            const response = await api.post("api/disposal-warnings/send-manual");
+            const response = await api.post("/disposal-warnings/send-manual");
             
             toast({
                 title: "Success",
@@ -176,7 +176,7 @@ const MainPage = () => {
 
     const handleClaim = async (transactionId) => {
         try {
-            const claimedTransaction = await api.patch(`api/claiming/${transactionId}/claim`);
+            const claimedTransaction = await api.patch(`/claiming/${transactionId}/claim`);
 
             toast({
                 title: "Success",
@@ -209,7 +209,7 @@ const MainPage = () => {
 
     const handleDispose = async (transactionId) => {
         try {
-            await api.patch(`api/expired/${transactionId}/dispose`);
+            await api.patch(`/expired/${transactionId}/dispose`);
 
             toast({
                 title: "Success",
@@ -439,7 +439,7 @@ const MainPage = () => {
                             hasUnfilteredData={activeTab === "unclaimed" ? transactions.length > 0 : expiredTransactions.length > 0}
                             isDarkMode={isDarkMode}
                             onSendWarning={(transactionId) => {
-                                api.post(`api/disposal-warnings/send-for-job/${transactionId}`)
+                                api.post(`/disposal-warnings/send-for-job/${transactionId}`)
                                     .then(() => {
                                         toast({
                                             title: "Success",

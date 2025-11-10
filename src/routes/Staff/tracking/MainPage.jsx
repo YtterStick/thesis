@@ -182,7 +182,7 @@ function ServiceTrackingContent() {
     // Function to fetch completed today count
     const fetchCompletedTodayCount = useCallback(async () => {
         try {
-            const count = await api.get("api/laundry-jobs/completed-today-count");
+            const count = await api.get("/laundry-jobs/completed-today-count");
             setCompletedTodayCount(count);
         } catch (err) {
             console.error("Failed to fetch completed today count:", err);
@@ -207,7 +207,7 @@ function ServiceTrackingContent() {
 
     const fetchJobs = useCallback(async () => {
         try {
-            const data = await api.get("api/laundry-jobs");
+            const data = await api.get("/laundry-jobs");
 
             const jobsWithLoads = data.map((job) => ({
                 id: job.id ?? job.transactionId,
@@ -250,7 +250,7 @@ function ServiceTrackingContent() {
 
     const fetchMachines = async () => {
         try {
-            const data = await api.get("api/machines");
+            const data = await api.get("/machines");
             console.log("📦 Machines API Response:", data);
             setMachines(data);
             return true;
@@ -359,7 +359,7 @@ function ServiceTrackingContent() {
         setSmsStatus((prev) => ({ ...prev, [jobKey]: "sending" }));
 
         try {
-            await api.post("api/send-completion-sms", {
+            await api.post("/send-completion-sms", {
                 transactionId: job.id,
                 customerName: job.customerName,
                 phoneNumber: job.contact,
@@ -396,7 +396,7 @@ function ServiceTrackingContent() {
 
             try {
                 await apiCallWithRetry(() =>
-                    api.patch(`api/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`)
+                    api.patch(`/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`)
                 );
                 return { success: true };
             } catch (err) {
@@ -426,7 +426,7 @@ function ServiceTrackingContent() {
 
             try {
                 await apiCallWithRetry(() =>
-                    api.patch(`api/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`)
+                    api.patch(`/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${duration}`)
                 );
                 return { success: true };
             } catch (err) {
@@ -531,7 +531,7 @@ function ServiceTrackingContent() {
                 completedTimersRef.current.delete(timerKey);
 
                 await apiCallWithRetry(() =>
-                    api.patch(`api/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`)
+                    api.patch(`/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`)
                 );
 
                 // Update with actual status and timer data after successful API call
@@ -678,12 +678,12 @@ function ServiceTrackingContent() {
 
             try {
                 // Make API call to advance status immediately
-                await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`));
+                await apiCallWithRetry(() => api.patch(`/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`));
 
                 // Release machine in backend when appropriate
                 if (shouldReleaseMachine && currentMachineId) {
                     try {
-                        await apiCallWithRetry(() => api.patch(`api/laundry-jobs/${job.id}/release-machine?loadNumber=${load.loadNumber}`));
+                        await apiCallWithRetry(() => api.patch(`/laundry-jobs/${job.id}/release-machine?loadNumber=${load.loadNumber}`));
                         console.log(
                             `✅ Machine ${currentMachineId} RELEASED for load ${load.loadNumber} when moving from ${load.status} to ${nextStatus}`,
                         );
@@ -759,7 +759,7 @@ function ServiceTrackingContent() {
 
                 // Use the API call with retry
                 await apiCallWithRetry(() => 
-                    api.patch(`api/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`)
+                    api.patch(`/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`)
                 );
 
                 // Update with the correct machine assignment and timer data

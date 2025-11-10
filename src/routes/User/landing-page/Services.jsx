@@ -20,7 +20,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
       setLoading(true);
       console.log("🔄 Starting to fetch services from backend...");
       
-      const response = await fetch(`${API_BASE_URL}/api/services`);
+      const response = await fetch(`${API_BASE_URL}/services`);
       
       console.log("📡 Response status:", response.status);
       console.log("📡 Response ok:", response.ok);
@@ -46,7 +46,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchStockItems = async () => {
     try {
       console.log("🔄 Fetching stock items...");
-      const response = await fetch(`${API_BASE_URL}/api/stock`);
+      const response = await fetch(`${API_BASE_URL}/stock`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -65,7 +65,7 @@ const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const fetchMachines = async () => {
     try {
       console.log("🔄 Fetching machines...");
-      const response = await fetch(`${API_BASE_URL}/api/machines`);
+      const response = await fetch(`${API_BASE_URL}/machines`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

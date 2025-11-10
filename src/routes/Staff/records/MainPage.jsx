@@ -25,8 +25,8 @@ const MainPage = () => {
             try {
                 // Use the api utility instead of direct fetch calls
                 const [recordsData, summaryData] = await Promise.all([
-                    api.get("api/records/staff"),
-                    api.get("api/records/staff/summary")
+                    api.get("/records/staff"),
+                    api.get("/records/staff/summary")
                 ]);
 
                 // Make sure to include the id field for the print functionality

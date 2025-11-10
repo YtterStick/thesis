@@ -146,7 +146,7 @@ export default function ReceiptConfigPage() {
     }
 
     try {
-      const data = await api.get("api/format-settings");
+      const data = await api.get("/format-settings");
       
       const newSettings = {
         storeName: data?.storeName || "",

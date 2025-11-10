@@ -126,7 +126,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
 
         try {
             console.log(`🔍 ${isSilentRefresh ? "Refreshing" : "Fetching"} tracking data for: ${invoiceNumber}`);
-            const response = await fetch(`${API_BASE_URL}/api/track/${invoiceNumber}`);
+            const response = await fetch(`${API_BASE_URL}/track/${invoiceNumber}`);
 
             if (!response.ok) {
                 if (response.status === 404) {
@@ -172,7 +172,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             console.log(`📄 Fetching receipt data for: ${invoiceNumber}`);
             
             // Use the tracking receipt endpoint that now includes proper format settings and amount given
-            const response = await fetch(`${API_BASE_URL}/api/track/${invoiceNumber}/receipt`);
+            const response = await fetch(`${API_BASE_URL}/track/${invoiceNumber}/receipt`);
 
             if (!response.ok) {
                 throw new Error("Failed to fetch receipt data from tracking endpoint");

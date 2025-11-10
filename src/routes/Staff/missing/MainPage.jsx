@@ -73,7 +73,7 @@ const MissingItemsPage = () => {
     const fetchMissingItems = async () => {
         try {
             setIsLoading(true);
-            const data = await api.get("api/missing-items");
+            const data = await api.get("/missing-items");
 
             const sortedData = data.sort((a, b) => {
                 const dateA = new Date(a.foundDate || a.createdAt || 0);
@@ -97,7 +97,7 @@ const MissingItemsPage = () => {
     const fetchMachines = async () => {
         try {
             setIsLoadingMachines(true);
-            const data = await api.get("api/machines");
+            const data = await api.get("/machines");
             setMachines(data);
         } catch (error) {
             console.error(error);
@@ -122,7 +122,7 @@ const MissingItemsPage = () => {
                 return;
             }
 
-            await api.post("api/missing-items", newItem);
+            await api.post("/missing-items", newItem);
 
             toast({
                 title: "Success",
@@ -153,7 +153,7 @@ const MissingItemsPage = () => {
                 return;
             }
 
-            await api.patch(`api/missing-items/${selectedItem.id}/claim`, { claimedByName: claimName });
+            await api.patch(`/missing-items/${selectedItem.id}/claim`, { claimedByName: claimName });
 
             toast({
                 title: "Success",

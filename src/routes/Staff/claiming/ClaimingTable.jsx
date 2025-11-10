@@ -165,7 +165,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
     const fetchFormatSettings = async () => {
         try {
             setLoadingSettings(true);
-            const settings = await api.get("api/format-settings");
+            const settings = await api.get("/format-settings");
             setFormatSettings(settings);
         } catch (error) {
             console.error("Error fetching format settings:", error);
