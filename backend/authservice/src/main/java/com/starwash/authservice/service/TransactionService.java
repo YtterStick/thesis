@@ -532,9 +532,6 @@ public class TransactionService {
         } finally {
             long duration = System.currentTimeMillis() - startTime;
             System.out.println("🕒 getAllAdminRecords took: " + duration + "ms");
-            if (duration > 5000) {
-                System.out.println("⚠️  SLOW QUERY DETECTED: " + duration + "ms");
-            }
         }
     }
 
@@ -546,6 +543,211 @@ public class TransactionService {
     @CacheEvict(value = "adminRecords", allEntries = true)
     public void evictAdminRecordsCache() {
         System.out.println("🗑️  Admin records cache evicted");
+    }
+
+    // Get summary data for all records (not paginated)
+    @Cacheable(value = "adminSummary", key = "'all'")
+    public Map<String, Object> getAdminRecordsSummary() {
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            System.out.println("📊 Calculating admin records summary...");
+            
+            List<Transaction> allTransactions = transactionRepository.findAll();
+            List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+
+            Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+
+            LocalDateTime currentManilaTime = getCurrentManilaTime();
+
+            // Calculate totals from ALL records
+            double totalIncome = allTransactions.stream()
+                    .mapToDouble(Transaction::getTotalPrice)
+                    .sum();
+
+            int totalLoads = allTransactions.stream()
+                    .mapToInt(Transaction::getServiceQuantity)
+                    .sum();
+
+            int totalFabric = allTransactions.stream()
+                    .mapToInt(tx -> tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                            .mapToInt(ServiceEntry::getQuantity)
+                            .sum())
+                    .sum();
+
+            int totalDetergent = allTransactions.stream()
+                    .mapToInt(tx -> tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                            .mapToInt(ServiceEntry::getQuantity)
+                            .sum())
+                    .sum();
+
+            long expiredCount = allTransactions.stream()
+                    .filter(tx -> {
+                        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+                        if (job != null) {
+                            return job.isExpired() && !job.isDisposed();
+                        }
+                        return tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime);
+                    })
+                    .count();
+
+            long unclaimedCount = allLaundryJobs.stream()
+                    .filter(job -> job.getLoadAssignments() != null &&
+                            job.getLoadAssignments().stream()
+                                    .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                    .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                    .filter(job -> !job.isExpired())
+                    .filter(job -> !job.isDisposed())
+                    .count();
+
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("totalIncome", totalIncome);
+            summary.put("totalLoads", totalLoads);
+            summary.put("totalFabric", totalFabric);
+            summary.put("totalDetergent", totalDetergent);
+            summary.put("expiredCount", expiredCount);
+            summary.put("unclaimedCount", unclaimedCount);
+            summary.put("totalRecords", allTransactions.size());
+
+            System.out.println("📈 Admin Summary Results:");
+            System.out.println("   - Total Income: ₱" + totalIncome);
+            System.out.println("   - Total Loads: " + totalLoads);
+            System.out.println("   - Total Fabric: " + totalFabric);
+            System.out.println("   - Total Detergent: " + totalDetergent);
+            System.out.println("   - Expired Count: " + expiredCount);
+            System.out.println("   - Unclaimed Count: " + unclaimedCount);
+            System.out.println("   - Total Records: " + allTransactions.size());
+
+            return summary;
+        } finally {
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("🕒 getAdminRecordsSummary took: " + duration + "ms");
+        }
+    }
+
+    // Get time-filtered summary
+    @Cacheable(value = "adminSummary", key = "#timeFilter")
+    public Map<String, Object> getAdminRecordsSummaryByTime(String timeFilter) {
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            System.out.println("📊 Calculating time-filtered admin records summary: " + timeFilter);
+            
+            List<Transaction> allTransactions = transactionRepository.findAll();
+            List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+
+            Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+
+            LocalDateTime currentManilaTime = getCurrentManilaTime();
+
+            // Filter transactions by time
+            List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
+
+            // Calculate totals from filtered records
+            double totalIncome = filteredTransactions.stream()
+                    .mapToDouble(Transaction::getTotalPrice)
+                    .sum();
+
+            int totalLoads = filteredTransactions.stream()
+                    .mapToInt(Transaction::getServiceQuantity)
+                    .sum();
+
+            int totalFabric = filteredTransactions.stream()
+                    .mapToInt(tx -> tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                            .mapToInt(ServiceEntry::getQuantity)
+                            .sum())
+                    .sum();
+
+            int totalDetergent = filteredTransactions.stream()
+                    .mapToInt(tx -> tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                            .mapToInt(ServiceEntry::getQuantity)
+                            .sum())
+                    .sum();
+
+            long expiredCount = filteredTransactions.stream()
+                    .filter(tx -> {
+                        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+                        if (job != null) {
+                            return job.isExpired() && !job.isDisposed();
+                        }
+                        return tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime);
+                    })
+                    .count();
+
+            long unclaimedCount = allLaundryJobs.stream()
+                    .filter(job -> filteredTransactions.stream()
+                            .anyMatch(tx -> tx.getInvoiceNumber().equals(job.getTransactionId())))
+                    .filter(job -> job.getLoadAssignments() != null &&
+                            job.getLoadAssignments().stream()
+                                    .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                    .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                    .filter(job -> !job.isExpired())
+                    .filter(job -> !job.isDisposed())
+                    .count();
+
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("totalIncome", totalIncome);
+            summary.put("totalLoads", totalLoads);
+            summary.put("totalFabric", totalFabric);
+            summary.put("totalDetergent", totalDetergent);
+            summary.put("expiredCount", expiredCount);
+            summary.put("unclaimedCount", unclaimedCount);
+            summary.put("totalRecords", filteredTransactions.size());
+            summary.put("timeFilter", timeFilter);
+
+            System.out.println("📈 Time-Filtered Summary Results (" + timeFilter + "):");
+            System.out.println("   - Total Income: ₱" + totalIncome);
+            System.out.println("   - Total Loads: " + totalLoads);
+            System.out.println("   - Total Fabric: " + totalFabric);
+            System.out.println("   - Total Detergent: " + totalDetergent);
+            System.out.println("   - Expired Count: " + expiredCount);
+            System.out.println("   - Unclaimed Count: " + unclaimedCount);
+            System.out.println("   - Total Records: " + filteredTransactions.size());
+
+            return summary;
+        } finally {
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("🕒 getAdminRecordsSummaryByTime took: " + duration + "ms");
+        }
+    }
+
+    private List<Transaction> filterTransactionsByTime(List<Transaction> transactions, String timeFilter, LocalDateTime currentTime) {
+        if ("all".equals(timeFilter)) {
+            return transactions;
+        }
+
+        LocalDateTime startDate;
+        switch (timeFilter) {
+            case "today":
+                startDate = currentTime.toLocalDate().atStartOfDay();
+                break;
+            case "week":
+                startDate = currentTime.toLocalDate().atStartOfDay().with(java.time.DayOfWeek.MONDAY);
+                break;
+            case "month":
+                startDate = currentTime.toLocalDate().withDayOfMonth(1).atStartOfDay();
+                break;
+            case "year":
+                startDate = currentTime.toLocalDate().withDayOfYear(1).atStartOfDay();
+                break;
+            default:
+                return transactions;
+        }
+
+        return transactions.stream()
+                .filter(tx -> tx.getCreatedAt() != null && !tx.getCreatedAt().isBefore(startDate))
+                .collect(Collectors.toList());
+    }
+
+    @CacheEvict(value = "adminSummary", allEntries = true)
+    public void evictAdminSummaryCache() {
+        System.out.println("🗑️  Admin summary cache evicted");
     }
 
     public List<Transaction> findPendingGcashTransactions() {

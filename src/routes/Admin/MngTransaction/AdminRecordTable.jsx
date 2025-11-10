@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Search, AlertCircle, CheckCircle2, Printer, CalendarIcon, Download, Clock8, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, AlertCircle, CheckCircle2, Printer, CalendarIcon, Download, Clock8, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -146,19 +146,18 @@ const AdminRecordTable = ({
     onDateRangeChange,
     onFilteredCountChange,
     activeFilters,
-    autoSearchTerm = "", // ADD THIS PROP
+    autoSearchTerm = "",
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [localSelectedRange, setLocalSelectedRange] = useState(selectedRange || { from: null, to: null });
     const [showCalendar, setShowCalendar] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
     const [expandedRows, setExpandedRows] = useState(new Set());
     const [printData, setPrintData] = useState(null);
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [allGcashReferences, setAllGcashReferences] = useState({});
 
-    const rowsPerPage = 10;
     const calendarRef = useRef(null);
 
     // ADD AUTO SEARCH EFFECT
@@ -166,7 +165,6 @@ const AdminRecordTable = ({
         if (autoSearchTerm) {
             console.log("🎯 Applying auto-search:", autoSearchTerm);
             setSearchTerm(autoSearchTerm);
-            setCurrentPage(1);
         }
     }, [autoSearchTerm]);
 
@@ -181,21 +179,17 @@ const AdminRecordTable = ({
             try {
                 console.log("🔄 Fetching ALL GCash references...");
                 
-                // Use the same endpoint as your PaymentManagementPage
                 const pendingGcashData = await api.get("/transactions/pending-gcash");
                 console.log("📦 Received GCash data:", pendingGcashData);
                 
-                // Create a mapping of invoiceNumber -> gcashReference
                 const referencesMap = {};
                 
                 pendingGcashData.forEach(transaction => {
                     if (transaction.invoiceNumber && transaction.gcashReference) {
                         referencesMap[transaction.invoiceNumber] = transaction.gcashReference;
-                        console.log(`📝 Mapping: ${transaction.invoiceNumber} -> ${transaction.gcashReference}`);
                     }
                 });
                 
-                console.log("🗂️ Final references map:", referencesMap);
                 setAllGcashReferences(referencesMap);
                 
             } catch (error) {
@@ -212,10 +206,6 @@ const AdminRecordTable = ({
             setLocalSelectedRange(selectedRange);
         }
     }, [selectedRange]);
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, localSelectedRange, activeFilters]);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -279,29 +269,24 @@ const AdminRecordTable = ({
         return "Date Range";
     };
 
-    // Helper function to get GCash reference - EXACTLY like PaymentManagementPage
+    // Helper function to get GCash reference
     const getGcashReference = (record) => {
-        // For GCash transactions, try to find the reference
         if (record.paymentMethod === "GCash") {
-            // First check if we have a reference in our fetched data
             if (record.invoiceNumber && allGcashReferences[record.invoiceNumber]) {
                 return allGcashReferences[record.invoiceNumber];
             }
-            // Then check if the record itself has a reference
             if (record.gcashReference && record.gcashReference !== "—") {
                 return record.gcashReference;
             }
-            // If no reference found but it's GCash, show "Pending"
             return "Pending";
         }
-        // For non-GCash transactions
         return "—";
     };
 
     // Helper function to get pickup status - CHANGED "Expired" TO "Past Due"
     const getPickupStatus = (record) => {
         if (record.disposed) return "Disposed";
-        if (record.expired) return "Past Due"; // Changed from "Expired" to "Past Due"
+        if (record.expired) return "Past Due";
         return record.pickupStatus;
     };
 
@@ -334,18 +319,18 @@ const AdminRecordTable = ({
             });
         }
 
-        // Apply payment filters - UPDATED FOR PAID/PENDING
+        // Apply payment filters
         if (activeFilters.paymentFilters.length > 0) {
             filtered = filtered.filter((record) => {
                 if (activeFilters.paymentFilters.includes("paid") && record.paid) return true;
-                if (activeFilters.paymentFilters.includes("pending") && !record.paid) return true; // Changed from unpaid to pending
+                if (activeFilters.paymentFilters.includes("pending") && !record.paid) return true;
                 if (activeFilters.paymentFilters.includes("gcash") && record.paymentMethod === "GCash") return true;
                 if (activeFilters.paymentFilters.includes("cash") && record.paymentMethod === "Cash") return true;
                 return false;
             });
         }
 
-        // Apply service filters - UPDATED SERVICE TYPES
+        // Apply service filters
         if (activeFilters.serviceFilters.length > 0) {
             filtered = filtered.filter((record) => {
                 const serviceLower = record.service?.toLowerCase() || "";
@@ -401,7 +386,6 @@ const AdminRecordTable = ({
     };
 
     const filtered = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
-
     const filteredWithActive = applyFilters(filtered);
 
     // Calculate records count based on date range and search
@@ -417,17 +401,10 @@ const AdminRecordTable = ({
         }
     }, [searchTerm, localSelectedRange, activeFilters, items, onFilteredCountChange]);
 
-    const totalPages = Math.ceil(filteredWithActive.length / rowsPerPage);
-    const paginated = filteredWithActive.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
-
     const handlePrint = async (record) => {
         try {
             setIsPrinting(true);
-            
-            // Use the api utility instead of direct fetch
             const invoiceData = await api.get(`/transactions/${record.id}/service-invoice`);
-            
-            console.log("📄 Invoice data:", invoiceData);
             setPrintData(invoiceData);
             setShowPrintModal(true);
         } catch (error) {
@@ -438,190 +415,78 @@ const AdminRecordTable = ({
         }
     };
 
-    const handleExport = () => {
-        // Use the filtered items that match the date range
-        const exportItems = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            
+            // Use the filtered items that match the date range
+            const exportItems = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
+            const filteredExportItems = applyFilters(exportItems);
 
-        // Apply active filters to export data as well
-        const filteredExportItems = applyFilters(exportItems);
+            const dataToExport = filteredExportItems.map((item) => ({
+                "Invoice Number": item.invoiceNumber || "—",
+                "Customer Name": item.name,
+                Service: item.service,
+                Loads: item.loads,
+                Detergent: item.detergent,
+                Fabric: item.fabric || "—",
+                Price: formatCurrency(item.price),
+                Date: item.createdAt ? format(new Date(item.createdAt), "MMM dd, yyyy") : "—",
+                "Payment Method": item.paymentMethod || "—",
+                "GCash Reference": getGcashReference(item),
+                "Payment Status": item.paid ? "Paid" : "Pending",
+                "Pickup Status": getPickupStatus(item),
+            }));
 
-        // Prepare data with updated columns - CHANGED "Expired" TO "Past Due"
-        const dataToExport = filteredExportItems.map((item) => ({
-            "Invoice Number": item.invoiceNumber || "—",
-            "Customer Name": item.name,
-            Service: item.service,
-            Loads: item.loads,
-            Detergent: item.detergent,
-            Fabric: item.fabric || "—",
-            Price: formatCurrency(item.price), // Use formatted currency with commas
-            Date: item.createdAt ? format(new Date(item.createdAt), "MMM dd, yyyy") : "—",
-            "Payment Method": item.paymentMethod || "—",
-            "GCash Reference": getGcashReference(item), // Use the helper function
-            "Payment Status": item.paid ? "Paid" : "Pending", // Updated to show Pending instead of Unpaid
-            "Pickup Status": getPickupStatus(item), // Use the helper function that shows "Past Due" instead of "Expired"
-        }));
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
 
-        // Create workbook and worksheet
-        const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const colWidths = [
+                { wch: 16 }, { wch: 20 }, { wch: 15 }, { wch: 8 }, { wch: 15 }, 
+                { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 20 }, 
+                { wch: 12 }, { wch: 15 },
+            ];
+            worksheet["!cols"] = colWidths;
 
-        // Set optimized column widths
-        const colWidths = [
-            { wch: 16 }, // Invoice Number
-            { wch: 20 }, // Customer Name
-            { wch: 15 }, // Service
-            { wch: 8 }, // Loads
-            { wch: 15 }, // Detergent
-            { wch: 12 }, // Fabric
-            { wch: 15 }, // Price
-            { wch: 12 }, // Date
-            { wch: 15 }, // Payment Method
-            { wch: 20 }, // GCash Reference
-            { wch: 12 }, // Payment Status
-            { wch: 15 }, // Pickup Status
-        ];
-        worksheet["!cols"] = colWidths;
-
-        // Add header styling
-        const range = XLSX.utils.decode_range(worksheet["!ref"]);
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cell_address = { c: C, r: 0 };
-            const cell_ref = XLSX.utils.encode_cell(cell_address);
-            if (worksheet[cell_ref]) {
-                worksheet[cell_ref].s = {
-                    font: { bold: true, color: { rgb: "FFFFFF" } },
-                    fill: { fgColor: { rgb: "0B2B26" } },
-                    alignment: { horizontal: "center" },
-                    border: {
-                        top: { style: "thin", color: { rgb: "1C3F3A" } },
-                        left: { style: "thin", color: { rgb: "1C3F3A" } },
-                        bottom: { style: "thin", color: { rgb: "1C3F3A" } },
-                        right: { style: "thin", color: { rgb: "1C3F3A" } },
-                    },
-                };
-            }
-        }
-
-        // Style data rows
-        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+            // Add header styling
+            const range = XLSX.utils.decode_range(worksheet["!ref"]);
             for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell = XLSX.utils.encode_cell({ c: C, r: R });
-                if (worksheet[cell]) {
-                    const isEvenRow = R % 2 === 0;
-                    worksheet[cell].s = {
-                        fill: {
-                            fgColor: { rgb: isEvenRow ? "F8FAFC" : "FFFFFF" },
-                        },
+                const cell_address = { c: C, r: 0 };
+                const cell_ref = XLSX.utils.encode_cell(cell_address);
+                if (worksheet[cell_ref]) {
+                    worksheet[cell_ref].s = {
+                        font: { bold: true, color: { rgb: "FFFFFF" } },
+                        fill: { fgColor: { rgb: "0B2B26" } },
+                        alignment: { horizontal: "center" },
                         border: {
-                            top: { style: "thin", color: { rgb: "E2E8F0" } },
-                            left: { style: "thin", color: { rgb: "E2E8F0" } },
-                            bottom: { style: "thin", color: { rgb: "E2E8F0" } },
-                            right: { style: "thin", color: { rgb: "E2E8F0" } },
+                            top: { style: "thin", color: { rgb: "1C3F3A" } },
+                            left: { style: "thin", color: { rgb: "1C3F3A" } },
+                            bottom: { style: "thin", color: { rgb: "1C3F3A" } },
+                            right: { style: "thin", color: { rgb: "1C3F3A" } },
                         },
-                        alignment: { horizontal: "left" },
                     };
-
-                    // Status column formatting
-                    if (C === 10) {
-                        // Payment Status column
-                        if (worksheet[cell].v === "Paid") {
-                            worksheet[cell].s.font = { color: { rgb: "059669" }, bold: true };
-                        } else if (worksheet[cell].v === "Pending") {
-                            worksheet[cell].s.font = { color: { rgb: "D97706" }, bold: true }; // Orange color for Pending
-                        }
-                    }
-                    // Pickup Status column formatting
-                    if (C === 11) {
-                        if (worksheet[cell].v === "Past Due") {
-                            worksheet[cell].s.font = { color: { rgb: "DC2626" }, bold: true };
-                        } else if (worksheet[cell].v === "Active") {
-                            worksheet[cell].s.font = { color: { rgb: "059669" }, bold: true };
-                        }
-                    }
                 }
             }
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Laundry Records");
+
+            // Generate filename
+            let filename = `laundry-records`;
+            if (localSelectedRange.from && localSelectedRange.to) {
+                const fromStr = format(localSelectedRange.from, "yyyy-MM-dd");
+                const toStr = format(localSelectedRange.to, "yyyy-MM-dd");
+                filename += `_${fromStr}_to_${toStr}`;
+            }
+            filename += `_${format(new Date(), "yyyy-MM-dd_HH-mm")}.xlsx`;
+
+            XLSX.writeFile(workbook, filename);
+            
+        } catch (error) {
+            console.error("❌ Export error:", error);
+            alert("Failed to export data. Please try again.");
+        } finally {
+            setIsExporting(false);
         }
-
-        // Add auto-filter
-        worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
-        worksheet["!freeze"] = { x: 0, y: 1 };
-
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Laundry Records");
-
-        // Calculate statistics for summary
-        const totalIncome = filteredExportItems.reduce((acc, item) => acc + item.price, 0);
-        const totalLoads = filteredExportItems.reduce((acc, item) => acc + item.loads, 0);
-        const paidCount = filteredExportItems.filter((item) => item.paid).length;
-        const pendingCount = filteredExportItems.filter((item) => !item.paid).length;
-        const expiredCount = filteredExportItems.filter((item) => item.expired && !item.disposed).length;
-        const disposedCount = filteredExportItems.filter((item) => item.disposed).length;
-
-        // Create summary sheet
-        const summaryData = [
-            ["LAUNDRY BUSINESS SUMMARY REPORT"],
-            [""],
-            [
-                "Report Generated:",
-                new Date().toLocaleDateString("en-PH", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
-            ],
-            [
-                "Date Range:",
-                localSelectedRange.from && localSelectedRange.to
-                    ? `${format(localSelectedRange.from, "MMM dd, yyyy")} - ${format(localSelectedRange.to, "MMM dd, yyyy")}`
-                    : "All records",
-            ],
-            ["Total Records Exported:", filteredExportItems.length],
-            [""],
-            ["FINANCIAL SUMMARY"],
-            ["Total Revenue:", formatCurrency(totalIncome)],
-            ["Average Transaction Value:", formatCurrency(filteredExportItems.length > 0 ? (totalIncome / filteredExportItems.length) : 0)],
-            ["Paid Transactions:", paidCount],
-            ["Pending Transactions:", pendingCount],
-            ["Payment Success Rate:", `${filteredExportItems.length > 0 ? ((paidCount / filteredExportItems.length) * 100).toFixed(1) : "0"}%`],
-            [""],
-            ["OPERATIONAL SUMMARY"],
-            ["Total Loads Processed:", totalLoads],
-            ["Average Loads per Transaction:", filteredExportItems.length > 0 ? (totalLoads / filteredExportItems.length).toFixed(1) : "0"],
-            ["Past Due Records:", expiredCount], // Changed from "Expired Records" to "Past Due Records"
-            ["Disposed Records:", disposedCount],
-        ];
-
-        const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-        summarySheet["!cols"] = [{ wch: 35 }, { wch: 30 }];
-
-        // Style summary sheet
-        if (summarySheet["A1"]) {
-            summarySheet["A1"].s = {
-                font: { bold: true, sz: 16, color: { rgb: "0B2B26" } },
-                fill: { fgColor: { rgb: "E0EAE8" } },
-                alignment: { horizontal: "center" },
-            };
-            summarySheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
-        }
-
-        XLSX.utils.book_append_sheet(workbook, summarySheet, "Business Summary");
-
-        // Generate filename with date range
-        let filename = `laundry-records`;
-        if (localSelectedRange.from && localSelectedRange.to) {
-            const fromStr = format(localSelectedRange.from, "yyyy-MM-dd");
-            const toStr = format(localSelectedRange.to, "yyyy-MM-dd");
-            filename += `_${fromStr}_to_${toStr}`;
-        }
-        filename += `_${format(new Date(), "yyyy-MM-dd_HH-mm")}.xlsx`;
-
-        // Export the file
-        XLSX.writeFile(workbook, filename);
-    };
-
-    const handlePageChange = (page) => {
-        if (page >= 1 && page <= totalPages) setCurrentPage(page);
     };
 
     const clearDateFilter = () => {
@@ -648,7 +513,7 @@ const AdminRecordTable = ({
     return (
         <TooltipProvider>
             <div className="flex flex-col gap-6">
-                {/* Search + Calendar + Export - UPDATED DARK MODE COLORS */}
+                {/* Search + Calendar + Export */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="w-full max-w-xs flex-1">
                         <div className="relative w-full max-w-xs">
@@ -666,10 +531,7 @@ const AdminRecordTable = ({
                                 <input
                                     type="text"
                                     value={searchTerm}
-                                    onChange={(e) => {
-                                        setSearchTerm(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                     placeholder={autoSearchTerm ? `Searching: ${autoSearchTerm}` : "Search by name"}
                                     className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
                                     style={{
@@ -696,7 +558,7 @@ const AdminRecordTable = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {/* Calendar - UPDATED DARK MODE COLORS */}
+                        {/* Calendar */}
                         <div
                             className="relative"
                             ref={calendarRef}
@@ -756,14 +618,19 @@ const AdminRecordTable = ({
                                 color: "#FFFFFF",
                                 border: "2px solid #10B981",
                             }}
-                            disabled={items.length === 0}
+                            disabled={items.length === 0 || isExporting}
                         >
-                            <Download className="mr-2 h-4 w-4" /> Export
+                            {isExporting ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Download className="mr-2 h-4 w-4" />
+                            )}
+                            {isExporting ? "Exporting..." : "Export"}
                         </Button>
                     </div>
                 </div>
 
-                {/* Table with horizontal scrolling - UPDATED DARK MODE COLORS */}
+                {/* Table */}
                 <div className="overflow-x-auto">
                     <div
                         className="rounded-lg border-2 min-w-max"
@@ -793,7 +660,7 @@ const AdminRecordTable = ({
                                 </tr>
                             </thead>
                             <tbody>
-                                {paginated.length === 0 ? (
+                                {filteredWithActive.length === 0 ? (
                                     <tr>
                                         <td
                                             colSpan={tableHeaders.length + 1}
@@ -829,10 +696,10 @@ const AdminRecordTable = ({
                                         </td>
                                     </tr>
                                 ) : (
-                                    paginated.map((record) => {
+                                    filteredWithActive.map((record) => {
                                         const isExpanded = expandedRows.has(record.id);
                                         const gcashRef = getGcashReference(record);
-                                        const pickupStatus = getPickupStatus(record); // Use the helper function
+                                        const pickupStatus = getPickupStatus(record);
 
                                         return (
                                             <>
@@ -1029,58 +896,6 @@ const AdminRecordTable = ({
                         </table>
                     </div>
                 </div>
-
-                {/* Pagination - UPDATED WITH BETTER BUTTON COLORS */}
-                {totalPages > 1 && (
-                    <div className="mt-4 flex items-center justify-center gap-4 text-sm">
-                        <button
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className={`rounded px-4 py-2 transition-all font-medium ${
-                                currentPage === 1 
-                                    ? "cursor-not-allowed opacity-50" 
-                                    : "hover:scale-105 hover:opacity-90"
-                            }`}
-                            style={{
-                                backgroundColor: isDarkMode ? "#334155" : "#0f172a",
-                                color: "#f1f5f9",
-                                border: `2px solid ${isDarkMode ? "#475569" : "#0f172a"}`,
-                                minWidth: "80px",
-                            }}
-                        >
-                            Prev
-                        </button>
-
-                        <span
-                            className="font-medium px-4 py-2 rounded"
-                            style={{ 
-                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                            }}
-                        >
-                            Page <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{currentPage}</span> of{" "}
-                            <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{totalPages}</span>
-                        </span>
-
-                        <button
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                            className={`rounded px-4 py-2 transition-all font-medium ${
-                                currentPage === totalPages 
-                                    ? "cursor-not-allowed opacity-50" 
-                                    : "hover:scale-105 hover:opacity-90"
-                            }`}
-                            style={{
-                                backgroundColor: isDarkMode ? "#334155" : "#0f172a",
-                                color: "#f1f5f9",
-                                border: `2px solid ${isDarkMode ? "#475569" : "#0f172a"}`,
-                                minWidth: "80px",
-                            }}
-                        >
-                            Next
-                        </button>
-                    </div>
-                )}
 
                 {/* Print Modal */}
                 {showPrintModal && printData && (

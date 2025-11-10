@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
-import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter, Droplets, Flower } from "lucide-react";
+import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter, Droplets, Flower, ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api-config";
-import { useNavigate, useLocation } from "react-router-dom"; // Replace Next.js imports with React Router
+import { useNavigate, useLocation } from "react-router-dom";
 
 const MainPage = () => {
     const { theme } = useTheme();
@@ -19,7 +19,13 @@ const MainPage = () => {
     const [filteredRecordsCount, setFilteredRecordsCount] = useState(0);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     
-    // ADD AUTO SEARCH STATE
+    // PAGINATION STATE
+    const [currentPage, setCurrentPage] = useState(0);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    
+    // AUTO SEARCH STATE
     const [autoSearchTerm, setAutoSearchTerm] = useState("");
 
     const filterDropdownRef = useRef(null);
@@ -41,19 +47,16 @@ const MainPage = () => {
         };
     });
 
-    // ADD AUTO SEARCH EFFECT - UPDATED FOR REACT ROUTER
+    // AUTO SEARCH EFFECT
     useEffect(() => {
-        // Check for auto search parameter from URL or sessionStorage
         const urlParams = new URLSearchParams(location.search);
         const searchName = urlParams.get('search') || sessionStorage.getItem('autoSearchName');
         
         if (searchName) {
             console.log("🔍 Auto-searching for:", searchName);
             setAutoSearchTerm(searchName);
-            // Clear the stored value so it doesn't persist on refresh
             sessionStorage.removeItem('autoSearchName');
             
-            // Clear URL parameter without page reload
             if (urlParams.get('search')) {
                 const newUrl = window.location.pathname;
                 window.history.replaceState({}, '', newUrl);
@@ -68,42 +71,69 @@ const MainPage = () => {
         }
     }, [activeFilters]);
 
-    useEffect(() => {
-        const fetchRecords = async () => {
-            try {
-                const data = await api.get("/admin/records");
-                
-                const mapped = data.map((r) => ({
-                    id: r.id,
-                    invoiceNumber: r.invoiceNumber,
-                    name: r.customerName,
-                    service: r.serviceName,
-                    loads: r.loads,
-                    detergent: r.detergent || "0",
-                    fabric: r.fabric || "0",
-                    price: r.totalPrice,
-                    paymentMethod: r.paymentMethod || "—",
-                    pickupStatus: r.pickupStatus,
-                    laundryStatus: r.laundryStatus,
-                    laundryProcessedBy: r.laundryProcessedBy || "—",
-                    claimProcessedBy: r.claimProcessedBy || "—",
-                    createdAt: r.createdAt,
-                    paid: r.paid || false,
-                    expired: r.expired,
-                    disposed: r.disposed || false,
-                    disposedBy: r.disposedBy || "—",
-                    gcashReference: r.gcashReference || "—",
-                }));
-                setRecords(mapped);
-            } catch (error) {
-                console.error("❌ Record fetch error:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+    // FETCH RECORDS WITH PAGINATION
+    const fetchRecords = async (page = 0, size = pageSize) => {
+        try {
+            setLoading(true);
+            console.log(`📥 Fetching records - Page: ${page}, Size: ${size}`);
+            
+            const data = await api.get(`/admin/records?page=${page}&size=${size}`);
+            
+            const mapped = data.map((r) => ({
+                id: r.id,
+                invoiceNumber: r.invoiceNumber,
+                name: r.customerName,
+                service: r.serviceName,
+                loads: r.loads,
+                detergent: r.detergent || "0",
+                fabric: r.fabric || "0",
+                price: r.totalPrice,
+                paymentMethod: r.paymentMethod || "—",
+                pickupStatus: r.pickupStatus,
+                laundryStatus: r.laundryStatus,
+                laundryProcessedBy: r.laundryProcessedBy || "—",
+                claimProcessedBy: r.claimProcessedBy || "—",
+                createdAt: r.createdAt,
+                paid: r.paid || false,
+                expired: r.expired,
+                disposed: r.disposed || false,
+                disposedBy: r.disposedBy || "—",
+                gcashReference: r.gcashReference || "—",
+            }));
+            
+            setRecords(mapped);
+            console.log(`✅ Loaded ${mapped.length} records (Page ${page + 1})`);
+            
+        } catch (error) {
+            console.error("❌ Record fetch error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        fetchRecords();
+    // FETCH TOTAL COUNT
+    const fetchTotalCount = async () => {
+        try {
+            const count = await api.get("/admin/records/count");
+            setTotalRecords(count);
+            const calculatedPages = Math.ceil(count / pageSize);
+            setTotalPages(calculatedPages);
+            console.log(`📊 Total records: ${count}, Pages: ${calculatedPages}`);
+        } catch (error) {
+            console.error("❌ Failed to fetch total count:", error);
+        }
+    };
+
+    // Load records and total count on component mount
+    useEffect(() => {
+        fetchRecords(currentPage, pageSize);
+        fetchTotalCount();
     }, []);
+
+    // Load records when page or page size changes
+    useEffect(() => {
+        fetchRecords(currentPage, pageSize);
+    }, [currentPage, pageSize]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -151,7 +181,7 @@ const MainPage = () => {
 
     const filteredRecords = filterRecordsByTime(records);
 
-    // Update metrics calculation - REPLACE ONLY UNWASHED WITH FABRIC AND DETERGENT, KEEP EXPIRED
+    // Update metrics calculation
     const totalIncome = filteredRecords.reduce((acc, r) => acc + r.price, 0);
     const totalLoads = filteredRecords.reduce((acc, r) => acc + r.loads, 0);
     const totalFabric = filteredRecords.reduce((acc, r) => {
@@ -173,6 +203,25 @@ const MainPage = () => {
     // Format total income with commas
     const formatCurrency = (amount) => {
         return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+    };
+
+    // PAGINATION FUNCTIONS
+    const goToPage = (page) => {
+        if (page >= 0 && page < totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+    const goToNextPage = () => {
+        if (currentPage < totalPages - 1) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
+
+    const goToPrevPage = () => {
+        if (currentPage > 0) {
+            setCurrentPage(currentPage - 1);
+        }
     };
 
     // First row cards
@@ -233,7 +282,7 @@ const MainPage = () => {
         { value: "all", label: "All Time" },
     ];
 
-    // Filter options - UPDATED SERVICE AND PAYMENT FILTERS
+    // Filter options
     const filterOptions = {
         sortBy: [
             { id: "date", label: "Date" },
@@ -315,7 +364,6 @@ const MainPage = () => {
             serviceFilters: []
         };
         setActiveFilters(defaultFilters);
-        // Also remove from localStorage
         if (typeof window !== 'undefined') {
             localStorage.removeItem('adminRecordFilters');
         }
@@ -323,7 +371,6 @@ const MainPage = () => {
 
     const getActiveFilterCount = () => {
         let count = 0;
-        // Don't count default date sorting as an active filter
         if (activeFilters.sortBy && activeFilters.sortBy !== "date") count++;
         if (activeFilters.sortOrder && activeFilters.sortOrder !== "desc") count++;
         count += activeFilters.statusFilters.length;
@@ -451,7 +498,7 @@ const MainPage = () => {
                 backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
             }}
         >
-            {/* Header - UPDATED DARK MODE COLORS */}
+            {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -474,13 +521,42 @@ const MainPage = () => {
                         </p>
                         <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                             Manage and track all laundry transactions
+                            {totalRecords > 0 && ` • ${totalRecords.toLocaleString()} total records`}
                         </p>
                     </div>
                 </div>
 
-                {/* Time Filter and Filter Button - UPDATED DARK MODE COLORS */}
+                {/* Page Size Selector and Filter Button */}
                 <div className="flex items-center gap-2">
-                    {/* Time Filter - UPDATED STYLING */}
+                    {/* Page Size Selector */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            Show:
+                        </span>
+                        <select
+                            value={pageSize}
+                            onChange={(e) => {
+                                const newSize = parseInt(e.target.value);
+                                setPageSize(newSize);
+                                setCurrentPage(0);
+                                fetchRecords(0, newSize);
+                                fetchTotalCount();
+                            }}
+                            className="rounded-lg border-2 px-3 py-2 text-sm focus:outline-none transition-all"
+                            style={{
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                            }}
+                        >
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                            <option value={200}>200</option>
+                        </select>
+                    </div>
+
+                    {/* Time Filter */}
                     <div className="flex items-center gap-2">
                         <Calendar
                             size={18}
@@ -507,7 +583,7 @@ const MainPage = () => {
                         </select>
                     </div>
 
-                    {/* Filter Button - UPDATED STYLING */}
+                    {/* Filter Button */}
                     <div className="relative" ref={filterDropdownRef}>
                         <button
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
@@ -529,7 +605,7 @@ const MainPage = () => {
                             )}
                         </button>
 
-                        {/* Filter Dropdown - UPDATED STYLING */}
+                        {/* Filter Dropdown */}
                         {showFilterDropdown && (
                             <div className="absolute right-0 z-50 mt-2 w-80 rounded-lg border-2 p-4 shadow-lg"
                                  style={{
@@ -680,7 +756,7 @@ const MainPage = () => {
                 </div>
             </motion.div>
 
-            {/* Summary Cards - UPDATED DARK MODE COLORS */}
+            {/* Summary Cards */}
             <div className="space-y-5">
                 {/* First Row - Total Income, Total Fabric, Total Detergent */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -799,7 +875,7 @@ const MainPage = () => {
                 </div>
             </div>
 
-            {/* Record Table - UPDATED DARK MODE COLORS */}
+            {/* Record Table */}
             {loading ? (
                 <SkeletonTable />
             ) : (
@@ -814,13 +890,20 @@ const MainPage = () => {
                     }}
                 >
                     <div className="flex items-center justify-between mb-4">
-                        <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                            Laundry Records
-                        </p>
+                        <div>
+                            <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                Laundry Records
+                            </p>
+                            <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                                Page {currentPage + 1} of {totalPages} • Showing {records.length} records
+                                {totalRecords > 0 && ` of ${totalRecords.toLocaleString()} total`}
+                            </p>
+                        </div>
                         <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             {filteredRecordsCount > 0 ? filteredRecordsCount : filteredRecords.length} records found
                         </span>
                     </div>
+                    
                     <AdminRecordTable
                         items={filteredRecords}
                         allItems={records}
@@ -830,8 +913,96 @@ const MainPage = () => {
                         onDateRangeChange={setSelectedRange}
                         onFilteredCountChange={handleFilteredCountChange}
                         activeFilters={activeFilters}
-                        autoSearchTerm={autoSearchTerm} // PASS AUTO SEARCH TERM
+                        autoSearchTerm={autoSearchTerm}
                     />
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-6 pt-4 border-t" style={{ borderColor: isDarkMode ? '#334155' : '#cbd5e1' }}>
+                            <div className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                                Page {currentPage + 1} of {totalPages}
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={goToPrevPage}
+                                    disabled={currentPage === 0}
+                                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                        currentPage === 0
+                                            ? 'opacity-50 cursor-not-allowed'
+                                            : 'hover:scale-105 hover:opacity-90'
+                                    }`}
+                                    style={{
+                                        backgroundColor: isDarkMode ? "#334155" : "#0f172a",
+                                        color: "#f1f5f9",
+                                        border: `2px solid ${isDarkMode ? "#475569" : "#0f172a"}`,
+                                    }}
+                                >
+                                    <ChevronLeft size={16} />
+                                    Previous
+                                </button>
+
+                                {/* Page Numbers */}
+                                <div className="flex items-center gap-1">
+                                    {[...Array(Math.min(5, totalPages))].map((_, index) => {
+                                        let pageNum;
+                                        if (totalPages <= 5) {
+                                            pageNum = index;
+                                        } else if (currentPage < 3) {
+                                            pageNum = index;
+                                        } else if (currentPage > totalPages - 4) {
+                                            pageNum = totalPages - 5 + index;
+                                        } else {
+                                            pageNum = currentPage - 2 + index;
+                                        }
+
+                                        if (pageNum >= totalPages) return null;
+
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => goToPage(pageNum)}
+                                                className={`w-8 h-8 rounded text-sm font-medium transition-all ${
+                                                    currentPage === pageNum
+                                                        ? 'scale-110 ring-2 ring-blue-500'
+                                                        : 'hover:scale-105 hover:opacity-90'
+                                                }`}
+                                                style={{
+                                                    backgroundColor: currentPage === pageNum
+                                                        ? isDarkMode ? "#3DD9B6" : "#0891B2"
+                                                        : isDarkMode ? "#334155" : "#f1f5f9",
+                                                    color: currentPage === pageNum
+                                                        ? "#ffffff"
+                                                        : isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                    border: `1px solid ${isDarkMode ? "#475569" : "#cbd5e1"}`,
+                                                }}
+                                            >
+                                                {pageNum + 1}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <button
+                                    onClick={goToNextPage}
+                                    disabled={currentPage === totalPages - 1}
+                                    className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                        currentPage === totalPages - 1
+                                            ? 'opacity-50 cursor-not-allowed'
+                                            : 'hover:scale-105 hover:opacity-90'
+                                    }`}
+                                    style={{
+                                        backgroundColor: isDarkMode ? "#334155" : "#0f172a",
+                                        color: "#f1f5f9",
+                                        border: `2px solid ${isDarkMode ? "#475569" : "#0f172a"}`,
+                                    }}
+                                >
+                                    Next
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </motion.div>
             )}
         </div>
