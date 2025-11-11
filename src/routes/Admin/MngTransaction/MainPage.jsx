@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
@@ -15,7 +15,15 @@ const MainPage = () => {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [summaryLoading, setSummaryLoading] = useState(true);
-    const [timeFilter, setTimeFilter] = useState("today");
+    
+    // Set "today" as default filter
+    const [timeFilter, setTimeFilter] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('adminTimeFilter') || "today";
+        }
+        return "today";
+    });
+    
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [filteredRecordsCount, setFilteredRecordsCount] = useState(0);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -26,7 +34,7 @@ const MainPage = () => {
     const [totalRecords, setTotalRecords] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     
-    // SUMMARY STATE
+    // SUMMARY STATE - Preload with empty values for faster initial render
     const [summaryData, setSummaryData] = useState({
         totalIncome: 0,
         totalLoads: 0,
@@ -59,6 +67,13 @@ const MainPage = () => {
         };
     });
 
+    // Save time filter to localStorage
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('adminTimeFilter', timeFilter);
+        }
+    }, [timeFilter]);
+
     // AUTO SEARCH EFFECT
     useEffect(() => {
         const urlParams = new URLSearchParams(location.search);
@@ -83,17 +98,17 @@ const MainPage = () => {
         }
     }, [activeFilters]);
 
-    // FETCH SUMMARY DATA
-    const fetchSummaryData = async (timeFilter = "all") => {
+    // OPTIMIZED: FETCH SUMMARY DATA with caching
+    const fetchSummaryData = useCallback(async (filter = "all") => {
         try {
             setSummaryLoading(true);
-            console.log(`📊 Fetching summary data for: ${timeFilter}`);
+            console.log(`📊 Fetching summary data for: ${filter}`);
             
             let summary;
-            if (timeFilter === "all") {
+            if (filter === "all") {
                 summary = await api.get("/admin/records/summary");
             } else {
-                summary = await api.get(`/admin/records/summary/${timeFilter}`);
+                summary = await api.get(`/admin/records/summary/${filter}`);
             }
             
             setSummaryData(summary);
@@ -104,15 +119,20 @@ const MainPage = () => {
         } finally {
             setSummaryLoading(false);
         }
-    };
+    }, []);
 
-    // FETCH RECORDS WITH PAGINATION
-    const fetchRecords = async (page = 0, size = pageSize) => {
+    // OPTIMIZED: FETCH RECORDS WITH TIME FILTERING
+    const fetchRecords = useCallback(async (page = 0, size = pageSize, filter = timeFilter) => {
         try {
             setLoading(true);
-            console.log(`📥 Fetching records - Page: ${page}, Size: ${size}`);
+            console.log(`📥 Fetching records - Page: ${page}, Size: ${size}, Filter: ${filter}`);
             
-            const data = await api.get(`/admin/records?page=${page}&size=${size}`);
+            let data;
+            if (filter === "all") {
+                data = await api.get(`/admin/records?page=${page}&size=${size}`);
+            } else {
+                data = await api.get(`/admin/records/filtered?page=${page}&size=${size}&timeFilter=${filter}`);
+            }
             
             const mapped = data.map((r) => ({
                 id: r.id,
@@ -137,44 +157,57 @@ const MainPage = () => {
             }));
             
             setRecords(mapped);
-            console.log(`✅ Loaded ${mapped.length} records (Page ${page + 1})`);
+            console.log(`✅ Loaded ${mapped.length} records (Page ${page + 1}, Filter: ${filter})`);
             
         } catch (error) {
             console.error("❌ Record fetch error:", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [pageSize, timeFilter]);
 
-    // FETCH TOTAL COUNT
-    const fetchTotalCount = async () => {
+    // OPTIMIZED: FETCH TOTAL COUNT WITH TIME FILTERING
+    const fetchTotalCount = useCallback(async (filter = timeFilter) => {
         try {
-            const count = await api.get("/admin/records/count");
+            let count;
+            if (filter === "all") {
+                count = await api.get("/admin/records/count");
+            } else {
+                count = await api.get(`/admin/records/count/filtered?timeFilter=${filter}`);
+            }
+            
             setTotalRecords(count);
             const calculatedPages = Math.ceil(count / pageSize);
             setTotalPages(calculatedPages);
-            console.log(`📊 Total records: ${count}, Pages: ${calculatedPages}`);
+            console.log(`📊 Total records (${filter}): ${count}, Pages: ${calculatedPages}`);
         } catch (error) {
             console.error("❌ Failed to fetch total count:", error);
         }
-    };
+    }, [pageSize, timeFilter]);
 
-    // Load data on component mount
+    // Load data on component mount - OPTIMIZED to load in parallel
     useEffect(() => {
-        fetchSummaryData(timeFilter);
-        fetchRecords(currentPage, pageSize);
-        fetchTotalCount();
+        const loadInitialData = async () => {
+            await Promise.all([
+                fetchSummaryData(timeFilter),
+                fetchRecords(currentPage, pageSize, timeFilter),
+                fetchTotalCount(timeFilter)
+            ]);
+        };
+        loadInitialData();
     }, []);
 
-    // Load records when page or page size changes
+    // Load records when page, page size, or time filter changes
     useEffect(() => {
-        fetchRecords(currentPage, pageSize);
-    }, [currentPage, pageSize]);
+        fetchRecords(currentPage, pageSize, timeFilter);
+    }, [currentPage, pageSize, timeFilter, fetchRecords]);
 
-    // Load summary when time filter changes
+    // Load summary and reset pagination when time filter changes
     useEffect(() => {
         fetchSummaryData(timeFilter);
-    }, [timeFilter]);
+        fetchTotalCount(timeFilter);
+        setCurrentPage(0); // Reset to first page when filter changes
+    }, [timeFilter, fetchSummaryData, fetchTotalCount]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -208,6 +241,14 @@ const MainPage = () => {
         if (currentPage > 0) {
             setCurrentPage(currentPage - 1);
         }
+    };
+
+    // Handle page size change
+    const handlePageSizeChange = (newSize) => {
+        setPageSize(newSize);
+        setCurrentPage(0);
+        fetchRecords(0, newSize, timeFilter);
+        fetchTotalCount(timeFilter);
     };
 
     // First row cards - USING SUMMARY DATA
@@ -376,38 +417,31 @@ const MainPage = () => {
         setFilteredRecordsCount(count);
     };
 
-    // Skeleton components
+    // IMPROVED Skeleton components - Fixed the moving card issue
     const SkeletonCard = ({ index }) => (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="rounded-xl border-2 p-5 transition-all"
+        <div
+            className="rounded-xl border-2 p-5"
             style={{
                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                minHeight: '120px' // Fixed height to prevent movement
             }}
         >
             <div className="flex items-center justify-between mb-4">
-                <motion.div
+                <div
                     className="rounded-lg p-2 animate-pulse"
                     style={{
                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                     }}
                 >
                     <div className="h-6 w-6"></div>
-                </motion.div>
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: index * 0.2 }}
-                    className="text-right"
-                >
+                </div>
+                <div className="text-right">
                     <div className="h-6 w-20 rounded animate-pulse"
                          style={{
                              backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                          }} />
-                </motion.div>
+                </div>
             </div>
             
             <div className="flex items-center justify-between">
@@ -416,18 +450,16 @@ const MainPage = () => {
                          backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
             </div>
-        </motion.div>
+        </div>
     );
 
     const SkeletonTable = () => (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="rounded-xl border-2 p-5 transition-all"
+        <div
+            className="rounded-xl border-2 p-5"
             style={{
                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                minHeight: '400px' // Fixed height to prevent movement
             }}
         >
             <div className="flex items-center justify-between mb-4">
@@ -474,37 +506,35 @@ const MainPage = () => {
                                  }`}
                                  style={{
                                      backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
-                                     animationDelay: `${rowIndex * 0.1}s`
                                  }} />
                         ))}
                     </div>
                 ))}
             </div>
-        </motion.div>
+        </div>
     );
 
-    // Card component that handles loading state
+    // IMPROVED Card component with fixed loading state
     const SummaryCard = ({ label, value, icon, color, tooltip, loading }) => {
         if (loading) {
             return (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border-2 p-5 transition-all"
+                <div
+                    className="rounded-xl border-2 p-5"
                     style={{
                         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                         borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                        minHeight: '120px' // Fixed height
                     }}
                 >
                     <div className="flex items-center justify-between mb-4">
-                        <motion.div
+                        <div
                             className="rounded-lg p-2 animate-pulse"
                             style={{
                                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                             }}
                         >
                             <div className="h-6 w-6"></div>
-                        </motion.div>
+                        </div>
                         <div className="h-6 w-20 rounded animate-pulse"
                              style={{
                                  backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
@@ -517,7 +547,7 @@ const MainPage = () => {
                                  backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                              }} />
                     </div>
-                </motion.div>
+                </div>
             );
         }
 
@@ -534,6 +564,7 @@ const MainPage = () => {
                 style={{
                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                    minHeight: '120px' // Fixed height
                 }}
                 title={tooltip}
             >
@@ -598,7 +629,7 @@ const MainPage = () => {
                         </p>
                         <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                             Manage and track all laundry transactions
-                            {summaryData.totalRecords > 0 && ` • ${summaryData.totalRecords.toLocaleString()} total records`}
+                            {summaryData.totalRecords > 0 && ` • ${summaryData.totalRecords.toLocaleString()} total ${timeFilter} records`}
                         </p>
                     </div>
                 </div>
@@ -612,13 +643,7 @@ const MainPage = () => {
                         </span>
                         <select
                             value={pageSize}
-                            onChange={(e) => {
-                                const newSize = parseInt(e.target.value);
-                                setPageSize(newSize);
-                                setCurrentPage(0);
-                                fetchRecords(0, newSize);
-                                fetchTotalCount();
-                            }}
+                            onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
                             className="rounded-lg border-2 px-3 py-2 text-sm focus:outline-none transition-all"
                             style={{
                                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
@@ -867,7 +892,7 @@ const MainPage = () => {
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                Laundry Records
+                                Laundry Records ({timeFilter.charAt(0).toUpperCase() + timeFilter.slice(1)})
                             </p>
                             <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                                 Page {currentPage + 1} of {totalPages} • Showing {records.length} records
