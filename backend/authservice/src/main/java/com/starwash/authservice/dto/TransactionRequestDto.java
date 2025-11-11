@@ -29,6 +29,10 @@ public class TransactionRequestDto {
     private List<String> statusFlow;
     private String gcashReference;
 
+    // NEW FIELDS FOR AUTO-CALCULATION
+    private Double totalWeightKg; // Total weight of laundry in kg
+    private Boolean autoCalculateLoads = true; // Flag to auto-calculate loads
+
     public TransactionRequestDto() {}
 
     public TransactionRequestDto(String customerName, String contact,
@@ -38,7 +42,7 @@ public class TransactionRequestDto {
                                  LocalDateTime issueDate, LocalDateTime dueDate,
                                  boolean generateInvoice, String staffId, String notes,
                                  Integer detergentQty, Integer fabricQty, List<String> statusFlow,
-                                 String gcashReference) {
+                                 String gcashReference, Double totalWeightKg, Boolean autoCalculateLoads) {
         this.customerName = customerName;
         this.contact = contact;
         this.serviceId = serviceId;
@@ -55,6 +59,8 @@ public class TransactionRequestDto {
         this.fabricQty = fabricQty;
         this.statusFlow = statusFlow;
         this.gcashReference = gcashReference;
+        this.totalWeightKg = totalWeightKg;
+        this.autoCalculateLoads = autoCalculateLoads;
     }
 
     // Getters and Setters
@@ -110,4 +116,11 @@ public class TransactionRequestDto {
 
     public String getGcashReference() { return gcashReference; }
     public void setGcashReference(String gcashReference) { this.gcashReference = gcashReference; }
+
+    // NEW GETTERS AND SETTERS
+    public Double getTotalWeightKg() { return totalWeightKg; }
+    public void setTotalWeightKg(Double totalWeightKg) { this.totalWeightKg = totalWeightKg; }
+    
+    public Boolean getAutoCalculateLoads() { return autoCalculateLoads; }
+    public void setAutoCalculateLoads(Boolean autoCalculateLoads) { this.autoCalculateLoads = autoCalculateLoads; }
 }

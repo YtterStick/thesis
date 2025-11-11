@@ -35,6 +35,7 @@ public class TransactionService {
     private final NotificationService notificationService;
     private final AuditService auditService;
     private final MongoTemplate mongoTemplate;
+    private final MachineService machineService; // ADDED
 
     public TransactionService(ServiceRepository serviceRepository,
             StockRepository stockRepository,
@@ -43,7 +44,8 @@ public class TransactionService {
             LaundryJobRepository laundryJobRepository,
             NotificationService notificationService,
             AuditService auditService,
-            MongoTemplate mongoTemplate) {
+            MongoTemplate mongoTemplate,
+            MachineService machineService) { // ADDED
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
         this.transactionRepository = transactionRepository;
@@ -52,6 +54,7 @@ public class TransactionService {
         this.notificationService = notificationService;
         this.auditService = auditService;
         this.mongoTemplate = mongoTemplate;
+        this.machineService = machineService; // ADDED
     }
 
     private ZoneId getManilaTimeZone() {
@@ -66,7 +69,33 @@ public class TransactionService {
         ServiceItem service = serviceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
-        int loads = Optional.ofNullable(request.getLoads()).orElse(1);
+        // AUTO-CALCULATION: Calculate loads based on weight if provided
+        int loads;
+        int autoPlasticBags = 0;
+        String machineUsed = null;
+        double machineCapacity = 0;
+        
+        if (Boolean.TRUE.equals(request.getAutoCalculateLoads()) && request.getTotalWeightKg() != null && request.getTotalWeightKg() > 0) {
+            try {
+                MachineService.LoadCalculationResult calculation = machineService.calculateLoads(request.getTotalWeightKg());
+                loads = calculation.getLoads();
+                autoPlasticBags = calculation.getPlasticBags();
+                machineUsed = calculation.getMachineName();
+                machineCapacity = calculation.getMachineCapacity();
+                
+                System.out.println("🔄 Auto-calculated loads: " + loads + " loads for " + 
+                                 request.getTotalWeightKg() + "kg using " + machineUsed + 
+                                 " (capacity: " + calculation.getMachineCapacity() + "kg)");
+                
+            } catch (Exception e) {
+                System.err.println("❌ Auto-calculation failed, using manual loads: " + e.getMessage());
+                loads = Optional.ofNullable(request.getLoads()).orElse(1);
+            }
+        } else {
+            // Fallback to manual input
+            loads = Optional.ofNullable(request.getLoads()).orElse(1);
+        }
+
         ServiceEntryDto serviceDto = new ServiceEntryDto(service.getName(), service.getPrice(), loads);
         double total = service.getPrice() * loads;
 
@@ -75,8 +104,32 @@ public class TransactionService {
 
         List<String> insufficientStockItems = new ArrayList<>();
 
+        // AUTO-PLASTIC: Add plastic bags automatically if calculated
+        Map<String, Integer> consumableQuantities = new HashMap<>();
+        if (request.getConsumableQuantities() != null) {
+            consumableQuantities.putAll(request.getConsumableQuantities());
+        }
+        
+        if (autoPlasticBags > 0) {
+            // Find plastic items in stock
+            List<StockItem> plasticItems = stockRepository.findAll().stream()
+                    .filter(item -> item.getName().toLowerCase().contains("plastic"))
+                    .collect(Collectors.toList());
+                    
+            if (!plasticItems.isEmpty()) {
+                StockItem plasticItem = plasticItems.get(0); // Use first plastic item found
+                String plasticName = plasticItem.getName();
+                
+                // Add or update plastic quantity
+                int currentPlastic = consumableQuantities.getOrDefault(plasticName, 0);
+                consumableQuantities.put(plasticName, currentPlastic + autoPlasticBags);
+                
+                System.out.println("📦 Auto-added " + autoPlasticBags + " plastic bags for " + loads + " loads");
+            }
+        }
+
         // Check stock availability for all consumables
-        for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
+        for (Map.Entry<String, Integer> entry : consumableQuantities.entrySet()) {
             String itemName = entry.getKey();
             int quantity = entry.getValue();
 
@@ -100,8 +153,8 @@ public class TransactionService {
             throw new InsufficientStockException(errorMessage, insufficientStockItems);
         }
 
-        // Process consumables and update stock
-        for (Map.Entry<String, Integer> entry : request.getConsumableQuantities().entrySet()) {
+        // Process consumables and update stock (using updated consumableQuantities)
+        for (Map.Entry<String, Integer> entry : consumableQuantities.entrySet()) {
             String itemName = entry.getKey();
             int quantity = entry.getValue();
 
@@ -138,6 +191,12 @@ public class TransactionService {
         System.out.println("   - Issue Date: " + issueDate);
         System.out.println("   - Due Date: " + dueDate);
         System.out.println("   - Current Manila Time: " + now);
+        
+        // Log auto-calculation info
+        if (machineUsed != null) {
+            System.out.println("   - Auto-calculation: " + request.getTotalWeightKg() + "kg = " + loads + " loads");
+            System.out.println("   - Machine Used: " + machineUsed + " (" + machineCapacity + "kg capacity)");
+        }
 
         String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
 
@@ -186,7 +245,8 @@ public class TransactionService {
                 .mapToInt(ServiceEntryDto::getQuantity)
                 .sum();
 
-        return new ServiceInvoiceDto(
+        // Include auto-calculation info in response
+        ServiceInvoiceDto invoiceDto = new ServiceInvoiceDto(
                 invoiceNumber,
                 transaction.getCustomerName(),
                 transaction.getContact(),
@@ -207,6 +267,15 @@ public class TransactionService {
                 plasticQty,
                 loads,
                 staffId);
+        
+        // Add auto-calculation metadata
+        if (machineUsed != null) {
+            // You might want to extend ServiceInvoiceDto to include these fields
+            System.out.println("✅ Auto-calculation completed: " + 
+                             request.getTotalWeightKg() + "kg → " + loads + " loads using " + machineUsed);
+        }
+
+        return invoiceDto;
     }
 
     public static class InsufficientStockException extends RuntimeException {

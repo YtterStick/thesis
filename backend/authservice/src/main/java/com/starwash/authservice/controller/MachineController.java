@@ -3,11 +3,14 @@ package com.starwash.authservice.controller;
 import com.starwash.authservice.dto.MachineItemDto;
 import com.starwash.authservice.model.MachineItem;
 import com.starwash.authservice.repository.MachineRepository;
+import com.starwash.authservice.service.MachineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -16,6 +19,9 @@ public class MachineController {
 
     @Autowired
     private MachineRepository machineRepository;
+
+    @Autowired
+    private MachineService machineService;
 
     @GetMapping
     public ResponseEntity<List<MachineItemDto>> getAllMachines() {
@@ -68,6 +74,61 @@ public class MachineController {
                     return ResponseEntity.ok(toDto(updated));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // NEW ENDPOINT: Calculate loads based on weight
+    @PostMapping("/calculate-loads")
+    public ResponseEntity<Map<String, Object>> calculateLoads(
+            @RequestBody CalculateLoadsRequest request) {
+        try {
+            MachineService.LoadCalculationResult result = machineService.calculateLoads(
+                request.getTotalWeightKg(), 
+                request.getMachineType()
+            );
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("loads", result.getLoads());
+            response.put("plasticBags", result.getPlasticBags());
+            response.put("machineCapacity", result.getMachineCapacity());
+            response.put("machineName", result.getMachineName());
+            response.put("totalWeight", request.getTotalWeightKg());
+            response.put("message", "Calculation successful");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    // NEW ENDPOINT: Get machine capacities
+    @GetMapping("/capacities")
+    public ResponseEntity<Map<String, Object>> getMachineCapacities() {
+        List<MachineItem> machines = machineRepository.findAll();
+        
+        Map<String, Double> capacities = machines.stream()
+                .collect(Collectors.toMap(
+                    MachineItem::getName, 
+                    machine -> machine.getCapacityKg() != null ? machine.getCapacityKg() : 8.0
+                ));
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("machines", capacities);
+        response.put("defaultCapacity", 8.0); // Default capacity
+        
+        return ResponseEntity.ok(response);
+    }
+
+    public static class CalculateLoadsRequest {
+        private Double totalWeightKg;
+        private String machineType = "Washer";
+        
+        // Getters and setters
+        public Double getTotalWeightKg() { return totalWeightKg; }
+        public void setTotalWeightKg(Double totalWeightKg) { this.totalWeightKg = totalWeightKg; }
+        public String getMachineType() { return machineType; }
+        public void setMachineType(String machineType) { this.machineType = machineType; }
     }
 
     private MachineItemDto toDto(MachineItem item) {

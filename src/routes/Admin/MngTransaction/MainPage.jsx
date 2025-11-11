@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
-import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter, Droplets, Flower, ChevronLeft, ChevronRight } from "lucide-react";
+import { PhilippinePeso, Package, TimerOff, AlertCircle, Calendar, Filter, Droplets, Flower, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { api } from "@/lib/api-config";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -16,6 +16,7 @@ const MainPage = () => {
     const [loading, setLoading] = useState(true);
     const [summaryLoading, setSummaryLoading] = useState(true);
     const [dataLoaded, setDataLoaded] = useState(false);
+    const [paginationLoading, setPaginationLoading] = useState(false);
 
     const [timeFilter, setTimeFilter] = useState("today");
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
@@ -91,9 +92,102 @@ const MainPage = () => {
         }
     }, [activeFilters]);
 
+    // Initial load - fetch everything together to prevent race conditions
+    useEffect(() => {
+        const loadInitialData = async () => {
+            try {
+                setLoading(true);
+                setSummaryLoading(true);
+                setDataLoaded(false);
+                setPaginationLoading(true);
+                
+                console.log("🚀 Initial data loading...");
+                
+                // Fetch all data in parallel for initial load to prevent race conditions
+                await Promise.all([
+                    fetchSummaryData(timeFilter),
+                    fetchRecords(currentPage, pageSize, timeFilter),
+                    fetchTotalCount(timeFilter)
+                ]);
+                
+            } catch (error) {
+                console.error("❌ Error loading initial data:", error);
+            } finally {
+                setLoading(false);
+                setSummaryLoading(false);
+                setDataLoaded(true);
+                setPaginationLoading(false);
+            }
+        };
+
+        loadInitialData();
+    }, []); // Empty dependency array - only run on mount
+
+    // Fetch records and total count when page, pageSize, or timeFilter changes
+    useEffect(() => {
+        // Skip initial load since it's handled by the effect above
+        if (!dataLoaded) return;
+
+        const loadRecordsData = async () => {
+            try {
+                setLoading(true);
+                setPaginationLoading(true);
+                
+                console.log(`🔄 Fetching records for page ${currentPage}`);
+                
+                // Only fetch records and total count, NOT summary
+                await Promise.all([
+                    fetchRecords(currentPage, pageSize, timeFilter),
+                    fetchTotalCount(timeFilter)
+                ]);
+                
+            } catch (error) {
+                console.error("❌ Error loading records data:", error);
+            } finally {
+                setLoading(false);
+                setPaginationLoading(false);
+            }
+        };
+
+        loadRecordsData();
+    }, [currentPage, pageSize, timeFilter, dataLoaded]);
+
+    // Fetch summary data only when timeFilter changes (after initial load)
+    useEffect(() => {
+        // Skip initial load since it's handled by the effect above
+        if (!dataLoaded) return;
+
+        const loadSummaryData = async () => {
+            try {
+                setSummaryLoading(true);
+                await fetchSummaryData(timeFilter);
+            } catch (error) {
+                console.error("❌ Error loading summary data:", error);
+            } finally {
+                setSummaryLoading(false);
+            }
+        };
+
+        loadSummaryData();
+    }, [timeFilter, dataLoaded]);
+
+    useEffect(() => {
+        if (timeFilter !== "today") {
+            setAutoSearchTerm("");
+        }
+    }, [timeFilter]);
+
+    useEffect(() => {
+        const handlePointerDown = (e) => {
+            if (filterDropdownRef.current?.contains(e.target)) return;
+            setShowFilterDropdown(false);
+        };
+        document.addEventListener("pointerdown", handlePointerDown);
+        return () => document.removeEventListener("pointerdown", handlePointerDown);
+    }, []);
+
     const fetchSummaryData = async (filter = "today") => {
         try {
-            setSummaryLoading(true);
             console.log(`📊 Fetching summary data for: ${filter}`);
             
             let summary;
@@ -117,8 +211,6 @@ const MainPage = () => {
                 unclaimedCount: 0,
                 totalRecords: 0
             });
-        } finally {
-            setSummaryLoading(false);
         }
     };
 
@@ -157,13 +249,11 @@ const MainPage = () => {
             }));
             
             setRecords(mapped);
-            setDataLoaded(true);
             console.log(`✅ Loaded ${mapped.length} records (Page ${page + 1}, Filter: ${filter})`);
             
         } catch (error) {
             console.error("❌ Record fetch error:", error);
             setRecords([]);
-            setDataLoaded(true);
         } finally {
             setLoading(false);
         }
@@ -171,6 +261,7 @@ const MainPage = () => {
 
     const fetchTotalCount = async (filter = timeFilter) => {
         try {
+            setPaginationLoading(true);
             let count;
             if (filter === "all") {
                 count = await api.get("/admin/records/count");
@@ -186,47 +277,10 @@ const MainPage = () => {
             console.error("❌ Failed to fetch total count:", error);
             setTotalRecords(0);
             setTotalPages(0);
+        } finally {
+            setPaginationLoading(false);
         }
     };
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                setDataLoaded(false);
-                
-                await Promise.all([
-                    fetchSummaryData(timeFilter),
-                    fetchRecords(currentPage, pageSize, timeFilter)
-                ]);
-                
-                await fetchTotalCount(timeFilter);
-                
-            } catch (error) {
-                console.error("❌ Error loading data:", error);
-            } finally {
-                setLoading(false);
-                setDataLoaded(true);
-            }
-        };
-
-        loadData();
-    }, [currentPage, pageSize, timeFilter]);
-
-    useEffect(() => {
-        if (timeFilter !== "today") {
-            setAutoSearchTerm("");
-        }
-    }, [timeFilter]);
-
-    useEffect(() => {
-        const handlePointerDown = (e) => {
-            if (filterDropdownRef.current?.contains(e.target)) return;
-            setShowFilterDropdown(false);
-        };
-        document.addEventListener("pointerdown", handlePointerDown);
-        return () => document.removeEventListener("pointerdown", handlePointerDown);
-    }, []);
 
     const formatCurrency = (amount) => {
         return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
@@ -550,6 +604,41 @@ const MainPage = () => {
         );
     };
 
+    // Loading indicator for pagination info
+    const PaginationInfoLoader = () => (
+        <div className="flex items-center gap-2 animate-pulse">
+            <Loader2 className="h-3 w-3 animate-spin" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }} />
+            <span className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                Calculating totals...
+            </span>
+        </div>
+    );
+
+    // Format the page info text
+    const getPageInfoText = () => {
+        if (paginationLoading) {
+            return "Calculating page information...";
+        }
+        
+        let text = `Page ${currentPage + 1}`;
+        if (totalPages > 0) {
+            text += ` of ${totalPages}`;
+        }
+        text += ` • Showing ${records.length} records`;
+        if (totalRecords > 0) {
+            text += ` of ${totalRecords.toLocaleString()} total`;
+        }
+        return text;
+    };
+
+    // Format the records found text
+    const getRecordsFoundText = () => {
+        if (paginationLoading) {
+            return "Calculating...";
+        }
+        return `${filteredRecordsCount > 0 ? filteredRecordsCount : records.length} records found`;
+    };
+
     return (
         <div 
             className="space-y-5 px-6 pb-5 pt-4 overflow-visible min-h-screen"
@@ -577,7 +666,13 @@ const MainPage = () => {
                         </p>
                         <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                             Manage and track all laundry transactions
-                            {summaryData.totalRecords > 0 && ` • ${summaryData.totalRecords.toLocaleString()} total ${timeFilter} records`}
+                            {!summaryLoading && summaryData.totalRecords > 0 && ` • ${summaryData.totalRecords.toLocaleString()} total ${timeFilter} records`}
+                            {summaryLoading && (
+                                <span className="flex items-center gap-1">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Loading summary...
+                                </span>
+                            )}
                         </p>
                     </div>
                 </div>
@@ -839,14 +934,21 @@ const MainPage = () => {
                             <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                 Laundry Records ({timeFilter.charAt(0).toUpperCase() + timeFilter.slice(1)})
                             </p>
-                            <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                                Page {currentPage + 1} of {totalPages} • Showing {records.length} records
-                                {totalRecords > 0 && ` of ${totalRecords.toLocaleString()} total`}
-                            </p>
+                            {paginationLoading ? (
+                                <PaginationInfoLoader />
+                            ) : (
+                                <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                                    {getPageInfoText()}
+                                </p>
+                            )}
                         </div>
-                        <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                            {filteredRecordsCount > 0 ? filteredRecordsCount : records.length} records found
-                        </span>
+                        {paginationLoading ? (
+                            <PaginationInfoLoader />
+                        ) : (
+                            <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                {getRecordsFoundText()}
+                            </span>
+                        )}
                     </div>
                     
                     <AdminRecordTable
@@ -867,16 +969,20 @@ const MainPage = () => {
                     {/* Pagination Controls */}
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between mt-6 pt-4 border-t" style={{ borderColor: isDarkMode ? '#334155' : '#cbd5e1' }}>
-                            <div className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                                Page {currentPage + 1} of {totalPages}
-                            </div>
+                            {paginationLoading ? (
+                                <PaginationInfoLoader />
+                            ) : (
+                                <div className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                                    Page {currentPage + 1} of {totalPages}
+                                </div>
+                            )}
                             
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={goToPrevPage}
-                                    disabled={currentPage === 0}
+                                    disabled={currentPage === 0 || paginationLoading}
                                     className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                                        currentPage === 0
+                                        currentPage === 0 || paginationLoading
                                             ? 'opacity-50 cursor-not-allowed'
                                             : 'hover:scale-105 hover:opacity-90'
                                     }`}
@@ -910,11 +1016,12 @@ const MainPage = () => {
                                             <button
                                                 key={pageNum}
                                                 onClick={() => goToPage(pageNum)}
+                                                disabled={paginationLoading}
                                                 className={`w-8 h-8 rounded text-sm font-medium transition-all ${
                                                     currentPage === pageNum
                                                         ? 'scale-110 ring-2 ring-blue-500'
                                                         : 'hover:scale-105 hover:opacity-90'
-                                                }`}
+                                                } ${paginationLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 style={{
                                                     backgroundColor: currentPage === pageNum
                                                         ? isDarkMode ? "#3DD9B6" : "#0891B2"
@@ -933,9 +1040,9 @@ const MainPage = () => {
 
                                 <button
                                     onClick={goToNextPage}
-                                    disabled={currentPage === totalPages - 1}
+                                    disabled={currentPage === totalPages - 1 || paginationLoading}
                                     className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                                        currentPage === totalPages - 1
+                                        currentPage === totalPages - 1 || paginationLoading
                                             ? 'opacity-50 cursor-not-allowed'
                                             : 'hover:scale-105 hover:opacity-90'
                                     }`}

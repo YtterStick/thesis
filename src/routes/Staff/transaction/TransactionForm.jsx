@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Receipt, Info } from "lucide-react";
+import { Receipt, Info, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import PaymentSection from "./PaymentSection";
@@ -120,6 +120,13 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const [initialLoad, setInitialLoad] = useState(!transactionFormCache);
     const [insufficientStockItems, setInsufficientStockItems] = useState([]);
     
+    // NEW STATES FOR AUTO-CALCULATION
+    const [totalWeight, setTotalWeight] = useState("");
+    const [autoCalculate, setAutoCalculate] = useState(true);
+    const [calculatedLoads, setCalculatedLoads] = useState(1);
+    const [machineInfo, setMachineInfo] = useState("");
+    const [isCalculating, setIsCalculating] = useState(false);
+    
     // Confirmation dialog states
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [pendingPayload, setPendingPayload] = useState(null);
@@ -174,6 +181,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             setDetergentOverrides({});
             setFabricOverrides({});
             setInsufficientStockItems([]);
+            setTotalWeight(""); // RESET WEIGHT
+            setAutoCalculate(true); // RESET AUTO-CALCULATE
+            setCalculatedLoads(1); // RESET CALCULATED LOADS
+            setMachineInfo(""); // RESET MACHINE INFO
             
             const initialConsumables = {};
             stockItems.forEach((item) => {
@@ -186,6 +197,69 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             onPreviewChange?.(null);
         },
     }));
+
+    // NEW FUNCTION: Calculate loads automatically
+    const calculateLoadsAutomatically = async (weight) => {
+        if (!weight || weight <= 0) {
+            setCalculatedLoads(1);
+            setMachineInfo("");
+            setLoads(1);
+            return;
+        }
+
+        setIsCalculating(true);
+        try {
+            const response = await api.post("/machines/calculate-loads", {
+                totalWeightKg: weight,
+                machineType: "Washer"
+            });
+
+            const { loads: calculatedLoads, machineName, machineCapacity, plasticBags } = response;
+            
+            setCalculatedLoads(calculatedLoads);
+            setMachineInfo(`${weight}kg = ${calculatedLoads} loads using ${machineName} (${machineCapacity}kg capacity)`);
+            setLoads(calculatedLoads);
+            
+            // Auto-update plastic bags in consumables
+            const plasticItem = stockItems.find(item => 
+                item.name.toLowerCase().includes("plastic")
+            );
+            
+            if (plasticItem && plasticBags > 0) {
+                setConsumables(prev => ({
+                    ...prev,
+                    [plasticItem.name]: plasticBags
+                }));
+                setPlasticOverrides(prev => ({
+                    ...prev,
+                    [plasticItem.name]: true
+                }));
+            }
+
+            toast({
+                title: "Auto-calculation Complete",
+                description: `Calculated ${calculatedLoads} loads for ${weight}kg`,
+                variant: "default",
+            });
+
+        } catch (error) {
+            console.error("Error calculating loads:", error);
+            // Fallback to simple calculation
+            const defaultCapacity = 8;
+            const calculated = Math.ceil(weight / defaultCapacity);
+            setCalculatedLoads(calculated);
+            setMachineInfo(`${weight}kg = ${calculated} loads (${defaultCapacity}kg default machine)`);
+            setLoads(calculated);
+            
+            toast({
+                title: "Used Default Calculation",
+                description: `Calculated ${calculated} loads using default machine capacity`,
+                variant: "default",
+            });
+        } finally {
+            setIsCalculating(false);
+        }
+    };
 
     const hasDataChanged = (newData, oldData) => {
         if (!oldData) return true;
@@ -693,7 +767,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             serviceId: form.serviceId,
             serviceName: selectedService?.name || "—",
             servicePrice,
-            loads: parseInt(loads),
+            loads: autoCalculate && calculatedLoads > 0 ? calculatedLoads : parseInt(loads),
             serviceTotal,
             consumables: Object.entries(consumables).map(([name, qty]) => {
                 const item = stockItems.find((i) => i.name === name);
@@ -710,6 +784,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             gcashReference: form.paymentMethod === "GCash" ? form.gcashReference : null,
             change: parseFloat(form.amountGiven || 0) - totalAmount,
             totalPrice: totalAmount,
+            // NEW: Include weight and auto-calculation info
+            totalWeightKg: totalWeight ? parseFloat(totalWeight) : null,
+            autoCalculateLoads: autoCalculate,
             // Use Manila time for dates
             issueDate: manilaIssueDate,
             dueDate: manilaDueDate,
@@ -719,6 +796,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         console.log("📝 FINAL PAYLOAD DATES:");
         console.log("   Issue Date:", payload.issueDate);
         console.log("   Due Date:", payload.dueDate);
+        console.log("   Auto-calculation:", payload.autoCalculateLoads);
+        console.log("   Total Weight:", payload.totalWeightKg);
+        console.log("   Calculated Loads:", payload.loads);
         console.log("🕒 ========== DATE DEBUGGING END ==========");
 
         // Show confirmation dialog instead of submitting immediately
@@ -823,6 +903,108 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         isLocked={isLocked}
                     />
 
+                    {/* NEW: Weight Input and Auto-calculation */}
+                    <div className="space-y-3 pt-4">
+                        <div>
+                            <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                Total Weight (kg)
+                            </Label>
+                            <Input
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                step="0.1"
+                                placeholder="Enter total weight in kg"
+                                value={totalWeight}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setTotalWeight(value);
+                                    
+                                    // Auto-calculate loads when weight changes
+                                    if (autoCalculate && value && !isNaN(parseFloat(value))) {
+                                        calculateLoadsAutomatically(parseFloat(value));
+                                    }
+                                }}
+                                disabled={isLocked}
+                                className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
+                                style={{
+                                    borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                                    color: isDarkMode ? '#f1f5f9' : '#0f172a'
+                                }}
+                            />
+                        </div>
+
+                        {/* Auto-calculation toggle */}
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="autoCalculate"
+                                checked={autoCalculate}
+                                onChange={(e) => {
+                                    setAutoCalculate(e.target.checked);
+                                    if (e.target.checked && totalWeight && !isNaN(parseFloat(totalWeight))) {
+                                        calculateLoadsAutomatically(parseFloat(totalWeight));
+                                    }
+                                }}
+                                disabled={isLocked}
+                                className="rounded border-2 focus:ring-2 focus:ring-blue-500"
+                                style={{
+                                    borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                                }}
+                            />
+                            <Label htmlFor="autoCalculate" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                Auto-calculate loads from weight
+                            </Label>
+                        </div>
+
+                        {/* Manual loads input (shown when auto-calculate is off) */}
+                        {!autoCalculate && (
+                            <div>
+                                <Label className="mb-1 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loads</Label>
+                                <Input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min="1"
+                                    value={loads}
+                                    onChange={(e) => {
+                                        const raw = e.target.value;
+                                        const cleaned = raw.replace(/^0+/, "") || "1";
+                                        setLoads(cleaned);
+                                    }}
+                                    onBlur={(e) => {
+                                        const numeric = parseInt(e.target.value, 10);
+                                        setLoads(isNaN(numeric) || numeric < 1 ? 1 : numeric);
+                                    }}
+                                    required
+                                    disabled={isLocked}
+                                    className="rounded-lg border-2 focus-visible:ring-2 focus-visible:ring-blue-500"
+                                    style={{
+                                        borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                                        backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                                        color: isDarkMode ? '#f1f5f9' : '#0f172a'
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {/* Display calculation info */}
+                        {machineInfo && autoCalculate && (
+                            <div className="text-sm p-2 rounded flex items-center gap-2" style={{ 
+                                backgroundColor: isDarkMode ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                                color: isDarkMode ? '#4ade80' : '#16a34a',
+                                border: `1px solid ${isDarkMode ? '#4ade80' : '#16a34a'}`
+                            }}>
+                                <Calculator size={16} />
+                                <div>
+                                    <strong>Auto-calculated:</strong> {machineInfo}
+                                    {isCalculating && " (Calculating...)"}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* 🧺 Supply Source Selector */}
                     <div className="space-y-2 pt-4">
                         <div className="flex items-center gap-2">
@@ -883,7 +1065,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                     <ConsumablesSection
                         stockItems={stockItems}
                         consumables={consumables}
-                        loads={loads}
+                        loads={autoCalculate && calculatedLoads > 0 ? calculatedLoads : loads}
                         onLoadsChange={setLoads}
                         onConsumableChange={handleConsumableChange}
                         plasticOverrides={plasticOverrides}
@@ -912,14 +1094,15 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
                     <Button
                         type="submit"
-                        disabled={isSubmitting || isLocked}
+                        disabled={isSubmitting || isLocked || isCalculating}
                         className="mt-2 w-full rounded-lg px-4 py-2 text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 hover:scale-105 transition-transform"
                         style={{
                             backgroundColor: isDarkMode ? '#0f172a' : '#0f172a',
                             color: '#f1f5f9'
                         }}
                     >
-                        {isSubmitting ? "Processing..." : "Save Transaction"}
+                        {isSubmitting ? "Processing..." : 
+                         isCalculating ? "Calculating..." : "Save Transaction"}
                     </Button>
                 </form>
 
@@ -966,9 +1149,17 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                                     <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Service:</span>
                                     <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.serviceName}</span>
                                 </div>
+                                {pendingPayload.totalWeightKg && (
+                                    <div className="flex justify-between">
+                                        <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Total Weight:</span>
+                                        <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.totalWeightKg}kg</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Loads:</span>
-                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{pendingPayload.loads}</span>
+                                    <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                        {pendingPayload.loads} {pendingPayload.autoCalculateLoads ? "(Auto-calculated)" : "(Manual)"}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Payment Method:</span>

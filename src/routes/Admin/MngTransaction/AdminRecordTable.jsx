@@ -30,87 +30,89 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
     const getStatusConfig = () => {
         const configs = {
             // Payment Status
-            "Paid": { 
-                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />, 
+            Paid: {
+                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />,
                 tooltip: "Payment has been completed successfully",
-                color: "green"
+                color: "green",
             },
-            "Pending": { 
-                icon: <Clock8 className="h-4 w-4 text-yellow-500" />, 
+            Pending: {
+                icon: <Clock8 className="h-4 w-4 text-yellow-500" />,
                 tooltip: "Payment is awaiting confirmation",
-                color: "yellow"
+                color: "yellow",
             },
-            "Unpaid": { 
-                icon: <AlertCircle className="h-4 w-4 text-red-500" />, 
+            Unpaid: {
+                icon: <AlertCircle className="h-4 w-4 text-red-500" />,
                 tooltip: "Payment has not been made",
-                color: "red"
+                color: "red",
             },
 
             // Laundry Status
-            "Completed": { 
-                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />, 
+            Completed: {
+                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />,
                 tooltip: "Laundry service has been completed",
-                color: "green"
+                color: "green",
             },
-            "In Progress": { 
-                icon: <Clock8 className="h-4 w-4 text-blue-500" />, 
+            "In Progress": {
+                icon: <Clock8 className="h-4 w-4 text-blue-500" />,
                 tooltip: "Laundry is currently being processed",
-                color: "blue"
+                color: "blue",
             },
-            "Washing": { 
-                icon: <Clock8 className="h-4 w-4 text-blue-500" />, 
+            Washing: {
+                icon: <Clock8 className="h-4 w-4 text-blue-500" />,
                 tooltip: "Laundry is being washed",
-                color: "blue"
+                color: "blue",
             },
-            "Done": { 
-                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />, 
+            Done: {
+                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />,
                 tooltip: "Laundry process is finished",
-                color: "green"
+                color: "green",
             },
-            "Not Started": { 
-                icon: <Clock8 className="h-4 w-4 text-gray-500" />, 
+            "Not Started": {
+                icon: <Clock8 className="h-4 w-4 text-gray-500" />,
                 tooltip: "Laundry service has not started yet",
-                color: "gray"
+                color: "gray",
             },
 
             // Pickup Status - CHANGED "Expired" TO "Past Due"
-            "Claimed": { 
-                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />, 
+            Claimed: {
+                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />,
                 tooltip: "Laundry has been picked up by customer",
-                color: "green"
+                color: "green",
             },
-            "COMPLETED": { 
-                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />, 
+            COMPLETED: {
+                icon: <CheckCircle2 className="h-4 w-4 text-green-600" />,
                 tooltip: "Laundry has been completed and picked up",
-                color: "green"
+                color: "green",
             },
-            "UNCLAIMED": { 
-                icon: <AlertCircle className="h-4 w-4 text-orange-500" />, 
+            UNCLAIMED: {
+                icon: <AlertCircle className="h-4 w-4 text-orange-500" />,
                 tooltip: "Laundry is ready but not yet claimed",
-                color: "orange"
+                color: "orange",
             },
-            "Unclaimed": { 
-                icon: <AlertCircle className="h-4 w-4 text-orange-500" />, 
+            Unclaimed: {
+                icon: <AlertCircle className="h-4 w-4 text-orange-500" />,
                 tooltip: "Laundry is ready but not yet claimed",
-                color: "orange"
+                color: "orange",
             },
-            "Past Due": { 
-                icon: <AlertCircle className="h-4 w-4 text-red-500" />, 
+            "Past Due": {
+                icon: <AlertCircle className="h-4 w-4 text-red-500" />,
                 tooltip: "Laundry pickup time has expired",
-                color: "red"
+                color: "red",
             },
-            "Disposed": { 
-                icon: <AlertCircle className="h-4 w-4 text-gray-500" />, 
+            Disposed: {
+                icon: <AlertCircle className="h-4 w-4 text-gray-500" />,
                 tooltip: "Laundry has been disposed",
-                color: "gray"
-            }
+                color: "gray",
+            },
         };
 
-        return configs[status] || { 
-            icon: <AlertCircle className="h-4 w-4 text-gray-500" />, 
-            tooltip: status,
-            color: "gray"
-        };
+        return (
+            configs[status] || {
+                icon: <AlertCircle className="h-4 w-4 text-gray-500" />,
+                tooltip: status,
+                color: "gray",
+            }
+        );
     };
 
     const { icon, tooltip } = getStatusConfig();
@@ -118,9 +120,7 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <span className="inline-flex items-center justify-center cursor-help">
-                    {icon}
-                </span>
+                <span className="inline-flex cursor-help items-center justify-center">{icon}</span>
             </TooltipTrigger>
             <TooltipContent
                 side="top"
@@ -130,8 +130,8 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
-                <div className="font-medium text-sm">{status}</div>
-                <div className="text-xs opacity-80 mt-1">{tooltip}</div>
+                <div className="text-sm font-medium">{status}</div>
+                <div className="mt-1 text-xs opacity-80">{tooltip}</div>
             </TooltipContent>
         </Tooltip>
     );
@@ -147,9 +147,9 @@ const AdminRecordTable = ({
     onFilteredCountChange,
     activeFilters,
     autoSearchTerm = "",
-    totalRecords = 0, // NEW: Total records for export all
-    currentPage = 0, // NEW: Current page for export current
-    pageSize = 50, // NEW: Page size for export current
+    totalRecords = 0,
+    currentPage = 0,
+    pageSize = 50,
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [localSelectedRange, setLocalSelectedRange] = useState(selectedRange || { from: null, to: null });
@@ -161,9 +161,18 @@ const AdminRecordTable = ({
     const [isExporting, setIsExporting] = useState(false);
     const [showExportDropdown, setShowExportDropdown] = useState(false);
     const [allGcashReferences, setAllGcashReferences] = useState({});
+    const [stableItems, setStableItems] = useState([]);
+    const [tableLoading, setTableLoading] = useState(false);
 
     const calendarRef = useRef(null);
     const exportDropdownRef = useRef(null);
+
+    // Stabilize items to prevent flickering
+    useEffect(() => {
+        if (items && items.length > 0) {
+            setStableItems(items);
+        }
+    }, [items]);
 
     // ADD AUTO SEARCH EFFECT
     useEffect(() => {
@@ -174,8 +183,16 @@ const AdminRecordTable = ({
     }, [autoSearchTerm]);
 
     // Format currency with commas
+    // FIXED: Format currency with proper error handling
     const formatCurrency = (amount) => {
-        return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+        try {
+            // Handle undefined, null, or invalid amounts
+            const safeAmount = Number(amount) || 0;
+            return `₱${safeAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
+        } catch (error) {
+            console.warn("Error formatting currency:", amount, error);
+            return "₱0.00";
+        }
     };
 
     // Fetch ALL GCash references once when component loads
@@ -183,20 +200,19 @@ const AdminRecordTable = ({
         const fetchAllGcashReferences = async () => {
             try {
                 console.log("🔄 Fetching ALL GCash references...");
-                
+
                 const pendingGcashData = await api.get("/transactions/pending-gcash");
                 console.log("📦 Received GCash data:", pendingGcashData);
-                
+
                 const referencesMap = {};
-                
-                pendingGcashData.forEach(transaction => {
+
+                pendingGcashData.forEach((transaction) => {
                     if (transaction.invoiceNumber && transaction.gcashReference) {
                         referencesMap[transaction.invoiceNumber] = transaction.gcashReference;
                     }
                 });
-                
+
                 setAllGcashReferences(referencesMap);
-                
             } catch (error) {
                 console.error("❌ Error fetching GCash references:", error);
             }
@@ -392,12 +408,16 @@ const AdminRecordTable = ({
         return filtered;
     };
 
-    const filtered = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
+    // FIXED: Use stable items for filtering to prevent flickering
+    const filtered = stableItems.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
     const filteredWithActive = applyFilters(filtered);
+
+    // FIXED: Ensure we always have data to display
+    const displayItems = filteredWithActive.length > 0 ? filteredWithActive : filtered.length > 0 ? filtered : stableItems;
 
     // Calculate records count based on date range and search
     const getFilteredRecordsCount = () => {
-        return filteredWithActive.length;
+        return displayItems.length;
     };
 
     // Notify parent component when filtered count changes
@@ -406,7 +426,7 @@ const AdminRecordTable = ({
             const count = getFilteredRecordsCount();
             onFilteredCountChange(count);
         }
-    }, [searchTerm, localSelectedRange, activeFilters, items, onFilteredCountChange]);
+    }, [searchTerm, localSelectedRange, activeFilters, stableItems, onFilteredCountChange]);
 
     const handlePrint = async (record) => {
         try {
@@ -422,151 +442,171 @@ const AdminRecordTable = ({
         }
     };
 
-    // NEW: Export current page data
+    // Export current page data
     const handleExportCurrent = async () => {
-        await handleExport('current');
+        await handleExport("current");
     };
 
-    // NEW: Export all data
+    // Export all data
     const handleExportAll = async () => {
-        await handleExport('all');
+        await handleExport("all");
     };
 
     // UPDATED: Handle export with option
-   // In AdminRecordTable.jsx - UPDATED handleExport function
+    // FIXED: Handle export with proper error handling and data validation
+    const handleExport = async (exportType = "current") => {
+        try {
+            setIsExporting(true);
+            setShowExportDropdown(false);
 
-// UPDATED: Handle export with option
-const handleExport = async (exportType = 'current') => {
-    try {
-        setIsExporting(true);
-        setShowExportDropdown(false);
-        
-        let exportItems = [];
-        let exportTitle = '';
+            let exportItems = [];
+            let exportTitle = "";
 
-        if (exportType === 'current') {
-            // Use the filtered items that match the date range (current view)
-            exportItems = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
-            exportItems = applyFilters(exportItems);
-            exportTitle = `Current View (${exportItems.length} records)`;
-        } else {
-            // Export ALL records for the current time filter
-            console.log(`📊 Exporting ALL records for time filter: ${timeFilter}`);
-            
-            try {
-                // Use a dedicated export endpoint or fetch in chunks
-                let allData = [];
-                
-                if (timeFilter === "all") {
-                    // For "all" time filter, fetch all records with a larger page size
-                    const response = await api.get(`/admin/records?page=0&size=10000`);
-                    allData = response;
-                } else {
-                    // For time-filtered data, use the filtered endpoint
-                    const response = await api.get(`/admin/records/filtered?page=0&size=10000&timeFilter=${timeFilter}`);
-                    allData = response;
+            if (exportType === "current") {
+                // Use the current view data
+                exportItems = displayItems;
+                exportTitle = `Current View (${exportItems.length} records)`;
+            } else {
+                // Export ALL records for the current time filter
+                console.log(`📊 Exporting ALL records for time filter: ${timeFilter}`);
+
+                try {
+                    let allData = [];
+                    const largePageSize = 10000;
+
+                    if (timeFilter === "all") {
+                        const response = await api.get(`/admin/records?page=0&size=${largePageSize}`);
+                        allData = response;
+                    } else {
+                        const response = await api.get(`/admin/records/filtered?page=0&size=${largePageSize}&timeFilter=${timeFilter}`);
+                        allData = response;
+                    }
+
+                    console.log(`📦 Received ${allData.length} records for export`);
+
+                    // Apply the same client-side filters and search
+                    let filteredAllData = allData.filter((r) => {
+                        const matchesSearch = r.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesDate = isInRange(r.createdAt);
+                        return matchesSearch && matchesDate;
+                    });
+
+                    exportItems = applyFilters(filteredAllData);
+                    exportTitle = `All ${timeFilter} Records (${exportItems.length} records)`;
+                } catch (fetchError) {
+                    console.error("❌ Error fetching all records for export:", fetchError);
+
+                    // Fallback: Use current items
+                    exportItems = displayItems;
+                    exportTitle = `Current View Only (Failed to load all records)`;
+
+                    alert("Could not load all records. Exporting current view only.");
                 }
-                
-                console.log(`📦 Received ${allData.length} records for export`);
-                
-                // Apply the same filters and search to all data
-                let filteredAllData = allData.filter((r) => {
-                    const matchesSearch = r.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
-                    const matchesDate = isInRange(r.createdAt);
-                    return matchesSearch && matchesDate;
-                });
-                
-                exportItems = applyFilters(filteredAllData);
-                exportTitle = `All ${timeFilter} Records (${exportItems.length} records)`;
-                
-            } catch (fetchError) {
-                console.error("❌ Error fetching all records for export:", fetchError);
-                
-                // Fallback: Use current items and show warning
-                exportItems = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
-                exportItems = applyFilters(exportItems);
-                exportTitle = `Current View Only (Failed to load all records)`;
-                
-                alert("Could not load all records. Exporting current view only.");
             }
-        }
 
-        // Check if we have data to export
-        if (exportItems.length === 0) {
-            alert("No records found to export.");
-            setIsExporting(false);
-            return;
-        }
+            // Check if we have data to export
+            if (exportItems.length === 0) {
+                alert("No records found to export.");
+                setIsExporting(false);
+                return;
+            }
 
-        console.log(`📊 Preparing to export ${exportItems.length} records`);
+            console.log(`📊 Preparing to export ${exportItems.length} records`);
+            
+            
 
-        const dataToExport = exportItems.map((item) => ({
-            "Invoice Number": item.invoiceNumber || "—",
-            "Customer Name": item.name,
-            Service: item.service,
-            Loads: item.loads,
-            Detergent: item.detergent,
-            Fabric: item.fabric || "—",
-            Price: formatCurrency(item.price),
-            Date: item.createdAt ? format(new Date(item.createdAt), "MMM dd, yyyy") : "—",
-            "Payment Method": item.paymentMethod || "—",
-            "GCash Reference": getGcashReference(item),
-            "Payment Status": item.paid ? "Paid" : "Pending",
-            "Pickup Status": getPickupStatus(item),
-        }));
+            // FIXED: Add data validation and safe property access
+            const dataToExport = exportItems.map((item) => {
+                // Safe currency formatting with fallback
+                const safePrice = item.price || item.totalPrice || 0;
+                const formattedPrice = formatCurrency(safePrice);
 
-        const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+                // Safe date formatting with fallback
+                let formattedDate = "—";
+                try {
+                    if (item.createdAt && !isNaN(new Date(item.createdAt))) {
+                        formattedDate = format(new Date(item.createdAt), "MMM dd, yyyy");
+                    }
+                } catch (dateError) {
+                    console.warn("Invalid date format for item:", item.id, item.createdAt);
+                }
 
-        const colWidths = [
-            { wch: 16 }, { wch: 20 }, { wch: 15 }, { wch: 8 }, { wch: 15 }, 
-            { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 20 }, 
-            { wch: 12 }, { wch: 15 },
-        ];
-        worksheet["!cols"] = colWidths;
-
-        // Add header styling
-        const range = XLSX.utils.decode_range(worksheet["!ref"]);
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cell_address = { c: C, r: 0 };
-            const cell_ref = XLSX.utils.encode_cell(cell_address);
-            if (worksheet[cell_ref]) {
-                worksheet[cell_ref].s = {
-                    font: { bold: true, color: { rgb: "FFFFFF" } },
-                    fill: { fgColor: { rgb: "0B2B26" } },
-                    alignment: { horizontal: "center" },
-                    border: {
-                        top: { style: "thin", color: { rgb: "1C3F3A" } },
-                        left: { style: "thin", color: { rgb: "1C3F3A" } },
-                        bottom: { style: "thin", color: { rgb: "1C3F3A" } },
-                        right: { style: "thin", color: { rgb: "1C3F3A" } },
-                    },
+                return {
+                    "Invoice Number": item.invoiceNumber || "—",
+                    "Customer Name": item.name || item.customerName || "—",
+                    Service: item.service || item.serviceName || "—",
+                    Loads: item.loads || item.serviceQuantity || 0,
+                    Detergent: item.detergent || "0",
+                    Fabric: item.fabric || "0",
+                    Price: formattedPrice,
+                    Date: formattedDate,
+                    "Payment Method": item.paymentMethod || "—",
+                    "GCash Reference": getGcashReference(item),
+                    "Payment Status": item.paid ? "Paid" : "Pending",
+                    "Pickup Status": getPickupStatus(item),
                 };
+            });
+
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+            const colWidths = [
+                { wch: 16 },
+                { wch: 20 },
+                { wch: 15 },
+                { wch: 8 },
+                { wch: 15 },
+                { wch: 12 },
+                { wch: 15 },
+                { wch: 12 },
+                { wch: 15 },
+                { wch: 20 },
+                { wch: 12 },
+                { wch: 15 },
+            ];
+            worksheet["!cols"] = colWidths;
+
+            // Add header styling
+            const range = XLSX.utils.decode_range(worksheet["!ref"]);
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = { c: C, r: 0 };
+                const cell_ref = XLSX.utils.encode_cell(cell_address);
+                if (worksheet[cell_ref]) {
+                    worksheet[cell_ref].s = {
+                        font: { bold: true, color: { rgb: "FFFFFF" } },
+                        fill: { fgColor: { rgb: "0B2B26" } },
+                        alignment: { horizontal: "center" },
+                        border: {
+                            top: { style: "thin", color: { rgb: "1C3F3A" } },
+                            left: { style: "thin", color: { rgb: "1C3F3A" } },
+                            bottom: { style: "thin", color: { rgb: "1C3F3A" } },
+                            right: { style: "thin", color: { rgb: "1C3F3A" } },
+                        },
+                    };
+                }
             }
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Laundry Records");
+
+            // Generate filename
+            let filename = `laundry-records-${exportType === "current" ? "current-view" : `all-${timeFilter}`}`;
+            if (localSelectedRange.from && localSelectedRange.to) {
+                const fromStr = format(localSelectedRange.from, "yyyy-MM-dd");
+                const toStr = format(localSelectedRange.to, "yyyy-MM-dd");
+                filename += `_${fromStr}_to_${toStr}`;
+            }
+            filename += `_${format(new Date(), "yyyy-MM-dd_HH-mm")}.xlsx`;
+
+            XLSX.writeFile(workbook, filename);
+
+            console.log(`✅ Exported ${exportItems.length} records (${exportType})`);
+        } catch (error) {
+            console.error("❌ Export error:", error);
+            alert("Failed to export data. Please try again.");
+        } finally {
+            setIsExporting(false);
         }
-
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Laundry Records");
-
-        // Generate filename
-        let filename = `laundry-records-${exportType === 'current' ? 'current-view' : `all-${timeFilter}`}`;
-        if (localSelectedRange.from && localSelectedRange.to) {
-            const fromStr = format(localSelectedRange.from, "yyyy-MM-dd");
-            const toStr = format(localSelectedRange.to, "yyyy-MM-dd");
-            filename += `_${fromStr}_to_${toStr}`;
-        }
-        filename += `_${format(new Date(), "yyyy-MM-dd_HH-mm")}.xlsx`;
-
-        XLSX.writeFile(workbook, filename);
-        
-        console.log(`✅ Exported ${exportItems.length} records (${exportType})`);
-        
-    } catch (error) {
-        console.error("❌ Export error:", error);
-        alert("Failed to export data. Please try again.");
-    } finally {
-        setIsExporting(false);
-    }
-};
+    };
 
     const clearDateFilter = () => {
         const newRange = { from: null, to: null };
@@ -588,6 +628,16 @@ const handleExport = async (exportType = 'current') => {
         setShowPrintModal(false);
         setPrintData(null);
     };
+
+    // Loading state for table
+    if (tableLoading) {
+        return (
+            <div className="flex items-center justify-center py-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500"></div>
+                <span className="ml-2">Loading records...</span>
+            </div>
+        );
+    }
 
     return (
         <TooltipProvider>
@@ -620,13 +670,13 @@ const handleExport = async (exportType = 'current') => {
                                 {/* SHOW AUTO SEARCH INDICATOR */}
                                 {autoSearchTerm && searchTerm === autoSearchTerm && (
                                     <div className="flex items-center">
-                                        <div 
-                                            className="w-2 h-2 rounded-full bg-green-500 animate-pulse mr-2"
+                                        <div
+                                            className="mr-2 h-2 w-2 animate-pulse rounded-full bg-green-500"
                                             title="Auto-searching"
                                         />
-                                        <span 
-                                            className="text-xs text-green-500 font-medium"
-                                            style={{ color: '#10B981' }}
+                                        <span
+                                            className="text-xs font-medium text-green-500"
+                                            style={{ color: "#10B981" }}
                                         >
                                             Auto
                                         </span>
@@ -689,7 +739,10 @@ const handleExport = async (exportType = 'current') => {
                         </div>
 
                         {/* Export Button with Dropdown */}
-                        <div className="relative" ref={exportDropdownRef}>
+                        <div
+                            className="relative"
+                            ref={exportDropdownRef}
+                        >
                             <Button
                                 onClick={() => setShowExportDropdown(!showExportDropdown)}
                                 className="transition-all"
@@ -700,49 +753,46 @@ const handleExport = async (exportType = 'current') => {
                                 }}
                                 disabled={isExporting}
                             >
-                                {isExporting ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Download className="mr-2 h-4 w-4" />
-                                )}
+                                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                                 {isExporting ? "Exporting..." : "Export"}
                             </Button>
-                            
+
                             {/* Export Dropdown */}
                             {showExportDropdown && (
-                                <div className="absolute right-0 z-50 mt-2 w-48 rounded-lg border-2 p-2 shadow-lg"
-                                     style={{
-                                         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                         borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                     }}>
+                                <div
+                                    className="absolute right-0 z-50 mt-2 w-48 rounded-lg border-2 p-2 shadow-lg"
+                                    style={{
+                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                    }}
+                                >
                                     <button
                                         onClick={handleExportCurrent}
-                                        className="w-full text-left px-3 py-2 text-sm rounded hover:bg-opacity-20 transition-all"
+                                        className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
                                         style={{
                                             color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                             backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                         }}
                                     >
                                         Export Current View
-                                        <div className="text-xs opacity-70 mt-1">
-                                            {filteredWithActive.length} records
-                                        </div>
+                                        <div className="mt-1 text-xs opacity-70">{displayItems.length} records</div>
                                     </button>
-                                    
-                                    <div className="border-t my-2" style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }} />
-                                    
+
+                                    <div
+                                        className="my-2 border-t"
+                                        style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }}
+                                    />
+
                                     <button
                                         onClick={handleExportAll}
-                                        className="w-full text-left px-3 py-2 text-sm rounded hover:bg-opacity-20 transition-all"
+                                        className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
                                         style={{
                                             color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                             backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                                         }}
                                     >
                                         Export All {timeFilter} Records
-                                        <div className="text-xs opacity-70 mt-1">
-                                            {totalRecords.toLocaleString()} total records
-                                        </div>
+                                        <div className="mt-1 text-xs opacity-70">{totalRecords.toLocaleString()} total records</div>
                                     </button>
                                 </div>
                             )}
@@ -753,7 +803,7 @@ const handleExport = async (exportType = 'current') => {
                 {/* Table */}
                 <div className="overflow-x-auto">
                     <div
-                        className="rounded-lg border-2 min-w-max"
+                        className="min-w-max rounded-lg border-2"
                         style={{
                             borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
@@ -769,7 +819,7 @@ const handleExport = async (exportType = 'current') => {
                                     {tableHeaders.map((header) => (
                                         <th
                                             key={header}
-                                            className="px-3 py-2 text-left text-xs font-medium whitespace-nowrap"
+                                            className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium"
                                             style={{
                                                 color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                             }}
@@ -780,7 +830,7 @@ const handleExport = async (exportType = 'current') => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredWithActive.length === 0 ? (
+                                {displayItems.length === 0 ? (
                                     <tr>
                                         <td
                                             colSpan={tableHeaders.length + 1}
@@ -816,7 +866,7 @@ const handleExport = async (exportType = 'current') => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredWithActive.map((record) => {
+                                    displayItems.map((record) => {
                                         const isExpanded = expandedRows.has(record.id);
                                         const gcashRef = getGcashReference(record);
                                         const pickupStatus = getPickupStatus(record);
@@ -853,83 +903,85 @@ const handleExport = async (exportType = 'current') => {
                                                         </button>
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 font-mono text-xs whitespace-nowrap"
+                                                        className="whitespace-nowrap px-3 py-2 font-mono text-xs"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.invoiceNumber || "—"}
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 font-medium whitespace-nowrap"
+                                                        className="whitespace-nowrap px-3 py-2 font-medium"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.name}
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 whitespace-nowrap"
+                                                        className="whitespace-nowrap px-3 py-2"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.service}
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 whitespace-nowrap"
+                                                        className="whitespace-nowrap px-3 py-2"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.loads}
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 whitespace-nowrap"
+                                                        className="whitespace-nowrap px-3 py-2"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.detergent}
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 whitespace-nowrap"
+                                                        className="whitespace-nowrap px-3 py-2"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.fabric}
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 font-semibold whitespace-nowrap"
+                                                        className="whitespace-nowrap px-3 py-2 font-semibold"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {formatCurrency(record.price)}
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 whitespace-nowrap"
+                                                        className="whitespace-nowrap px-3 py-2"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.createdAt && !isNaN(new Date(record.createdAt))
                                                             ? format(new Date(record.createdAt), "MMM dd, yyyy")
                                                             : "—"}
                                                     </td>
-                                                    <td className="px-3 py-2 whitespace-nowrap">
+                                                    <td className="whitespace-nowrap px-3 py-2">
                                                         <div className="flex items-center gap-2">
                                                             <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{record.paymentMethod}</span>
-                                                            <StatusBadge status={record.paid ? "Paid" : "Pending"} type="payment" isDarkMode={isDarkMode} />
+                                                            <StatusBadge
+                                                                status={record.paid ? "Paid" : "Pending"}
+                                                                type="payment"
+                                                                isDarkMode={isDarkMode}
+                                                            />
                                                         </div>
                                                     </td>
                                                     <td
-                                                        className="px-3 py-2 font-mono text-xs whitespace-nowrap"
-                                                        style={{ 
+                                                        className="whitespace-nowrap px-3 py-2 font-mono text-xs"
+                                                        style={{
                                                             color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                            fontFamily: 'monospace'
+                                                            fontFamily: "monospace",
                                                         }}
                                                     >
                                                         {gcashRef}
                                                     </td>
-                                                    <td className="px-3 py-2 whitespace-nowrap">
+                                                    <td className="whitespace-nowrap px-3 py-2">
                                                         <div className="flex items-center gap-2">
-                                                            <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
-                                                                {pickupStatus}
-                                                            </span>
-                                                            <StatusBadge 
-                                                                status={pickupStatus} 
-                                                                type="pickup" 
-                                                                isDarkMode={isDarkMode} 
+                                                            <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{pickupStatus}</span>
+                                                            <StatusBadge
+                                                                status={pickupStatus}
+                                                                type="pickup"
+                                                                isDarkMode={isDarkMode}
                                                             />
                                                         </div>
                                                     </td>
-                                                    <td className="px-3 py-2 whitespace-nowrap">
+                                                    <td className="whitespace-nowrap px-3 py-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <button
@@ -937,7 +989,9 @@ const handleExport = async (exportType = 'current') => {
                                                                     disabled={isPrinting}
                                                                     className="rounded-lg p-2 transition-all hover:opacity-80 disabled:opacity-50"
                                                                     style={{
-                                                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                                                        backgroundColor: isDarkMode
+                                                                            ? "rgba(51, 65, 85, 0.3)"
+                                                                            : "rgba(11, 43, 38, 0.1)",
                                                                     }}
                                                                 >
                                                                     <Printer
