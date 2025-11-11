@@ -40,4 +40,9 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
     
     @Query("{ 'transactionId': { $in: ?0 } }")
     List<LaundryJob> findByTransactionIdIn(List<String> transactionIds);
+    
+    // Add Count Methods
+    long countByExpiredTrueAndDisposedFalse();
+    long countByPickupStatusAndExpiredFalseAndDisposedFalse(String pickupStatus);
+    long countByPickupStatus(String pickupStatus);
 }
