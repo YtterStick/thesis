@@ -147,6 +147,9 @@ const AdminRecordTable = ({
     onFilteredCountChange,
     activeFilters,
     autoSearchTerm = "",
+    totalRecords = 0, // NEW: Total records for export all
+    currentPage = 0, // NEW: Current page for export current
+    pageSize = 50, // NEW: Page size for export current
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [localSelectedRange, setLocalSelectedRange] = useState(selectedRange || { from: null, to: null });
@@ -156,9 +159,11 @@ const AdminRecordTable = ({
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
     const [allGcashReferences, setAllGcashReferences] = useState({});
 
     const calendarRef = useRef(null);
+    const exportDropdownRef = useRef(null);
 
     // ADD AUTO SEARCH EFFECT
     useEffect(() => {
@@ -211,7 +216,9 @@ const AdminRecordTable = ({
     useEffect(() => {
         const handlePointerDown = (e) => {
             if (calendarRef.current?.contains(e.target)) return;
+            if (exportDropdownRef.current?.contains(e.target)) return;
             setShowCalendar(false);
+            setShowExportDropdown(false);
         };
         document.addEventListener("pointerdown", handlePointerDown);
         return () => document.removeEventListener("pointerdown", handlePointerDown);
@@ -415,79 +422,151 @@ const AdminRecordTable = ({
         }
     };
 
-    const handleExport = async () => {
-        try {
-            setIsExporting(true);
-            
-            // Use the filtered items that match the date range
-            const exportItems = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
-            const filteredExportItems = applyFilters(exportItems);
-
-            const dataToExport = filteredExportItems.map((item) => ({
-                "Invoice Number": item.invoiceNumber || "—",
-                "Customer Name": item.name,
-                Service: item.service,
-                Loads: item.loads,
-                Detergent: item.detergent,
-                Fabric: item.fabric || "—",
-                Price: formatCurrency(item.price),
-                Date: item.createdAt ? format(new Date(item.createdAt), "MMM dd, yyyy") : "—",
-                "Payment Method": item.paymentMethod || "—",
-                "GCash Reference": getGcashReference(item),
-                "Payment Status": item.paid ? "Paid" : "Pending",
-                "Pickup Status": getPickupStatus(item),
-            }));
-
-            const workbook = XLSX.utils.book_new();
-            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-
-            const colWidths = [
-                { wch: 16 }, { wch: 20 }, { wch: 15 }, { wch: 8 }, { wch: 15 }, 
-                { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 20 }, 
-                { wch: 12 }, { wch: 15 },
-            ];
-            worksheet["!cols"] = colWidths;
-
-            // Add header styling
-            const range = XLSX.utils.decode_range(worksheet["!ref"]);
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell_address = { c: C, r: 0 };
-                const cell_ref = XLSX.utils.encode_cell(cell_address);
-                if (worksheet[cell_ref]) {
-                    worksheet[cell_ref].s = {
-                        font: { bold: true, color: { rgb: "FFFFFF" } },
-                        fill: { fgColor: { rgb: "0B2B26" } },
-                        alignment: { horizontal: "center" },
-                        border: {
-                            top: { style: "thin", color: { rgb: "1C3F3A" } },
-                            left: { style: "thin", color: { rgb: "1C3F3A" } },
-                            bottom: { style: "thin", color: { rgb: "1C3F3A" } },
-                            right: { style: "thin", color: { rgb: "1C3F3A" } },
-                        },
-                    };
-                }
-            }
-
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Laundry Records");
-
-            // Generate filename
-            let filename = `laundry-records`;
-            if (localSelectedRange.from && localSelectedRange.to) {
-                const fromStr = format(localSelectedRange.from, "yyyy-MM-dd");
-                const toStr = format(localSelectedRange.to, "yyyy-MM-dd");
-                filename += `_${fromStr}_to_${toStr}`;
-            }
-            filename += `_${format(new Date(), "yyyy-MM-dd_HH-mm")}.xlsx`;
-
-            XLSX.writeFile(workbook, filename);
-            
-        } catch (error) {
-            console.error("❌ Export error:", error);
-            alert("Failed to export data. Please try again.");
-        } finally {
-            setIsExporting(false);
-        }
+    // NEW: Export current page data
+    const handleExportCurrent = async () => {
+        await handleExport('current');
     };
+
+    // NEW: Export all data
+    const handleExportAll = async () => {
+        await handleExport('all');
+    };
+
+    // UPDATED: Handle export with option
+   // In AdminRecordTable.jsx - UPDATED handleExport function
+
+// UPDATED: Handle export with option
+const handleExport = async (exportType = 'current') => {
+    try {
+        setIsExporting(true);
+        setShowExportDropdown(false);
+        
+        let exportItems = [];
+        let exportTitle = '';
+
+        if (exportType === 'current') {
+            // Use the filtered items that match the date range (current view)
+            exportItems = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
+            exportItems = applyFilters(exportItems);
+            exportTitle = `Current View (${exportItems.length} records)`;
+        } else {
+            // Export ALL records for the current time filter
+            console.log(`📊 Exporting ALL records for time filter: ${timeFilter}`);
+            
+            try {
+                // Use a dedicated export endpoint or fetch in chunks
+                let allData = [];
+                
+                if (timeFilter === "all") {
+                    // For "all" time filter, fetch all records with a larger page size
+                    const response = await api.get(`/admin/records?page=0&size=10000`);
+                    allData = response;
+                } else {
+                    // For time-filtered data, use the filtered endpoint
+                    const response = await api.get(`/admin/records/filtered?page=0&size=10000&timeFilter=${timeFilter}`);
+                    allData = response;
+                }
+                
+                console.log(`📦 Received ${allData.length} records for export`);
+                
+                // Apply the same filters and search to all data
+                let filteredAllData = allData.filter((r) => {
+                    const matchesSearch = r.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
+                    const matchesDate = isInRange(r.createdAt);
+                    return matchesSearch && matchesDate;
+                });
+                
+                exportItems = applyFilters(filteredAllData);
+                exportTitle = `All ${timeFilter} Records (${exportItems.length} records)`;
+                
+            } catch (fetchError) {
+                console.error("❌ Error fetching all records for export:", fetchError);
+                
+                // Fallback: Use current items and show warning
+                exportItems = items.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
+                exportItems = applyFilters(exportItems);
+                exportTitle = `Current View Only (Failed to load all records)`;
+                
+                alert("Could not load all records. Exporting current view only.");
+            }
+        }
+
+        // Check if we have data to export
+        if (exportItems.length === 0) {
+            alert("No records found to export.");
+            setIsExporting(false);
+            return;
+        }
+
+        console.log(`📊 Preparing to export ${exportItems.length} records`);
+
+        const dataToExport = exportItems.map((item) => ({
+            "Invoice Number": item.invoiceNumber || "—",
+            "Customer Name": item.name,
+            Service: item.service,
+            Loads: item.loads,
+            Detergent: item.detergent,
+            Fabric: item.fabric || "—",
+            Price: formatCurrency(item.price),
+            Date: item.createdAt ? format(new Date(item.createdAt), "MMM dd, yyyy") : "—",
+            "Payment Method": item.paymentMethod || "—",
+            "GCash Reference": getGcashReference(item),
+            "Payment Status": item.paid ? "Paid" : "Pending",
+            "Pickup Status": getPickupStatus(item),
+        }));
+
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+        const colWidths = [
+            { wch: 16 }, { wch: 20 }, { wch: 15 }, { wch: 8 }, { wch: 15 }, 
+            { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 20 }, 
+            { wch: 12 }, { wch: 15 },
+        ];
+        worksheet["!cols"] = colWidths;
+
+        // Add header styling
+        const range = XLSX.utils.decode_range(worksheet["!ref"]);
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cell_address = { c: C, r: 0 };
+            const cell_ref = XLSX.utils.encode_cell(cell_address);
+            if (worksheet[cell_ref]) {
+                worksheet[cell_ref].s = {
+                    font: { bold: true, color: { rgb: "FFFFFF" } },
+                    fill: { fgColor: { rgb: "0B2B26" } },
+                    alignment: { horizontal: "center" },
+                    border: {
+                        top: { style: "thin", color: { rgb: "1C3F3A" } },
+                        left: { style: "thin", color: { rgb: "1C3F3A" } },
+                        bottom: { style: "thin", color: { rgb: "1C3F3A" } },
+                        right: { style: "thin", color: { rgb: "1C3F3A" } },
+                    },
+                };
+            }
+        }
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Laundry Records");
+
+        // Generate filename
+        let filename = `laundry-records-${exportType === 'current' ? 'current-view' : `all-${timeFilter}`}`;
+        if (localSelectedRange.from && localSelectedRange.to) {
+            const fromStr = format(localSelectedRange.from, "yyyy-MM-dd");
+            const toStr = format(localSelectedRange.to, "yyyy-MM-dd");
+            filename += `_${fromStr}_to_${toStr}`;
+        }
+        filename += `_${format(new Date(), "yyyy-MM-dd_HH-mm")}.xlsx`;
+
+        XLSX.writeFile(workbook, filename);
+        
+        console.log(`✅ Exported ${exportItems.length} records (${exportType})`);
+        
+    } catch (error) {
+        console.error("❌ Export error:", error);
+        alert("Failed to export data. Please try again.");
+    } finally {
+        setIsExporting(false);
+    }
+};
 
     const clearDateFilter = () => {
         const newRange = { from: null, to: null };
@@ -609,24 +688,65 @@ const AdminRecordTable = ({
                             )}
                         </div>
 
-                        {/* Export Button */}
-                        <Button
-                            onClick={handleExport}
-                            className="transition-all"
-                            style={{
-                                backgroundColor: "#10B981",
-                                color: "#FFFFFF",
-                                border: "2px solid #10B981",
-                            }}
-                            disabled={items.length === 0 || isExporting}
-                        >
-                            {isExporting ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Download className="mr-2 h-4 w-4" />
+                        {/* Export Button with Dropdown */}
+                        <div className="relative" ref={exportDropdownRef}>
+                            <Button
+                                onClick={() => setShowExportDropdown(!showExportDropdown)}
+                                className="transition-all"
+                                style={{
+                                    backgroundColor: "#10B981",
+                                    color: "#FFFFFF",
+                                    border: "2px solid #10B981",
+                                }}
+                                disabled={isExporting}
+                            >
+                                {isExporting ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Download className="mr-2 h-4 w-4" />
+                                )}
+                                {isExporting ? "Exporting..." : "Export"}
+                            </Button>
+                            
+                            {/* Export Dropdown */}
+                            {showExportDropdown && (
+                                <div className="absolute right-0 z-50 mt-2 w-48 rounded-lg border-2 p-2 shadow-lg"
+                                     style={{
+                                         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                         borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                     }}>
+                                    <button
+                                        onClick={handleExportCurrent}
+                                        className="w-full text-left px-3 py-2 text-sm rounded hover:bg-opacity-20 transition-all"
+                                        style={{
+                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                        }}
+                                    >
+                                        Export Current View
+                                        <div className="text-xs opacity-70 mt-1">
+                                            {filteredWithActive.length} records
+                                        </div>
+                                    </button>
+                                    
+                                    <div className="border-t my-2" style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }} />
+                                    
+                                    <button
+                                        onClick={handleExportAll}
+                                        className="w-full text-left px-3 py-2 text-sm rounded hover:bg-opacity-20 transition-all"
+                                        style={{
+                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                        }}
+                                    >
+                                        Export All {timeFilter} Records
+                                        <div className="text-xs opacity-70 mt-1">
+                                            {totalRecords.toLocaleString()} total records
+                                        </div>
+                                    </button>
+                                </div>
                             )}
-                            {isExporting ? "Exporting..." : "Export"}
-                        </Button>
+                        </div>
                     </div>
                 </div>
 

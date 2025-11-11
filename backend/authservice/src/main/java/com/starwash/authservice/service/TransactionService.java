@@ -872,35 +872,27 @@ public class TransactionService {
         return transactionRepository.count();
     }
 
-    // Time-filtered pagination for admin records
+    // OPTIMIZED: Time-filtered records with better performance
     @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size + '-filter-' + #timeFilter")
     public List<AdminRecordResponseDto> getAllAdminRecordsByTime(int page, int size, String timeFilter) {
         long startTime = System.currentTimeMillis();
         
         try {
-            System.out.println("🔄 Fetching time-filtered admin records - Page: " + page + ", Size: " + size + ", Filter: " + timeFilter);
+            System.out.println("🔄 OPTIMIZED: Fetching time-filtered admin records - Page: " + page + ", Size: " + size + ", Filter: " + timeFilter);
             
-            // Get all transactions first (we'll filter them by time)
-            List<Transaction> allTransactions = transactionRepository.findAll();
-            List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
-
-            LocalDateTime currentManilaTime = getCurrentManilaTime();
-
-            // Filter transactions by time
-            List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
-
-            // Apply pagination to filtered results
-            int startIndex = page * size;
-            int endIndex = Math.min(startIndex + size, filteredTransactions.size());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            List<Transaction> transactions;
             
-            if (startIndex >= filteredTransactions.size()) {
-                return Collections.emptyList();
+            // Use database-level filtering instead of Java filtering
+            if ("all".equals(timeFilter)) {
+                transactions = transactionRepository.findAll(pageable).getContent();
+            } else {
+                LocalDateTime startDate = calculateStartDate(timeFilter, getCurrentManilaTime());
+                transactions = transactionRepository.findByCreatedAtAfter(startDate, pageable);
             }
-
-            List<Transaction> paginatedTransactions = filteredTransactions.subList(startIndex, endIndex);
-
+            
             // Get only the laundry jobs needed for these transactions
-            List<String> transactionIds = paginatedTransactions.stream()
+            List<String> transactionIds = transactions.stream()
                     .map(Transaction::getInvoiceNumber)
                     .collect(Collectors.toList());
                     
@@ -908,7 +900,9 @@ public class TransactionService {
             Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
                     .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-            List<AdminRecordResponseDto> result = paginatedTransactions.stream().map(tx -> {
+            LocalDateTime currentManilaTime = getCurrentManilaTime();
+
+            List<AdminRecordResponseDto> result = transactions.stream().map(tx -> {
                 AdminRecordResponseDto dto = new AdminRecordResponseDto();
                 dto.setId(tx.getId());
                 dto.setInvoiceNumber(tx.getInvoiceNumber());
@@ -995,11 +989,11 @@ public class TransactionService {
                 return dto;
             }).collect(Collectors.toList());
             
-            System.out.println("✅ Loaded " + result.size() + " time-filtered records (Page " + page + ", Filter: " + timeFilter + ")");
+            System.out.println("✅ OPTIMIZED: Loaded " + result.size() + " time-filtered records");
             return result;
         } finally {
             long duration = System.currentTimeMillis() - startTime;
-            System.out.println("🕒 getAllAdminRecordsByTime took: " + duration + "ms");
+            System.out.println("🕒 OPTIMIZED getAllAdminRecordsByTime took: " + duration + "ms");
         }
     }
 

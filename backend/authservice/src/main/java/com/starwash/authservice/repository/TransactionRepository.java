@@ -4,6 +4,7 @@ import com.starwash.authservice.model.Transaction;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.mongodb.repository.Aggregation;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -40,6 +41,10 @@ public interface TransactionRepository extends MongoRepository<Transaction, Stri
     
     @Query("{ 'createdAt': { $gte: ?0 } }")
     List<Transaction> findByCreatedAtAfter(LocalDateTime date);
+    
+    // NEW OPTIMIZED METHOD: Time-filtered records with pagination
+    @Query("{ 'createdAt': { $gte: ?0 } }")
+    List<Transaction> findByCreatedAtAfter(LocalDateTime date, Pageable pageable);
     
     @Aggregation(pipeline = {
         "{ $match: { 'createdAt': { $gte: ?0 } } }",

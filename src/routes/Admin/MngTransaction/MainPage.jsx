@@ -15,18 +15,24 @@ const MainPage = () => {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [summaryLoading, setSummaryLoading] = useState(true);
-    const [timeFilter, setTimeFilter] = useState("all");
+    const [dataLoaded, setDataLoaded] = useState(false);
+
+    const [timeFilter, setTimeFilter] = useState("today");
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [filteredRecordsCount, setFilteredRecordsCount] = useState(0);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     
-    // PAGINATION STATE
     const [currentPage, setCurrentPage] = useState(0);
-    const [pageSize, setPageSize] = useState(50);
+    const [pageSize, setPageSize] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const savedSize = localStorage.getItem('adminPageSize');
+            return savedSize ? parseInt(savedSize) : 50;
+        }
+        return 50;
+    });
     const [totalRecords, setTotalRecords] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     
-    // SUMMARY STATE
     const [summaryData, setSummaryData] = useState({
         totalIncome: 0,
         totalLoads: 0,
@@ -37,12 +43,10 @@ const MainPage = () => {
         totalRecords: 0
     });
     
-    // AUTO SEARCH STATE
     const [autoSearchTerm, setAutoSearchTerm] = useState("");
 
     const filterDropdownRef = useRef(null);
 
-    // Load filters from localStorage on component mount
     const [activeFilters, setActiveFilters] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedFilters = localStorage.getItem('adminRecordFilters');
@@ -59,7 +63,6 @@ const MainPage = () => {
         };
     });
 
-    // AUTO SEARCH EFFECT
     useEffect(() => {
         const urlParams = new URLSearchParams(location.search);
         const searchName = urlParams.get('search') || sessionStorage.getItem('autoSearchName');
@@ -76,15 +79,19 @@ const MainPage = () => {
         }
     }, [location.search]);
 
-    // Save filters to localStorage whenever they change
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('adminPageSize', pageSize.toString());
+        }
+    }, [pageSize]);
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             localStorage.setItem('adminRecordFilters', JSON.stringify(activeFilters));
         }
     }, [activeFilters]);
 
-    // FETCH SUMMARY DATA
-    const fetchSummaryData = async (filter = "all") => {
+    const fetchSummaryData = async (filter = "today") => {
         try {
             setSummaryLoading(true);
             console.log(`📊 Fetching summary data for: ${filter}`);
@@ -101,12 +108,20 @@ const MainPage = () => {
             
         } catch (error) {
             console.error("❌ Summary fetch error:", error);
+            setSummaryData({
+                totalIncome: 0,
+                totalLoads: 0,
+                totalFabric: 0,
+                totalDetergent: 0,
+                expiredCount: 0,
+                unclaimedCount: 0,
+                totalRecords: 0
+            });
         } finally {
             setSummaryLoading(false);
         }
     };
 
-    // FETCH RECORDS WITH TIME FILTERING
     const fetchRecords = async (page = 0, size = pageSize, filter = timeFilter) => {
         try {
             setLoading(true);
@@ -114,10 +129,8 @@ const MainPage = () => {
             
             let data;
             if (filter === "all") {
-                // Use regular endpoint for "all" for better performance
                 data = await api.get(`/admin/records?page=${page}&size=${size}`);
             } else {
-                // Use filtered endpoint for time-based filters
                 data = await api.get(`/admin/records/filtered?page=${page}&size=${size}&timeFilter=${filter}`);
             }
             
@@ -144,16 +157,18 @@ const MainPage = () => {
             }));
             
             setRecords(mapped);
+            setDataLoaded(true);
             console.log(`✅ Loaded ${mapped.length} records (Page ${page + 1}, Filter: ${filter})`);
             
         } catch (error) {
             console.error("❌ Record fetch error:", error);
+            setRecords([]);
+            setDataLoaded(true);
         } finally {
             setLoading(false);
         }
     };
 
-    // FETCH TOTAL COUNT WITH TIME FILTERING
     const fetchTotalCount = async (filter = timeFilter) => {
         try {
             let count;
@@ -169,29 +184,41 @@ const MainPage = () => {
             console.log(`📊 Total records (${filter}): ${count}, Pages: ${calculatedPages}`);
         } catch (error) {
             console.error("❌ Failed to fetch total count:", error);
+            setTotalRecords(0);
+            setTotalPages(0);
         }
     };
 
-    // Load data on component mount
     useEffect(() => {
-        fetchSummaryData(timeFilter);
-        fetchRecords(currentPage, pageSize, timeFilter);
-        fetchTotalCount(timeFilter);
-    }, []);
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                setDataLoaded(false);
+                
+                await Promise.all([
+                    fetchSummaryData(timeFilter),
+                    fetchRecords(currentPage, pageSize, timeFilter)
+                ]);
+                
+                await fetchTotalCount(timeFilter);
+                
+            } catch (error) {
+                console.error("❌ Error loading data:", error);
+            } finally {
+                setLoading(false);
+                setDataLoaded(true);
+            }
+        };
 
-    // Load records when page, page size, or time filter changes
-    useEffect(() => {
-        fetchRecords(currentPage, pageSize, timeFilter);
+        loadData();
     }, [currentPage, pageSize, timeFilter]);
 
-    // Load summary and reset pagination when time filter changes
     useEffect(() => {
-        fetchSummaryData(timeFilter);
-        fetchTotalCount(timeFilter);
-        setCurrentPage(0); // Reset to first page when filter changes
+        if (timeFilter !== "today") {
+            setAutoSearchTerm("");
+        }
     }, [timeFilter]);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handlePointerDown = (e) => {
             if (filterDropdownRef.current?.contains(e.target)) return;
@@ -201,12 +228,10 @@ const MainPage = () => {
         return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, []);
 
-    // Format total income with commas
     const formatCurrency = (amount) => {
         return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
     };
 
-    // PAGINATION FUNCTIONS
     const goToPage = (page) => {
         if (page >= 0 && page < totalPages) {
             setCurrentPage(page);
@@ -225,15 +250,11 @@ const MainPage = () => {
         }
     };
 
-    // Handle page size change
     const handlePageSizeChange = (newSize) => {
         setPageSize(newSize);
         setCurrentPage(0);
-        fetchRecords(0, newSize, timeFilter);
-        fetchTotalCount(timeFilter);
     };
 
-    // First row cards - USING SUMMARY DATA
     const firstRowCards = [
         {
             label: "Total Income",
@@ -261,7 +282,6 @@ const MainPage = () => {
         },
     ];
 
-    // Second row cards - USING SUMMARY DATA
     const secondRowCards = [
         {
             label: "Total Loads",
@@ -297,7 +317,6 @@ const MainPage = () => {
         { value: "all", label: "All Time" },
     ];
 
-    // Filter options
     const filterOptions = {
         sortBy: [
             { id: "date", label: "Date" },
@@ -325,7 +344,6 @@ const MainPage = () => {
         ]
     };
 
-    // Handle filter changes
     const handleSortChange = (sortId) => {
         setActiveFilters(prev => ({
             ...prev,
@@ -394,43 +412,33 @@ const MainPage = () => {
         return count;
     };
 
-    // Handle filtered count update from AdminRecordTable
     const handleFilteredCountChange = (count) => {
         setFilteredRecordsCount(count);
     };
 
-    // Skeleton components
-    const SkeletonCard = ({ index }) => (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="rounded-xl border-2 p-5 transition-all"
+    const SkeletonCard = () => (
+        <div
+            className="rounded-xl border-2 p-5"
             style={{
                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             }}
         >
             <div className="flex items-center justify-between mb-4">
-                <motion.div
+                <div
                     className="rounded-lg p-2 animate-pulse"
                     style={{
                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                     }}
                 >
-                    <div className="h-6 w-6"></div>
-                </motion.div>
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: index * 0.2 }}
-                    className="text-right"
-                >
+                    <div className="h-6 w-6 opacity-0">icon</div>
+                </div>
+                <div className="text-right">
                     <div className="h-6 w-20 rounded animate-pulse"
                          style={{
                              backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                          }} />
-                </motion.div>
+                </div>
             </div>
             
             <div className="flex items-center justify-between">
@@ -439,15 +447,12 @@ const MainPage = () => {
                          backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
             </div>
-        </motion.div>
+        </div>
     );
 
     const SkeletonTable = () => (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="rounded-xl border-2 p-5 transition-all"
+        <div
+            className="rounded-xl border-2 p-5"
             style={{
                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
@@ -497,63 +502,22 @@ const MainPage = () => {
                                  }`}
                                  style={{
                                      backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
-                                     animationDelay: `${rowIndex * 0.1}s`
                                  }} />
                         ))}
                     </div>
                 ))}
             </div>
-        </motion.div>
+        </div>
     );
 
-    // Card component that handles loading state
     const SummaryCard = ({ label, value, icon, color, tooltip, loading }) => {
         if (loading) {
-            return (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border-2 p-5 transition-all"
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                    }}
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <motion.div
-                            className="rounded-lg p-2 animate-pulse"
-                            style={{
-                                backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
-                            }}
-                        >
-                            <div className="h-6 w-6"></div>
-                        </motion.div>
-                        <div className="h-6 w-20 rounded animate-pulse"
-                             style={{
-                                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
-                             }} />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                        <div className="h-5 w-28 rounded animate-pulse"
-                             style={{
-                                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
-                             }} />
-                    </div>
-                </motion.div>
-            );
+            return <SkeletonCard />;
         }
 
         return (
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={{ 
-                    scale: 1.03,
-                    y: -2,
-                    transition: { duration: 0.2 }
-                }}
-                className="rounded-xl border-2 p-5 transition-all"
+            <div
+                className="rounded-xl border-2 p-5 transition-all hover:scale-105"
                 style={{
                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
@@ -561,25 +525,20 @@ const MainPage = () => {
                 title={tooltip}
             >
                 <div className="flex items-center justify-between mb-4">
-                    <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="rounded-lg p-2"
+                    <div
+                        className="rounded-lg p-2 transition-transform hover:scale-110 hover:rotate-5"
                         style={{
                             backgroundColor: `${color}20`,
                             color: color,
                         }}
                     >
                         {icon}
-                    </motion.div>
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="text-right"
-                    >
+                    </div>
+                    <div className="text-right">
                         <p className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             {value}
                         </p>
-                    </motion.div>
+                    </div>
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -587,7 +546,7 @@ const MainPage = () => {
                         {label}
                     </h3>
                 </div>
-            </motion.div>
+            </div>
         );
     };
 
@@ -599,22 +558,19 @@ const MainPage = () => {
             }}
         >
             {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
+            <div
                 className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
             >
                 <div className="flex items-center gap-3">
-                    <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="rounded-lg p-2"
+                    <div
+                        className="rounded-lg p-2 transition-transform hover:scale-110 hover:rotate-5"
                         style={{
                             backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
                             color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                         }}
                     >
                         <Package size={22} />
-                    </motion.div>
+                    </div>
                     <div>
                         <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                             Admin Laundry Records
@@ -848,33 +804,30 @@ const MainPage = () => {
                         )}
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {/* Summary Cards */}
             <div className="space-y-5">
                 {/* First Row - Total Income, Total Fabric, Total Detergent */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                    {firstRowCards.map((card, index) => (
-                        <SummaryCard key={card.label} {...card} index={index} />
+                    {firstRowCards.map((card) => (
+                        <SummaryCard key={card.label} {...card} />
                     ))}
                 </div>
 
                 {/* Second Row - Total Loads, Unclaimed Loads, Expired Loads */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                    {secondRowCards.map((card, index) => (
-                        <SummaryCard key={card.label} {...card} index={index + 3} />
+                    {secondRowCards.map((card) => (
+                        <SummaryCard key={card.label} {...card} />
                     ))}
                 </div>
             </div>
 
             {/* Record Table */}
-            {loading ? (
+            {loading || !dataLoaded ? (
                 <SkeletonTable />
             ) : (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
+                <div
                     className="rounded-xl border-2 p-5 transition-all"
                     style={{
                         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
@@ -906,6 +859,9 @@ const MainPage = () => {
                         onFilteredCountChange={handleFilteredCountChange}
                         activeFilters={activeFilters}
                         autoSearchTerm={autoSearchTerm}
+                        totalRecords={totalRecords}
+                        currentPage={currentPage}
+                        pageSize={pageSize}
                     />
 
                     {/* Pagination Controls */}
@@ -995,7 +951,7 @@ const MainPage = () => {
                             </div>
                         </div>
                     )}
-                </motion.div>
+                </div>
             )}
         </div>
     );
