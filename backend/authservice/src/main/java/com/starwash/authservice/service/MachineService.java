@@ -37,18 +37,11 @@ public class MachineService {
         MachineItem machine = highestCapacityMachine.orElse(machines.get(0));
         double capacityKg = machine.getCapacityKg() != null ? machine.getCapacityKg() : 8.0;
         
-        // Check if all machines have same capacity
-        boolean allSameCapacity = machines.stream()
+        // Group machines by capacity
+        List<Double> uniqueCapacities = machines.stream()
                 .map(m -> m.getCapacityKg() != null ? m.getCapacityKg() : 8.0)
                 .distinct()
-                .count() == 1;
-        
-        // Find machines with different capacities (not 8kg)
-        List<MachineItem> differentCapacityMachines = machines.stream()
-                .filter(m -> {
-                    double capacity = m.getCapacityKg() != null ? m.getCapacityKg() : 8.0;
-                    return capacity != 8.0; // Different from standard 8kg
-                })
+                .sorted()
                 .collect(Collectors.toList());
         
         // Calculate number of loads needed (round up)
@@ -58,15 +51,28 @@ public class MachineService {
         int plasticNeeded = loadsNeeded;
         
         String machineInfo;
-        if (allSameCapacity && capacityKg == 8.0) {
-            // All machines are standard 8kg capacity
-            machineInfo = "8kg capacity";
-        } else if (differentCapacityMachines.contains(machine)) {
-            // Using a machine with different capacity, show its name
-            machineInfo = "using " + machine.getName() + " (" + capacityKg + "kg capacity)";
+        if (uniqueCapacities.size() == 1) {
+            // All machines have same capacity
+            machineInfo = uniqueCapacities.get(0) + "kg capacity";
         } else {
-            // Using highest capacity machine but it's standard, just show capacity
-            machineInfo = capacityKg + "kg capacity";
+            // Multiple different capacities
+            StringBuilder infoBuilder = new StringBuilder();
+            infoBuilder.append("using ").append(machine.getName()).append(" (").append(capacityKg).append("kg)");
+            
+            // Add info about other capacities
+            List<Double> otherCapacities = uniqueCapacities.stream()
+                    .filter(cap -> cap != capacityKg)
+                    .collect(Collectors.toList());
+            
+            if (!otherCapacities.isEmpty()) {
+                infoBuilder.append(" - other machines: ");
+                for (int i = 0; i < otherCapacities.size(); i++) {
+                    if (i > 0) infoBuilder.append(", ");
+                    infoBuilder.append(otherCapacities.get(i)).append("kg");
+                }
+            }
+            
+            machineInfo = infoBuilder.toString();
         }
         
         return new LoadCalculationResult(loadsNeeded, plasticNeeded, capacityKg, machineInfo);
