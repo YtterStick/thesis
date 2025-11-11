@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class MachineService {
@@ -42,6 +43,14 @@ public class MachineService {
                 .distinct()
                 .count() == 1;
         
+        // Find machines with different capacities (not 8kg)
+        List<MachineItem> differentCapacityMachines = machines.stream()
+                .filter(m -> {
+                    double capacity = m.getCapacityKg() != null ? m.getCapacityKg() : 8.0;
+                    return capacity != 8.0; // Different from standard 8kg
+                })
+                .collect(Collectors.toList());
+        
         // Calculate number of loads needed (round up)
         int loadsNeeded = (int) Math.ceil(totalWeightKg / capacityKg);
         
@@ -49,10 +58,15 @@ public class MachineService {
         int plasticNeeded = loadsNeeded;
         
         String machineInfo;
-        if (allSameCapacity) {
-            machineInfo = capacityKg + "kg capacity";
+        if (allSameCapacity && capacityKg == 8.0) {
+            // All machines are standard 8kg capacity
+            machineInfo = "8kg capacity";
+        } else if (differentCapacityMachines.contains(machine)) {
+            // Using a machine with different capacity, show its name
+            machineInfo = "using " + machine.getName() + " (" + capacityKg + "kg capacity)";
         } else {
-            machineInfo = machine.getName() + " (" + capacityKg + "kg capacity)";
+            // Using highest capacity machine but it's standard, just show capacity
+            machineInfo = capacityKg + "kg capacity";
         }
         
         return new LoadCalculationResult(loadsNeeded, plasticNeeded, capacityKg, machineInfo);

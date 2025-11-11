@@ -120,6 +120,38 @@ public class MachineController {
         return ResponseEntity.ok(response);
     }
 
+    // NEW ENDPOINT: Get machines with different capacities
+    @GetMapping("/different-capacities")
+    public ResponseEntity<Map<String, Object>> getMachinesWithDifferentCapacities() {
+        List<MachineItem> allMachines = machineRepository.findAll();
+        
+        // Find machines that don't have standard 8kg capacity
+        List<MachineItemDto> differentCapacityMachines = allMachines.stream()
+                .filter(machine -> {
+                    double capacity = machine.getCapacityKg() != null ? machine.getCapacityKg() : 8.0;
+                    return capacity != 8.0;
+                })
+                .map(this::toDto)
+                .collect(Collectors.toList());
+        
+        // Find the highest capacity machine
+        MachineItem highestCapacityMachine = allMachines.stream()
+                .max((m1, m2) -> {
+                    double cap1 = m1.getCapacityKg() != null ? m1.getCapacityKg() : 8.0;
+                    double cap2 = m2.getCapacityKg() != null ? m2.getCapacityKg() : 8.0;
+                    return Double.compare(cap1, cap2);
+                })
+                .orElse(null);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("differentCapacityMachines", differentCapacityMachines);
+        response.put("highestCapacityMachine", highestCapacityMachine != null ? toDto(highestCapacityMachine) : null);
+        response.put("totalMachines", allMachines.size());
+        response.put("standardCapacity", 8.0);
+        
+        return ResponseEntity.ok(response);
+    }
+
     public static class CalculateLoadsRequest {
         private Double totalWeightKg;
         private String machineType = "Washer";
