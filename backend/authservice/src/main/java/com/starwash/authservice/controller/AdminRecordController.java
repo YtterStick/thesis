@@ -46,7 +46,7 @@ public class AdminRecordController {
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
-            @RequestParam(defaultValue = "today") String timeFilter) { // Changed default to "today"
+            @RequestParam(defaultValue = "all") String timeFilter) {
         
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
@@ -84,7 +84,7 @@ public class AdminRecordController {
     @GetMapping("/records/count/filtered")
     public ResponseEntity<Long> getTotalRecordsCountByTime(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam(defaultValue = "today") String timeFilter) { // Changed default to "today"
+            @RequestParam(defaultValue = "all") String timeFilter) {
         
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
@@ -100,7 +100,7 @@ public class AdminRecordController {
         return ResponseEntity.ok(totalCount);
     }
 
-    // ✅ GET /api/admin/records/summary — returns optimized summary for all records
+    // ✅ GET /api/admin/records/summary — returns summary for all records
     @GetMapping("/records/summary")
     public ResponseEntity<Map<String, Object>> getAdminRecordsSummary(
             @RequestHeader("Authorization") String authHeader) {
@@ -113,7 +113,7 @@ public class AdminRecordController {
         return ResponseEntity.ok(summary);
     }
 
-    // ✅ GET /api/admin/records/summary/{timeFilter} — returns optimized time-filtered summary
+    // ✅ GET /api/admin/records/summary/{timeFilter} — returns time-filtered summary
     @GetMapping("/records/summary/{timeFilter}")
     public ResponseEntity<Map<String, Object>> getAdminRecordsSummaryByTime(
             @RequestHeader("Authorization") String authHeader,
@@ -133,22 +133,9 @@ public class AdminRecordController {
         return ResponseEntity.ok(summary);
     }
 
-    // ✅ GET /api/admin/records/summary/fast — returns instant summary for fast loading
-    @GetMapping("/records/summary/fast")
-    public ResponseEntity<Map<String, Object>> getFastAdminSummary(
-            @RequestHeader("Authorization") String authHeader) {
-        
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(401).build();
-        }
-
-        Map<String, Object> summary = transactionService.getFastAdminSummary();
-        return ResponseEntity.ok(summary);
-    }
-
     // ✅ POST /api/admin/records/cache/clear — clear all cache (admin only)
     @PostMapping("/records/cache/clear")
-    @CacheEvict(value = {"adminRecords", "adminRecordsCount", "adminSummary", "fastSummary"}, allEntries = true)
+    @CacheEvict(value = {"adminRecords", "adminRecordsCount", "adminSummary"}, allEntries = true)
     public ResponseEntity<Void> clearAdminRecordsCache(
             @RequestHeader("Authorization") String authHeader) {
         
@@ -177,7 +164,7 @@ public class AdminRecordController {
 
     // ✅ POST /api/admin/records/cache/clear/summary — clear only summary cache
     @PostMapping("/records/cache/clear/summary")
-    @CacheEvict(value = {"adminSummary", "fastSummary"}, allEntries = true)
+    @CacheEvict(value = "adminSummary", allEntries = true)
     public ResponseEntity<Void> clearAdminSummaryCacheOnly(
             @RequestHeader("Authorization") String authHeader) {
         

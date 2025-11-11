@@ -37,27 +37,7 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
     @Query("{ 'loadAssignments.status': { $ne: 'COMPLETED' } }")
     List<LaundryJob> findIncompleteJobs();
     
+    
     @Query("{ 'transactionId': { $in: ?0 } }")
     List<LaundryJob> findByTransactionIdIn(List<String> transactionIds);
-    
-    // NEW OPTIMIZED COUNT METHODS
-    long countByExpiredTrueAndDisposedFalse();
-    
-    long countByPickupStatusAndExpiredFalseAndDisposedFalse(String pickupStatus);
-    
-    @Query("{ 'transactionId': { $in: ?0 }, 'expired': true, 'disposed': false }")
-    long countByTransactionIdInAndExpiredTrueAndDisposedFalse(List<String> transactionIds);
-    
-    @Query("{ 'transactionId': { $in: ?0 }, 'pickupStatus': ?1, 'expired': false, 'disposed': false }")
-    long countByTransactionIdInAndPickupStatusAndExpiredFalseAndDisposedFalse(List<String> transactionIds, String pickupStatus);
-    
-    // Fast count methods for summary
-    @Query(value = "{}", count = true)
-    long countAllJobs();
-    
-    @Query(value = "{ 'expired': true, 'disposed': false }", count = true)
-    long countExpiredJobs();
-    
-    @Query(value = "{ 'pickupStatus': 'UNCLAIMED', 'expired': false, 'disposed': false }", count = true)
-    long countUnclaimedJobs();
 }

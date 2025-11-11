@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
@@ -15,15 +15,7 @@ const MainPage = () => {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [summaryLoading, setSummaryLoading] = useState(true);
-    
-    // Set "today" as default filter
-    const [timeFilter, setTimeFilter] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('adminTimeFilter') || "today";
-        }
-        return "today";
-    });
-    
+    const [timeFilter, setTimeFilter] = useState("all");
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [filteredRecordsCount, setFilteredRecordsCount] = useState(0);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -34,7 +26,7 @@ const MainPage = () => {
     const [totalRecords, setTotalRecords] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     
-    // SUMMARY STATE - Preload with empty values for faster initial render
+    // SUMMARY STATE
     const [summaryData, setSummaryData] = useState({
         totalIncome: 0,
         totalLoads: 0,
@@ -67,13 +59,6 @@ const MainPage = () => {
         };
     });
 
-    // Save time filter to localStorage
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('adminTimeFilter', timeFilter);
-        }
-    }, [timeFilter]);
-
     // AUTO SEARCH EFFECT
     useEffect(() => {
         const urlParams = new URLSearchParams(location.search);
@@ -98,8 +83,8 @@ const MainPage = () => {
         }
     }, [activeFilters]);
 
-    // OPTIMIZED: FETCH SUMMARY DATA with caching
-    const fetchSummaryData = useCallback(async (filter = "all") => {
+    // FETCH SUMMARY DATA
+    const fetchSummaryData = async (filter = "all") => {
         try {
             setSummaryLoading(true);
             console.log(`📊 Fetching summary data for: ${filter}`);
@@ -119,18 +104,20 @@ const MainPage = () => {
         } finally {
             setSummaryLoading(false);
         }
-    }, []);
+    };
 
-    // OPTIMIZED: FETCH RECORDS WITH TIME FILTERING
-    const fetchRecords = useCallback(async (page = 0, size = pageSize, filter = timeFilter) => {
+    // FETCH RECORDS WITH TIME FILTERING
+    const fetchRecords = async (page = 0, size = pageSize, filter = timeFilter) => {
         try {
             setLoading(true);
             console.log(`📥 Fetching records - Page: ${page}, Size: ${size}, Filter: ${filter}`);
             
             let data;
             if (filter === "all") {
+                // Use regular endpoint for "all" for better performance
                 data = await api.get(`/admin/records?page=${page}&size=${size}`);
             } else {
+                // Use filtered endpoint for time-based filters
                 data = await api.get(`/admin/records/filtered?page=${page}&size=${size}&timeFilter=${filter}`);
             }
             
@@ -164,10 +151,10 @@ const MainPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [pageSize, timeFilter]);
+    };
 
-    // OPTIMIZED: FETCH TOTAL COUNT WITH TIME FILTERING
-    const fetchTotalCount = useCallback(async (filter = timeFilter) => {
+    // FETCH TOTAL COUNT WITH TIME FILTERING
+    const fetchTotalCount = async (filter = timeFilter) => {
         try {
             let count;
             if (filter === "all") {
@@ -183,31 +170,26 @@ const MainPage = () => {
         } catch (error) {
             console.error("❌ Failed to fetch total count:", error);
         }
-    }, [pageSize, timeFilter]);
+    };
 
-    // Load data on component mount - OPTIMIZED to load in parallel
+    // Load data on component mount
     useEffect(() => {
-        const loadInitialData = async () => {
-            await Promise.all([
-                fetchSummaryData(timeFilter),
-                fetchRecords(currentPage, pageSize, timeFilter),
-                fetchTotalCount(timeFilter)
-            ]);
-        };
-        loadInitialData();
+        fetchSummaryData(timeFilter);
+        fetchRecords(currentPage, pageSize, timeFilter);
+        fetchTotalCount(timeFilter);
     }, []);
 
     // Load records when page, page size, or time filter changes
     useEffect(() => {
         fetchRecords(currentPage, pageSize, timeFilter);
-    }, [currentPage, pageSize, timeFilter, fetchRecords]);
+    }, [currentPage, pageSize, timeFilter]);
 
     // Load summary and reset pagination when time filter changes
     useEffect(() => {
         fetchSummaryData(timeFilter);
         fetchTotalCount(timeFilter);
         setCurrentPage(0); // Reset to first page when filter changes
-    }, [timeFilter, fetchSummaryData, fetchTotalCount]);
+    }, [timeFilter]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -417,31 +399,38 @@ const MainPage = () => {
         setFilteredRecordsCount(count);
     };
 
-    // IMPROVED Skeleton components - Fixed the moving card issue
+    // Skeleton components
     const SkeletonCard = ({ index }) => (
-        <div
-            className="rounded-xl border-2 p-5"
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="rounded-xl border-2 p-5 transition-all"
             style={{
                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                minHeight: '120px' // Fixed height to prevent movement
             }}
         >
             <div className="flex items-center justify-between mb-4">
-                <div
+                <motion.div
                     className="rounded-lg p-2 animate-pulse"
                     style={{
                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                     }}
                 >
                     <div className="h-6 w-6"></div>
-                </div>
-                <div className="text-right">
+                </motion.div>
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: index * 0.2 }}
+                    className="text-right"
+                >
                     <div className="h-6 w-20 rounded animate-pulse"
                          style={{
                              backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                          }} />
-                </div>
+                </motion.div>
             </div>
             
             <div className="flex items-center justify-between">
@@ -450,16 +439,18 @@ const MainPage = () => {
                          backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                      }} />
             </div>
-        </div>
+        </motion.div>
     );
 
     const SkeletonTable = () => (
-        <div
-            className="rounded-xl border-2 p-5"
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="rounded-xl border-2 p-5 transition-all"
             style={{
                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                minHeight: '400px' // Fixed height to prevent movement
             }}
         >
             <div className="flex items-center justify-between mb-4">
@@ -506,35 +497,37 @@ const MainPage = () => {
                                  }`}
                                  style={{
                                      backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
+                                     animationDelay: `${rowIndex * 0.1}s`
                                  }} />
                         ))}
                     </div>
                 ))}
             </div>
-        </div>
+        </motion.div>
     );
 
-    // IMPROVED Card component with fixed loading state
+    // Card component that handles loading state
     const SummaryCard = ({ label, value, icon, color, tooltip, loading }) => {
         if (loading) {
             return (
-                <div
-                    className="rounded-xl border-2 p-5"
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl border-2 p-5 transition-all"
                     style={{
                         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                         borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                        minHeight: '120px' // Fixed height
                     }}
                 >
                     <div className="flex items-center justify-between mb-4">
-                        <div
+                        <motion.div
                             className="rounded-lg p-2 animate-pulse"
                             style={{
                                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                             }}
                         >
                             <div className="h-6 w-6"></div>
-                        </div>
+                        </motion.div>
                         <div className="h-6 w-20 rounded animate-pulse"
                              style={{
                                  backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
@@ -547,7 +540,7 @@ const MainPage = () => {
                                  backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
                              }} />
                     </div>
-                </div>
+                </motion.div>
             );
         }
 
@@ -564,7 +557,6 @@ const MainPage = () => {
                 style={{
                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                    minHeight: '120px' // Fixed height
                 }}
                 title={tooltip}
             >

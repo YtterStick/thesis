@@ -390,6 +390,7 @@ public class TransactionService {
                 .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
                 .count();
 
+        // FIXED: Corrected lambda syntax
         int unclaimedCount = (int) nonDisposedJobs.stream()
                 .filter(job -> job.getLoadAssignments() != null &&
                         job.getLoadAssignments().stream()
@@ -544,42 +545,63 @@ public class TransactionService {
         System.out.println("🗑️  Admin records cache evicted");
     }
 
-    // OPTIMIZED: Get summary data for all records with parallel processing
-    @Cacheable(value = "adminSummary", key = "'optimized-all'")
+    // Get summary data for all records (not paginated)
+    @Cacheable(value = "adminSummary", key = "'all'")
     public Map<String, Object> getAdminRecordsSummary() {
         long startTime = System.currentTimeMillis();
         
         try {
-            System.out.println("📊 Calculating OPTIMIZED admin records summary...");
+            System.out.println("📊 Calculating admin records summary...");
             
             List<Transaction> allTransactions = transactionRepository.findAll();
-            
-            // Parallel processing for better performance
-            double totalIncome = allTransactions.parallelStream()
+            List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+
+            Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+
+            LocalDateTime currentManilaTime = getCurrentManilaTime();
+
+            // Calculate totals from ALL records
+            double totalIncome = allTransactions.stream()
                     .mapToDouble(Transaction::getTotalPrice)
                     .sum();
 
-            int totalLoads = allTransactions.parallelStream()
+            int totalLoads = allTransactions.stream()
                     .mapToInt(Transaction::getServiceQuantity)
                     .sum();
 
-            int totalFabric = allTransactions.parallelStream()
+            int totalFabric = allTransactions.stream()
                     .mapToInt(tx -> tx.getConsumables().stream()
                             .filter(c -> c.getName().toLowerCase().contains("fabric"))
                             .mapToInt(ServiceEntry::getQuantity)
                             .sum())
                     .sum();
 
-            int totalDetergent = allTransactions.parallelStream()
+            int totalDetergent = allTransactions.stream()
                     .mapToInt(tx -> tx.getConsumables().stream()
                             .filter(c -> c.getName().toLowerCase().contains("detergent"))
                             .mapToInt(ServiceEntry::getQuantity)
                             .sum())
                     .sum();
 
-            // Get counts from laundry jobs directly for better performance
-            long expiredCount = laundryJobRepository.countByExpiredTrueAndDisposedFalse();
-            long unclaimedCount = laundryJobRepository.countByPickupStatusAndExpiredFalseAndDisposedFalse("UNCLAIMED");
+            long expiredCount = allTransactions.stream()
+                    .filter(tx -> {
+                        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+                        if (job != null) {
+                            return job.isExpired() && !job.isDisposed();
+                        }
+                        return tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime);
+                    })
+                    .count();
+
+            long unclaimedCount = allLaundryJobs.stream()
+                    .filter(job -> job.getLoadAssignments() != null &&
+                            job.getLoadAssignments().stream()
+                                    .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                    .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                    .filter(job -> !job.isExpired())
+                    .filter(job -> !job.isDisposed())
+                    .count();
 
             Map<String, Object> summary = new HashMap<>();
             summary.put("totalIncome", totalIncome);
@@ -590,7 +612,7 @@ public class TransactionService {
             summary.put("unclaimedCount", unclaimedCount);
             summary.put("totalRecords", allTransactions.size());
 
-            System.out.println("📈 OPTIMIZED Admin Summary Results:");
+            System.out.println("📈 Admin Summary Results:");
             System.out.println("   - Total Income: ₱" + totalIncome);
             System.out.println("   - Total Loads: " + totalLoads);
             System.out.println("   - Total Fabric: " + totalFabric);
@@ -602,55 +624,72 @@ public class TransactionService {
             return summary;
         } finally {
             long duration = System.currentTimeMillis() - startTime;
-            System.out.println("🕒 getOptimizedAdminRecordsSummary took: " + duration + "ms");
+            System.out.println("🕒 getAdminRecordsSummary took: " + duration + "ms");
         }
     }
 
-    // OPTIMIZED: Get time-filtered summary with parallel processing
-    @Cacheable(value = "adminSummary", key = "'optimized-' + #timeFilter")
+    // Get time-filtered summary
+    @Cacheable(value = "adminSummary", key = "#timeFilter")
     public Map<String, Object> getAdminRecordsSummaryByTime(String timeFilter) {
         long startTime = System.currentTimeMillis();
         
         try {
-            System.out.println("📊 Calculating OPTIMIZED time-filtered admin records summary: " + timeFilter);
+            System.out.println("📊 Calculating time-filtered admin records summary: " + timeFilter);
             
             List<Transaction> allTransactions = transactionRepository.findAll();
+            List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+
+            Map<String, LaundryJob> laundryJobMap = allLaundryJobs.stream()
+                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+
             LocalDateTime currentManilaTime = getCurrentManilaTime();
 
             // Filter transactions by time
             List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
 
-            // Parallel processing for filtered records
-            double totalIncome = filteredTransactions.parallelStream()
+            // Calculate totals from filtered records
+            double totalIncome = filteredTransactions.stream()
                     .mapToDouble(Transaction::getTotalPrice)
                     .sum();
 
-            int totalLoads = filteredTransactions.parallelStream()
+            int totalLoads = filteredTransactions.stream()
                     .mapToInt(Transaction::getServiceQuantity)
                     .sum();
 
-            int totalFabric = filteredTransactions.parallelStream()
+            int totalFabric = filteredTransactions.stream()
                     .mapToInt(tx -> tx.getConsumables().stream()
                             .filter(c -> c.getName().toLowerCase().contains("fabric"))
                             .mapToInt(ServiceEntry::getQuantity)
                             .sum())
                     .sum();
 
-            int totalDetergent = filteredTransactions.parallelStream()
+            int totalDetergent = filteredTransactions.stream()
                     .mapToInt(tx -> tx.getConsumables().stream()
                             .filter(c -> c.getName().toLowerCase().contains("detergent"))
                             .mapToInt(ServiceEntry::getQuantity)
                             .sum())
                     .sum();
 
-            // Get counts for filtered transactions
-            List<String> filteredTransactionIds = filteredTransactions.stream()
-                    .map(Transaction::getInvoiceNumber)
-                    .collect(Collectors.toList());
-                    
-            long expiredCount = laundryJobRepository.countByTransactionIdInAndExpiredTrueAndDisposedFalse(filteredTransactionIds);
-            long unclaimedCount = laundryJobRepository.countByTransactionIdInAndPickupStatusAndExpiredFalseAndDisposedFalse(
-                    filteredTransactionIds, "UNCLAIMED");
+            long expiredCount = filteredTransactions.stream()
+                    .filter(tx -> {
+                        LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+                        if (job != null) {
+                            return job.isExpired() && !job.isDisposed();
+                        }
+                        return tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime);
+                    })
+                    .count();
+
+            long unclaimedCount = allLaundryJobs.stream()
+                    .filter(job -> filteredTransactions.stream()
+                            .anyMatch(tx -> tx.getInvoiceNumber().equals(job.getTransactionId())))
+                    .filter(job -> job.getLoadAssignments() != null &&
+                            job.getLoadAssignments().stream()
+                                    .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                    .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                    .filter(job -> !job.isExpired())
+                    .filter(job -> !job.isDisposed())
+                    .count();
 
             Map<String, Object> summary = new HashMap<>();
             summary.put("totalIncome", totalIncome);
@@ -662,7 +701,7 @@ public class TransactionService {
             summary.put("totalRecords", filteredTransactions.size());
             summary.put("timeFilter", timeFilter);
 
-            System.out.println("📈 OPTIMIZED Time-Filtered Summary Results (" + timeFilter + "):");
+            System.out.println("📈 Time-Filtered Summary Results (" + timeFilter + "):");
             System.out.println("   - Total Income: ₱" + totalIncome);
             System.out.println("   - Total Loads: " + totalLoads);
             System.out.println("   - Total Fabric: " + totalFabric);
@@ -674,7 +713,7 @@ public class TransactionService {
             return summary;
         } finally {
             long duration = System.currentTimeMillis() - startTime;
-            System.out.println("🕒 getOptimizedAdminRecordsSummaryByTime took: " + duration + "ms");
+            System.out.println("🕒 getAdminRecordsSummaryByTime took: " + duration + "ms");
         }
     }
 
@@ -781,191 +820,156 @@ public class TransactionService {
         return transactionRepository.count();
     }
 
-    // Time-filtered pagination for admin records
-    @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size + '-filter-' + #timeFilter")
-    public List<AdminRecordResponseDto> getAllAdminRecordsByTime(int page, int size, String timeFilter) {
-        long startTime = System.currentTimeMillis();
+    // Add these methods to TransactionService.java
+
+// Time-filtered pagination for admin records
+@Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size + '-filter-' + #timeFilter")
+public List<AdminRecordResponseDto> getAllAdminRecordsByTime(int page, int size, String timeFilter) {
+    long startTime = System.currentTimeMillis();
+    
+    try {
+        System.out.println("🔄 Fetching time-filtered admin records - Page: " + page + ", Size: " + size + ", Filter: " + timeFilter);
         
-        try {
-            System.out.println("🔄 Fetching time-filtered admin records - Page: " + page + ", Size: " + size + ", Filter: " + timeFilter);
-            
-            // Get all transactions first (we'll filter them by time)
-            List<Transaction> allTransactions = transactionRepository.findAll();
-            List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+        // Get all transactions first (we'll filter them by time)
+        List<Transaction> allTransactions = transactionRepository.findAll();
+        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
 
-            LocalDateTime currentManilaTime = getCurrentManilaTime();
+        LocalDateTime currentManilaTime = getCurrentManilaTime();
 
-            // Filter transactions by time
-            List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
+        // Filter transactions by time
+        List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
 
-            // Apply pagination to filtered results
-            int startIndex = page * size;
-            int endIndex = Math.min(startIndex + size, filteredTransactions.size());
-            
-            if (startIndex >= filteredTransactions.size()) {
-                return Collections.emptyList();
-            }
+        // Apply pagination to filtered results
+        int startIndex = page * size;
+        int endIndex = Math.min(startIndex + size, filteredTransactions.size());
+        
+        if (startIndex >= filteredTransactions.size()) {
+            return Collections.emptyList();
+        }
 
-            List<Transaction> paginatedTransactions = filteredTransactions.subList(startIndex, endIndex);
+        List<Transaction> paginatedTransactions = filteredTransactions.subList(startIndex, endIndex);
 
-            // Get only the laundry jobs needed for these transactions
-            List<String> transactionIds = paginatedTransactions.stream()
-                    .map(Transaction::getInvoiceNumber)
-                    .collect(Collectors.toList());
-                    
-            List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
-            Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
-                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+        // Get only the laundry jobs needed for these transactions
+        List<String> transactionIds = paginatedTransactions.stream()
+                .map(Transaction::getInvoiceNumber)
+                .collect(Collectors.toList());
+                
+        List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
+        Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
+                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-            List<AdminRecordResponseDto> result = paginatedTransactions.stream().map(tx -> {
-                AdminRecordResponseDto dto = new AdminRecordResponseDto();
-                dto.setId(tx.getId());
-                dto.setInvoiceNumber(tx.getInvoiceNumber());
-                dto.setCustomerName(tx.getCustomerName());
-                dto.setContact(tx.getContact());
-                dto.setServiceName(tx.getServiceName());
-                dto.setLoads(tx.getServiceQuantity());
+        List<AdminRecordResponseDto> result = paginatedTransactions.stream().map(tx -> {
+            AdminRecordResponseDto dto = new AdminRecordResponseDto();
+            dto.setId(tx.getId());
+            dto.setInvoiceNumber(tx.getInvoiceNumber());
+            dto.setCustomerName(tx.getCustomerName());
+            dto.setContact(tx.getContact());
+            dto.setServiceName(tx.getServiceName());
+            dto.setLoads(tx.getServiceQuantity());
 
-                String detergentQty = tx.getConsumables().stream()
-                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                        .map(c -> String.valueOf(c.getQuantity()))
-                        .findFirst().orElse("0");
+            String detergentQty = tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("0");
 
-                String fabricQty = tx.getConsumables().stream()
-                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                        .map(c -> String.valueOf(c.getQuantity()))
-                        .findFirst().orElse("0");
+            String fabricQty = tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("0");
 
-                dto.setDetergent(detergentQty);
-                dto.setFabric(fabricQty);
+            dto.setDetergent(detergentQty);
+            dto.setFabric(fabricQty);
 
-                dto.setTotalPrice(tx.getTotalPrice());
-                dto.setPaymentMethod(tx.getPaymentMethod());
-                dto.setProcessedByStaff(tx.getStaffId());
-                dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
-                dto.setCreatedAt(tx.getCreatedAt());
+            dto.setTotalPrice(tx.getTotalPrice());
+            dto.setPaymentMethod(tx.getPaymentMethod());
+            dto.setProcessedByStaff(tx.getStaffId());
+            dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
+            dto.setCreatedAt(tx.getCreatedAt());
 
-                dto.setGcashVerified(tx.getGcashVerified());
+            dto.setGcashVerified(tx.getGcashVerified());
 
-                LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
-                if (job != null) {
-                    dto.setPickupStatus(
-                            job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
+            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+            if (job != null) {
+                dto.setPickupStatus(
+                        job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
 
-                    if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
-                        long completedLoads = job.getLoadAssignments().stream()
-                                .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
-                                .count();
+                if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
+                    long completedLoads = job.getLoadAssignments().stream()
+                            .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
+                            .count();
 
-                        long totalLoads = job.getLoadAssignments().size();
+                    long totalLoads = job.getLoadAssignments().size();
 
-                        if (completedLoads == totalLoads) {
-                            dto.setLaundryStatus("Completed");
-                        } else if (completedLoads > 0) {
+                    if (completedLoads == totalLoads) {
+                        dto.setLaundryStatus("Completed");
+                    } else if (completedLoads > 0) {
+                        dto.setLaundryStatus("In Progress");
+                    } else {
+                        boolean anyInProgress = job.getLoadAssignments().stream()
+                                .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
+                                        !"COMPLETED".equalsIgnoreCase(load.getStatus()));
+
+                        if (anyInProgress) {
                             dto.setLaundryStatus("In Progress");
                         } else {
-                            boolean anyInProgress = job.getLoadAssignments().stream()
-                                    .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
-                                            !"COMPLETED".equalsIgnoreCase(load.getStatus()));
-
-                            if (anyInProgress) {
-                                dto.setLaundryStatus("In Progress");
-                            } else {
-                                dto.setLaundryStatus("Not Started");
-                            }
+                            dto.setLaundryStatus("Not Started");
                         }
-
-                        long unwashedLoadsCount = job.getLoadAssignments().stream()
-                                .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
-                                .count();
-                        dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
-
-                    } else {
-                        dto.setLaundryStatus("Not Started");
-                        dto.setUnwashedLoadsCount(tx.getServiceQuantity());
                     }
 
-                    dto.setExpired(job.isExpired());
-                    dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
-                    dto.setClaimProcessedBy(job.getClaimedByStaffId());
-                    dto.setDisposed(job.isDisposed());
-                    dto.setDisposedBy(job.getDisposedBy());
+                    long unwashedLoadsCount = job.getLoadAssignments().stream()
+                            .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                            .count();
+                    dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
+
                 } else {
-                    dto.setPickupStatus("UNCLAIMED");
                     dto.setLaundryStatus("Not Started");
                     dto.setUnwashedLoadsCount(tx.getServiceQuantity());
-                    dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
-                    dto.setLaundryProcessedBy(null);
-                    dto.setClaimProcessedBy(null);
-                    dto.setDisposed(false);
-                    dto.setDisposedBy(null);
                 }
 
-                return dto;
-            }).collect(Collectors.toList());
-            
-            System.out.println("✅ Loaded " + result.size() + " time-filtered records (Page " + page + ", Filter: " + timeFilter + ")");
-            return result;
-        } finally {
-            long duration = System.currentTimeMillis() - startTime;
-            System.out.println("🕒 getAllAdminRecordsByTime took: " + duration + "ms");
-        }
-    }
+                dto.setExpired(job.isExpired());
+                dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
+                dto.setClaimProcessedBy(job.getClaimedByStaffId());
+                dto.setDisposed(job.isDisposed());
+                dto.setDisposedBy(job.getDisposedBy());
+            } else {
+                dto.setPickupStatus("UNCLAIMED");
+                dto.setLaundryStatus("Not Started");
+                dto.setUnwashedLoadsCount(tx.getServiceQuantity());
+                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
+                dto.setLaundryProcessedBy(null);
+                dto.setClaimProcessedBy(null);
+                dto.setDisposed(false);
+                dto.setDisposedBy(null);
+            }
 
-    // Get count for time-filtered records
-    @Cacheable(value = "adminRecordsCount", key = "'filter-' + #timeFilter")
-    public long getTotalAdminRecordsCountByTime(String timeFilter) {
-        try {
-            System.out.println("📊 Counting time-filtered records: " + timeFilter);
-            
-            List<Transaction> allTransactions = transactionRepository.findAll();
-            LocalDateTime currentManilaTime = getCurrentManilaTime();
-
-            List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
-            long count = filteredTransactions.size();
-            
-            System.out.println("✅ Time-filtered count (" + timeFilter + "): " + count);
-            return count;
-        } catch (Exception e) {
-            System.err.println("❌ Error counting time-filtered records: " + e.getMessage());
-            return transactionRepository.count(); // Fallback to total count
-        }
-    }
-    
-    // FAST SUMMARY METHOD - For instant loading of summary cards
-    @Cacheable(value = "fastSummary", key = "'instant'")
-    public Map<String, Object> getFastAdminSummary() {
-        long startTime = System.currentTimeMillis();
+            return dto;
+        }).collect(Collectors.toList());
         
-        try {
-            System.out.println("⚡ Loading FAST admin summary...");
-            
-            // Return basic structure immediately for instant UI rendering
-            Map<String, Object> fastSummary = new HashMap<>();
-            fastSummary.put("totalIncome", 0.0);
-            fastSummary.put("totalLoads", 0);
-            fastSummary.put("totalFabric", 0);
-            fastSummary.put("totalDetergent", 0);
-            fastSummary.put("expiredCount", 0);
-            fastSummary.put("unclaimedCount", 0);
-            fastSummary.put("totalRecords", 0);
-            fastSummary.put("loading", true);
-            
-            // Then load actual data asynchronously
-            new Thread(() -> {
-                try {
-                    Map<String, Object> actualSummary = getAdminRecordsSummary();
-                    // Update cache with actual data
-                    evictAdminSummaryCache();
-                } catch (Exception e) {
-                    System.err.println("❌ Error loading actual summary data: " + e.getMessage());
-                }
-            }).start();
-            
-            return fastSummary;
-        } finally {
-            long duration = System.currentTimeMillis() - startTime;
-            System.out.println("⚡ getFastAdminSummary took: " + duration + "ms");
-        }
+        System.out.println("✅ Loaded " + result.size() + " time-filtered records (Page " + page + ", Filter: " + timeFilter + ")");
+        return result;
+    } finally {
+        long duration = System.currentTimeMillis() - startTime;
+        System.out.println("🕒 getAllAdminRecordsByTime took: " + duration + "ms");
     }
+}
+
+// Get count for time-filtered records
+@Cacheable(value = "adminRecordsCount", key = "'filter-' + #timeFilter")
+public long getTotalAdminRecordsCountByTime(String timeFilter) {
+    try {
+        System.out.println("📊 Counting time-filtered records: " + timeFilter);
+        
+        List<Transaction> allTransactions = transactionRepository.findAll();
+        LocalDateTime currentManilaTime = getCurrentManilaTime();
+
+        List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
+        long count = filteredTransactions.size();
+        
+        System.out.println("✅ Time-filtered count (" + timeFilter + "): " + count);
+        return count;
+    } catch (Exception e) {
+        System.err.println("❌ Error counting time-filtered records: " + e.getMessage());
+        return transactionRepository.count(); // Fallback to total count
+    }
+}
 }
