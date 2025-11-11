@@ -35,7 +35,7 @@ public class TransactionService {
     private final NotificationService notificationService;
     private final AuditService auditService;
     private final MongoTemplate mongoTemplate;
-    private final MachineService machineService; // ADDED
+    private final MachineService machineService;
 
     public TransactionService(ServiceRepository serviceRepository,
             StockRepository stockRepository,
@@ -45,7 +45,7 @@ public class TransactionService {
             NotificationService notificationService,
             AuditService auditService,
             MongoTemplate mongoTemplate,
-            MachineService machineService) { // ADDED
+            MachineService machineService) {
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
         this.transactionRepository = transactionRepository;
@@ -54,7 +54,7 @@ public class TransactionService {
         this.notificationService = notificationService;
         this.auditService = auditService;
         this.mongoTemplate = mongoTemplate;
-        this.machineService = machineService; // ADDED
+        this.machineService = machineService;
     }
 
     private ZoneId getManilaTimeZone() {
@@ -72,7 +72,7 @@ public class TransactionService {
         // AUTO-CALCULATION: Calculate loads based on weight if provided
         int loads;
         int autoPlasticBags = 0;
-        String machineUsed = null;
+        String machineInfo = null;
         double machineCapacity = 0;
         
         if (Boolean.TRUE.equals(request.getAutoCalculateLoads()) && request.getTotalWeightKg() != null && request.getTotalWeightKg() > 0) {
@@ -80,12 +80,11 @@ public class TransactionService {
                 MachineService.LoadCalculationResult calculation = machineService.calculateLoads(request.getTotalWeightKg());
                 loads = calculation.getLoads();
                 autoPlasticBags = calculation.getPlasticBags();
-                machineUsed = calculation.getMachineName();
+                machineInfo = calculation.getMachineInfo();
                 machineCapacity = calculation.getMachineCapacity();
                 
                 System.out.println("🔄 Auto-calculated loads: " + loads + " loads for " + 
-                                 request.getTotalWeightKg() + "kg using " + machineUsed + 
-                                 " (capacity: " + calculation.getMachineCapacity() + "kg)");
+                                 request.getTotalWeightKg() + "kg - " + machineInfo);
                 
             } catch (Exception e) {
                 System.err.println("❌ Auto-calculation failed, using manual loads: " + e.getMessage());
@@ -193,9 +192,9 @@ public class TransactionService {
         System.out.println("   - Current Manila Time: " + now);
         
         // Log auto-calculation info
-        if (machineUsed != null) {
+        if (machineInfo != null) {
             System.out.println("   - Auto-calculation: " + request.getTotalWeightKg() + "kg = " + loads + " loads");
-            System.out.println("   - Machine Used: " + machineUsed + " (" + machineCapacity + "kg capacity)");
+            System.out.println("   - Machine Info: " + machineInfo);
         }
 
         String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
@@ -269,10 +268,9 @@ public class TransactionService {
                 staffId);
         
         // Add auto-calculation metadata
-        if (machineUsed != null) {
-            // You might want to extend ServiceInvoiceDto to include these fields
+        if (machineInfo != null) {
             System.out.println("✅ Auto-calculation completed: " + 
-                             request.getTotalWeightKg() + "kg → " + loads + " loads using " + machineUsed);
+                             request.getTotalWeightKg() + "kg → " + loads + " loads - " + machineInfo);
         }
 
         return invoiceDto;

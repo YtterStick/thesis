@@ -108,7 +108,8 @@ const ConsumablesSection = ({
                 <span>Insufficient</span>
               </div>
             )}
-            {isManuallySet(item.name, type) && !insufficient && (
+            {/* Only show "Manual" for detergent and fabric, not for plastic during auto-calculation */}
+            {isManuallySet(item.name, type) && !insufficient && type !== "plastic" && (
               <div className="flex items-center gap-1 text-xs" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }}>
                 <Info size={12} />
                 <span>Manual</span>

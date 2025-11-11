@@ -90,7 +90,7 @@ public class MachineController {
             response.put("loads", result.getLoads());
             response.put("plasticBags", result.getPlasticBags());
             response.put("machineCapacity", result.getMachineCapacity());
-            response.put("machineName", result.getMachineName());
+            response.put("machineInfo", result.getMachineInfo());
             response.put("totalWeight", request.getTotalWeightKg());
             response.put("message", "Calculation successful");
             

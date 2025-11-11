@@ -4,7 +4,9 @@ import com.starwash.authservice.model.MachineItem;
 import com.starwash.authservice.repository.MachineRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class MachineService {
@@ -19,20 +21,26 @@ public class MachineService {
      * Calculate number of loads needed based on total weight and machine capacity
      */
     public LoadCalculationResult calculateLoads(double totalWeightKg, String machineType) {
-        // Get available machines of the specified type
-        List<MachineItem> availableMachines = machineRepository.findByStatusAndType("Available", machineType);
+        // Get all machines of the specified type
+        List<MachineItem> machines = machineRepository.findByType(machineType);
         
-        if (availableMachines.isEmpty()) {
-            // Fallback to any machine of the type
-            availableMachines = machineRepository.findByType(machineType);
-            if (availableMachines.isEmpty()) {
-                throw new RuntimeException("No " + machineType + " machines found");
-            }
+        if (machines.isEmpty()) {
+            throw new RuntimeException("No " + machineType + " machines found");
         }
         
-        // Use the first available machine's capacity
-        MachineItem machine = availableMachines.get(0);
-        double capacityKg = machine.getCapacityKg() != null ? machine.getCapacityKg() : 8.0; // Default to 8kg if null
+        // Find the machine with highest capacity
+        Optional<MachineItem> highestCapacityMachine = machines.stream()
+                .max(Comparator.comparing(machine -> 
+                    machine.getCapacityKg() != null ? machine.getCapacityKg() : 0.0));
+        
+        MachineItem machine = highestCapacityMachine.orElse(machines.get(0));
+        double capacityKg = machine.getCapacityKg() != null ? machine.getCapacityKg() : 8.0;
+        
+        // Check if all machines have same capacity
+        boolean allSameCapacity = machines.stream()
+                .map(m -> m.getCapacityKg() != null ? m.getCapacityKg() : 8.0)
+                .distinct()
+                .count() == 1;
         
         // Calculate number of loads needed (round up)
         int loadsNeeded = (int) Math.ceil(totalWeightKg / capacityKg);
@@ -40,7 +48,14 @@ public class MachineService {
         // Calculate plastic needed (typically 1 plastic per load)
         int plasticNeeded = loadsNeeded;
         
-        return new LoadCalculationResult(loadsNeeded, plasticNeeded, capacityKg, machine.getName());
+        String machineInfo;
+        if (allSameCapacity) {
+            machineInfo = capacityKg + "kg capacity";
+        } else {
+            machineInfo = machine.getName() + " (" + capacityKg + "kg capacity)";
+        }
+        
+        return new LoadCalculationResult(loadsNeeded, plasticNeeded, capacityKg, machineInfo);
     }
     
     /**
@@ -54,19 +69,19 @@ public class MachineService {
         private final int loads;
         private final int plasticBags;
         private final double machineCapacity;
-        private final String machineName;
+        private final String machineInfo;
         
-        public LoadCalculationResult(int loads, int plasticBags, double machineCapacity, String machineName) {
+        public LoadCalculationResult(int loads, int plasticBags, double machineCapacity, String machineInfo) {
             this.loads = loads;
             this.plasticBags = plasticBags;
             this.machineCapacity = machineCapacity;
-            this.machineName = machineName;
+            this.machineInfo = machineInfo;
         }
         
         // Getters
         public int getLoads() { return loads; }
         public int getPlasticBags() { return plasticBags; }
         public double getMachineCapacity() { return machineCapacity; }
-        public String getMachineName() { return machineName; }
+        public String getMachineInfo() { return machineInfo; }
     }
 }
