@@ -77,7 +77,11 @@ public class TransactionService {
         
         if (Boolean.TRUE.equals(request.getAutoCalculateLoads()) && request.getTotalWeightKg() != null && request.getTotalWeightKg() > 0) {
             try {
-                MachineService.LoadCalculationResult calculation = machineService.calculateLoads(request.getTotalWeightKg());
+                // Use service-aware calculation (detect if it's a dryer service)
+                MachineService.LoadCalculationResult calculation = machineService.calculateLoadsForService(
+                    request.getTotalWeightKg(), 
+                    service.getName()
+                );
                 loads = calculation.getLoads();
                 autoPlasticBags = calculation.getPlasticBags();
                 machineInfo = calculation.getMachineInfo();

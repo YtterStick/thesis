@@ -19,14 +19,19 @@ public class MachineService {
     }
     
     /**
-     * Calculate number of loads needed based on total weight and machine capacity
+     * Calculate number of loads needed based on total weight and machine type
      */
     public LoadCalculationResult calculateLoads(double totalWeightKg, String machineType) {
         // Get all machines of the specified type
         List<MachineItem> machines = machineRepository.findByType(machineType);
         
         if (machines.isEmpty()) {
-            throw new RuntimeException("No " + machineType + " machines found");
+            // Fallback: try to find any machine if specified type not found
+            machines = machineRepository.findAll();
+            if (machines.isEmpty()) {
+                throw new RuntimeException("No machines found");
+            }
+            System.out.println("⚠️ No " + machineType + " machines found, using any available machine");
         }
         
         // Find the machine with highest capacity
@@ -37,7 +42,7 @@ public class MachineService {
         MachineItem machine = highestCapacityMachine.orElse(machines.get(0));
         double capacityKg = machine.getCapacityKg() != null ? machine.getCapacityKg() : 8.0;
         
-        // Group machines by capacity
+        // Group machines by capacity for the specified type
         List<Double> uniqueCapacities = machines.stream()
                 .map(m -> m.getCapacityKg() != null ? m.getCapacityKg() : 8.0)
                 .distinct()
@@ -75,6 +80,11 @@ public class MachineService {
             machineInfo = infoBuilder.toString();
         }
         
+        // Add machine type to the info
+        if (!machines.isEmpty() && machines.get(0).getType() != null) {
+            machineInfo = machine.getType() + " - " + machineInfo;
+        }
+        
         return new LoadCalculationResult(loadsNeeded, plasticNeeded, capacityKg, machineInfo);
     }
     
@@ -83,6 +93,19 @@ public class MachineService {
      */
     public LoadCalculationResult calculateLoads(double totalWeightKg) {
         return calculateLoads(totalWeightKg, "Washer");
+    }
+    
+    /**
+     * Calculate loads based on service type (detect if it's a dryer service)
+     */
+    public LoadCalculationResult calculateLoadsForService(double totalWeightKg, String serviceName) {
+        if (serviceName != null && serviceName.toLowerCase().contains("dry")) {
+            // Dryer service - use dryer machines
+            return calculateLoads(totalWeightKg, "Dryer");
+        } else {
+            // Default to washer for wash services
+            return calculateLoads(totalWeightKg, "Washer");
+        }
     }
     
     public static class LoadCalculationResult {

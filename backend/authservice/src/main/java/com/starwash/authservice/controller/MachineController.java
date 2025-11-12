@@ -102,6 +102,32 @@ public class MachineController {
         }
     }
 
+    // NEW ENDPOINT: Calculate loads based on service type
+    @PostMapping("/calculate-loads-service")
+    public ResponseEntity<Map<String, Object>> calculateLoadsForService(
+            @RequestBody CalculateLoadsServiceRequest request) {
+        try {
+            MachineService.LoadCalculationResult result = machineService.calculateLoadsForService(
+                request.getTotalWeightKg(), 
+                request.getServiceName()
+            );
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("loads", result.getLoads());
+            response.put("plasticBags", result.getPlasticBags());
+            response.put("machineCapacity", result.getMachineCapacity());
+            response.put("machineInfo", result.getMachineInfo());
+            response.put("totalWeight", request.getTotalWeightKg());
+            response.put("message", "Calculation successful");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
     // NEW ENDPOINT: Get machine capacities
     @GetMapping("/capacities")
     public ResponseEntity<Map<String, Object>> getMachineCapacities() {
@@ -161,6 +187,17 @@ public class MachineController {
         public void setTotalWeightKg(Double totalWeightKg) { this.totalWeightKg = totalWeightKg; }
         public String getMachineType() { return machineType; }
         public void setMachineType(String machineType) { this.machineType = machineType; }
+    }
+
+    public static class CalculateLoadsServiceRequest {
+        private Double totalWeightKg;
+        private String serviceName;
+        
+        // Getters and setters
+        public Double getTotalWeightKg() { return totalWeightKg; }
+        public void setTotalWeightKg(Double totalWeightKg) { this.totalWeightKg = totalWeightKg; }
+        public String getServiceName() { return serviceName; }
+        public void setServiceName(String serviceName) { this.serviceName = serviceName; }
     }
 
     private MachineItemDto toDto(MachineItem item) {
