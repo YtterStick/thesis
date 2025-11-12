@@ -58,13 +58,20 @@ public class MachineService {
         String machineInfo;
         if (uniqueCapacities.size() == 1) {
             // All machines have same capacity
-            machineInfo = uniqueCapacities.get(0) + "kg capacity";
+            double capacity = uniqueCapacities.get(0);
+            machineInfo = getMachineDisplayName(capacity) + " - " + capacity + "kg";
         } else {
             // Multiple different capacities
             StringBuilder infoBuilder = new StringBuilder();
-            infoBuilder.append("using ").append(machine.getName()).append(" (").append(capacityKg).append("kg)");
             
-            // Add info about other capacities
+            // Use "Machine" for the highest capacity, specific names for others
+            if (capacityKg > 8.0) {
+                infoBuilder.append("Machine - ").append(capacityKg).append("kg");
+            } else {
+                infoBuilder.append(machine.getName()).append(" - ").append(capacityKg).append("kg");
+            }
+            
+            // Add info about other capacities with proper naming
             List<Double> otherCapacities = uniqueCapacities.stream()
                     .filter(cap -> cap != capacityKg)
                     .collect(Collectors.toList());
@@ -73,7 +80,18 @@ public class MachineService {
                 infoBuilder.append(" - other machines: ");
                 for (int i = 0; i < otherCapacities.size(); i++) {
                     if (i > 0) infoBuilder.append(", ");
-                    infoBuilder.append(otherCapacities.get(i)).append("kg");
+                    double cap = otherCapacities.get(i);
+                    if (cap > 8.0) {
+                        infoBuilder.append("Machine - ").append(cap).append("kg");
+                    } else {
+                        // Find a machine with this capacity to get its name
+                        String machineName = machines.stream()
+                                .filter(m -> (m.getCapacityKg() != null ? m.getCapacityKg() : 8.0) == cap)
+                                .findFirst()
+                                .map(MachineItem::getName)
+                                .orElse("Washer " + (i + 1));
+                        infoBuilder.append(machineName).append(" - ").append(cap).append("kg");
+                    }
                 }
             }
             
@@ -86,6 +104,31 @@ public class MachineService {
         }
         
         return new LoadCalculationResult(loadsNeeded, plasticNeeded, capacityKg, machineInfo);
+    }
+    
+    /**
+     * Get display name based on capacity
+     * Machines > 8kg are called "Machine", others keep their specific names
+     */
+    private String getMachineDisplayName(double capacity) {
+        return capacity > 8.0 ? "Machine" : "Washer";
+    }
+    
+    /**
+     * Enhanced machine naming logic
+     */
+    private String getMachineDisplayName(MachineItem machine, double capacity) {
+        if (capacity > 8.0) {
+            return "Machine";
+        } else {
+            // For smaller machines, use their actual name or default to "Washer"
+            String name = machine.getName();
+            if (name == null || name.trim().isEmpty()) {
+                return "Washer";
+            }
+            // If name contains numbers or specific identifiers, keep them
+            return name;
+        }
     }
     
     /**

@@ -209,15 +209,24 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
         setIsCalculating(true);
         try {
+            // Determine machine type based on selected service
+            let machineType = "Washer";
+            if (form.serviceId && services.length > 0) {
+                const selectedService = services.find(s => s.id === form.serviceId);
+                if (selectedService && selectedService.name.toLowerCase().includes("dry")) {
+                    machineType = "Dryer";
+                }
+            }
+
             const response = await api.post("/machines/calculate-loads", {
                 totalWeightKg: weight,
-                machineType: "Washer"
+                machineType: machineType
             });
 
             const { loads: calculatedLoads, machineInfo, machineCapacity, plasticBags } = response;
             
             setCalculatedLoads(calculatedLoads);
-            setMachineInfo(`${weight}kg = ${calculatedLoads} loads (${machineInfo})`);
+            setMachineInfo(`${weight}kg = ${calculatedLoads} loads - ${machineInfo}`);
             setLoads(calculatedLoads);
             
             // Auto-update plastic bags in consumables and clear manual override

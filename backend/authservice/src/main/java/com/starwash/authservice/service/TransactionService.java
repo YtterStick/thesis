@@ -75,7 +75,10 @@ public class TransactionService {
         String machineInfo = null;
         double machineCapacity = 0;
         
-        if (Boolean.TRUE.equals(request.getAutoCalculateLoads()) && request.getTotalWeightKg() != null && request.getTotalWeightKg() > 0) {
+        // Track if plastic should be auto-managed
+        boolean shouldAutoManagePlastic = Boolean.TRUE.equals(request.getAutoCalculateLoads());
+        
+        if (shouldAutoManagePlastic && request.getTotalWeightKg() != null && request.getTotalWeightKg() > 0) {
             try {
                 // Use service-aware calculation (detect if it's a dryer service)
                 MachineService.LoadCalculationResult calculation = machineService.calculateLoadsForService(
@@ -93,10 +96,12 @@ public class TransactionService {
             } catch (Exception e) {
                 System.err.println("❌ Auto-calculation failed, using manual loads: " + e.getMessage());
                 loads = Optional.ofNullable(request.getLoads()).orElse(1);
+                shouldAutoManagePlastic = false; // Disable plastic auto-management if calculation failed
             }
         } else {
             // Fallback to manual input
             loads = Optional.ofNullable(request.getLoads()).orElse(1);
+            shouldAutoManagePlastic = false; // Manual mode - don't auto-manage plastic
         }
 
         ServiceEntryDto serviceDto = new ServiceEntryDto(service.getName(), service.getPrice(), loads);
@@ -107,27 +112,33 @@ public class TransactionService {
 
         List<String> insufficientStockItems = new ArrayList<>();
 
-        // AUTO-PLASTIC: Add plastic bags automatically if calculated
+        // AUTO-PLASTIC: Add plastic bags automatically ONLY when auto-calculating
         Map<String, Integer> consumableQuantities = new HashMap<>();
         if (request.getConsumableQuantities() != null) {
             consumableQuantities.putAll(request.getConsumableQuantities());
         }
         
-        if (autoPlasticBags > 0) {
+        // Only auto-add plastic when we're in auto-calculation mode
+        if (shouldAutoManagePlastic && autoPlasticBags > 0) {
             // Find plastic items in stock
             List<StockItem> plasticItems = stockRepository.findAll().stream()
                     .filter(item -> item.getName().toLowerCase().contains("plastic"))
                     .collect(Collectors.toList());
-                    
+                
             if (!plasticItems.isEmpty()) {
                 StockItem plasticItem = plasticItems.get(0); // Use first plastic item found
                 String plasticName = plasticItem.getName();
                 
-                // Add or update plastic quantity
+                // Add or update plastic quantity - only if not already manually set
                 int currentPlastic = consumableQuantities.getOrDefault(plasticName, 0);
-                consumableQuantities.put(plasticName, currentPlastic + autoPlasticBags);
-                
-                System.out.println("📦 Auto-added " + autoPlasticBags + " plastic bags for " + loads + " loads");
+                // Only auto-set if it matches the expected auto value (not manually overridden)
+                if (currentPlastic == 0 || currentPlastic == loads) {
+                    consumableQuantities.put(plasticName, autoPlasticBags);
+                    
+                    System.out.println("📦 Auto-added " + autoPlasticBags + " plastic bags for " + loads + " loads");
+                } else {
+                    System.out.println("📦 Plastic bags manually set to " + currentPlastic + ", not auto-adjusting");
+                }
             }
         }
 
