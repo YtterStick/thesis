@@ -5,7 +5,7 @@ import ServiceInvoiceCard from "@/components/ServiceInvoiceCard";
 import TotalPreviewCard from "@/components/TotalPreviewCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { RotateCcw, XCircle, AlertTriangle, Check, X } from "lucide-react";
+import { RotateCcw, XCircle, AlertTriangle, Check, X, Eye, Calculator } from "lucide-react";
 import { api } from "@/lib/api-config";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
@@ -205,7 +205,8 @@ const MainPage = () => {
                 // For other errors, show the error message and toast
                 setErrorMessage(error.message || "Transaction failed");
                 toast({
-                    title: "Insufficient stock",
+                    title: "Transaction Failed",
+                    description: error.message || "Please try again",
                     variant: "destructive",
                 });
             }
@@ -267,44 +268,134 @@ const MainPage = () => {
         }));
     };
 
+    // Floating Preview Component
+const FloatingPreview = () => {
+    const { totalAmount = 0, amountGiven = 0, change = 0 } = previewData;
+    const isPaid = amountGiven > 0;
+    const isUnderpaid = isPaid && change < 0;
+    const isOverpaid = isPaid && change > 0;
+
     return (
-        <div className="px-6 pb-5 pt-4 overflow-hidden" style={{
+        <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="lg:absolute lg:bottom-6 lg:right-6 fixed bottom-6 right-6 z-40 shadow-2xl border-2 rounded-xl p-4 w-64"
+            style={{
+                backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+            }}
+        >
+            <div className="flex items-center gap-2 mb-3">
+                <Calculator className="h-4 w-4" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }} />
+                <h3 className="font-semibold text-sm" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                    Live Total Preview
+                </h3>
+            </div>
+            
+            <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Total:</span>
+                    <div className="flex items-center gap-1 font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                        <span>₱</span>
+                        <span>{totalAmount.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Given:</span>
+                    <div className="flex items-center gap-1 font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                        <span>₱</span>
+                        <span>{amountGiven.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                {isPaid && (
+                    <div className="flex justify-between items-center pt-2 border-t" style={{ borderColor: isDarkMode ? '#334155' : '#e2e8f0' }}>
+                        <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Change:</span>
+                        <div className={`flex items-center gap-1 font-semibold ${
+                            isUnderpaid 
+                                ? 'text-red-500' 
+                                : isOverpaid 
+                                    ? 'text-green-500' 
+                                    : isDarkMode 
+                                        ? 'text-slate-300' 
+                                        : 'text-slate-700'
+                        }`}>
+                            <span>{change < 0 ? "-₱" : "₱"}</span>
+                            <span>{Math.abs(change).toFixed(2)}</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+            
+            {/* Warning for underpayment */}
+            {isUnderpaid && (
+                <div className="mt-2 p-2 rounded text-xs flex items-center gap-1" style={{ 
+                    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    border: `1px solid ${isDarkMode ? '#ef4444' : '#ef4444'}`
+                }}>
+                    <AlertTriangle size={12} />
+                    <span>Amount given is less than total</span>
+                </div>
+            )}
+            
+            <div className="mt-2 text-xs flex items-center gap-1" style={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                <Eye size={12} />
+                <span>Updates as you type</span>
+            </div>
+        </motion.div>
+    );
+};
+
+    return (
+        <div className="min-h-screen pb-5 pt-4 relative" style={{
             backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
         }}>
-            {/* Main content with manual spacing */}
-            <div className="mb-6">
+            {/* Main content */}
+            <div className="container mx-auto">
                 <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-                    <TransactionForm
-                        ref={formRef}
-                        onSubmit={handleSubmit}
-                        onPreviewChange={handlePreviewChange}
-                        isSubmitting={isSubmitting || isCheckingLaundry || isProcessingAfterConfirm}
-                        isLocked={isLocked}
-                    />
+                    {/* Left Column - Transaction Form */}
+                    <div className="space-y-6">
+                        <TransactionForm
+                            ref={formRef}
+                            onSubmit={handleSubmit}
+                            onPreviewChange={handlePreviewChange}
+                            isSubmitting={isSubmitting || isCheckingLaundry || isProcessingAfterConfirm}
+                            isLocked={isLocked}
+                        />
+                    </div>
 
-                    {!invoice &&
-                        previewData &&
-                        typeof previewData.totalAmount === "number" &&
-                        typeof previewData.amountGiven === "number" &&
-                        typeof previewData.change === "number" && (
-                            <TotalPreviewCard
-                                amount={previewData.totalAmount}
-                                amountGiven={previewData.amountGiven}
-                                change={previewData.change}
-                            />
-                        )}
+                    {/* Right Column - Regular Preview (hidden on mobile) */}
+                    <div className="hidden lg:block">
+                        <div className="space-y-6">
+                            {!invoice &&
+                                previewData &&
+                                typeof previewData.totalAmount === "number" &&
+                                typeof previewData.amountGiven === "number" &&
+                                typeof previewData.change === "number" && (
+                                    <TotalPreviewCard
+                                        amount={previewData.totalAmount}
+                                        amountGiven={previewData.amountGiven}
+                                        change={previewData.change}
+                                    />
+                                )}
 
-                    {invoice && (
-                        <div>
-                            <ServiceInvoiceCard
-                                transaction={invoice}
-                                settings={invoice.formatSettings}
-                            />
+                            {invoice && (
+                                <ServiceInvoiceCard
+                                    transaction={invoice}
+                                    settings={invoice.formatSettings}
+                                />
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
 
+            {/* Floating Preview - Shows on all screens */}
+            {!invoice && previewData && previewData.totalAmount > 0 && (
+                <FloatingPreview />
+            )}
 
             {/* Transaction Complete Modal */}
             {showActions && (

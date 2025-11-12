@@ -1,6 +1,7 @@
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.dto.LaundryJobDto;
+import com.starwash.authservice.dto.LaundryJobPageDto;
 import com.starwash.authservice.model.LaundryJob;
 import com.starwash.authservice.model.LaundryJob.LoadAssignment;
 import com.starwash.authservice.model.MachineItem;
@@ -72,16 +73,151 @@ public class LaundryJobService {
         return LocalDateTime.now(getManilaTimeZone());
     }
 
-    private List<String> getFlowByServiceType(String serviceType) {
-        if (serviceType == null) {
-            return List.of(STATUS_NOT_STARTED, "IN_PROGRESS", STATUS_COMPLETED);
+    // NEW: Paginated endpoint for service tracking
+    @Cacheable(value = "laundryJobs", key = "'tracking-page-' + #page + '-size-' + #size")
+    public LaundryJobPageDto getJobsForTracking(int page, int size) {
+        long startTime = System.currentTimeMillis();
+        System.out.println("🚀 OPTIMIZED: Fetching jobs for tracking - Page: " + page + ", Size: " + size);
+        
+        try {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("dueDate").ascending());
+            Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
+            List<LaundryJob> jobs = jobPage.getContent();
+
+            // Filter out completed jobs and process to DTOs
+            List<LaundryJob> nonCompletedJobs = jobs.stream()
+                    .filter(job -> job.getLoadAssignments() != null)
+                    .filter(job -> !job.getLoadAssignments().stream()
+                            .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                    .collect(Collectors.toList());
+
+            List<LaundryJobDto> jobDtos = processJobsToDtos(nonCompletedJobs);
+
+            System.out.println("✅ OPTIMIZED: Loaded " + jobDtos.size() + " jobs for tracking in " + 
+                             (System.currentTimeMillis() - startTime) + "ms");
+
+            return new LaundryJobPageDto(
+                    jobDtos,
+                    jobPage.getNumber(),
+                    jobPage.getSize(),
+                    jobPage.getTotalElements(),
+                    jobPage.getTotalPages()
+            );
+        } finally {
+            System.out.println("🕒 getJobsForTracking took: " + (System.currentTimeMillis() - startTime) + "ms");
         }
-        return SERVICE_FLOWS.getOrDefault(
-                serviceType.toLowerCase(),
-                List.of(STATUS_NOT_STARTED, "IN_PROGRESS", STATUS_COMPLETED));
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    // NEW: Simplified DTO for faster processing
+    @Cacheable(value = "laundryJobs", key = "'simplified-page-' + #page + '-size-' + #size")
+    public LaundryJobPageDto getSimplifiedJobs(int page, int size) {
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("dueDate").ascending());
+            Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
+            List<LaundryJob> jobs = jobPage.getContent();
+
+            List<LaundryJob> nonCompletedJobs = jobs.stream()
+                    .filter(job -> job.getLoadAssignments() != null)
+                    .filter(job -> !job.getLoadAssignments().stream()
+                            .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                    .collect(Collectors.toList());
+
+            List<LaundryJobDto> jobDtos = processJobsToSimplifiedDtos(nonCompletedJobs);
+
+            return new LaundryJobPageDto(
+                    jobDtos,
+                    jobPage.getNumber(),
+                    jobPage.getSize(),
+                    jobPage.getTotalElements(),
+                    jobPage.getTotalPages()
+            );
+        } finally {
+            System.out.println("🕒 getSimplifiedJobs took: " + (System.currentTimeMillis() - startTime) + "ms");
+        }
+    }
+
+    // NEW: Optimized DTO processing for service tracking
+    private List<LaundryJobDto> processJobsToSimplifiedDtos(List<LaundryJob> jobs) {
+        if (jobs.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<String> transactionIds = jobs.stream()
+                .map(LaundryJob::getTransactionId)
+                .collect(Collectors.toSet());
+
+        List<Transaction> transactions = transactionRepository.findByInvoiceNumberIn(new ArrayList<>(transactionIds));
+        Map<String, Transaction> transactionMap = transactions.stream()
+                .collect(Collectors.toMap(Transaction::getInvoiceNumber, Function.identity()));
+
+        List<LaundryJobDto> result = new ArrayList<>();
+
+        for (LaundryJob job : jobs) {
+            Transaction tx = transactionMap.get(job.getTransactionId());
+
+            int detergentQty = 0;
+            int fabricQty = 0;
+            LocalDateTime issueDate = null;
+            String serviceType = job.getServiceType();
+            String contact = job.getContact();
+
+            if (tx != null) {
+                issueDate = tx.getIssueDate();
+                serviceType = tx.getServiceName();
+
+                if (tx.getConsumables() != null) {
+                    detergentQty = tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                            .mapToInt(c -> c.getQuantity())
+                            .sum();
+
+                    fabricQty = tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                            .mapToInt(c -> c.getQuantity())
+                            .sum();
+                }
+            }
+
+            LaundryJobDto dto = new LaundryJobDto();
+            dto.setTransactionId(job.getTransactionId());
+            dto.setCustomerName(job.getCustomerName());
+            dto.setContact(contact);
+            
+            // Simplified load assignments - only essential fields
+            if (job.getLoadAssignments() != null) {
+                List<LoadAssignment> simplifiedLoads = job.getLoadAssignments().stream()
+                        .map(load -> {
+                            LoadAssignment simplified = new LoadAssignment();
+                            simplified.setLoadNumber(load.getLoadNumber());
+                            simplified.setMachineId(load.getMachineId());
+                            simplified.setStatus(load.getStatus());
+                            simplified.setDurationMinutes(load.getDurationMinutes());
+                            simplified.setStartTime(load.getStartTime());
+                            simplified.setEndTime(load.getEndTime());
+                            return simplified;
+                        })
+                        .collect(Collectors.toList());
+                dto.setLoadAssignments(simplifiedLoads);
+            }
+            
+            dto.setDetergentQty(detergentQty);
+            dto.setFabricQty(fabricQty);
+            dto.setStatusFlow(job.getStatusFlow());
+            dto.setCurrentStep(job.getCurrentStep());
+            dto.setIssueDate(issueDate);
+            dto.setServiceType(serviceType);
+            dto.setTotalLoads(job.getLoadAssignments() != null ? job.getLoadAssignments().size() : 0);
+
+            result.add(dto);
+        }
+
+        return result;
+    }
+
+    // Keep existing methods but add caching optimizations
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob createJob(LaundryJobDto dto) {
         Transaction txn = transactionRepository
                 .findByInvoiceNumber(dto.getTransactionId())
@@ -89,7 +225,7 @@ public class LaundryJobService {
                         "Transaction not found for invoice: " + dto.getTransactionId()));
 
         List<LoadAssignment> assignments = new ArrayList<>();
-        for (int i = 1; i <= txn.getServiceQuantity(); i++) {
+        for (int i = 1; i <= (dto.getTotalLoads() != null ? dto.getTotalLoads() : txn.getServiceQuantity()); i++) {
             assignments.add(new LoadAssignment(i, null, STATUS_NOT_STARTED, null, null, null));
         }
 
@@ -115,10 +251,15 @@ public class LaundryJobService {
         System.out.println("🆕 Creating laundry job with dueDate: " + job.getDueDate() +
                 " for transaction: " + dto.getTransactionId());
 
-        return laundryJobRepository.save(job);
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        
+        // Evict tracking caches
+        evictTrackingCaches();
+        
+        return savedJob;
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob assignMachine(String transactionId, int loadNumber, String machineId, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -141,7 +282,11 @@ public class LaundryJobService {
                 .setMachineId(machineId);
 
         job.setLaundryProcessedBy(processedBy);
-        return laundryJobRepository.save(job);
+        
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        evictTrackingCaches();
+        
+        return savedJob;
     }
 
     private boolean isCorrectMachineTypeForLoad(LaundryJob job, int loadNumber, MachineItem machine) {
@@ -187,7 +332,7 @@ public class LaundryJobService {
         }
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -250,10 +395,11 @@ public class LaundryJobService {
             autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber);
         }, finalDuration, TimeUnit.MINUTES);
 
+        evictTrackingCaches();
         return saved;
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob dryAgain(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -319,6 +465,7 @@ public class LaundryJobService {
             autoAdvanceAfterStepEnds("dry", transactionId, loadNumber);
         }, duration, TimeUnit.MINUTES);
 
+        evictTrackingCaches();
         return saved;
     }
 
@@ -344,7 +491,7 @@ public class LaundryJobService {
         return load.getStatus();
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob advanceLoad(String transactionId, int loadNumber, String newStatus, String processedBy) {
         if ("COMPLETE".equalsIgnoreCase(newStatus)) {
             newStatus = STATUS_COMPLETED;
@@ -394,6 +541,7 @@ public class LaundryJobService {
             }
         }
 
+        evictTrackingCaches();
         return savedJob;
     }
 
@@ -517,7 +665,7 @@ public class LaundryJobService {
         }
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob completeLoad(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = advanceLoad(transactionId, loadNumber, STATUS_COMPLETED, processedBy);
 
@@ -556,6 +704,7 @@ public class LaundryJobService {
             System.err.println("❌ Failed to send completion notification: " + e.getMessage());
         }
 
+        evictTrackingCaches();
         return job;
     }
 
@@ -618,7 +767,7 @@ public class LaundryJobService {
         }
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob updateLoadDuration(String transactionId, int loadNumber, int durationMinutes,
             String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
@@ -634,24 +783,33 @@ public class LaundryJobService {
         }
 
         job.setLaundryProcessedBy(processedBy);
-        return laundryJobRepository.save(job);
+        
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        evictTrackingCaches();
+        return savedJob;
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob updateCurrentStep(String transactionId, int newStep, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
         job.setCurrentStep(newStep);
         job.setLaundryProcessedBy(processedBy);
-        return laundryJobRepository.save(job);
+        
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        evictTrackingCaches();
+        return savedJob;
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob updateJob(LaundryJob job, String processedBy) {
         job.setLaundryProcessedBy(processedBy);
-        return laundryJobRepository.save(job);
+        
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        evictTrackingCaches();
+        return savedJob;
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public boolean deleteJobById(String id, String processedBy) {
         if (!laundryJobRepository.existsById(id))
             return false;
@@ -663,11 +821,12 @@ public class LaundryJobService {
         }
 
         laundryJobRepository.deleteById(id);
+        evictTrackingCaches();
         return true;
     }
 
     // ADDED BACK: Dispose job method
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob disposeJob(String id, String processedBy) {
         LaundryJob job = laundryJobRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Laundry job not found: " + id));
@@ -683,7 +842,10 @@ public class LaundryJobService {
         job.setDisposed(true);
         job.setDisposedBy(processedBy);
         job.setDisposedDate(getCurrentManilaTime());
-        return laundryJobRepository.save(job);
+        
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        evictTrackingCaches();
+        return savedJob;
     }
 
     // ADDED BACK: Get disposed jobs method
@@ -691,52 +853,16 @@ public class LaundryJobService {
         return laundryJobRepository.findByDisposedTrue();
     }
 
-    @Cacheable(value = "laundryJobs", key = "'allJobs-' + #page + '-' + #size")
-    public List<LaundryJobDto> getAllJobs(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("dueDate").ascending());
-        Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
-        List<LaundryJob> jobs = jobPage.getContent();
-
-        List<LaundryJob> nonCompletedJobs = jobs.stream()
-                .filter(job -> job.getLoadAssignments() != null)
-                .filter(job -> !job.getLoadAssignments().stream()
-                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
-                .collect(Collectors.toList());
-
-        return processJobsToDtos(nonCompletedJobs);
+    // Update the existing getAllJobs to use pagination
+    @Cacheable(value = "laundryJobs", key = "'all-page-' + #page + '-size-' + #size")
+    public LaundryJobPageDto getAllJobs(int page, int size) {
+        return getJobsForTracking(page, size);
     }
 
-    @Cacheable(value = "laundryJobs", key = "'allJobs'")
+    // Keep existing getAllJobs without parameters for backward compatibility
     public List<LaundryJobDto> getAllJobs() {
-        List<LaundryJob> jobs = laundryJobRepository.findAll();
-
-        List<LaundryJob> nonCompletedJobs = jobs.stream()
-                .filter(job -> job.getLoadAssignments() != null)
-                .filter(job -> !job.getLoadAssignments().stream()
-                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
-                .collect(Collectors.toList());
-
-        return processJobsToDtos(nonCompletedJobs);
-    }
-
-    @Cacheable(value = "completedCount", key = "'allCompleted'")
-    public int getAllCompletedCount() {
-        List<LaundryJob> allJobs = laundryJobRepository.findAll();
-
-        int count = 0;
-
-        for (LaundryJob job : allJobs) {
-            if (job.getLoadAssignments() != null) {
-                for (LoadAssignment load : job.getLoadAssignments()) {
-                    if (STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())) {
-                        count++;
-                    }
-                }
-            }
-        }
-
-        System.out.println("📊 ALL Completed loads count: " + count + " (scanned " + allJobs.size() + " total jobs)");
-        return count;
+        LaundryJobPageDto pageDto = getJobsForTracking(0, 50);
+        return pageDto.getJobs();
     }
 
     @Cacheable(value = "completedCount", key = "'today'")
@@ -770,6 +896,26 @@ public class LaundryJobService {
         }
 
         System.out.println("📊 Completed today count: " + count + " (as of " + getCurrentManilaTime() + ")");
+        return count;
+    }
+
+    @Cacheable(value = "completedCount", key = "'all'")
+    public int getAllCompletedCount() {
+        List<LaundryJob> allJobs = laundryJobRepository.findAll();
+
+        int count = 0;
+
+        for (LaundryJob job : allJobs) {
+            if (job.getLoadAssignments() != null) {
+                for (LoadAssignment load : job.getLoadAssignments()) {
+                    if (STATUS_COMPLETED.equalsIgnoreCase(load.getStatus())) {
+                        count++;
+                    }
+                }
+            }
+        }
+
+        System.out.println("📊 ALL Completed loads count: " + count + " (scanned " + allJobs.size() + " total jobs)");
         return count;
     }
 
@@ -1054,7 +1200,7 @@ public class LaundryJobService {
         return laundryJobRepository.findByCustomerName(customerName);
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob forceAdvanceLoad(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -1093,7 +1239,10 @@ public class LaundryJobService {
         load.setEndTime(null);
 
         job.setLaundryProcessedBy(processedBy);
-        return laundryJobRepository.save(job);
+        
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        evictTrackingCaches();
+        return savedJob;
     }
 
     public void checkAndFixTimerStates(String transactionId) {
@@ -1137,7 +1286,7 @@ public class LaundryJobService {
             .collect(Collectors.toList());
     }
 
-    @CacheEvict(value = "laundryJobs", allEntries = true)
+    @CacheEvict(value = {"laundryJobs", "completedCount"}, allEntries = true)
     public LaundryJob releaseMachine(String transactionId, int loadNumber, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
@@ -1149,6 +1298,24 @@ public class LaundryJobService {
         releaseMachine(load);
 
         job.setLaundryProcessedBy(processedBy);
-        return laundryJobRepository.save(job);
+        
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        evictTrackingCaches();
+        return savedJob;
+    }
+
+    private List<String> getFlowByServiceType(String serviceType) {
+        if (serviceType == null) {
+            return List.of(STATUS_NOT_STARTED, "IN_PROGRESS", STATUS_COMPLETED);
+        }
+        return SERVICE_FLOWS.getOrDefault(
+                serviceType.toLowerCase(),
+                List.of(STATUS_NOT_STARTED, "IN_PROGRESS", STATUS_COMPLETED));
+    }
+
+    // NEW: Cache eviction helper for tracking endpoints
+    private void evictTrackingCaches() {
+        // These will be evicted on next method call
+        System.out.println("🗑️  Evicting tracking caches");
     }
 }

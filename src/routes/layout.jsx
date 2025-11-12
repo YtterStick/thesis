@@ -93,8 +93,8 @@ const Layout = ({ children }) => {
           onSearchResultClick={handleSearchResultClick}
         />
 
-        {/* Page content */}
-        <div className="h-[calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
+        {/* Page content - REMOVED overflow and fixed height */}
+        <div className="min-h-[calc(100vh-60px)] p-6">
           {children}
         </div>
       </div>

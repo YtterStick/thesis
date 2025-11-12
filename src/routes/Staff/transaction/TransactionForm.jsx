@@ -164,6 +164,54 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         handleChange("name", cleanedValue);
     };
 
+    // UPDATED: Enhanced plastic change handler
+    const handlePlasticChange = (name, value) => {
+        const numericValue = parseInt(value) || 0;
+        
+        // Get the expected value based on current mode
+        const expectedValue = autoCalculate && calculatedLoads > 0 ? calculatedLoads : parseInt(loads) || 1;
+        
+        if (numericValue !== expectedValue) {
+            setPlasticOverrides((prev) => ({
+                ...prev,
+                [name]: true,
+            }));
+            console.log("🔧 Manual plastic override:", numericValue);
+        } else {
+            // If value matches expected, clear the override
+            setPlasticOverrides((prev) => ({
+                ...prev,
+                [name]: false,
+            }));
+            console.log("🔧 Plastic matches expected value - clearing override");
+        }
+        
+        setConsumables((prev) => ({
+            ...prev,
+            [name]: numericValue,
+        }));
+    };
+
+    const handleConsumableChange = (name, value) => {
+        setConsumables((prev) => ({
+            ...prev,
+            [name]: parseInt(value) || 0,
+        }));
+
+        if (name.toLowerCase().includes("detergent")) {
+            setDetergentOverrides((prev) => ({
+                ...prev,
+                [name]: true,
+            }));
+        } else if (name.toLowerCase().includes("fabric")) {
+            setFabricOverrides((prev) => ({
+                ...prev,
+                [name]: true,
+            }));
+        }
+        // Note: Plastic overrides are handled separately in handlePlasticChange
+    };
+
     useImperativeHandle(ref, () => ({
         resetForm: () => {
             const defaultService = services[0];
@@ -223,27 +271,30 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 machineType: machineType
             });
 
-            const { loads: calculatedLoads, machineInfo, machineCapacity, plasticBags } = response;
+            const { loads: calculatedLoads, machineInfo, machineCapacity, plasticBags } = response.data;
             
             setCalculatedLoads(calculatedLoads);
             setMachineInfo(`${weight}kg = ${calculatedLoads} loads - ${machineInfo}`);
             setLoads(calculatedLoads);
             
-            // Auto-update plastic bags in consumables and clear manual override
+            // Auto-update plastic bags ONLY if not manually overridden
             const plasticItem = stockItems.find(item => 
                 item.name.toLowerCase().includes("plastic")
             );
             
             if (plasticItem && plasticBags > 0) {
-                setConsumables(prev => ({
-                    ...prev,
-                    [plasticItem.name]: plasticBags
-                }));
-                // Clear manual override when auto-calculating
-                setPlasticOverrides(prev => ({
-                    ...prev,
-                    [plasticItem.name]: false
-                }));
+                // Check if plastic was manually overridden
+                const isManuallySet = plasticOverrides[plasticItem.name];
+                
+                if (!isManuallySet) {
+                    setConsumables(prev => ({
+                        ...prev,
+                        [plasticItem.name]: plasticBags
+                    }));
+                    console.log("📦 Auto-set plastic to:", plasticBags);
+                } else {
+                    console.log("📦 Plastic manually set to:", consumables[plasticItem.name], "- not auto-adjusting");
+                }
             }
 
             toast({
@@ -271,6 +322,31 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     };
 
+    // NEW EFFECT: Handle plastic when switching to manual mode
+    useEffect(() => {
+        if (!autoCalculate) {
+            console.log("🔴 Auto-calculate off - plastic will follow manual input");
+            
+            const plasticItem = stockItems.find(item => 
+                item.name.toLowerCase().includes("plastic")
+            );
+            
+            if (plasticItem && !plasticOverrides[plasticItem.name]) {
+                const currentLoads = parseInt(loads) || 1;
+                const currentPlastic = consumables[plasticItem.name] || 0;
+                
+                // Only update if plastic doesn't match loads
+                if (currentPlastic !== currentLoads) {
+                    setConsumables(prev => ({
+                        ...prev,
+                        [plasticItem.name]: currentLoads
+                    }));
+                    console.log("📦 Manual mode - set plastic to match loads:", currentLoads);
+                }
+            }
+        }
+    }, [autoCalculate, loads, stockItems, plasticOverrides, consumables]);
+
     // Reset plastic overrides when auto-calculate is toggled on
     useEffect(() => {
         if (autoCalculate && totalWeight && !isNaN(parseFloat(totalWeight))) {
@@ -288,6 +364,28 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             }
         }
     }, [autoCalculate]);
+
+    // Handle auto-calculate toggle with proper override reset
+    const handleAutoCalculateToggle = (checked) => {
+        setAutoCalculate(checked);
+        
+        // Clear plastic overrides when switching to auto-calculate
+        if (checked) {
+            const plasticItem = stockItems.find(item => 
+                item.name.toLowerCase().includes("plastic")
+            );
+            if (plasticItem) {
+                setPlasticOverrides(prev => ({
+                    ...prev,
+                    [plasticItem.name]: false
+                }));
+            }
+            
+            if (totalWeight && !isNaN(parseFloat(totalWeight))) {
+                calculateLoadsAutomatically(parseFloat(totalWeight));
+            }
+        }
+    };
 
     const hasDataChanged = (newData, oldData) => {
         if (!oldData) return true;
@@ -581,6 +679,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 if (!plasticOverrides[name] && consumables[name] !== expected) {
                     updated[name] = expected;
                     changed = true;
+                    console.log("📦 Auto-syncing plastic to:", expected);
                 }
             });
         }
@@ -612,32 +711,8 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     }, [loads, calculatedLoads, autoCalculate, stockItems, plasticOverrides, detergentOverrides, fabricOverrides, consumables, supplySource]);
 
-    const handleConsumableChange = (name, value) => {
-        setConsumables((prev) => ({
-            ...prev,
-            [name]: parseInt(value) || 0,
-        }));
-
-        if (name.toLowerCase().includes("plastic")) {
-            setPlasticOverrides((prev) => ({
-                ...prev,
-                [name]: true,
-            }));
-        } else if (name.toLowerCase().includes("detergent")) {
-            setDetergentOverrides((prev) => ({
-                ...prev,
-                [name]: true,
-            }));
-        } else if (name.toLowerCase().includes("fabric")) {
-            setFabricOverrides((prev) => ({
-                ...prev,
-                [name]: true,
-            }));
-        }
-    };
-
     const servicePrice = selectedService?.price || 0;
-    const serviceTotal = servicePrice * parseInt(loads);
+    const serviceTotal = servicePrice * (autoCalculate && calculatedLoads > 0 ? calculatedLoads : parseInt(loads));
 
     const consumablesTotal = Object.entries(consumables).reduce((sum, [name, qty]) => {
         const item = stockItems.find((i) => i.name === name);
@@ -971,12 +1046,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                                 type="checkbox"
                                 id="autoCalculate"
                                 checked={autoCalculate}
-                                onChange={(e) => {
-                                    setAutoCalculate(e.target.checked);
-                                    if (e.target.checked && totalWeight && !isNaN(parseFloat(totalWeight))) {
-                                        calculateLoadsAutomatically(parseFloat(totalWeight));
-                                    }
-                                }}
+                                onChange={(e) => handleAutoCalculateToggle(e.target.checked)}
                                 disabled={isLocked}
                                 className="rounded border-2 focus:ring-2 focus:ring-blue-500"
                                 style={{
@@ -1098,6 +1168,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         loads={autoCalculate && calculatedLoads > 0 ? calculatedLoads : loads}
                         onLoadsChange={setLoads}
                         onConsumableChange={handleConsumableChange}
+                        onPlasticChange={handlePlasticChange}
                         plasticOverrides={plasticOverrides}
                         setPlasticOverrides={setPlasticOverrides}
                         detergentOverrides={detergentOverrides}

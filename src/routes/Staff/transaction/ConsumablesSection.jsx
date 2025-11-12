@@ -11,6 +11,7 @@ const ConsumablesSection = ({
   loads,
   onLoadsChange,
   onConsumableChange,
+  onPlasticChange,
   plasticOverrides,
   setPlasticOverrides,
   detergentOverrides,
@@ -43,12 +44,29 @@ const ConsumablesSection = ({
       !item.name.toLowerCase().includes("fabric")
   );
 
+  // UPDATED: Enhanced plastic change handler
   const handlePlasticChange = (name, value, raw) => {
-    setPlasticOverrides((prev) => ({
-      ...prev,
-      [name]: true,
-    }));
-    onConsumableChange(name, value);
+    const numericValue = parseInt(value) || 0;
+    
+    // Only set as manual override if value is different from loads value
+    const expectedValue = parseInt(loads) || 1;
+    
+    if (numericValue !== expectedValue) {
+      setPlasticOverrides((prev) => ({
+        ...prev,
+        [name]: true,
+      }));
+      console.log("🔧 Manual plastic override:", numericValue);
+    } else {
+      // If value matches expected, clear the override
+      setPlasticOverrides((prev) => ({
+        ...prev,
+        [name]: false,
+      }));
+      console.log("🔧 Plastic matches expected value - clearing override");
+    }
+    
+    onPlasticChange(name, numericValue);
   };
 
   const handleDetergentChange = (name, value, raw) => {
@@ -108,8 +126,8 @@ const ConsumablesSection = ({
                 <span>Insufficient</span>
               </div>
             )}
-            {/* Only show "Manual" for detergent and fabric, not for plastic during auto-calculation */}
-            {isManuallySet(item.name, type) && !insufficient && type !== "plastic" && (
+            {/* Show "Manual" for all types when manually set */}
+            {isManuallySet(item.name, type) && !insufficient && (
               <div className="flex items-center gap-1 text-xs" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }}>
                 <Info size={12} />
                 <span>Manual</span>
@@ -258,6 +276,7 @@ ConsumablesSection.propTypes = {
   consumables: PropTypes.object.isRequired,
   loads: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   onConsumableChange: PropTypes.func.isRequired,
+  onPlasticChange: PropTypes.func.isRequired,
   onLoadsChange: PropTypes.func.isRequired,
   plasticOverrides: PropTypes.object.isRequired,
   setPlasticOverrides: PropTypes.func.isRequired,
