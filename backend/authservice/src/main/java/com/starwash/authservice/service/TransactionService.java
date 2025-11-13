@@ -66,217 +66,229 @@ public class TransactionService {
     }
 
     public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request, String staffId) {
-        long startTime = System.currentTimeMillis();
+        ServiceItem service = serviceRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new RuntimeException("Service not found"));
+
+        // AUTO-CALCULATION: Calculate loads based on weight if provided
+        int loads;
+        int autoPlasticBags = 0;
+        String machineInfo = null;
+        double machineCapacity = 0;
         
-        try {
-            ServiceItem service = serviceRepository.findById(request.getServiceId())
-                    .orElseThrow(() -> new RuntimeException("Service not found"));
-
-            // OPTIMIZED: Auto-calculation with simplified logic
-            int loads;
-            int autoPlasticBags = 0;
-            String machineInfo = null;
-            
-            // Track if plastic should be auto-managed
-            boolean shouldAutoManagePlastic = Boolean.TRUE.equals(request.getAutoCalculateLoads());
-            
-            if (shouldAutoManagePlastic && request.getTotalWeightKg() != null && request.getTotalWeightKg() > 0) {
-                try {
-                    // Use service-aware calculation
-                    MachineService.LoadCalculationResult calculation = machineService.calculateLoadsForService(
-                        request.getTotalWeightKg(), 
-                        service.getName()
-                    );
-                    loads = calculation.getLoads();
-                    autoPlasticBags = calculation.getPlasticBags();
-                    machineInfo = calculation.getMachineInfo();
-                    
-                    System.out.println("🔄 Auto-calculated loads: " + loads + " loads for " + 
-                                     request.getTotalWeightKg() + "kg");
-                    
-                } catch (Exception e) {
-                    System.err.println("❌ Auto-calculation failed, using manual loads: " + e.getMessage());
-                    loads = Optional.ofNullable(request.getLoads()).orElse(1);
-                    shouldAutoManagePlastic = false;
-                }
-            } else {
-                // Fallback to manual input
+        // Track if plastic should be auto-managed
+        boolean shouldAutoManagePlastic = Boolean.TRUE.equals(request.getAutoCalculateLoads());
+        
+        if (shouldAutoManagePlastic && request.getTotalWeightKg() != null && request.getTotalWeightKg() > 0) {
+            try {
+                // Use service-aware calculation (detect if it's a dryer service)
+                MachineService.LoadCalculationResult calculation = machineService.calculateLoadsForService(
+                    request.getTotalWeightKg(), 
+                    service.getName()
+                );
+                loads = calculation.getLoads();
+                autoPlasticBags = calculation.getPlasticBags();
+                machineInfo = calculation.getMachineInfo();
+                machineCapacity = calculation.getMachineCapacity();
+                
+                System.out.println("🔄 Auto-calculated loads: " + loads + " loads for " + 
+                                 request.getTotalWeightKg() + "kg - " + machineInfo);
+                
+            } catch (Exception e) {
+                System.err.println("❌ Auto-calculation failed, using manual loads: " + e.getMessage());
                 loads = Optional.ofNullable(request.getLoads()).orElse(1);
-                shouldAutoManagePlastic = false;
+                shouldAutoManagePlastic = false; // Disable plastic auto-management if calculation failed
             }
-
-            ServiceEntryDto serviceDto = new ServiceEntryDto(service.getName(), service.getPrice(), loads);
-            double total = service.getPrice() * loads;
-
-            List<ServiceEntryDto> consumableDtos = new ArrayList<>();
-            List<ServiceEntry> consumables = new ArrayList<>();
-
-            List<String> insufficientStockItems = new ArrayList<>();
-
-            // OPTIMIZED: Auto-plastic logic
-            Map<String, Integer> consumableQuantities = new HashMap<>();
-            if (request.getConsumableQuantities() != null) {
-                consumableQuantities.putAll(request.getConsumableQuantities());
-            }
-            
-            // Only auto-add plastic when we're in auto-calculation mode
-            if (shouldAutoManagePlastic && autoPlasticBags > 0) {
-                // Find plastic items in stock
-                List<StockItem> plasticItems = stockRepository.findAll().stream()
-                        .filter(item -> item.getName().toLowerCase().contains("plastic"))
-                        .collect(Collectors.toList());
-                    
-                if (!plasticItems.isEmpty()) {
-                    StockItem plasticItem = plasticItems.get(0);
-                    String plasticName = plasticItem.getName();
-                    
-                    // Add or update plastic quantity - only if not already manually set
-                    int currentPlastic = consumableQuantities.getOrDefault(plasticName, 0);
-                    if (currentPlastic == 0 || currentPlastic == loads) {
-                        consumableQuantities.put(plasticName, autoPlasticBags);
-                    }
-                }
-            }
-
-            // OPTIMIZED: Batch stock checking
-            List<String> itemsToCheck = consumableQuantities.entrySet().stream()
-                    .filter(entry -> entry.getValue() > 0)
-                    .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
-
-            // Check stock availability for all consumables
-            for (String itemName : itemsToCheck) {
-                int quantity = consumableQuantities.get(itemName);
-
-                StockItem item = stockRepository.findByName(itemName)
-                        .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
-
-                if (item.getQuantity() < quantity) {
-                    insufficientStockItems.add(String.format("%s (Requested: %d, Available: %d)",
-                            itemName, quantity, item.getQuantity()));
-
-                    notificationService.notifyTransactionStockIssue(
-                            itemName, quantity, item.getQuantity(), "pending-transaction");
-                }
-            }
-
-            if (!insufficientStockItems.isEmpty()) {
-                String errorMessage = "Insufficient stock for: " + String.join(", ", insufficientStockItems);
-                throw new InsufficientStockException(errorMessage, insufficientStockItems);
-            }
-
-            // Process consumables and update stock
-            for (Map.Entry<String, Integer> entry : consumableQuantities.entrySet()) {
-                String itemName = entry.getKey();
-                int quantity = entry.getValue();
-
-                // Skip if quantity is 0
-                if (quantity <= 0) continue;
-
-                StockItem item = stockRepository.findByName(itemName)
-                        .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
-
-                Integer previousQuantity = item.getQuantity();
-
-                item.setQuantity(item.getQuantity() - quantity);
-                stockRepository.save(item);
-
-                double itemTotal = item.getPrice() * quantity;
-                total += itemTotal;
-
-                consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
-                consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
-
-                notificationService.checkAndNotifyStockLevel(item, previousQuantity);
-            }
-
-            double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
-            double change = amountGiven - total;
-
-            // OPTIMIZED: Simplified date handling
-            LocalDateTime now = getCurrentManilaTime();
-            LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
-            LocalDateTime dueDate = Optional.ofNullable(request.getDueDate())
-                    .orElse(issueDate.plusDays(7));
-
-            String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
-
-            Transaction transaction = new Transaction(
-                    null,
-                    invoiceNumber,
-                    request.getCustomerName(),
-                    request.getContact(),
-                    service.getName(),
-                    service.getPrice(),
-                    loads,
-                    consumables,
-                    total,
-                    request.getPaymentMethod(),
-                    amountGiven,
-                    change,
-                    issueDate,
-                    dueDate,
-                    staffId,
-                    now);
-
-            if ("GCash".equals(request.getPaymentMethod())) {
-                transaction.setGcashReference(request.getGcashReference());
-                transaction.setGcashVerified(false);
-            }
-
-            transactionRepository.save(transaction);
-
-            createNewLaundryServiceNotification(transaction);
-
-            FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
-                    .orElseThrow(() -> new RuntimeException("Format settings not found"));
-
-            int detergentQty = consumableDtos.stream()
-                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                    .mapToInt(ServiceEntryDto::getQuantity)
-                    .sum();
-
-            int fabricQty = consumableDtos.stream()
-                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                    .mapToInt(ServiceEntryDto::getQuantity)
-                    .sum();
-
-            int plasticQty = consumableDtos.stream()
-                    .filter(c -> c.getName().toLowerCase().contains("plastic"))
-                    .mapToInt(ServiceEntryDto::getQuantity)
-                    .sum();
-
-            ServiceInvoiceDto invoiceDto = new ServiceInvoiceDto(
-                    invoiceNumber,
-                    transaction.getCustomerName(),
-                    transaction.getContact(),
-                    serviceDto,
-                    consumableDtos,
-                    total,
-                    0.0,
-                    0.0,
-                    total,
-                    request.getPaymentMethod(),
-                    amountGiven,
-                    change,
-                    issueDate,
-                    dueDate,
-                    new FormatSettingsDto(settings),
-                    detergentQty,
-                    fabricQty,
-                    plasticQty,
-                    loads,
-                    staffId);
-
-            long duration = System.currentTimeMillis() - startTime;
-            System.out.println("✅ Transaction created in " + duration + "ms");
-
-            return invoiceDto;
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            System.err.println("❌ Transaction failed after " + duration + "ms: " + e.getMessage());
-            throw e;
+        } else {
+            // Fallback to manual input
+            loads = Optional.ofNullable(request.getLoads()).orElse(1);
+            shouldAutoManagePlastic = false; // Manual mode - don't auto-manage plastic
         }
+
+        ServiceEntryDto serviceDto = new ServiceEntryDto(service.getName(), service.getPrice(), loads);
+        double total = service.getPrice() * loads;
+
+        List<ServiceEntryDto> consumableDtos = new ArrayList<>();
+        List<ServiceEntry> consumables = new ArrayList<>();
+
+        List<String> insufficientStockItems = new ArrayList<>();
+
+        // AUTO-PLASTIC: Add plastic bags automatically ONLY when auto-calculating
+        Map<String, Integer> consumableQuantities = new HashMap<>();
+        if (request.getConsumableQuantities() != null) {
+            consumableQuantities.putAll(request.getConsumableQuantities());
+        }
+        
+        // Only auto-add plastic when we're in auto-calculation mode
+        if (shouldAutoManagePlastic && autoPlasticBags > 0) {
+            // Find plastic items in stock
+            List<StockItem> plasticItems = stockRepository.findAll().stream()
+                    .filter(item -> item.getName().toLowerCase().contains("plastic"))
+                    .collect(Collectors.toList());
+                
+            if (!plasticItems.isEmpty()) {
+                StockItem plasticItem = plasticItems.get(0); // Use first plastic item found
+                String plasticName = plasticItem.getName();
+                
+                // Add or update plastic quantity - only if not already manually set
+                int currentPlastic = consumableQuantities.getOrDefault(plasticName, 0);
+                // Only auto-set if it matches the expected auto value (not manually overridden)
+                if (currentPlastic == 0 || currentPlastic == loads) {
+                    consumableQuantities.put(plasticName, autoPlasticBags);
+                    
+                    System.out.println("📦 Auto-added " + autoPlasticBags + " plastic bags for " + loads + " loads");
+                } else {
+                    System.out.println("📦 Plastic bags manually set to " + currentPlastic + ", not auto-adjusting");
+                }
+            }
+        }
+
+        // Check stock availability for all consumables
+        for (Map.Entry<String, Integer> entry : consumableQuantities.entrySet()) {
+            String itemName = entry.getKey();
+            int quantity = entry.getValue();
+
+            // Skip if quantity is 0
+            if (quantity <= 0) continue;
+
+            StockItem item = stockRepository.findByName(itemName)
+                    .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
+
+            if (item.getQuantity() < quantity) {
+                insufficientStockItems.add(String.format("%s (Requested: %d, Available: %d)",
+                        itemName, quantity, item.getQuantity()));
+
+                notificationService.notifyTransactionStockIssue(
+                        itemName, quantity, item.getQuantity(), "pending-transaction");
+            }
+        }
+
+        if (!insufficientStockItems.isEmpty()) {
+            String errorMessage = "Insufficient stock for: " + String.join(", ", insufficientStockItems);
+            throw new InsufficientStockException(errorMessage, insufficientStockItems);
+        }
+
+        // Process consumables and update stock (using updated consumableQuantities)
+        for (Map.Entry<String, Integer> entry : consumableQuantities.entrySet()) {
+            String itemName = entry.getKey();
+            int quantity = entry.getValue();
+
+            // Skip if quantity is 0
+            if (quantity <= 0) continue;
+
+            StockItem item = stockRepository.findByName(itemName)
+                    .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
+
+            Integer previousQuantity = item.getQuantity();
+
+            item.setQuantity(item.getQuantity() - quantity);
+            stockRepository.save(item);
+
+            double itemTotal = item.getPrice() * quantity;
+            total += itemTotal;
+
+            consumableDtos.add(new ServiceEntryDto(item.getName(), item.getPrice(), quantity));
+            consumables.add(new ServiceEntry(item.getName(), item.getPrice(), quantity));
+
+            notificationService.checkAndNotifyStockLevel(item, previousQuantity);
+        }
+
+        double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
+        double change = amountGiven - total;
+
+        LocalDateTime now = getCurrentManilaTime();
+        LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
+
+        LocalDateTime dueDate = Optional.ofNullable(request.getDueDate())
+                .orElse(issueDate.plusDays(7));
+
+        System.out.println("🆕 Creating transaction with Manila time:");
+        System.out.println("   - Issue Date: " + issueDate);
+        System.out.println("   - Due Date: " + dueDate);
+        System.out.println("   - Current Manila Time: " + now);
+        
+        // Log auto-calculation info
+        if (machineInfo != null) {
+            System.out.println("   - Auto-calculation: " + request.getTotalWeightKg() + "kg = " + loads + " loads");
+            System.out.println("   - Machine Info: " + machineInfo);
+        }
+
+        String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
+
+        Transaction transaction = new Transaction(
+                null,
+                invoiceNumber,
+                request.getCustomerName(),
+                request.getContact(),
+                service.getName(),
+                service.getPrice(),
+                loads,
+                consumables,
+                total,
+                request.getPaymentMethod(),
+                amountGiven,
+                change,
+                issueDate,
+                dueDate,
+                staffId,
+                now);
+
+        if ("GCash".equals(request.getPaymentMethod())) {
+            transaction.setGcashReference(request.getGcashReference());
+            transaction.setGcashVerified(false);
+        }
+
+        transactionRepository.save(transaction);
+
+        createNewLaundryServiceNotification(transaction);
+
+        FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
+                .orElseThrow(() -> new RuntimeException("Format settings not found"));
+
+        int detergentQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        int fabricQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        int plasticQty = consumableDtos.stream()
+                .filter(c -> c.getName().toLowerCase().contains("plastic"))
+                .mapToInt(ServiceEntryDto::getQuantity)
+                .sum();
+
+        // Include auto-calculation info in response
+        ServiceInvoiceDto invoiceDto = new ServiceInvoiceDto(
+                invoiceNumber,
+                transaction.getCustomerName(),
+                transaction.getContact(),
+                serviceDto,
+                consumableDtos,
+                total,
+                0.0,
+                0.0,
+                total,
+                request.getPaymentMethod(),
+                amountGiven,
+                change,
+                issueDate,
+                dueDate,
+                new FormatSettingsDto(settings),
+                detergentQty,
+                fabricQty,
+                plasticQty,
+                loads,
+                staffId);
+        
+        // Add auto-calculation metadata
+        if (machineInfo != null) {
+            System.out.println("✅ Auto-calculation completed: " + 
+                             request.getTotalWeightKg() + "kg → " + loads + " loads - " + machineInfo);
+        }
+
+        return invoiceDto;
     }
 
     public static class InsufficientStockException extends RuntimeException {
@@ -301,6 +313,8 @@ public class TransactionService {
                     transaction.getServiceQuantity());
 
             notificationService.notifyAllStaff("new_laundry_service", title, message, transaction.getId());
+
+            System.out.println("🔔 Notification created for new laundry service: " + transaction.getInvoiceNumber());
         } catch (Exception e) {
             System.err.println("❌ Failed to create notification for new laundry service: " + e.getMessage());
         }
@@ -364,8 +378,7 @@ public class TransactionService {
                 tx.getStaffId());
     }
 
-    // OPTIMIZED: Get records with minimal data for unclaimed check
-    public List<RecordResponseDto> getRecordsForUnclaimedCheck() {
+    public List<RecordResponseDto> getAllRecords() {
         List<Transaction> allTransactions = transactionRepository.findAll();
         List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
 
@@ -382,6 +395,17 @@ public class TransactionService {
             dto.setServiceName(tx.getServiceName());
             dto.setLoads(tx.getServiceQuantity());
             dto.setContact(tx.getContact());
+
+            dto.setDetergent(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
+
+            dto.setFabric(tx.getConsumables().stream()
+                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                    .map(c -> String.valueOf(c.getQuantity()))
+                    .findFirst().orElse("—"));
+
             dto.setTotalPrice(tx.getTotalPrice());
             dto.setPaymentMethod(tx.getPaymentMethod());
             dto.setPickupStatus("Unclaimed");
@@ -404,9 +428,8 @@ public class TransactionService {
         }).collect(Collectors.toList());
     }
 
-    // OPTIMIZED: Get staff records with performance improvements
     public List<RecordResponseDto> getStaffRecords() {
-        List<RecordResponseDto> allRecords = this.getRecordsForUnclaimedCheck();
+        List<RecordResponseDto> allRecords = this.getAllRecords();
 
         return allRecords.stream()
                 .filter(record -> {
@@ -418,7 +441,6 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
-    // OPTIMIZED: Staff records summary with better performance
     public Map<String, Object> getStaffRecordsSummary() {
         Map<String, Object> summary = new HashMap<>();
 
@@ -431,7 +453,7 @@ public class TransactionService {
         System.out.println("   - Start of Day: " + startOfDay);
         System.out.println("   - End of Day: " + endOfDay);
 
-        List<RecordResponseDto> allRecords = this.getRecordsForUnclaimedCheck();
+        List<RecordResponseDto> allRecords = this.getAllRecords();
 
         List<RecordResponseDto> todaysRecords = allRecords.stream()
                 .filter(record -> !record.isDisposed())
@@ -490,10 +512,14 @@ public class TransactionService {
         long startTime = System.currentTimeMillis();
         
         try {
+            System.out.println("🔄 Fetching admin records - Page: " + page + ", Size: " + size);
+            
+            // Use pagination for transactions
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Transaction> transactionPage = transactionRepository.findAll(pageable);
             List<Transaction> transactions = transactionPage.getContent();
             
+            // Get only the laundry jobs needed for these transactions
             List<String> transactionIds = transactions.stream()
                     .map(Transaction::getInvoiceNumber)
                     .collect(Collectors.toList());
