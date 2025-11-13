@@ -3,7 +3,7 @@ package com.starwash.authservice.service;
 import com.starwash.authservice.dto.*;
 import com.starwash.authservice.model.*;
 import com.starwash.authservice.repository.*;
-import com.starwash.authservice.security.ManilaTimeUtil; // ADDED IMPORT
+import com.starwash.authservice.security.ManilaTimeUtil;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -58,7 +58,7 @@ public class TransactionService {
         this.machineService = machineService;
     }
 
-    // REPLACED with ManilaTimeUtil
+    // Use ManilaTimeUtil for all date/time operations
     private LocalDateTime getCurrentManilaTime() {
         return ManilaTimeUtil.now();
     }
@@ -197,7 +197,7 @@ public class TransactionService {
         double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
         double change = amountGiven - total;
 
-        // FIXED: Use ManilaTimeUtil for consistent time handling
+        // FIXED: Use ManilaTimeUtil for consistent time handling for ALL dates
         LocalDateTime now = ManilaTimeUtil.now();
         
         // Handle issueDate - convert to Manila time if provided, otherwise use current Manila time
@@ -221,6 +221,7 @@ public class TransactionService {
         System.out.println("   - Current Manila Time: " + now);
         System.out.println("   - Issue Date: " + issueDate);
         System.out.println("   - Due Date: " + dueDate);
+        System.out.println("   - Created At: " + now); // createdAt uses Manila time
         System.out.println("   - Timezone: " + ManilaTimeUtil.getManilaZone());
         
         // Log auto-calculation info
@@ -231,6 +232,7 @@ public class TransactionService {
 
         String invoiceNumber = "INV-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
 
+        // Create transaction with ALL dates in Manila time
         Transaction transaction = new Transaction(
                 null,
                 invoiceNumber,
@@ -247,7 +249,7 @@ public class TransactionService {
                 issueDate,
                 dueDate,
                 staffId,
-                now);
+                now); // createdAt set to Manila time
 
         if ("GCash".equals(request.getPaymentMethod())) {
             transaction.setGcashReference(request.getGcashReference());
@@ -458,7 +460,7 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
-    // UPDATED: Use ManilaTimeUtil consistently
+    // UPDATED: Use ManilaTimeUtil consistently for all date operations
     public Map<String, Object> getStaffRecordsSummary() {
         Map<String, Object> summary = new HashMap<>();
 
@@ -930,7 +932,7 @@ public class TransactionService {
                 request);
     }
 
-    // UPDATED: Use ManilaTimeUtil consistently
+    // UPDATED: Use ManilaTimeUtil consistently for fixing dates
     public void fixTransactionDatesToManilaTime() {
         List<Transaction> allTransactions = transactionRepository.findAll();
         int fixedCount = 0;

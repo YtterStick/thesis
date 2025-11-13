@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Receipt, Info, Calculator } from "lucide-react";
+import { Receipt, Info, Calculator, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import PaymentSection from "./PaymentSection";
@@ -16,7 +16,7 @@ import { useTheme } from "@/hooks/use-theme";
 // Cache configuration
 const CACHE_DURATION = 30 * 1000; // 30 seconds
 
-// OPTIMIZED: Simplified Manila time utility functions
+// OPTIMIZED: Enhanced Manila time utility functions
 const getManilaTime = (date = new Date()) => {
     const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
     const manilaOffset = 8 * 60 * 60 * 1000;
@@ -24,12 +24,22 @@ const getManilaTime = (date = new Date()) => {
 };
 
 const formatToManilaISOString = (date = new Date()) => {
-    return getManilaTime(date).toISOString();
+    const manilaDate = getManilaTime(date);
+    // Format as ISO string without timezone offset
+    const year = manilaDate.getFullYear();
+    const month = String(manilaDate.getMonth() + 1).padStart(2, '0');
+    const day = String(manilaDate.getDate()).padStart(2, '0');
+    const hours = String(manilaDate.getHours()).padStart(2, '0');
+    const minutes = String(manilaDate.getMinutes()).padStart(2, '0');
+    const seconds = String(manilaDate.getSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
 
 const addDaysManilaTime = (days, date = new Date()) => {
     const manilaDate = getManilaTime(date);
-    return new Date(manilaDate.getTime() + days * 24 * 60 * 60 * 1000);
+    const newDate = new Date(manilaDate.getTime() + days * 24 * 60 * 60 * 1000);
+    return formatToManilaISOString(newDate);
 };
 
 // Cache initialization
@@ -351,77 +361,77 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     }, []);
 
     const fetchFreshData = async () => {
-    console.log("🔄 Fetching fresh transaction form data");
-    
-    try {
-        const [servicesData, stockData, paymentData] = await Promise.all([
-            api.get("/services"),
-            api.get("/stock"),
-            api.get("/payment-settings")
-        ]);
-
-        const safeStockItems = Array.isArray(stockData) ? stockData : (stockData.items ?? []);
-
-        let paymentMethodsData = ["Cash"];
+        console.log("🔄 Fetching fresh transaction form data");
         
-        if (paymentData && (paymentData.gcashEnabled === true || paymentData.gcashEnabled === "true")) {
-            paymentMethodsData.push("GCash");
-        }
+        try {
+            const [servicesData, stockData, paymentData] = await Promise.all([
+                api.get("/services"),
+                api.get("/stock"),
+                api.get("/payment-settings")
+            ]);
 
-        const newData = {
-            services: servicesData,
-            stockItems: safeStockItems,
-            paymentMethods: paymentMethodsData,
-        };
+            const safeStockItems = Array.isArray(stockData) ? stockData : (stockData.items ?? []);
 
-        const currentTime = Date.now();
-
-        if (!transactionFormCache || hasDataChanged(newData, transactionFormCache.data)) {
-            transactionFormCache = {
-                data: newData,
-                timestamp: currentTime
-            };
-            cacheTimestamp = currentTime;
-            saveCacheToStorage(transactionFormCache);
-        } else {
-            cacheTimestamp = currentTime;
-            transactionFormCache.timestamp = currentTime;
-            saveCacheToStorage(transactionFormCache);
-        }
-
-        if (isMountedRef.current) {
-            setServices(servicesData);
-            setStockItems(safeStockItems);
-            setPaymentMethods(paymentMethodsData);
+            let paymentMethodsData = ["Cash"];
             
-            if (servicesData.length > 0) {
-                setForm((prev) => ({ 
-                    ...prev, 
-                    serviceId: prev.serviceId || servicesData[0]?.id || "" 
-                }));
+            if (paymentData && (paymentData.gcashEnabled === true || paymentData.gcashEnabled === "true")) {
+                paymentMethodsData.push("GCash");
             }
-            
-            const initialConsumables = {};
-            safeStockItems.forEach((item) => {
-                initialConsumables[item.name] = 
-                    item.name.toLowerCase().includes("plastic") || 
-                    item.name.toLowerCase().includes("detergent") || 
-                    item.name.toLowerCase().includes("fabric") ? loads : 0;
-            });
-            setConsumables(initialConsumables);
-            
-            setInitialLoad(false);
-        }
 
-    } catch (error) {
-        console.error("Failed to fetch data:", error);
-        toast({
-            title: "Data Fetch Error",
-            description: "Unable to load required data.",
-            variant: "destructive",
-        });
-    }
-};
+            const newData = {
+                services: servicesData,
+                stockItems: safeStockItems,
+                paymentMethods: paymentMethodsData,
+            };
+
+            const currentTime = Date.now();
+
+            if (!transactionFormCache || hasDataChanged(newData, transactionFormCache.data)) {
+                transactionFormCache = {
+                    data: newData,
+                    timestamp: currentTime
+                };
+                cacheTimestamp = currentTime;
+                saveCacheToStorage(transactionFormCache);
+            } else {
+                cacheTimestamp = currentTime;
+                transactionFormCache.timestamp = currentTime;
+                saveCacheToStorage(transactionFormCache);
+            }
+
+            if (isMountedRef.current) {
+                setServices(servicesData);
+                setStockItems(safeStockItems);
+                setPaymentMethods(paymentMethodsData);
+                
+                if (servicesData.length > 0) {
+                    setForm((prev) => ({ 
+                        ...prev, 
+                        serviceId: prev.serviceId || servicesData[0]?.id || "" 
+                    }));
+                }
+                
+                const initialConsumables = {};
+                safeStockItems.forEach((item) => {
+                    initialConsumables[item.name] = 
+                        item.name.toLowerCase().includes("plastic") || 
+                        item.name.toLowerCase().includes("detergent") || 
+                        item.name.toLowerCase().includes("fabric") ? loads : 0;
+                });
+                setConsumables(initialConsumables);
+                
+                setInitialLoad(false);
+            }
+
+        } catch (error) {
+            console.error("Failed to fetch data:", error);
+            toast({
+                title: "Data Fetch Error",
+                description: "Unable to load required data.",
+                variant: "destructive",
+            });
+        }
+    };
 
     // OPTIMIZED: useEffect without polling
     useEffect(() => {
@@ -717,9 +727,15 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             return acc;
         }, {});
 
-        // OPTIMIZED: Simplified date handling
+        // FIXED: Use Manila time for dates - this will fix the Nov 13/14 issue
         const manilaIssueDate = formatToManilaISOString();
-        const manilaDueDate = addDaysManilaTime(7).toISOString();
+        const manilaDueDate = addDaysManilaTime(7);
+
+        console.log("🕒 Sending dates in Manila time:", {
+            issueDate: manilaIssueDate,
+            dueDate: manilaDueDate,
+            currentManilaTime: getManilaTime().toString()
+        });
 
         const payload = {
             customerName: form.name,
@@ -746,8 +762,8 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             totalPrice: totalAmount,
             totalWeightKg: totalWeight ? parseFloat(totalWeight) : null,
             autoCalculateLoads: autoCalculate,
-            issueDate: manilaIssueDate,
-            dueDate: manilaDueDate,
+            issueDate: manilaIssueDate, // This will be in Manila time
+            dueDate: manilaDueDate,     // This will be in Manila time
             staffId: localStorage.getItem("staffId") || "Unknown",
         };
 
@@ -1130,8 +1146,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                                 {/* Date Information */}
                                 <div className="pt-2 border-t" style={{ borderColor: isDarkMode ? '#334155' : '#e2e8f0' }}>
                                     <div className="text-xs" style={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}>
-                                        <div>Issue Date: {new Date(pendingPayload.issueDate).toLocaleString()}</div>
-                                        <div>Due Date: {new Date(pendingPayload.dueDate).toLocaleString()}</div>
+                                        <div>Issue Date: {new Date(pendingPayload.issueDate).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</div>
+                                        <div>Due Date: {new Date(pendingPayload.dueDate).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</div>
+                                        <div className="text-green-600">✓ Dates are in Manila Time (GMT+8)</div>
                                     </div>
                                 </div>
                             </div>
