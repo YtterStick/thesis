@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
+import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package } from "lucide-react";
 import TrackingTable from "./TrackingTable";
@@ -87,13 +88,11 @@ function ServiceTrackingContent() {
     const activeTimersRef = useRef(new Map());
     const requestQueueRef = useRef([]);
     const isProcessingRef = useRef(false);
-    const initialLoadRef = useRef(true);
 
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [totalItems, setTotalItems] = useState(0);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
 
-    // Calculate pagination
+    const totalItems = jobs.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
@@ -201,28 +200,14 @@ function ServiceTrackingContent() {
     };
 
     useEffect(() => {
-        if (currentPage > totalPages && totalPages > 0) {
-            setCurrentPage(totalPages);
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages > 0 ? totalPages : 1);
         }
-    }, [currentPage, totalPages]);
+    }, [jobs, currentPage, totalPages]);
 
-    // WORKING: Fetch jobs using legacy endpoint
     const fetchJobs = useCallback(async () => {
         try {
-            console.log("🔄 Fetching jobs using legacy endpoint...");
-            
-            // Use the endpoint that was working before
-            const data = await api.get("/laundry-jobs/all");
-            
-            console.log("📦 Raw jobs data:", data);
-
-            if (!data || data.length === 0) {
-                console.log("📭 No jobs found");
-                setJobs([]);
-                setTotalItems(0);
-                setError(null);
-                return true;
-            }
+            const data = await api.get("/laundry-jobs");
 
             const jobsWithLoads = data.map((job) => ({
                 id: job.id ?? job.transactionId,
@@ -253,16 +238,7 @@ function ServiceTrackingContent() {
                 })),
             }));
 
-            console.log(`✅ Processed ${jobsWithLoads.length} jobs`);
-            
-            // Debug unwashed loads
-            const unwashedLoads = jobsWithLoads.flatMap(job => 
-                job.loads?.filter(load => load.status === "UNWASHED") || []
-            );
-            console.log(`🔍 Found ${unwashedLoads.length} unwashed loads ready to wash`);
-
             setJobs(jobsWithLoads);
-            setTotalItems(jobsWithLoads.length);
             setError(null);
             return true;
         } catch (err) {
@@ -272,7 +248,6 @@ function ServiceTrackingContent() {
         }
     }, []);
 
-    // Fetch machines
     const fetchMachines = async () => {
         try {
             const data = await api.get("/machines");
@@ -285,50 +260,25 @@ function ServiceTrackingContent() {
         }
     };
 
-    // Progressive data loading
-    const fetchCriticalData = async () => {
+    // Fetch completed count along with other data
+    const fetchData = async () => {
         setIsRefreshing(true);
-        setLoading(true);
-        
         try {
-            console.log("🚀 Starting progressive data loading...");
-            
-            // Load jobs first (most critical)
-            const jobsSuccess = await fetchJobs();
-            
-            // Show content as soon as jobs are loaded
-            if (jobsSuccess) {
-                setLoading(false);
-            }
-            
-            // Then load secondary data in parallel
-            await Promise.allSettled([
+            const [jobsSuccess, machinesSuccess, completedCountSuccess] = await Promise.allSettled([
+                fetchJobs(),
                 fetchMachines(),
                 fetchCompletedTodayCount(),
             ]);
 
-            if (!jobsSuccess) {
-                throw new Error("Failed to fetch jobs");
+            if (jobsSuccess.status === "fulfilled" && jobsSuccess.value) {
+                setLoading(false);
+            } else if (jobsSuccess.status === "rejected") {
+                throw new Error(jobsSuccess.reason?.message || "Failed to fetch jobs");
             }
-            
-            console.log("✅ Progressive loading completed");
-            
         } catch (err) {
             console.error("Failed to fetch data:", err);
             setError(err.message);
             setLoading(false);
-        } finally {
-            setIsRefreshing(false);
-        }
-    };
-
-    // Refresh function
-    const refreshData = async () => {
-        setIsRefreshing(true);
-        try {
-            await fetchCriticalData();
-        } catch (err) {
-            console.error("Refresh failed:", err);
         } finally {
             setIsRefreshing(false);
         }
@@ -362,7 +312,7 @@ function ServiceTrackingContent() {
 
         if (needsRefresh) {
             setTimeout(() => {
-                refreshData();
+                fetchData();
             }, 1000);
         }
     }, [jobs]);
@@ -386,15 +336,12 @@ function ServiceTrackingContent() {
 
     // Setup clock and initial data fetch
     useEffect(() => {
-        if (initialLoadRef.current) {
-            initialLoadRef.current = false;
-            console.log("🎯 Initial load starting...");
-            fetchCriticalData();
-            clockRef.current = setInterval(() => setNow(Date.now()), 1000);
-        }
+        fetchData();
+
+        clockRef.current = setInterval(() => setNow(Date.now()), 1000);
 
         return () => {
-            if (clockRef.current) clearInterval(clockRef.current);
+            clearInterval(clockRef.current);
             if (timerCheckRef.current) clearInterval(timerCheckRef.current);
         };
     }, []);
@@ -972,7 +919,7 @@ function ServiceTrackingContent() {
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={() => refreshData()}
+                            onClick={() => fetchData()}
                             className="mx-auto flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-all"
                             style={{
                                 backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
@@ -1043,7 +990,7 @@ function ServiceTrackingContent() {
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => refreshData()}
+                        onClick={() => fetchData()}
                         disabled={globalLoading}
                         className="flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-all disabled:opacity-50"
                         style={{
@@ -1062,7 +1009,7 @@ function ServiceTrackingContent() {
                 {[
                     {
                         label: "Total Jobs",
-                        value: totalItems,
+                        value: jobs.length,
                         color: "#3DD9B6",
                         description: "Active laundry jobs",
                     },
@@ -1183,7 +1130,7 @@ function ServiceTrackingContent() {
             </TooltipProvider>
 
             {/* Pagination */}
-            {totalItems > 0 && (
+            {jobs.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1291,8 +1238,8 @@ function ServiceTrackingContent() {
 
 const DEFAULT_DURATION = { washing: 35, drying: 40 };
 const SERVICE_FLOWS = {
-    Wash: ["UNWASHED", "WASHING", "WASHED", "COMPLETED"],
-    Dry: ["UNWASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"],
+    Wash: ["UNWASHED", "WASHING", "WASHED", "COMPLETED"], // Wash: UNWASHED → WASHING → WASHED → COMPLETED
+    Dry: ["UNWASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"], // Dry: UNWASHED → DRYING → DRIED → FOLDING → COMPLETED
     "Wash & Dry": ["UNWASHED", "WASHING", "WASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"],
 };
 
