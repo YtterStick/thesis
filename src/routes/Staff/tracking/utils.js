@@ -17,6 +17,38 @@ export const maskContact = (contact) => {
     return contact.toString(); // Return the complete number as-is
 };
 
+// NEW: Performance monitoring utility
+export const withPerformanceLogging = (fn, name) => {
+    return async (...args) => {
+        const startTime = performance.now();
+        console.log(`⚡ ${name} started`);
+        
+        try {
+            const result = await fn(...args);
+            const endTime = performance.now();
+            console.log(`✅ ${name} completed in ${(endTime - startTime).toFixed(2)}ms`);
+            return result;
+        } catch (error) {
+            const endTime = performance.now();
+            console.error(`❌ ${name} failed after ${(endTime - startTime).toFixed(2)}ms:`, error);
+            throw error;
+        }
+    };
+};
+
+// NEW: Debounce utility for API calls
+export const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
 export const fetchWithTimeout = (url, options = {}, timeout = REQUEST_TIMEOUT) => {
     const controller = new AbortController();
     const { signal } = controller;

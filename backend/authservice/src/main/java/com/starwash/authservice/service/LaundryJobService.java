@@ -108,7 +108,7 @@ public class LaundryJobService {
         }
     }
 
-    // NEW: Simplified DTO for faster processing
+    // NEW: Simplified DTO for faster processing - FIXED FILTERING
     @Cacheable(value = "laundryJobs", key = "'simplified-page-' + #page + '-size-' + #size")
     public LaundryJobPageDto getSimplifiedJobs(int page, int size) {
         long startTime = System.currentTimeMillis();
@@ -118,20 +118,19 @@ public class LaundryJobService {
             Page<LaundryJob> jobPage = laundryJobRepository.findAll(pageable);
             List<LaundryJob> jobs = jobPage.getContent();
 
-            List<LaundryJob> nonCompletedJobs = jobs.stream()
-                    .filter(job -> job.getLoadAssignments() != null)
-                    .filter(job -> !job.getLoadAssignments().stream()
-                            .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
-                    .collect(Collectors.toList());
+            System.out.println("🔍 DEBUG: Found " + jobs.size() + " total jobs in database");
+            
+            // TEMPORARY: Return ALL jobs without filtering
+            List<LaundryJobDto> jobDtos = processJobsToSimplifiedDtos(jobs);
 
-            List<LaundryJobDto> jobDtos = processJobsToSimplifiedDtos(nonCompletedJobs);
+            System.out.println("✅ Processed " + jobDtos.size() + " job DTOs");
 
             return new LaundryJobPageDto(
-                    jobDtos,
-                    jobPage.getNumber(),
-                    jobPage.getSize(),
-                    jobPage.getTotalElements(),
-                    jobPage.getTotalPages()
+                jobDtos,
+                jobPage.getNumber(),
+                jobPage.getSize(),
+                jobPage.getTotalElements(),
+                jobPage.getTotalPages()
             );
         } finally {
             System.out.println("🕒 getSimplifiedJobs took: " + (System.currentTimeMillis() - startTime) + "ms");
