@@ -3,6 +3,7 @@ package com.starwash.authservice.service;
 import com.starwash.authservice.dto.*;
 import com.starwash.authservice.model.*;
 import com.starwash.authservice.repository.*;
+import com.starwash.authservice.security.ManilaTimeUtil; // ADDED IMPORT
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -57,12 +58,13 @@ public class TransactionService {
         this.machineService = machineService;
     }
 
-    private ZoneId getManilaTimeZone() {
-        return ZoneId.of("Asia/Manila");
+    // REPLACED with ManilaTimeUtil
+    private LocalDateTime getCurrentManilaTime() {
+        return ManilaTimeUtil.now();
     }
 
-    private LocalDateTime getCurrentManilaTime() {
-        return LocalDateTime.now(getManilaTimeZone());
+    private LocalDate getCurrentManilaDate() {
+        return ManilaTimeUtil.now().toLocalDate();
     }
 
     public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request, String staffId) {
@@ -195,16 +197,31 @@ public class TransactionService {
         double amountGiven = Optional.ofNullable(request.getAmountGiven()).orElse(0.0);
         double change = amountGiven - total;
 
-        LocalDateTime now = getCurrentManilaTime();
-        LocalDateTime issueDate = Optional.ofNullable(request.getIssueDate()).orElse(now);
+        // FIXED: Use ManilaTimeUtil for consistent time handling
+        LocalDateTime now = ManilaTimeUtil.now();
+        
+        // Handle issueDate - convert to Manila time if provided, otherwise use current Manila time
+        LocalDateTime issueDate;
+        if (request.getIssueDate() != null) {
+            // Convert provided date to Manila timezone
+            issueDate = ManilaTimeUtil.toManilaTime(request.getIssueDate());
+        } else {
+            issueDate = now;
+        }
 
-        LocalDateTime dueDate = Optional.ofNullable(request.getDueDate())
-                .orElse(issueDate.plusDays(7));
+        // Handle dueDate - convert to Manila time if provided, otherwise calculate from issueDate
+        LocalDateTime dueDate;
+        if (request.getDueDate() != null) {
+            dueDate = ManilaTimeUtil.toManilaTime(request.getDueDate());
+        } else {
+            dueDate = issueDate.plusDays(7);
+        }
 
         System.out.println("🆕 Creating transaction with Manila time:");
+        System.out.println("   - Current Manila Time: " + now);
         System.out.println("   - Issue Date: " + issueDate);
         System.out.println("   - Due Date: " + dueDate);
-        System.out.println("   - Current Manila Time: " + now);
+        System.out.println("   - Timezone: " + ManilaTimeUtil.getManilaZone());
         
         // Log auto-calculation info
         if (machineInfo != null) {
@@ -441,10 +458,12 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
+    // UPDATED: Use ManilaTimeUtil consistently
     public Map<String, Object> getStaffRecordsSummary() {
         Map<String, Object> summary = new HashMap<>();
 
-        LocalDate today = LocalDate.now(getManilaTimeZone());
+        // Use ManilaTimeUtil for consistent date handling
+        LocalDate today = getCurrentManilaDate();
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
 
@@ -452,6 +471,7 @@ public class TransactionService {
         System.out.println("   - Today: " + today);
         System.out.println("   - Start of Day: " + startOfDay);
         System.out.println("   - End of Day: " + endOfDay);
+        System.out.println("   - Current Manila Time: " + getCurrentManilaTime());
 
         List<RecordResponseDto> allRecords = this.getAllRecords();
 
@@ -459,7 +479,9 @@ public class TransactionService {
                 .filter(record -> !record.isDisposed())
                 .filter(record -> {
                     LocalDateTime createdAt = record.getCreatedAt();
-                    return createdAt.isAfter(startOfDay) && createdAt.isBefore(endOfDay);
+                    return createdAt != null && 
+                           createdAt.isAfter(startOfDay) && 
+                           createdAt.isBefore(endOfDay);
                 })
                 .collect(Collectors.toList());
 
@@ -908,6 +930,7 @@ public class TransactionService {
                 request);
     }
 
+    // UPDATED: Use ManilaTimeUtil consistently
     public void fixTransactionDatesToManilaTime() {
         List<Transaction> allTransactions = transactionRepository.findAll();
         int fixedCount = 0;
@@ -922,6 +945,8 @@ public class TransactionService {
                             .toHours();
                     if (Math.abs(hoursDifference) > 12) {
                         System.out.println("🕒 Fixing createdAt for transaction: " + transaction.getInvoiceNumber());
+                        System.out.println("   - Old date: " + transaction.getCreatedAt());
+                        System.out.println("   - New date: " + currentManilaTime.minusDays(1));
                         transaction.setCreatedAt(currentManilaTime.minusDays(1));
                         needsUpdate = true;
                     }
@@ -931,6 +956,8 @@ public class TransactionService {
                     LocalDateTime expectedDueDate = transaction.getIssueDate().plusDays(7);
                     if (!transaction.getDueDate().equals(expectedDueDate)) {
                         System.out.println("📅 Fixing dueDate for transaction: " + transaction.getInvoiceNumber());
+                        System.out.println("   - Old due date: " + transaction.getDueDate());
+                        System.out.println("   - New due date: " + expectedDueDate);
                         transaction.setDueDate(expectedDueDate);
                         needsUpdate = true;
                     }
