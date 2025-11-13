@@ -27,10 +27,8 @@ public class MongoConfig {
 
     @Bean
     public MongoClient mongoClient() {
-        // Use environment variable for MongoDB URI
         String mongoUri = System.getenv("MONGODB_URI");
         if (mongoUri == null || mongoUri.isEmpty()) {
-            // Fallback to your connection string
             mongoUri = "mongodb+srv://ytterstick:vQjnfLWfTnN43tyf@starwash-cluster.fp7frav.mongodb.net";
         }
         
@@ -70,8 +68,9 @@ public class MongoConfig {
     public static class LocalDateTimeToDateConverter implements Converter<LocalDateTime, Date> {
         @Override
         public Date convert(@NonNull LocalDateTime source) {
-            ZonedDateTime zonedDateTime = source.atZone(MANILA_ZONE);
-            return Date.from(zonedDateTime.toInstant());
+            // Assume source is already in Manila time, convert to UTC for storage
+            ZonedDateTime manilaTime = source.atZone(MANILA_ZONE);
+            return Date.from(manilaTime.toInstant());
         }
     }
 
@@ -81,8 +80,9 @@ public class MongoConfig {
     public static class DateToLocalDateTimeConverter implements Converter<Date, LocalDateTime> {
         @Override
         public LocalDateTime convert(@NonNull Date source) {
-            ZonedDateTime zonedDateTime = source.toInstant().atZone(MANILA_ZONE);
-            return zonedDateTime.toLocalDateTime();
+            // Convert from UTC to Manila timezone when reading from DB
+            ZonedDateTime manilaTime = source.toInstant().atZone(MANILA_ZONE);
+            return manilaTime.toLocalDateTime();
         }
     }
 
