@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, DollarSign, TrendingUp, BarChart3, Package, ChevronLeft, ChevronRight, Info, Calendar, LineChart } from "lucide-react";
+import { Search, TrendingUp, BarChart3, Package, ChevronLeft,PhilippinePeso, ChevronRight, Info, Calendar, LineChart, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { api } from "@/lib/api-config";
+import * as XLSX from "xlsx";
+import { getManilaTime, getManilaDateString } from "@/utils/manilaTime";
 
 let salesReportCache = null;
 let cacheTimestamp = null;
@@ -122,7 +124,6 @@ const formatDateForBackend = (dateString) => {
 
 const CustomBarTooltip = ({ active, payload, label, isDarkMode }) => {
     if (active && payload && payload.length) {
-        // Extract month information from payload if available
         const monthInfo = payload[0]?.payload?.month ? ` (${payload[0].payload.month})` : '';
         
         return (
@@ -184,6 +185,8 @@ const SalesReportPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [datesSwapped, setDatesSwapped] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
     const { toast } = useToast();
 
     const [salesData, setSalesData] = useState([]);
@@ -216,6 +219,18 @@ const SalesReportPage = () => {
         { id: "Wash", name: "Wash Only" },
         { id: "Dry", name: "Dry Only" },
     ];
+
+    const exportDropdownRef = useRef(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handlePointerDown = (e) => {
+            if (exportDropdownRef.current?.contains(e.target)) return;
+            setShowExportDropdown(false);
+        };
+        document.addEventListener("pointerdown", handlePointerDown);
+        return () => document.removeEventListener("pointerdown", handlePointerDown);
+    }, []);
 
     // Function to check if data has actually changed
     const hasDataChanged = (newData, oldData) => {
@@ -513,11 +528,14 @@ const SalesReportPage = () => {
         setDateRange(value);
         setDatesSwapped(false);
 
-        const today = new Date();
+        // Use Manila time instead of local time - THIS IS THE KEY FIX
+        const today = getManilaTime();
+        const manilaDateString = getManilaDateString();
+
         switch (value) {
             case "today":
-                setStartDate(today.toISOString().split("T")[0]);
-                setEndDate(today.toISOString().split("T")[0]);
+                setStartDate(manilaDateString);
+                setEndDate(manilaDateString);
                 break;
             case "yesterday":
                 const yesterday = new Date(today);
@@ -529,13 +547,13 @@ const SalesReportPage = () => {
                 const weekStart = new Date(today);
                 weekStart.setDate(weekStart.getDate() - 7);
                 setStartDate(weekStart.toISOString().split("T")[0]);
-                setEndDate(today.toISOString().split("T")[0]);
+                setEndDate(manilaDateString);
                 break;
             case "month":
                 // For "This Month", set to first day of current month to today
                 const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
                 setStartDate(monthStart.toISOString().split("T")[0]);
-                setEndDate(today.toISOString().split("T")[0]);
+                setEndDate(manilaDateString);
                 break;
             case "year":
                 const yearStart = new Date(today.getFullYear(), 0, 1);
@@ -578,6 +596,296 @@ const SalesReportPage = () => {
         }
     };
 
+    const handleExportSalesReport = async (exportType = 'full') => {
+        try {
+            setIsExporting(true);
+            setShowExportDropdown(false);
+
+            const workbook = XLSX.utils.book_new();
+            const currentDate = new Date().toISOString().split('T')[0];
+            const currentDateTime = new Date().toLocaleString();
+
+            // Helper function to create styled headers
+            const createStyledHeader = (title) => [
+                [title],
+                [], // Empty row for spacing
+            ];
+
+            // Helper function to add styled tables - FIXED: Only add headers once
+            const addStyledTable = (sheet, data, startRow, hasHeader = true) => {
+                data.forEach((row, rowIndex) => {
+                    row.forEach((cell, colIndex) => {
+                        const cellRef = XLSX.utils.encode_cell({ r: startRow + rowIndex, c: colIndex });
+                        
+                        // Style headers (first row of data if hasHeader is true)
+                        if (hasHeader && rowIndex === 0) {
+                            sheet[cellRef] = {
+                                v: cell,
+                                s: {
+                                    font: { bold: true, color: { rgb: "FFFFFF" } },
+                                    fill: { fgColor: { rgb: "2C5F2D" } }, // Dark green
+                                    alignment: { horizontal: "center", vertical: "center" },
+                                    border: {
+                                        top: { style: "thin", color: { rgb: "1C3F3A" } },
+                                        left: { style: "thin", color: { rgb: "1C3F3A" } },
+                                        bottom: { style: "thin", color: { rgb: "1C3F3A" } },
+                                        right: { style: "thin", color: { rgb: "1C3F3A" } },
+                                    },
+                                }
+                            };
+                        } else {
+                            // Style data rows
+                            sheet[cellRef] = {
+                                v: cell,
+                                s: {
+                                    border: {
+                                        left: { style: "thin", color: { rgb: "E0E0E0" } },
+                                        right: { style: "thin", color: { rgb: "E0E0E0" } },
+                                        bottom: { style: "thin", color: { rgb: "E0E0E0" } },
+                                    },
+                                    alignment: { vertical: "center" }
+                                }
+                            };
+                            
+                            // Alternate row coloring
+                            if (rowIndex % 2 === 1) {
+                                sheet[cellRef].s.fill = { fgColor: { rgb: "F8F9FA" } };
+                            }
+                            
+                            // Right align numeric columns
+                            if (typeof cell === 'number' || (typeof cell === 'string' && cell.includes('₱'))) {
+                                sheet[cellRef].s.alignment = { horizontal: "right", vertical: "center" };
+                            }
+                        }
+                    });
+                });
+                
+                return startRow + data.length;
+            };
+
+            if (exportType === 'summary' || exportType === 'full') {
+                // Summary Sheet - Enhanced with better formatting
+                const summaryHeader = createStyledHeader('STARWASH SALES REPORT SUMMARY');
+                
+                const reportInfo = [
+                    ['Report Generated', currentDateTime],
+                    ['Date Range', dateRange.charAt(0).toUpperCase() + dateRange.slice(1)],
+                    ['Start Date', startDate],
+                    ['End Date', endDate],
+                    ['Service Type', serviceTypeFilter === 'all' ? 'All Services' : serviceTypeFilter],
+                    ['', ''], // Spacer
+                ];
+
+                const financialSummaryHeader = [['FINANCIAL PERFORMANCE']];
+                const financialSummary = [
+                    ['Metric', 'Value'],
+                    ['Total Income', `₱${summaryData.totalSales.toLocaleString()}`],
+                    ['Total Transactions', summaryData.totalTransactions.toLocaleString()],
+                    ['Average Order Value', `₱${summaryData.averageOrderValue.toFixed(2)}`],
+                    ['Growth Percentage', `${summaryData.growthPercentage}%`],
+                    ['', ''], // Spacer
+                ];
+
+                const operationalSummaryHeader = [['OPERATIONAL METRICS']];
+                const operationalSummary = [
+                    ['Metric', 'Value'],
+                    ['Total Customers', summaryData.totalCustomers.toLocaleString()],
+                    ['Total Loads Processed', summaryData.totalLoads.toLocaleString()],
+                    ['Average Loads per Transaction', (summaryData.totalLoads / summaryData.totalTransactions).toFixed(1)],
+                ];
+
+                const summaryDataSheet = [
+                    ...summaryHeader,
+                    ...reportInfo,
+                    ...financialSummaryHeader,
+                    ...financialSummary,
+                    ...operationalSummaryHeader,
+                    ...operationalSummary,
+                ];
+
+                const summarySheet = XLSX.utils.aoa_to_sheet(summaryDataSheet);
+                
+                // Merge header cells for better appearance
+                if (!summarySheet['!merges']) summarySheet['!merges'] = [];
+                summarySheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
+                summarySheet['!merges'].push({ s: { r: 8, c: 0 }, e: { r: 8, c: 1 } });
+                summarySheet['!merges'].push({ s: { r: 15, c: 0 }, e: { r: 15, c: 1 } });
+
+                XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+            }
+
+            if (exportType === 'trend' || exportType === 'full') {
+                // Sales Trend Sheet - Enhanced with tables
+                const trendHeader = createStyledHeader('SALES TREND ANALYSIS');
+                
+                const summaryRow = [
+                    ['Period Summary', 'Total Sales', 'Average per Period'],
+                    [
+                        `${salesData.length} ${salesData.length === 1 ? 'Period' : 'Periods'}`,
+                        `₱${salesData.reduce((sum, item) => sum + item.sales, 0).toLocaleString()}`,
+                        `₱${(salesData.reduce((sum, item) => sum + item.sales, 0) / salesData.length).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ],
+                    [], // Spacer
+                ];
+
+                // FIXED: Only one header row
+                const trendData = [
+                    ['Period', 'Sales (₱)', 'Percentage of Total'],
+                    ...salesData.map(item => {
+                        const totalSales = salesData.reduce((sum, i) => sum + i.sales, 0);
+                        const percentage = totalSales > 0 ? (item.sales / totalSales * 100) : 0;
+                        return [
+                            item.period,
+                            item.sales,
+                            `${percentage.toFixed(1)}%`
+                        ];
+                    })
+                ];
+
+                const trendDataSheet = [
+                    ...trendHeader,
+                    ...summaryRow,
+                    ...trendData,
+                ];
+
+                const trendSheet = XLSX.utils.aoa_to_sheet(trendDataSheet);
+                
+                // Style the trend sheet
+                addStyledTable(trendSheet, trendData, 5); // Start at row 5 (after headers and summary)
+                
+                XLSX.utils.book_append_sheet(workbook, trendSheet, 'Sales Trend');
+            }
+
+            if (exportType === 'services' || exportType === 'full') {
+                // Service Distribution Sheet - Enhanced with tables
+                const servicesHeader = createStyledHeader('SERVICE DISTRIBUTION ANALYSIS');
+                
+                const totalServiceTransactions = serviceDistributionData.reduce((sum, item) => sum + item.value, 0);
+                
+                // FIXED: Only one header row
+                const serviceData = [
+                    ['Service Type', 'Transaction Count', 'Percentage', 'Revenue Contribution'],
+                    ...serviceDistributionData.map(item => {
+                        const percentage = totalServiceTransactions > 0 ? (item.value / totalServiceTransactions * 100) : 0;
+                        // Estimate revenue contribution based on average order value
+                        const estimatedRevenue = item.value * summaryData.averageOrderValue;
+                        return [
+                            item.name,
+                            item.value,
+                            `${percentage.toFixed(1)}%`,
+                            `₱${estimatedRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        ];
+                    })
+                ];
+
+                const servicesDataSheet = [
+                    ...servicesHeader,
+                    ['Total Services Offered:', serviceDistributionData.length],
+                    ['Total Transactions:', totalServiceTransactions],
+                    [], // Spacer
+                    ...serviceData,
+                ];
+
+                const servicesSheet = XLSX.utils.aoa_to_sheet(servicesDataSheet);
+                
+                // Style the services sheet
+                addStyledTable(servicesSheet, serviceData, 6); // Start at row 6
+                
+                XLSX.utils.book_append_sheet(workbook, servicesSheet, 'Service Analysis');
+            }
+
+            if (exportType === 'transactions' || exportType === 'full') {
+                // Transactions Sheet - FIXED: No duplicate headers
+                const transactionsHeader = createStyledHeader('CUSTOMER TRANSACTIONS');
+                
+                // FIXED: Create header row separately from data
+                const transactionHeaders = [['Transaction Date', 'Customer Name', 'Service Type', 'Amount (₱)', 'Loads', 'Status']];
+                
+                const transactionData = recentTransactions.map(transaction => [
+                    new Date(transaction.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    }),
+                    transaction.customerName,
+                    transaction.serviceType,
+                    transaction.totalPrice,
+                    transaction.loads || 1,
+                    'Completed'
+                ]);
+
+                const summaryStats = [
+                    [],
+                    ['Transaction Summary', '', '', '', '', ''],
+                    ['Total Transactions:', recentTransactions.length, '', 'Total Revenue:', `₱${recentTransactions.reduce((sum, t) => sum + t.totalPrice, 0).toLocaleString()}`, ''],
+                    ['Average Transaction:', `₱${(recentTransactions.reduce((sum, t) => sum + t.totalPrice, 0) / recentTransactions.length).toFixed(2)}`, '', 'Period Covered:', `${dateRange.charAt(0).toUpperCase() + dateRange.slice(1)}`, ''],
+                    [], // Spacer
+                ];
+
+                // FIXED: Combine headers and data without duplication
+                const transactionsDataSheet = [
+                    ...transactionsHeader,
+                    ...summaryStats,
+                    ...transactionHeaders, // Header row
+                    ...transactionData,    // Data rows
+                ];
+
+                const transactionsSheet = XLSX.utils.aoa_to_sheet(transactionsDataSheet);
+                
+                // Style the transactions sheet - FIXED: Start at correct row
+                const allTransactionData = [transactionHeaders[0], ...transactionData];
+                addStyledTable(transactionsSheet, allTransactionData, 8); // Start at row 8
+                
+                XLSX.utils.book_append_sheet(workbook, transactionsSheet, 'Transactions');
+            }
+
+            // Set column widths for all sheets
+            const colWidths = [
+                { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 15 }
+            ];
+            
+            workbook.SheetNames.forEach(sheetName => {
+                const sheet = workbook.Sheets[sheetName];
+                if (sheet) {
+                    sheet['!cols'] = colWidths;
+                    
+                    // Add auto-filter to data tables
+                    if (sheetName !== 'Executive Summary') {
+                        const range = XLSX.utils.decode_range(sheet['!ref']);
+                        // Set auto-filter for data rows (skip headers)
+                        sheet['!autofilter'] = {
+                            ref: XLSX.utils.encode_range({
+                                s: { r: range.s.r + 2, c: range.s.c },
+                                e: { r: range.e.r, c: range.e.c }
+                            })
+                        };
+                    }
+                }
+            });
+
+            // Generate filename based on export type
+            const filename = `StarWash_Sales_Report_${exportType.charAt(0).toUpperCase() + exportType.slice(1)}_${dateRange}_${currentDate}.xlsx`;
+
+            XLSX.writeFile(workbook, filename);
+
+            toast({
+                title: "Export Successful",
+                description: `Sales report has been exported`,
+                variant: "default",
+            });
+
+        } catch (error) {
+            console.error("Export error:", error);
+            toast({
+                title: "Export Failed",
+                description: "Failed to export sales report. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     const filteredTransactions = recentTransactions.filter(
         (transaction) =>
             transaction.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -616,7 +924,7 @@ const SalesReportPage = () => {
         {
             label: "Total Income",
             value: animatedSummary.totalSales,
-            icon: <DollarSign size={26} />,
+            icon: <PhilippinePeso size={26} />, 
             color: CHART_COLORS.accent,
             description: `${summaryData.growthPercentage >= 0 ? "+" : ""}${animatedSummary.growthPercentage}% from previous period`,
             trend: summaryData.growthPercentage,
@@ -901,6 +1209,87 @@ const SalesReportPage = () => {
                         </p>
                     </div>
                 </div>
+
+                {/* Export Button */}
+                <div className="relative" ref={exportDropdownRef}>
+                    <Button
+                        onClick={() => setShowExportDropdown(!showExportDropdown)}
+                        className="transition-all"
+                        style={{
+                            backgroundColor: "#10B981",
+                            color: "#FFFFFF",
+                            border: "2px solid #10B981",
+                        }}
+                        disabled={isExporting}
+                    >
+                        {isExporting ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Download className="mr-2 h-4 w-4" />
+                        )}
+                        {isExporting ? "Exporting..." : "Export Report"}
+                    </Button>
+
+                    {showExportDropdown && (
+                        <div
+                            className="absolute right-0 z-50 mt-2 w-48 rounded-lg border-2 p-2 shadow-lg"
+                            style={{
+                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                            }}
+                        >
+                            <button
+                                onClick={() => handleExportSalesReport('full')}
+                                className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
+                                style={{
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                }}
+                            >
+                                📊 Full Report
+                                <div className="mt-1 text-xs opacity-70">Complete analysis with all data</div>
+                            </button>
+
+                            <div className="my-2 border-t" style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }} />
+
+                            <button
+                                onClick={() => handleExportSalesReport('summary')}
+                                className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
+                                style={{
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                }}
+                            >
+                                📈 Executive Summary
+                                <div className="mt-1 text-xs opacity-70">Key metrics and performance</div>
+                            </button>
+
+                            <button
+                                onClick={() => handleExportSalesReport('trend')}
+                                className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
+                                style={{
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                }}
+                            >
+                                📅 Sales Trend
+                                <div className="mt-1 text-xs opacity-70">Revenue over time analysis</div>
+                            </button>
+
+                            <button
+                                onClick={() => handleExportSalesReport('transactions')}
+                                className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
+                                style={{
+                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                }}
+                            >
+                                👥 Customer Transactions
+                                <div className="mt-1 text-xs opacity-70">Detailed transaction data</div>
+                            </button>
+                        </div>
+                    )}
+                </div>
             </motion.div>
 
             {/* Filters */}
@@ -1041,6 +1430,33 @@ const SalesReportPage = () => {
                                 onChange={handleServiceChange}
                                 isLocked={false}
                             />
+
+                            <div className="space-y-2">
+                                <Label
+                                    className="mb-1 block"
+                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}
+                                >
+                                    Search Customers
+                                </Label>
+                                <div className="relative">
+                                    <Search 
+                                        className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform" 
+                                        style={{ color: isDarkMode ? "#94a3b8" : "#0B2B26/70" }} 
+                                    />
+                                    <Input
+                                        type="text"
+                                        placeholder="Search by name..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 transition-all"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                            borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                                            color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -1082,12 +1498,10 @@ const SalesReportPage = () => {
                                 transition={{ delay: index * 0.2 }}
                                 className="text-right"
                             >
-                                {/* Change the p tag to div since it contains block content */}
                                 <div
                                     className="text-2xl font-bold"
                                     style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                 >
-                                    {/* Use AnimatedNumber instead of skeleton loading */}
                                     <AnimatedNumber
                                         value={value}
                                         isChanging={animatedSummary.isChanging}

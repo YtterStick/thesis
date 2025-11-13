@@ -104,21 +104,36 @@ const ConsumablesSection = ({
     );
   };
 
-  const renderInput = (item, type = "other") => {
+  // NEW: Function to add "pcs" label for specific items
+  const getItemLabel = (item, type = "other") => {
     const insufficient = isInsufficientStock(item.name);
     
     return (
       <div key={item.id} className="relative">
         <div className="flex items-center justify-between mb-1">
-          <Label 
-            style={{ 
-              color: insufficient 
-                ? '#ef4444' 
-                : (isDarkMode ? '#f1f5f9' : '#0f172a') 
-            }}
-          >
-            {item.name}
-          </Label>
+          <div className="flex items-center gap-2">
+            <Label 
+              style={{ 
+                color: insufficient 
+                  ? '#ef4444' 
+                  : (isDarkMode ? '#f1f5f9' : '#0f172a') 
+              }}
+            >
+              {item.name}
+            </Label>
+            {/* ADDED: "pcs" label for plastic, detergent, and fabric items */}
+            {(type === "plastic" || type === "detergent" || type === "fabric") && (
+              <span 
+                className="text-xs px-1.5 py-0.5 rounded"
+                style={{
+                  backgroundColor: isDarkMode ? 'rgba(100, 116, 139, 0.3)' : 'rgba(100, 116, 139, 0.1)',
+                  color: isDarkMode ? '#cbd5e1' : '#64748b'
+                }}
+              >
+                pcs
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             {insufficient && (
               <div className="flex items-center gap-1 text-xs text-red-500">
@@ -213,7 +228,7 @@ const ConsumablesSection = ({
           </div>
 
           {/* Plastic Items Only (always show) */}
-          {plasticItems.map((item) => renderInput(item, "plastic"))}
+          {plasticItems.map((item) => getItemLabel(item, "plastic"))}
         </div>
       </div>
     );
@@ -252,19 +267,19 @@ const ConsumablesSection = ({
         </div>
 
         {/* Plastic Items */}
-        {plasticItems.map((item) => renderInput(item, "plastic"))}
+        {plasticItems.map((item) => getItemLabel(item, "plastic"))}
         
         {/* Detergent Items */}
-        {detergentItems.map((item) => renderInput(item, "detergent"))}
+        {detergentItems.map((item) => getItemLabel(item, "detergent"))}
         
         {/* Fabric Softener Items */}
-        {fabricItems.map((item) => renderInput(item, "fabric"))}
+        {fabricItems.map((item) => getItemLabel(item, "fabric"))}
       </div>
 
       {/* 🧼 Non-Consumable Items — only if supplySource is in-store */}
       {nonConsumableItems.length > 0 && (
         <div className="grid grid-cols-2 gap-4">
-          {nonConsumableItems.map((item) => renderInput(item, "other"))}
+          {nonConsumableItems.map((item) => getItemLabel(item, "other"))}
         </div>
       )}
     </div>

@@ -13,52 +13,23 @@ import ConsumablesSection from "./ConsumablesSection";
 import { api } from "@/lib/api-config";
 import { useTheme } from "@/hooks/use-theme";
 
-// In TransactionForm
-const CACHE_DURATION = 30 * 1000;
-const POLLING_INTERVAL = 1000;
+// Cache configuration
+const CACHE_DURATION = 30 * 1000; // 30 seconds
 
-// Enhanced Manila time utility functions with detailed debugging
+// OPTIMIZED: Simplified Manila time utility functions
 const getManilaTime = (date = new Date()) => {
-    // Method 1: Direct calculation (UTC+8)
     const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-    const manilaOffset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
-    const manilaTime = new Date(utc + manilaOffset);
-    
-    // Method 2: Using toLocaleString for verification
-    const localeManilaTime = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-    
-    console.log("🕒 Manila Time Calculation:");
-    console.log("   Original Local:", date.toString());
-    console.log("   Original ISO:", date.toISOString());
-    console.log("   Calculated Manila:", manilaTime.toString());
-    console.log("   Locale Manila:", localeManilaTime.toString());
-    console.log("   Difference (ms):", manilaTime.getTime() - localeManilaTime.getTime());
-    
-    return manilaTime;
+    const manilaOffset = 8 * 60 * 60 * 1000;
+    return new Date(utc + manilaOffset);
 };
 
 const formatToManilaISOString = (date = new Date()) => {
-    const manilaDate = getManilaTime(date);
-    const isoString = manilaDate.toISOString();
-    
-    console.log("🕒 Formatting Manila to ISO:");
-    console.log("   Manila Date:", manilaDate.toString());
-    console.log("   ISO String:", isoString);
-    
-    return isoString;
+    return getManilaTime(date).toISOString();
 };
 
 const addDaysManilaTime = (days, date = new Date()) => {
     const manilaDate = getManilaTime(date);
-    const result = new Date(manilaDate.getTime() + days * 24 * 60 * 60 * 1000);
-    
-    console.log("🕒 Adding days to Manila time:");
-    console.log("   Original Manila:", manilaDate.toString());
-    console.log("   Added Days:", days);
-    console.log("   Result:", result.toString());
-    console.log("   Result ISO:", result.toISOString());
-    
-    return result;
+    return new Date(manilaDate.getTime() + days * 24 * 60 * 60 * 1000);
 };
 
 // Cache initialization
@@ -68,10 +39,7 @@ const initializeCache = () => {
         if (stored) {
             const parsed = JSON.parse(stored);
             if (Date.now() - parsed.timestamp < CACHE_DURATION) {
-                console.log("📦 Initializing transaction form from stored cache");
                 return parsed;
-            } else {
-                console.log("🗑️ Stored transaction form cache expired");
             }
         }
     } catch (error) {
@@ -132,7 +100,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const [pendingPayload, setPendingPayload] = useState(null);
     
     const { toast } = useToast();
-    const pollingIntervalRef = useRef(null);
     const isMountedRef = useRef(true);
 
     const selectedService = services.find((s) => s.id === form.serviceId);
@@ -153,7 +120,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         if (field === "serviceId" && services.length > 0) {
             const selectedService = services.find(s => s.id === value);
             if (selectedService && selectedService.name.toLowerCase().includes("dry") && !selectedService.name.toLowerCase().includes("wash")) {
-                console.log("🔄 Dry Only service selected - auto-setting supply source to customer");
                 setSupplySource("customer");
             }
         }
@@ -168,7 +134,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     const handlePlasticChange = (name, value) => {
         const numericValue = parseInt(value) || 0;
         
-        // Get the expected value based on current mode
         const expectedValue = autoCalculate && calculatedLoads > 0 ? calculatedLoads : parseInt(loads) || 1;
         
         if (numericValue !== expectedValue) {
@@ -176,14 +141,11 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 ...prev,
                 [name]: true,
             }));
-            console.log("🔧 Manual plastic override:", numericValue);
         } else {
-            // If value matches expected, clear the override
             setPlasticOverrides((prev) => ({
                 ...prev,
                 [name]: false,
             }));
-            console.log("🔧 Plastic matches expected value - clearing override");
         }
         
         setConsumables((prev) => ({
@@ -209,7 +171,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 [name]: true,
             }));
         }
-        // Note: Plastic overrides are handled separately in handlePlasticChange
     };
 
     useImperativeHandle(ref, () => ({
@@ -229,10 +190,10 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             setDetergentOverrides({});
             setFabricOverrides({});
             setInsufficientStockItems([]);
-            setTotalWeight(""); // RESET WEIGHT
-            setAutoCalculate(true); // RESET AUTO-CALCULATE
-            setCalculatedLoads(1); // RESET CALCULATED LOADS
-            setMachineInfo(""); // RESET MACHINE INFO
+            setTotalWeight("");
+            setAutoCalculate(true);
+            setCalculatedLoads(1);
+            setMachineInfo("");
             
             const initialConsumables = {};
             stockItems.forEach((item) => {
@@ -246,7 +207,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         },
     }));
 
-    // NEW FUNCTION: Calculate loads automatically
+    // OPTIMIZED: Calculate loads automatically
     const calculateLoadsAutomatically = async (weight) => {
         if (!weight || weight <= 0) {
             setCalculatedLoads(1);
@@ -257,7 +218,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
         setIsCalculating(true);
         try {
-            // Determine machine type based on selected service
             let machineType = "Washer";
             if (form.serviceId && services.length > 0) {
                 const selectedService = services.find(s => s.id === form.serviceId);
@@ -271,7 +231,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                 machineType: machineType
             });
 
-            const { loads: calculatedLoads, machineInfo, machineCapacity, plasticBags } = response.data;
+            const { loads: calculatedLoads, machineInfo, plasticBags } = response.data;
             
             setCalculatedLoads(calculatedLoads);
             setMachineInfo(`${weight}kg = ${calculatedLoads} loads - ${machineInfo}`);
@@ -283,7 +243,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             );
             
             if (plasticItem && plasticBags > 0) {
-                // Check if plastic was manually overridden
                 const isManuallySet = plasticOverrides[plasticItem.name];
                 
                 if (!isManuallySet) {
@@ -291,9 +250,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                         ...prev,
                         [plasticItem.name]: plasticBags
                     }));
-                    console.log("📦 Auto-set plastic to:", plasticBags);
-                } else {
-                    console.log("📦 Plastic manually set to:", consumables[plasticItem.name], "- not auto-adjusting");
                 }
             }
 
@@ -321,49 +277,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             setIsCalculating(false);
         }
     };
-
-    // NEW EFFECT: Handle plastic when switching to manual mode
-    useEffect(() => {
-        if (!autoCalculate) {
-            console.log("🔴 Auto-calculate off - plastic will follow manual input");
-            
-            const plasticItem = stockItems.find(item => 
-                item.name.toLowerCase().includes("plastic")
-            );
-            
-            if (plasticItem && !plasticOverrides[plasticItem.name]) {
-                const currentLoads = parseInt(loads) || 1;
-                const currentPlastic = consumables[plasticItem.name] || 0;
-                
-                // Only update if plastic doesn't match loads
-                if (currentPlastic !== currentLoads) {
-                    setConsumables(prev => ({
-                        ...prev,
-                        [plasticItem.name]: currentLoads
-                    }));
-                    console.log("📦 Manual mode - set plastic to match loads:", currentLoads);
-                }
-            }
-        }
-    }, [autoCalculate, loads, stockItems, plasticOverrides, consumables]);
-
-    // Reset plastic overrides when auto-calculate is toggled on
-    useEffect(() => {
-        if (autoCalculate && totalWeight && !isNaN(parseFloat(totalWeight))) {
-            calculateLoadsAutomatically(parseFloat(totalWeight));
-            
-            // Clear plastic overrides when auto-calculate is enabled
-            const plasticItem = stockItems.find(item => 
-                item.name.toLowerCase().includes("plastic")
-            );
-            if (plasticItem) {
-                setPlasticOverrides(prev => ({
-                    ...prev,
-                    [plasticItem.name]: false
-                }));
-            }
-        }
-    }, [autoCalculate]);
 
     // Handle auto-calculate toggle with proper override reset
     const handleAutoCalculateToggle = (checked) => {
@@ -428,7 +341,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             if (!isMountedRef.current) return;
             
             if (transactionFormCache) {
-                console.log("⚠️ Fetch failed, falling back to cached data");
                 const cachedData = transactionFormCache.data;
                 setServices(cachedData.services || []);
                 setStockItems(cachedData.stockItems || []);
@@ -442,7 +354,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     console.log("🔄 Fetching fresh transaction form data");
     
     try {
-        // Use the api utility instead of direct fetch calls
         const [servicesData, stockData, paymentData] = await Promise.all([
             api.get("/services"),
             api.get("/stock"),
@@ -451,19 +362,11 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
 
         const safeStockItems = Array.isArray(stockData) ? stockData : (stockData.items ?? []);
 
-        // FIXED: Properly handle payment settings response
         let paymentMethodsData = ["Cash"];
-        console.log("💳 Payment settings response:", paymentData);
         
-        // Check if GCash is enabled in the payment settings
         if (paymentData && (paymentData.gcashEnabled === true || paymentData.gcashEnabled === "true")) {
-            console.log("✅ GCash is enabled - adding to payment methods");
             paymentMethodsData.push("GCash");
-        } else {
-            console.log("❌ GCash is disabled - only Cash available");
         }
-
-        console.log("💰 Available payment methods:", paymentMethodsData);
 
         const newData = {
             services: servicesData,
@@ -474,8 +377,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         const currentTime = Date.now();
 
         if (!transactionFormCache || hasDataChanged(newData, transactionFormCache.data)) {
-            console.log("🔄 Transaction form data updated with fresh data");
-            
             transactionFormCache = {
                 data: newData,
                 timestamp: currentTime
@@ -483,7 +384,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             cacheTimestamp = currentTime;
             saveCacheToStorage(transactionFormCache);
         } else {
-            console.log("✅ No changes in transaction form data, updating timestamp only");
             cacheTimestamp = currentTime;
             transactionFormCache.timestamp = currentTime;
             saveCacheToStorage(transactionFormCache);
@@ -523,6 +423,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
     }
 };
 
+    // OPTIMIZED: useEffect without polling
     useEffect(() => {
         isMountedRef.current = true;
         
@@ -554,16 +455,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         
         fetchData();
         
-        pollingIntervalRef.current = setInterval(() => {
-            console.log("🔄 Auto-refreshing transaction form data...");
-            fetchData(false);
-        }, POLLING_INTERVAL);
-        
         return () => {
             isMountedRef.current = false;
-            if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current);
-            }
+            // REMOVED: No more polling interval cleanup
         };
     }, [fetchData]);
 
@@ -572,42 +466,33 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         if (form.serviceId && services.length > 0) {
             const selectedService = services.find(s => s.id === form.serviceId);
             if (selectedService && selectedService.name.toLowerCase().includes("dry") && !selectedService.name.toLowerCase().includes("wash")) {
-                console.log("🔄 Dry Only service detected - setting supply source to customer");
                 setSupplySource("customer");
             }
         }
     }, [form.serviceId, services]);
 
-    // Handle supply source changes - set detergent and fabric to 0 when customer-provided
+    // Handle supply source changes
     useEffect(() => {
         if (supplySource === "customer" && stockItems.length > 0) {
-            console.log("🔄 Customer provided selected - setting detergent and fabric to 0");
-            
             const updatedConsumables = { ...consumables };
             let hasChanges = false;
 
-            // Set all detergent items to 0
             stockItems.forEach((item) => {
                 if (item.name.toLowerCase().includes("detergent")) {
                     if (updatedConsumables[item.name] !== 0) {
                         updatedConsumables[item.name] = 0;
                         hasChanges = true;
-                        console.log(`✅ Set ${item.name} to 0`);
                     }
-                    // Mark as manually set so it doesn't auto-sync
                     setDetergentOverrides((prev) => ({ ...prev, [item.name]: true }));
                 }
             });
 
-            // Set all fabric items to 0
             stockItems.forEach((item) => {
                 if (item.name.toLowerCase().includes("fabric")) {
                     if (updatedConsumables[item.name] !== 0) {
                         updatedConsumables[item.name] = 0;
                         hasChanges = true;
-                        console.log(`✅ Set ${item.name} to 0`);
                     }
-                    // Mark as manually set so it doesn't auto-sync
                     setFabricOverrides((prev) => ({ ...prev, [item.name]: true }));
                 }
             });
@@ -618,37 +503,29 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     }, [supplySource, stockItems]);
 
-    // Handle switching back to in-store - reset detergent and fabric to match loads
+    // Handle switching back to in-store
     useEffect(() => {
         if (supplySource === "in-store" && stockItems.length > 0) {
-            console.log("🔄 In-store selected - resetting detergent and fabric to match loads");
-            
             const expected = parseInt(loads) || 1;
             const updatedConsumables = { ...consumables };
             let hasChanges = false;
 
-            // Reset detergent items to match loads and clear overrides
             stockItems.forEach((item) => {
                 if (item.name.toLowerCase().includes("detergent")) {
                     if (updatedConsumables[item.name] !== expected) {
                         updatedConsumables[item.name] = expected;
                         hasChanges = true;
-                        console.log(`✅ Reset ${item.name} to ${expected}`);
                     }
-                    // Clear manual override so it can auto-sync
                     setDetergentOverrides((prev) => ({ ...prev, [item.name]: false }));
                 }
             });
 
-            // Reset fabric items to match loads and clear overrides
             stockItems.forEach((item) => {
                 if (item.name.toLowerCase().includes("fabric")) {
                     if (updatedConsumables[item.name] !== expected) {
                         updatedConsumables[item.name] = expected;
                         hasChanges = true;
-                        console.log(`✅ Reset ${item.name} to ${expected}`);
                     }
-                    // Clear manual override so it can auto-sync
                     setFabricOverrides((prev) => ({ ...prev, [item.name]: false }));
                 }
             });
@@ -659,7 +536,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         }
     }, [supplySource, stockItems, loads]);
 
-    // Auto-sync logic for consumables - INCLUDING PLASTIC when auto-calculating
+    // Auto-sync logic for consumables
     useEffect(() => {
         if (!stockItems.length) return;
 
@@ -672,19 +549,16 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         let changed = false;
         const updated = { ...consumables };
 
-        // Update plastic items that aren't overridden (only if auto-calculating)
         if (autoCalculate) {
             plasticItems.forEach((item) => {
                 const name = item.name;
                 if (!plasticOverrides[name] && consumables[name] !== expected) {
                     updated[name] = expected;
                     changed = true;
-                    console.log("📦 Auto-syncing plastic to:", expected);
                 }
             });
         }
 
-        // Update detergent items that aren't overridden (only if in-store)
         if (supplySource === "in-store") {
             detergentItems.forEach((item) => {
                 const name = item.name;
@@ -695,7 +569,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             });
         }
 
-        // Update fabric items that aren't overridden (only if in-store)
         if (supplySource === "in-store") {
             fabricItems.forEach((item) => {
                 const name = item.name;
@@ -732,18 +605,14 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         });
     }, [form.amountGiven, totalAmount]);
 
-    // Function to extract stock items from error response
     const extractInsufficientStockItems = (error) => {
-        // Try to get the response data if available
         if (error.response && error.response.data) {
             const responseData = error.response.data;
             
-            // If backend returns structured error with insufficientItems
             if (responseData.insufficientItems && Array.isArray(responseData.insufficientItems)) {
                 return responseData.insufficientItems;
             }
             
-            // If backend returns message with item names
             if (responseData.message && responseData.message.includes("Insufficient stock")) {
                 const itemsMatch = responseData.message.match(/Insufficient stock for: (.+)$/);
                 if (itemsMatch && itemsMatch[1]) {
@@ -752,7 +621,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             }
         }
         
-        // Fallback: try to extract from error message
         if (error.message && error.message.includes("Insufficient stock")) {
             const itemsMatch = error.message.match(/Insufficient stock for: (.+)$/);
             if (itemsMatch && itemsMatch[1]) {
@@ -760,7 +628,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             }
         }
         
-        // If we can't extract specific items, check all consumables against stock
         const insufficientItems = [];
         Object.entries(consumables).forEach(([itemName, quantity]) => {
             const stockItem = stockItems.find(item => item.name === itemName);
@@ -776,7 +643,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         e.preventDefault();
         if (isSubmitting) return;
 
-        // Clear previous insufficient stock errors
         setInsufficientStockItems([]);
 
         if (!form.name || !form.contact || !form.serviceId) {
@@ -851,20 +717,9 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             return acc;
         }, {});
 
-        // Enhanced Manila time debugging
-        console.log("🕒 ========== DATE DEBUGGING START ==========");
-        
-        const currentLocal = new Date();
-        const currentManila = getManilaTime();
+        // OPTIMIZED: Simplified date handling
         const manilaIssueDate = formatToManilaISOString();
         const manilaDueDate = addDaysManilaTime(7).toISOString();
-
-        console.log("🕒 CURRENT TIME COMPARISON:");
-        console.log("   Local Time:", currentLocal.toString());
-        console.log("   Local ISO:", currentLocal.toISOString());
-        console.log("   Manila Time:", currentManila.toString());
-        console.log("   Manila ISO:", manilaIssueDate);
-        console.log("   Due Date Manila:", manilaDueDate);
 
         const payload = {
             customerName: form.name,
@@ -889,29 +744,18 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
             gcashReference: form.paymentMethod === "GCash" ? form.gcashReference : null,
             change: parseFloat(form.amountGiven || 0) - totalAmount,
             totalPrice: totalAmount,
-            // NEW: Include weight and auto-calculation info
             totalWeightKg: totalWeight ? parseFloat(totalWeight) : null,
             autoCalculateLoads: autoCalculate,
-            // Use Manila time for dates
             issueDate: manilaIssueDate,
             dueDate: manilaDueDate,
             staffId: localStorage.getItem("staffId") || "Unknown",
         };
-
-        console.log("📝 FINAL PAYLOAD DATES:");
-        console.log("   Issue Date:", payload.issueDate);
-        console.log("   Due Date:", payload.dueDate);
-        console.log("   Auto-calculation:", payload.autoCalculateLoads);
-        console.log("   Total Weight:", payload.totalWeightKg);
-        console.log("   Calculated Loads:", payload.loads);
-        console.log("🕒 ========== DATE DEBUGGING END ==========");
 
         // Show confirmation dialog instead of submitting immediately
         setPendingPayload(payload);
         setShowConfirmation(true);
     };
 
-    // New function to handle confirmed submission
     const handleConfirmedSubmit = async () => {
         if (!pendingPayload) return;
         
@@ -920,7 +764,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
         try {
             await onSubmit(pendingPayload);
         } catch (error) {
-            // Extract insufficient stock items from error
             const insufficientItems = extractInsufficientStockItems(error);
             if (insufficientItems.length > 0) {
                 setInsufficientStockItems(insufficientItems);
@@ -1025,7 +868,6 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                                     const value = e.target.value;
                                     setTotalWeight(value);
                                     
-                                    // Auto-calculate loads when weight changes
                                     if (autoCalculate && value && !isNaN(parseFloat(value))) {
                                         calculateLoadsAutomatically(parseFloat(value));
                                     }
@@ -1202,7 +1044,7 @@ const TransactionForm = forwardRef(({ onSubmit, onPreviewChange, isSubmitting, i
                             color: '#f1f5f9'
                         }}
                     >
-                        {isSubmitting ? "Processing..." : 
+                        {isSubmitting ? "Processing Transaction..." : 
                          isCalculating ? "Calculating..." : "Save Transaction"}
                     </Button>
                 </form>

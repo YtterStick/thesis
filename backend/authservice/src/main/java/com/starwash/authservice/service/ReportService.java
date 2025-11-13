@@ -2,9 +2,11 @@ package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.repository.TransactionRepository;
+import com.starwash.authservice.security.ManilaTimeUtil;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Function;
@@ -23,13 +25,16 @@ public class ReportService {
             String serviceType) {
         Map<String, Object> reportData = new HashMap<>();
 
+        // Use Manila time for all date calculations
         LocalDate[] dates = calculateDateRange(dateRange, startDate, endDate);
         LocalDate reportStartDate = dates[0];
         LocalDate reportEndDate = dates[1];
 
-        List<Transaction> transactions = transactionRepository.findByCreatedAtBetween(
-                reportStartDate.atStartOfDay(),
-                reportEndDate.plusDays(1).atStartOfDay());
+        // Convert to Manila time for database queries
+        LocalDateTime manilaStart = reportStartDate.atStartOfDay();
+        LocalDateTime manilaEnd = reportEndDate.plusDays(1).atStartOfDay();
+
+        List<Transaction> transactions = transactionRepository.findByCreatedAtBetween(manilaStart, manilaEnd);
 
         if (serviceType != null && !"all".equals(serviceType)) {
             transactions = transactions.stream()
@@ -38,11 +43,8 @@ public class ReportService {
         }
 
         List<Map<String, Object>> salesTrend = generateSalesTrend(transactions, reportStartDate, reportEndDate, dateRange);
-
         List<Map<String, Object>> serviceDistribution = generateServiceDistribution(transactions);
-
         Map<String, Object> summary = generateSummary(transactions, reportStartDate, reportEndDate);
-
         List<Map<String, Object>> uniqueCustomerTransactions = getUniqueCustomerTransactions(transactions);
 
         reportData.put("salesTrend", salesTrend);
@@ -54,7 +56,8 @@ public class ReportService {
     }
 
     private LocalDate[] calculateDateRange(String dateRange, LocalDate startDate, LocalDate endDate) {
-        LocalDate today = LocalDate.now();
+        // Use Manila time for "today" - THIS IS THE KEY FIX
+        LocalDate today = ManilaTimeUtil.now().toLocalDate();
 
         if ("custom".equals(dateRange)) {
             if (startDate == null || endDate == null) {

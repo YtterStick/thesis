@@ -33,7 +33,6 @@ const MainPage = () => {
     const [pendingPayload, setPendingPayload] = useState(null);
     const [unclaimedItems, setUnclaimedItems] = useState([]);
     const [isCheckingLaundry, setIsCheckingLaundry] = useState(false);
-    // Add state to track if we're processing after confirmation
     const [isProcessingAfterConfirm, setIsProcessingAfterConfirm] = useState(false);
 
     useEffect(() => {
@@ -58,27 +57,53 @@ const MainPage = () => {
         };
     }, []);
 
-    // Function to check for unclaimed laundry
+    // OPTIMIZED: Function to check for unclaimed laundry
     const checkUnclaimedLaundry = async (customerName, contact) => {
+        // Early return if no customer data
+        if (!customerName || !contact) {
+            return [];
+        }
+
         try {
-            // Get all records to check for unclaimed laundry
+            // Add a cache to avoid repeated checks for same customer
+            const cacheKey = `${customerName.toLowerCase()}-${contact}`;
+            const cachedCheck = sessionStorage.getItem(`unclaimed-${cacheKey}`);
+            
+            if (cachedCheck) {
+                const cachedData = JSON.parse(cachedCheck);
+                // Cache valid for 2 minutes
+                if (Date.now() - cachedData.timestamp < 120000) {
+                    return cachedData.items;
+                }
+            }
+
             const response = await api.get("/records");
             
             const currentTime = new Date();
             
             // Filter for unclaimed, non-expired, non-disposed laundry for this customer
             const unclaimedLaundry = response.filter(record => {
+                if (record.disposed) return false;
+                if (record.expired) return false;
+                
                 const isSameCustomer = record.customerName?.toLowerCase() === customerName?.toLowerCase() &&
                                     record.contact === contact;
+                
+                if (!isSameCustomer) return false;
                 
                 const isUnclaimed = record.pickupStatus === "UNCLAIMED" || 
                                   record.pickupStatus === "Unclaimed";
                 
-                const isNotExpired = !record.expired;
-                const isNotDisposed = !record.disposed;
-                
-                return isSameCustomer && isUnclaimed && isNotExpired && isNotDisposed;
+                return isUnclaimed;
             });
+            
+            // Cache the result
+            if (unclaimedLaundry.length > 0) {
+                sessionStorage.setItem(`unclaimed-${cacheKey}`, JSON.stringify({
+                    items: unclaimedLaundry,
+                    timestamp: Date.now()
+                }));
+            }
             
             return unclaimedLaundry;
         } catch (error) {
@@ -87,37 +112,40 @@ const MainPage = () => {
         }
     };
 
+    // OPTIMIZED: Handle submit with better loading states
     const handleSubmit = async (payload) => {
         if (isSubmitting || isCheckingLaundry) return;
+        
         setIsSubmitting(true);
         setErrorMessage(null);
 
         try {
-            // Check for unclaimed laundry before submitting
-            setIsCheckingLaundry(true);
-            const unclaimedLaundry = await checkUnclaimedLaundry(payload.customerName, payload.contact);
-            
-            if (unclaimedLaundry.length > 0) {
-                // Show confirmation dialog
-                setUnclaimedItems(unclaimedLaundry);
-                setPendingPayload(payload);
-                setShowUnclaimedDialog(true);
-                setIsSubmitting(false);
+            // Only check unclaimed laundry if we have valid customer data
+            if (payload.customerName && payload.contact) {
+                setIsCheckingLaundry(true);
+                const unclaimedLaundry = await checkUnclaimedLaundry(payload.customerName, payload.contact);
+                
+                if (unclaimedLaundry.length > 0) {
+                    setUnclaimedItems(unclaimedLaundry);
+                    setPendingPayload(payload);
+                    setShowUnclaimedDialog(true);
+                    setIsSubmitting(false);
+                    setIsCheckingLaundry(false);
+                    return;
+                }
                 setIsCheckingLaundry(false);
-                return;
             }
             
             // No unclaimed laundry, proceed with transaction creation
             await processTransaction(payload);
         } catch (error) {
             console.error("Error checking unclaimed laundry:", error);
-            // If check fails, proceed with submission
+            // If check fails, proceed with submission anyway
             await processTransaction(payload);
-        } finally {
-            setIsCheckingLaundry(false);
         }
     };
 
+    // OPTIMIZED: Process transaction with simplified logic
     const processTransaction = async (payload) => {
         try {
             // Get staffId from localStorage BEFORE making the API call
@@ -129,24 +157,12 @@ const MainPage = () => {
                 staffId: staffId || "Unknown"
             };
 
-            console.log("📝 Transaction payload staffId:", payloadWithStaff.staffId);
+            console.log("📝 Creating transaction...");
 
             const response = await api.post("/transactions", payloadWithStaff);
-            console.log("🧾 Full backend response:", response);
-            console.log("🔍 Response structure keys:", Object.keys(response));
             
-            // Check what service data is in the response
-            console.log("🛠️ Service data in response:", {
-                serviceName: response.serviceName,
-                service: response.service,
-                servicePrice: response.servicePrice,
-                loads: response.loads,
-                serviceQuantity: response.serviceQuantity
-            });
-
-            // Transform the response to ensure proper structure for frontend
+            // Simplified transformation
             const transformedInvoice = {
-                // Use direct properties from response
                 invoiceNumber: response.invoiceNumber,
                 customerName: response.customerName,
                 contact: response.contact,
@@ -162,21 +178,9 @@ const MainPage = () => {
                 dueDate: response.dueDate,
                 consumables: response.consumables || [],
                 formatSettings: response.formatSettings || {},
-                
-                // Include the original response as fallback
-                ...response
             };
 
-            console.log("🎯 Transformed invoice data:", {
-                staffId: transformedInvoice.staffId,
-                serviceName: transformedInvoice.serviceName,
-                servicePrice: transformedInvoice.servicePrice,
-                loads: transformedInvoice.loads,
-                serviceQuantity: transformedInvoice.serviceQuantity
-            });
-
             setInvoice(transformedInvoice);
-
             setPreviewData({
                 totalAmount: 0,
                 amountGiven: 0,
@@ -193,16 +197,10 @@ const MainPage = () => {
         } catch (error) {
             console.error("❌ Transaction failed:", error);
             
-            // Check if it's an insufficient stock error by looking at the response data
             const isInsufficientStock = error.response?.data?.error === "Insufficient stock" || 
                                        (error.message && error.message.includes("Insufficient stock"));
             
-            if (isInsufficientStock) {
-                // Don't set error message and don't show toast for insufficient stock
-                // TransactionForm will handle the visual display of insufficient items
-                console.log("📦 Insufficient stock detected - handled by TransactionForm");
-            } else {
-                // For other errors, show the error message and toast
+            if (!isInsufficientStock) {
                 setErrorMessage(error.message || "Transaction failed");
                 toast({
                     title: "Transaction Failed",
@@ -211,7 +209,6 @@ const MainPage = () => {
                 });
             }
             
-            // Re-throw the error so TransactionForm can handle it specifically
             throw error;
         } finally {
             setIsSubmitting(false);
@@ -220,7 +217,6 @@ const MainPage = () => {
     };
 
     const handleConfirmTransaction = async () => {
-        // Set processing state and close dialog immediately
         setIsProcessingAfterConfirm(true);
         setShowUnclaimedDialog(false);
         
@@ -269,84 +265,84 @@ const MainPage = () => {
     };
 
     // Floating Preview Component
-const FloatingPreview = () => {
-    const { totalAmount = 0, amountGiven = 0, change = 0 } = previewData;
-    const isPaid = amountGiven > 0;
-    const isUnderpaid = isPaid && change < 0;
-    const isOverpaid = isPaid && change > 0;
+    const FloatingPreview = () => {
+        const { totalAmount = 0, amountGiven = 0, change = 0 } = previewData;
+        const isPaid = amountGiven > 0;
+        const isUnderpaid = isPaid && change < 0;
+        const isOverpaid = isPaid && change > 0;
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="lg:absolute lg:bottom-6 lg:right-6 fixed bottom-6 right-6 z-40 shadow-2xl border-2 rounded-xl p-4 w-64"
-            style={{
-                backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
-                borderColor: isDarkMode ? '#334155' : '#cbd5e1',
-            }}
-        >
-            <div className="flex items-center gap-2 mb-3">
-                <Calculator className="h-4 w-4" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }} />
-                <h3 className="font-semibold text-sm" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                    Live Total Preview
-                </h3>
-            </div>
-            
-            <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center">
-                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Total:</span>
-                    <div className="flex items-center gap-1 font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                        <span>₱</span>
-                        <span>{totalAmount.toFixed(2)}</span>
-                    </div>
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="lg:absolute lg:bottom-6 lg:right-6 fixed bottom-6 right-6 z-40 shadow-2xl border-2 rounded-xl p-4 w-64"
+                style={{
+                    backgroundColor: isDarkMode ? '#1e293b' : '#FFFFFF',
+                    borderColor: isDarkMode ? '#334155' : '#cbd5e1',
+                }}
+            >
+                <div className="flex items-center gap-2 mb-3">
+                    <Calculator className="h-4 w-4" style={{ color: isDarkMode ? '#60a5fa' : '#2563eb' }} />
+                    <h3 className="font-semibold text-sm" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                        Live Total Preview
+                    </h3>
                 </div>
                 
-                <div className="flex justify-between items-center">
-                    <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Given:</span>
-                    <div className="flex items-center gap-1 font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                        <span>₱</span>
-                        <span>{amountGiven.toFixed(2)}</span>
-                    </div>
-                </div>
-                
-                {isPaid && (
-                    <div className="flex justify-between items-center pt-2 border-t" style={{ borderColor: isDarkMode ? '#334155' : '#e2e8f0' }}>
-                        <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Change:</span>
-                        <div className={`flex items-center gap-1 font-semibold ${
-                            isUnderpaid 
-                                ? 'text-red-500' 
-                                : isOverpaid 
-                                    ? 'text-green-500' 
-                                    : isDarkMode 
-                                        ? 'text-slate-300' 
-                                        : 'text-slate-700'
-                        }`}>
-                            <span>{change < 0 ? "-₱" : "₱"}</span>
-                            <span>{Math.abs(change).toFixed(2)}</span>
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                        <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Total:</span>
+                        <div className="flex items-center gap-1 font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            <span>₱</span>
+                            <span>{totalAmount.toFixed(2)}</span>
                         </div>
                     </div>
-                )}
-            </div>
-            
-            {/* Warning for underpayment */}
-            {isUnderpaid && (
-                <div className="mt-2 p-2 rounded text-xs flex items-center gap-1" style={{ 
-                    backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    color: '#ef4444',
-                    border: `1px solid ${isDarkMode ? '#ef4444' : '#ef4444'}`
-                }}>
-                    <AlertTriangle size={12} />
-                    <span>Amount given is less than total</span>
+                    
+                    <div className="flex justify-between items-center">
+                        <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Given:</span>
+                        <div className="flex items-center gap-1 font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            <span>₱</span>
+                            <span>{amountGiven.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    
+                    {isPaid && (
+                        <div className="flex justify-between items-center pt-2 border-t" style={{ borderColor: isDarkMode ? '#334155' : '#e2e8f0' }}>
+                            <span style={{ color: isDarkMode ? '#cbd5e1' : '#64748b' }}>Change:</span>
+                            <div className={`flex items-center gap-1 font-semibold ${
+                                isUnderpaid 
+                                    ? 'text-red-500' 
+                                    : isOverpaid 
+                                        ? 'text-green-500' 
+                                        : isDarkMode 
+                                            ? 'text-slate-300' 
+                                            : 'text-slate-700'
+                            }`}>
+                                <span>{change < 0 ? "-₱" : "₱"}</span>
+                                <span>{Math.abs(change).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
-            
-            <div className="mt-2 text-xs flex items-center gap-1" style={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}>
-                <Eye size={12} />
-                <span>Updates as you type</span>
-            </div>
-        </motion.div>
-    );
-};
+                
+                {/* Warning for underpayment */}
+                {isUnderpaid && (
+                    <div className="mt-2 p-2 rounded text-xs flex items-center gap-1" style={{ 
+                        backgroundColor: isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: '#ef4444',
+                        border: `1px solid ${isDarkMode ? '#ef4444' : '#ef4444'}`
+                    }}>
+                        <AlertTriangle size={12} />
+                        <span>Amount given is less than total</span>
+                    </div>
+                )}
+                
+                <div className="mt-2 text-xs flex items-center gap-1" style={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}>
+                    <Eye size={12} />
+                    <span>Updates as you type</span>
+                </div>
+            </motion.div>
+        );
+    };
 
     return (
         <div className="min-h-screen pb-5 pt-4 relative" style={{
