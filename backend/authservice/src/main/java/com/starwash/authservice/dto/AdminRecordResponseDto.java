@@ -1,5 +1,6 @@
 package com.starwash.authservice.dto;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class AdminRecordResponseDto {
@@ -22,6 +23,7 @@ public class AdminRecordResponseDto {
     private Boolean gcashVerified;
     private String laundryProcessedBy;
     private String claimProcessedBy;
+    private LocalDateTime claimDate;
     private boolean disposed;
     private String disposedBy;
     private int unwashedLoadsCount;
@@ -34,7 +36,7 @@ public class AdminRecordResponseDto {
                                  String processedByStaff, boolean paid, boolean expired, 
                                  LocalDateTime createdAt, Boolean gcashVerified,
                                  String laundryProcessedBy, String claimProcessedBy,
-                                 boolean disposed, String disposedBy, int unwashedLoadsCount) {
+                                 boolean disposed, String disposedBy, int unwashedLoadsCount, LocalDateTime claimDate) {
         this.id = id;
         this.invoiceNumber = invoiceNumber;
         this.customerName = customerName;
@@ -57,8 +59,12 @@ public class AdminRecordResponseDto {
         this.disposed = disposed;
         this.disposedBy = disposedBy;
         this.unwashedLoadsCount = unwashedLoadsCount;
+        this.claimDate = claimDate;
     }
 
+     // Add getter and setter
+    public LocalDateTime getClaimDate() { return claimDate; }
+    public void setClaimDate(LocalDateTime claimDate) { this.claimDate = claimDate; }
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     

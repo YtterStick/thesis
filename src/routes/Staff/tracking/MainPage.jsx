@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package } from "lucide-react";
+import { WashingMachine, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle, Package, Clock } from "lucide-react";
 import TrackingTable from "./TrackingTable";
 import SkeletonLoader from "./SkeletonLoader";
 import { maskContact } from "./utils";
@@ -102,11 +102,98 @@ function ServiceTrackingContent() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
-    const totalItems = jobs.length;
+    // Add sorting state
+    const [sortConfig, setSortConfig] = useState({
+        key: 'timeRemaining', // default sort by time remaining
+        direction: 'asc' // asc = soonest first
+    });
+
+    // Enhanced getRemainingTime function with better urgency calculation
+    const getRemainingTime = (load) => {
+        if (!load?.startTime || !load?.duration) return null;
+        const end = new Date(load.startTime).getTime() + load.duration * 60000;
+        const remaining = Math.max(Math.floor((end - now) / 1000), 0);
+        return remaining;
+    };
+
+    // Auto-sorting function
+    const getSortedJobs = useCallback((jobsToSort) => {
+        if (!jobsToSort || jobsToSort.length === 0) return jobsToSort;
+
+        return [...jobsToSort].sort((a, b) => {
+            // Get the most urgent load for each job (lowest remaining time)
+            const getMostUrgentLoad = (job) => {
+                if (!job.loads || job.loads.length === 0) return null;
+                
+                return job.loads.reduce((mostUrgent, load) => {
+                    if (load.status === 'WASHING' || load.status === 'DRYING') {
+                        const remaining = getRemainingTime(load);
+                        if (remaining !== null && remaining > 0) {
+                            if (!mostUrgent || remaining < mostUrgent.remaining) {
+                                return { load, remaining };
+                            }
+                        }
+                    }
+                    return mostUrgent;
+                }, null);
+            };
+
+            const aUrgent = getMostUrgentLoad(a);
+            const bUrgent = getMostUrgentLoad(b);
+
+            // Jobs with running loads come first
+            if (aUrgent && !bUrgent) return -1;
+            if (!aUrgent && bUrgent) return 1;
+            
+            // Both have running loads - sort by remaining time
+            if (aUrgent && bUrgent) {
+                return sortConfig.direction === 'asc' 
+                    ? aUrgent.remaining - bUrgent.remaining
+                    : bUrgent.remaining - aUrgent.remaining;
+            }
+            
+            // Neither have running loads - maintain original order
+            return 0;
+        });
+    }, [sortConfig.direction, now, getRemainingTime]);
+
+    // Apply sorting to jobs
+    const sortedJobs = useMemo(() => {
+        return getSortedJobs(jobs);
+    }, [jobs, getSortedJobs]);
+
+    // Update all references from 'jobs' to 'sortedJobs'
+    const totalItems = sortedJobs.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-    const currentItems = jobs.slice(startIndex, endIndex);
+    const currentItems = sortedJobs.slice(startIndex, endIndex);
+
+    // Add a function to get job urgency for display
+    const getJobUrgency = (job) => {
+        if (!job.loads || job.loads.length === 0) return null;
+        
+        let minRemaining = Infinity;
+        let hasRunningLoads = false;
+        
+        job.loads.forEach(load => {
+            if (load.status === 'WASHING' || load.status === 'DRYING') {
+                const remaining = getRemainingTime(load);
+                if (remaining !== null && remaining > 0) {
+                    hasRunningLoads = true;
+                    minRemaining = Math.min(minRemaining, remaining);
+                }
+            }
+        });
+        
+        if (!hasRunningLoads) return null;
+        
+        return {
+            minutes: Math.floor(minRemaining / 60),
+            seconds: minRemaining % 60,
+            totalSeconds: minRemaining
+        };
+    };
 
     const isComingFromTransaction = useMemo(() => {
         return location.state?.fromTransaction || 
@@ -281,8 +368,11 @@ function ServiceTrackingContent() {
                 })),
             }));
 
-            setJobs(jobsWithLoads);
-            globalCache.jobs = jobsWithLoads;
+            // Apply sorting immediately after fetching
+            const sortedJobsWithLoads = getSortedJobs(jobsWithLoads);
+            
+            setJobs(sortedJobsWithLoads);
+            globalCache.jobs = sortedJobsWithLoads;
             globalCache.lastFetchTime = Date.now();
             setError(null);
             return true;
@@ -291,7 +381,7 @@ function ServiceTrackingContent() {
             setError(err.message);
             return false;
         }
-    }, []);
+    }, [getSortedJobs]);
 
     const fetchMachines = async (forceRefresh = false) => {
         if (globalCache.machines && !forceRefresh && globalCache.lastFetchTime && 
@@ -483,12 +573,6 @@ function ServiceTrackingContent() {
     }, [isComingFromTransaction]);
 
     const getJobKey = (job) => job.id ?? `${job.customerName}-${job.issueDate}`;
-
-    const getRemainingTime = (load) => {
-        if (!load?.startTime || !load?.duration) return null;
-        const end = new Date(load.startTime).getTime() + load.duration * 60000;
-        return Math.max(Math.floor((end - now) / 1000), 0);
-    };
 
     const sendSmsNotification = async (job, serviceType) => {
         const jobKey = getJobKey(job);
@@ -1132,13 +1216,15 @@ function ServiceTrackingContent() {
                 </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {/* Updated Dashboard Stats with Urgent Jobs */}
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-5">
                 {[
                     {
                         label: "Total Jobs",
                         value: jobs.length,
                         color: "#3DD9B6",
                         description: "Active laundry jobs",
+                        icon: Package
                     },
                     {
                         label: "Active Loads",
@@ -1148,20 +1234,33 @@ function ServiceTrackingContent() {
                         ),
                         color: "#60A5FA",
                         description: "Currently processing",
+                        icon: WashingMachine
+                    },
+                    {
+                        label: "Urgent",
+                        value: jobs.reduce((acc, job) => {
+                            const urgency = getJobUrgency(job);
+                            return acc + (urgency && urgency.totalSeconds < 300 ? 1 : 0);
+                        }, 0),
+                        color: "#EF4444",
+                        description: "Less than 5 min remaining",
+                        icon: Clock
                     },
                     {
                         label: "Pending",
                         value: jobs.reduce((acc, job) => acc + (job.loads?.filter((load) => load.status === "UNWASHED").length || 0), 0),
                         color: "#FB923C",
                         description: "Waiting to start",
+                        icon: AlertCircle
                     },
                     {
                         label: "Completed Today",
                         value: completedTodayCount,
                         color: "#10B981",
                         description: "Finished loads today",
+                        icon: CheckCircle
                     },
-                ].map(({ label, value, color, description }, index) => (
+                ].map(({ label, value, color, description, icon: Icon }, index) => (
                     <motion.div
                         key={label}
                         initial={{ opacity: 0, y: 20 }}
@@ -1187,7 +1286,7 @@ function ServiceTrackingContent() {
                                     color: color,
                                 }}
                             >
-                                <Package size={26} />
+                                <Icon size={26} />
                             </motion.div>
                             <motion.div
                                 initial={{ scale: 0 }}
@@ -1250,6 +1349,7 @@ function ServiceTrackingContent() {
                             isDarkMode={isDarkMode}
                             globalLoading={globalLoading}
                             pendingRequests={pendingRequests}
+                            getJobUrgency={getJobUrgency}
                         />
                     </ErrorBoundary>
                 </motion.div>

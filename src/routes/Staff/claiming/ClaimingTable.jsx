@@ -149,16 +149,14 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
         setCurrentPage(1);
     }, [transactions]);
 
-    const formatDateTime = (dateString) => {
+    const formatDate = (dateString) => {
         if (!dateString) return "N/A";
 
         const date = new Date(dateString);
-        return date.toLocaleString(undefined, {
+        return date.toLocaleDateString(undefined, {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
         });
     };
 
@@ -202,8 +200,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Service</TableHead>
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loads</TableHead>
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Date Completed</TableHead>
-                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Due Date</TableHead>}
-                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Past Due On</TableHead>}
+                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Claiming Date</TableHead>}
+                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Claiming Date</TableHead>}
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Status</TableHead>
                             <TableHead className="text-right" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Actions</TableHead>
                         </TableRow>
@@ -325,8 +323,8 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Service</TableHead>
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Loads</TableHead>
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Date Completed</TableHead>
-                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Due Date</TableHead>}
-                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Past Due On</TableHead>}
+                            {!isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Claiming Date</TableHead>}
+                            {isExpiredTab && <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Claiming Date</TableHead>}
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Status</TableHead>
                             <TableHead className="text-right" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Actions</TableHead>
                         </TableRow>
@@ -416,16 +414,16 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                         </TableCell>
                                         <TableCell className="flex items-center" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                             <Calendar className="mr-1 h-4 w-4" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }} />
-                                            {completionDate ? formatDateTime(completionDate) : "N/A"}
+                                            {completionDate ? formatDate(completionDate) : "N/A"}
                                         </TableCell>
                                         {!isExpiredTab && (
                                             <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                                {dueDate ? formatDateTime(dueDate) : "N/A"}
+                                                {dueDate ? formatDate(dueDate) : "N/A"}
                                             </TableCell>
                                         )}
                                         {isExpiredTab && (
                                             <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                                {dueDate ? formatDateTime(dueDate) : "N/A"}
+                                                {dueDate ? formatDate(dueDate) : "N/A"}
                                             </TableCell>
                                         )}
                                         <TableCell>

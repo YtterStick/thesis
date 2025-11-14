@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowDown, ArrowUp, CheckCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle, Clock } from "lucide-react";
 import MachineSelector from "./MachineSelector";
 import StatusIndicator from "./StatusIndicator";
 import ActionButtons from "./ActionButtons";
@@ -26,9 +26,45 @@ const TrackingTable = ({
   maskContact,
   isDarkMode,
   globalLoading,
-  pendingRequests
+  pendingRequests,
+  getJobUrgency
 }) => {
   const [completingLoads, setCompletingLoads] = useState({});
+
+  // Add urgency badge component
+  const UrgencyBadge = ({ urgency }) => {
+    if (!urgency) return null;
+    
+    const getUrgencyColor = (totalSeconds) => {
+      if (totalSeconds < 300) return '#EF4444'; // red for < 5 min
+      if (totalSeconds < 900) return '#F59E0B'; // amber for < 15 min
+      return '#10B981'; // green for > 15 min
+    };
+
+    const formatTime = (urgency) => {
+      if (urgency.minutes > 0) {
+        return `${urgency.minutes}m ${urgency.seconds}s`;
+      }
+      return `${urgency.seconds}s`;
+    };
+
+    return (
+      <div 
+        className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+        style={{
+          backgroundColor: `${getUrgencyColor(urgency.totalSeconds)}20`,
+          color: getUrgencyColor(urgency.totalSeconds),
+          border: `1px solid ${getUrgencyColor(urgency.totalSeconds)}40`
+        }}
+      >
+        <div 
+          className="w-2 h-2 rounded-full animate-pulse"
+          style={{ backgroundColor: getUrgencyColor(urgency.totalSeconds) }}
+        />
+        {formatTime(urgency)}
+      </div>
+    );
+  };
 
   const handleCompletionAnimation = (jobKey, loadIndex) => {
     const completionKey = `${jobKey}-${loadIndex}`;
@@ -93,7 +129,7 @@ const TrackingTable = ({
             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
           }}>
             <tr>
-              {["Name", "Contact", "Service", "Fabric", "Detergent", "Load", "Status", "Machine", "Duration", "Action"].map((header) => (
+              {["Urgency", "Name", "Contact", "Service", "Fabric", "Detergent", "Load", "Status", "Machine", "Duration", "Action"].map((header) => (
                 <th
                   key={header}
                   className="px-3 py-2 text-left text-xs font-medium"
@@ -111,7 +147,7 @@ const TrackingTable = ({
               {jobs.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-4 py-16 text-center text-sm"
                     style={{
                       color: isDarkMode ? '#94a3b8' : '#475569',
@@ -129,6 +165,7 @@ const TrackingTable = ({
                   const jobKey = getJobKey(job);
                   const expanded = expandedJobs[jobKey] || false;
                   const visibleLoads = getVisibleLoads(job, expanded);
+                  const urgency = getJobUrgency(job);
 
                   if (visibleLoads.length === 0) return null;
 
@@ -172,6 +209,11 @@ const TrackingTable = ({
                               borderColor: isDarkMode ? "#334155" : "#e2e8f0",
                             }}
                           >
+                            {/* Urgency Column */}
+                            <td className="px-3 py-2">
+                              <UrgencyBadge urgency={urgency} />
+                            </td>
+                            
                             <td className="px-3 py-2 font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                               {job.customerName}
                             </td>
@@ -311,7 +353,7 @@ const TrackingTable = ({
                       {job.loads.length > 1 && (
                         <tr>
                           <td
-                            colSpan={10}
+                            colSpan={11}
                             className="p-2"
                           >
                             <div className="flex justify-center">

@@ -584,3 +584,29 @@
         color: black !important;
     }
 }
+
+/* Add to your CSS file */
+@media print {
+  .print-claiming-stub .receipt-optimized {
+    width: 280px !important;
+    max-width: 280px !important;
+    margin: 0 auto !important;
+  }
+  
+  .print-claiming-stub .receipt-optimized .text-xs {
+    font-size: 16px !important;
+  }
+  
+  .print-claiming-stub .receipt-optimized .text-10px {
+    font-size: 14px !important;
+  }
+  
+  .print-claiming-stub .receipt-optimized .text-9px {
+    font-size: 12px !important;
+  }
+  
+  /* Hide the main invoice when printing claiming stub */
+  .print-claiming-stub .service-invoice-card {
+    display: none !important;
+  }
+}
