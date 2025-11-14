@@ -109,14 +109,14 @@ public class DashboardService {
     public Map<String, Object> getAdminDashboardData() {
         Map<String, Object> data = new HashMap<>();
 
-        // FIXED: Use the optimized MongoDB aggregation methods
+        // Use MongoDB aggregations for accurate totals
         Double totalIncome = transactionRepository.sumTotalPrice();
         if (totalIncome == null) totalIncome = 0.0;
 
         Integer totalLoads = transactionRepository.sumServiceQuantity();
         if (totalLoads == null) totalLoads = 0;
 
-        // For other metrics that need the actual transactions, we still load them
+        // For unclaimed and unwashed counts, we need the actual records
         List<Transaction> allTransactions = transactionRepository.findAll();
 
         int unwashedCount = (int) laundryJobRepository.findAll().stream()
@@ -130,23 +130,26 @@ public class DashboardService {
                         job.getLoadAssignments().stream()
                                 .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
                 .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                .filter(job -> !job.isExpired())
                 .collect(Collectors.toList());
 
         int totalUnclaimed = allUnclaimedJobs.size();
 
-        // Current year data for chart (using Manila time)
+        // Chart data (monthly overview)
         int currentYear = ManilaTimeUtil.now().getYear();
         LocalDate startOfYear = LocalDate.of(currentYear, 1, 1);
         LocalDate endOfYear = LocalDate.of(currentYear, 12, 31);
 
         Map<String, Double> monthlyIncome = new LinkedHashMap<>();
-
         String[] monthNames = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        
+        // Initialize all months to zero
         for (String month : monthNames) {
             monthlyIncome.put(month, 0.0);
         }
 
+        // Calculate monthly income
         allTransactions.stream()
                 .filter(tx -> {
                     LocalDate txDate = tx.getCreatedAt().toLocalDate();
@@ -155,7 +158,7 @@ public class DashboardService {
                 .forEach(tx -> {
                     int month = tx.getCreatedAt().getMonthValue();
                     String monthName = monthNames[month - 1];
-                    monthlyIncome.put(monthName, monthlyIncome.get(monthName) + tx.getTotalPrice());
+                    monthlyIncome.put(monthName, monthlyIncome.get(monthName) + (tx.getTotalPrice() != null ? tx.getTotalPrice() : 0.0));
                 });
 
         List<Map<String, Object>> overviewData = monthlyIncome.entrySet().stream()
@@ -167,6 +170,7 @@ public class DashboardService {
                 })
                 .collect(Collectors.toList());
 
+        // Unclaimed list
         List<Map<String, Object>> unclaimedList = allUnclaimedJobs.stream()
                 .map(job -> {
                     Map<String, Object> item = new HashMap<>();
@@ -193,22 +197,18 @@ public class DashboardService {
                         }
                     }
 
+                    item.put("invoiceNumber", job.getTransactionId());
                     return item;
                 })
                 .collect(Collectors.toList());
 
-        // Enhanced debugging
-        System.out.println("🚀 MONGODB AGGREGATION - Total Income: " + totalIncome);
-        System.out.println("📊 MONGODB AGGREGATION - Total Loads: " + totalLoads);
-        System.out.println("💾 Using MongoDB aggregation pipelines");
-        
-        // Compare with Java stream calculation for verification
-        double javaStreamTotal = allTransactions.stream()
-                .filter(tx -> tx.getTotalPrice() != null && tx.getTotalPrice() > 0)
-                .mapToDouble(Transaction::getTotalPrice)
-                .sum();
-        System.out.println("🔍 VERIFICATION - Java Stream Total: " + javaStreamTotal);
-        System.out.println("📈 Difference: " + (totalIncome - javaStreamTotal));
+        // Debug information
+        System.out.println("📊 DASHBOARD SUMMARY:");
+        System.out.println("💰 Total Income: " + totalIncome);
+        System.out.println("👕 Total Loads: " + totalLoads);
+        System.out.println("⏳ Unwashed Count: " + unwashedCount);
+        System.out.println("📦 Unclaimed Count: " + totalUnclaimed);
+        System.out.println("📈 Chart Data Points: " + overviewData.size());
 
         data.put("totalIncome", totalIncome);
         data.put("totalLoads", totalLoads);

@@ -9,7 +9,7 @@ import * as XLSX from "xlsx";
 import PrintableReceipt from "@/components/PrintableReceipt";
 import { api } from "@/lib/api-config";
 
-// Updated table headers - ADDED CLAIMED DATE COLUMN
+// Updated table headers - KEEP Claimed Date column in main table
 const tableHeaders = [
     "Invoice",
     "Name",
@@ -22,7 +22,7 @@ const tableHeaders = [
     "Payment",
     "GCash Ref",
     "Pickup Status",
-    "Claimed Date", // ADDED: Claimed date column
+    "Claimed Date", // KEEP in main table
     "Actions",
 ];
 
@@ -136,6 +136,13 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
             </TooltipContent>
         </Tooltip>
     );
+};
+
+// Helper function to format time in normal clock format (1:00am, 2:30pm)
+const formatTimeNormal = (date) => {
+    if (!date || isNaN(new Date(date))) return "—";
+    
+    return format(new Date(date), "MMM dd, yyyy 'at' h:mm a");
 };
 
 const AdminRecordTable = ({
@@ -530,7 +537,7 @@ const AdminRecordTable = ({
                         formattedDate = format(new Date(item.createdAt), "MMM dd, yyyy");
                     }
                     if (item.claimDate && !isNaN(new Date(item.claimDate))) {
-                        formattedClaimDate = format(new Date(item.claimDate), "MMM dd, yyyy HH:mm");
+                        formattedClaimDate = formatTimeNormal(item.claimDate);
                     }
                 } catch (dateError) {
                     console.warn("Invalid date format for item:", item.id, item.createdAt);
@@ -545,7 +552,7 @@ const AdminRecordTable = ({
                     Fabric: item.fabric || "0",
                     Price: formattedPrice,
                     Date: formattedDate,
-                    "Claimed Date": formattedClaimDate, // ADDED: Claimed date to export
+                    "Claimed Date": formattedClaimDate,
                     "Payment Method": item.paymentMethod || "—",
                     "GCash Reference": getGcashReference(item),
                     "Payment Status": item.paid ? "Paid" : "Pending",
@@ -568,7 +575,7 @@ const AdminRecordTable = ({
                 { wch: 15 },
                 { wch: 20 },
                 { wch: 12 },
-                { wch: 18 }, // Claimed Date column
+                { wch: 18 }, // Claimed Date column for export
                 { wch: 15 },
             ];
             worksheet["!cols"] = colWidths;
@@ -988,13 +995,13 @@ const AdminRecordTable = ({
                                                             />
                                                         </div>
                                                     </td>
-                                                    {/* ADDED: Claimed Date Column */}
+                                                    {/* KEEP: Claimed Date Column in main table */}
                                                     <td
                                                         className="whitespace-nowrap px-3 py-2 text-xs"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.claimDate && !isNaN(new Date(record.claimDate))
-                                                            ? format(new Date(record.claimDate), "MMM dd, yyyy HH:mm")
+                                                            ? formatTimeNormal(record.claimDate)
                                                             : "—"}
                                                     </td>
                                                     <td className="whitespace-nowrap px-3 py-2">
@@ -1040,7 +1047,8 @@ const AdminRecordTable = ({
                                                             colSpan={tableHeaders.length + 1}
                                                             className="px-4 py-3"
                                                         >
-                                                            <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+                                                            {/* REMOVED: Claimed Date from expanded view - only show Laundry Processed By and Claim Processed By */}
+                                                            <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
                                                                 <div>
                                                                     <span
                                                                         className="font-medium"
@@ -1061,19 +1069,6 @@ const AdminRecordTable = ({
                                                                     </span>
                                                                     <p style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                                                         {record.claimProcessedBy || "—"}
-                                                                    </p>
-                                                                </div>
-                                                                <div>
-                                                                    <span
-                                                                        className="font-medium"
-                                                                        style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
-                                                                    >
-                                                                        Claimed Date:
-                                                                    </span>
-                                                                    <p style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                                                        {record.claimDate && !isNaN(new Date(record.claimDate))
-                                                                            ? format(new Date(record.claimDate), "MMM dd, yyyy 'at' hh:mm a")
-                                                                            : "—"}
                                                                     </p>
                                                                 </div>
                                                             </div>

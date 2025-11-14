@@ -6,7 +6,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
-import { getManilaTime, toManilaTime } from '@/utils/manilaTime';
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 10000;
@@ -112,21 +111,6 @@ const calculateTotals = (records) => {
     return { totalIncome, totalLoads };
 };
 
-// Debugging helper for income calculation
-const debugIncomeCalculation = (records) => {
-    console.log("🔍 DEBUG Income Calculation:");
-    let total = 0;
-    
-    records.forEach((record, index) => {
-        const price = record.price || 0;
-        total += price;
-        console.log(`   ${index + 1}. ${record.invoiceNumber || record.id}: ${record.name} - ₱${price.toFixed(2)}`);
-    });
-    
-    console.log(`   === TOTAL: ₱${total.toFixed(2)} ===`);
-    return total;
-};
-
 export default function AdminDashboardPage() {
     const { theme } = useTheme();
     const { isAuthenticated, user, logout } = useAuth();
@@ -162,19 +146,9 @@ export default function AdminDashboardPage() {
         };
     });
 
-    const [currentTime, setCurrentTime] = useState(getManilaTime());
     const [initialLoad, setInitialLoad] = useState(!dashboardCache);
     const pollingIntervalRef = useRef(null);
     const isMountedRef = useRef(true);
-
-    // Update current time every second
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(getManilaTime());
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, []);
 
     const hasDataChanged = (newData, oldData) => {
         if (!oldData) return true;
@@ -293,19 +267,16 @@ export default function AdminDashboardPage() {
             const unwashedCount = calculateUnwashedLoads(mappedRecords);
             const { totalUnclaimed, unclaimedList } = calculateUnclaimedLoads(mappedRecords);
 
-            // Debug income calculation
-            const debugTotal = debugIncomeCalculation(mappedRecords);
-
-            // Calculate today's transactions using Manila time
-            const manilaToday = getManilaTime();
-            manilaToday.setHours(0, 0, 0, 0);
+            // Calculate today's transactions
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
             
             const todayTransactions = mappedRecords
                 .filter(record => {
                     if (!record.createdAt) return false;
-                    const recordDate = toManilaTime(new Date(record.createdAt));
+                    const recordDate = new Date(record.createdAt);
                     recordDate.setHours(0, 0, 0, 0);
-                    return recordDate.getTime() === manilaToday.getTime();
+                    return recordDate.getTime() === today.getTime();
                 })
                 // Sort by creation date - latest first
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -320,28 +291,15 @@ export default function AdminDashboardPage() {
                 unwashedCount,
                 totalUnclaimed,
                 pendingCount,
-                todayTransactionsCount: todayTransactions.length,
-                debugTotal
+                todayTransactionsCount: todayTransactions.length
             });
 
             // Get the chart data from your existing backend endpoint
             const dashboardApiData = await api.get("/dashboard/admin");
             console.log("📊 Chart data from backend:", dashboardApiData.overviewData);
 
-            // Use backend-calculated totalIncome if available and consistent
-            const finalTotalIncome = dashboardApiData.totalIncome !== undefined && 
-                               Math.abs(dashboardApiData.totalIncome - totalIncome) < 1
-                ? dashboardApiData.totalIncome 
-                : totalIncome;
-
-            console.log("💰 Final total income decision:", {
-                frontend: totalIncome,
-                backend: dashboardApiData.totalIncome,
-                final: finalTotalIncome
-            });
-
             const newDashboardData = {
-                totalIncome: finalTotalIncome || 0,
+                totalIncome: totalIncome || 0,
                 totalLoads: totalLoads || 0,
                 pendingCount: pendingCount || 0,
                 totalUnclaimed: totalUnclaimed || 0,
@@ -466,23 +424,7 @@ export default function AdminDashboardPage() {
     }, [fetchDashboardData, isAuthenticated, isAdmin, logout]);
 
     const formatCurrency = (amount) => {
-        const formatted = `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
-        return formatted;
-    };
-
-    const formatManilaDateTime = (date) => {
-        if (!date) return 'N/A';
-        
-        const manilaDate = toManilaTime(new Date(date));
-        return manilaDate.toLocaleString('en-PH', {
-            timeZone: 'Asia/Manila',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+        return `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
     };
 
     // Add this function to handle card click - UPDATED TO MAKE ENTIRE CARD CLICKABLE
@@ -820,50 +762,30 @@ export default function AdminDashboardPage() {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-3 flex items-center justify-between gap-3"
+                className="mb-3 flex items-center gap-3"
             >
-                <div className="flex items-center gap-3">
-                    <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="rounded-lg p-2"
-                        style={{
-                            backgroundColor: isDarkMode ? "#1e293b" : "#1e293b",
-                            color: isDarkMode ? "#1e293b" : "#1e293b",
-                        }}
+                <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="rounded-lg p-2"
+                    style={{
+                        backgroundColor: isDarkMode ? "#1e293b" : "#1e293b",
+                        color: isDarkMode ? "#1e293b" : "#1e293b",
+                    }}
+                >
+                    <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
+                </motion.div>
+                <div>
+                    <p
+                        className="text-xl font-bold"
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     >
-                        <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
-                    </motion.div>
-                    <div>
-                        <p
-                            className="text-xl font-bold"
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                        >
-                            Admin Dashboard
-                        </p>
-                        <p
-                            className="text-sm"
-                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                        >
-                            Real-time business overview and analytics
-                            {dashboardData.lastUpdated && (
-                                <span> • Last updated: {formatManilaDateTime(dashboardData.lastUpdated)}</span>
-                            )}
-                        </p>
-                    </div>
-                </div>
-                <div className="text-right">
-                    <p className="text-sm font-medium" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
-                        {currentTime.toLocaleString('en-PH', {
-                            timeZone: 'Asia/Manila',
-                            weekday: 'short',
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                            hour12: true
-                        })}
+                        Admin Dashboard
+                    </p>
+                    <p
+                        className="text-sm"
+                        style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                    >
+                        Real-time business overview and analytics
                     </p>
                 </div>
             </motion.div>
