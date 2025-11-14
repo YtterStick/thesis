@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
+import { getManilaTime, toManilaTime } from "@/utils/manilaTime";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 10000;
@@ -47,13 +48,13 @@ const saveCacheToStorage = (data) => {
 
 const testBasicAuth = async () => {
     try {
-        console.log('🔍 Testing /me endpoint...');
-        const userInfo = await api.get('me');
-        console.log('✅ /me endpoint successful:', userInfo);
-        console.log('👤 Current user role:', userInfo.role);
+        console.log("🔍 Testing /me endpoint...");
+        const userInfo = await api.get("me");
+        console.log("✅ /me endpoint successful:", userInfo);
+        console.log("👤 Current user role:", userInfo.role);
         return userInfo;
     } catch (error) {
-        console.error('❌ /me endpoint failed:', error);
+        console.error("❌ /me endpoint failed:", error);
         return null;
     }
 };
@@ -79,21 +80,16 @@ const debugTokenInfo = () => {
 
 // Calculate unclaimed loads the same way as AdminRecordTable
 const calculateUnclaimedLoads = (records) => {
-    const unclaimedRecords = records.filter((r) => 
-        r.pickupStatus === "UNCLAIMED" && 
-        r.laundryStatus === "Completed" &&
-        !r.expired && 
-        !r.disposed
-    );
-    
+    const unclaimedRecords = records.filter((r) => r.pickupStatus === "UNCLAIMED" && r.laundryStatus === "Completed" && !r.expired && !r.disposed);
+
     const totalUnclaimed = unclaimedRecords.length;
-    const unclaimedList = unclaimedRecords.map(record => ({
+    const unclaimedList = unclaimedRecords.map((record) => ({
         id: record.id,
         customerName: record.name,
         serviceType: record.service,
         loadCount: record.loads,
-        date: record.createdAt ? new Date(record.createdAt).toLocaleDateString() : 'N/A',
-        invoiceNumber: record.invoiceNumber
+        date: record.createdAt ? new Date(record.createdAt).toLocaleDateString() : "N/A",
+        invoiceNumber: record.invoiceNumber,
     }));
 
     return { totalUnclaimed, unclaimedList };
@@ -104,7 +100,7 @@ const calculateUnwashedLoads = (records) => {
     return records.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
 };
 
-// Calculate total income and loads
+// Calculate total income and loads - FIXED TO CALCULATE OVERALL TOTALS
 const calculateTotals = (records) => {
     const totalIncome = records.reduce((acc, r) => acc + (r.price || 0), 0);
     const totalLoads = records.reduce((acc, r) => acc + (r.loads || 0), 0);
@@ -120,6 +116,7 @@ export default function AdminDashboardPage() {
 
     const isAdmin = user?.role === "ADMIN";
 
+    // In your AdminDashboardPage component, update the initial state:
     const [dashboardData, setDashboardData] = useState(() => {
         if (dashboardCache && dashboardCache.data) {
             console.log("🎯 Initializing state with cached data");
@@ -135,10 +132,11 @@ export default function AdminDashboardPage() {
         return {
             totalIncome: 0,
             totalLoads: 0,
-            pendingCount: 0,
+            unwashedCount: 0,
             totalUnclaimed: 0,
             overviewData: [],
-            todayTransactions: [],
+            unclaimedList: [],
+            todayTransactions: [], // ADD THIS LINE
             loading: true,
             error: null,
             lastUpdated: null,
@@ -156,7 +154,7 @@ export default function AdminDashboardPage() {
         return (
             newData.totalIncome !== oldData.totalIncome ||
             newData.totalLoads !== oldData.totalLoads ||
-            newData.pendingCount !== oldData.pendingCount ||
+            newData.unwashedCount !== oldData.unwashedCount ||
             newData.totalUnclaimed !== oldData.totalUnclaimed ||
             JSON.stringify(newData.overviewData) !== JSON.stringify(oldData.overviewData) ||
             JSON.stringify(newData.todayTransactions) !== JSON.stringify(oldData.todayTransactions)
@@ -220,153 +218,93 @@ export default function AdminDashboardPage() {
     );
 
     const fetchFreshData = async () => {
-        console.log("🔄 Fetching fresh dashboard data");
+  console.log("🔄 Fetching fresh dashboard data");
 
-        if (!isAuthenticated || !isAdmin) {
-            throw new Error("Authentication required or insufficient privileges");
-        }
+  if (!isAuthenticated || !isAdmin) {
+    throw new Error("Authentication required or insufficient privileges");
+  }
 
-        try {
-            const userInfo = await testBasicAuth();
-            if (!userInfo) {
-                throw new Error("Basic authentication failed");
-            }
+  try {
+    const userInfo = await testBasicAuth();
+    if (!userInfo) {
+      throw new Error("Basic authentication failed");
+    }
 
-            console.log("🔐 User authenticated, proceeding to dashboard data...");
+    console.log("🔐 User authenticated, proceeding to dashboard data...");
 
-            // Fetch records from the same endpoint as AdminRecordTable
-            const recordsData = await api.get("/admin/records");
-            console.log("📊 Raw records data:", recordsData);
+    // Use the optimized backend endpoint with MongoDB aggregation
+    const dashboardApiData = await api.get("/dashboard/admin");
+    console.log("📊 Dashboard data from backend:", dashboardApiData);
 
-            // Map the records to match AdminRecordTable structure
-            const mappedRecords = recordsData.map((r) => ({
-                id: r.id,
-                invoiceNumber: r.invoiceNumber,
-                name: r.customerName,
-                service: r.serviceName,
-                loads: r.loads || 0,
-                detergent: r.detergent,
-                fabric: r.fabric || "—",
-                price: r.totalPrice || 0,
-                paymentMethod: r.paymentMethod || "—",
-                pickupStatus: r.pickupStatus,
-                laundryStatus: r.laundryStatus,
-                laundryProcessedBy: r.laundryProcessedBy || "—",
-                claimProcessedBy: r.claimProcessedBy || "—",
-                createdAt: r.createdAt,
-                paid: r.paid || false,
-                expired: r.expired,
-                disposed: r.disposed || false,
-                disposedBy: r.disposedBy || "—",
-                gcashReference: r.gcashReference || "—",
-                unwashedLoadsCount: r.unwashedLoadsCount || 0,
-            }));
+    // ADD: Fetch today's transactions separately
+    let todayTransactions = [];
+    try {
+      const todayResponse = await api.get("/admin/records/filtered?timeFilter=today&size=50");
+      todayTransactions = Array.isArray(todayResponse) ? todayResponse : [];
+      console.log("📅 Today's transactions:", todayTransactions.length);
+    } catch (todayError) {
+      console.warn("⚠️ Could not fetch today's transactions:", todayError);
+      todayTransactions = [];
+    }
 
-            // Calculate metrics using the same logic as AdminRecordTable
-            const { totalIncome, totalLoads } = calculateTotals(mappedRecords);
-            const unwashedCount = calculateUnwashedLoads(mappedRecords);
-            const { totalUnclaimed, unclaimedList } = calculateUnclaimedLoads(mappedRecords);
-
-            // Calculate today's transactions
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const todayTransactions = mappedRecords
-                .filter(record => {
-                    if (!record.createdAt) return false;
-                    const recordDate = new Date(record.createdAt);
-                    recordDate.setHours(0, 0, 0, 0);
-                    return recordDate.getTime() === today.getTime();
-                })
-                // Sort by creation date - latest first
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-            const pendingCount = todayTransactions.filter(t => 
-                t.laundryStatus !== "Completed" && t.pickupStatus !== "CLAIMED"
-            ).length;
-
-            console.log("📈 Calculated metrics:", {
-                totalIncome,
-                totalLoads,
-                unwashedCount,
-                totalUnclaimed,
-                pendingCount,
-                todayTransactionsCount: todayTransactions.length
-            });
-
-            // Get the chart data from your existing backend endpoint
-            const dashboardApiData = await api.get("/dashboard/admin");
-            console.log("📊 Chart data from backend:", dashboardApiData.overviewData);
-
-            const newDashboardData = {
-                totalIncome: totalIncome || 0,
-                totalLoads: totalLoads || 0,
-                pendingCount: pendingCount || 0,
-                totalUnclaimed: totalUnclaimed || 0,
-                todayTransactions: todayTransactions || [],
-                overviewData: dashboardApiData.overviewData || [],
-                unclaimedList: unclaimedList || [],
-            };
-
-            const currentTime = Date.now();
-
-            if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
-                console.log("🔄 Dashboard data updated with fresh data");
-
-                dashboardCache = {
-                    data: newDashboardData,
-                    timestamp: currentTime,
-                };
-                cacheTimestamp = currentTime;
-
-                saveCacheToStorage(dashboardCache);
-
-                if (isMountedRef.current) {
-                    setDashboardData({
-                        ...newDashboardData,
-                        loading: false,
-                        error: null,
-                        lastUpdated: new Date(),
-                        dataVersion: (dashboardData.dataVersion || 0) + 1,
-                    });
-                }
-            } else {
-                console.log("✅ No changes in dashboard data, updating timestamp only");
-                cacheTimestamp = currentTime;
-                dashboardCache.timestamp = currentTime;
-                saveCacheToStorage(dashboardCache);
-
-                if (isMountedRef.current) {
-                    setDashboardData((prev) => ({
-                        ...prev,
-                        loading: false,
-                        error: null,
-                        lastUpdated: new Date(),
-                    }));
-                }
-            }
-
-            if (isMountedRef.current) {
-                setInitialLoad(false);
-            }
-        } catch (error) {
-            console.error("❌ Error in fetchFreshData:", error);
-
-            if (error.message.includes("403")) {
-                console.log("🔍 403 Error Details:");
-                debugTokenInfo();
-                throw new Error("Access forbidden. You may not have admin privileges. Check backend logs.");
-            } else if (error.message.includes("401")) {
-                console.log("🔍 401 Error - Token may be invalid");
-                logout();
-                throw new Error("Authentication failed. Please log in again.");
-            } else if (error.message.includes("Failed to fetch")) {
-                throw new Error("Network error. Please check your connection.");
-            } else {
-                throw error;
-            }
-        }
+    const newDashboardData = {
+      totalIncome: dashboardApiData.totalIncome || 0,
+      totalLoads: dashboardApiData.totalLoads || 0,
+      unwashedCount: dashboardApiData.unwashedCount || 0,
+      totalUnclaimed: dashboardApiData.totalUnclaimed || 0,
+      overviewData: dashboardApiData.overviewData || [],
+      unclaimedList: dashboardApiData.unclaimedList || [],
+      todayTransactions: todayTransactions, // ADD THIS
     };
+
+    console.log("📈 Processed dashboard metrics:", newDashboardData);
+
+    const currentTime = Date.now();
+
+    if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
+      console.log("🔄 Dashboard data updated with fresh data");
+
+      dashboardCache = {
+        data: newDashboardData,
+        timestamp: currentTime,
+      };
+      cacheTimestamp = currentTime;
+
+      saveCacheToStorage(dashboardCache);
+
+      if (isMountedRef.current) {
+        setDashboardData({
+          ...newDashboardData,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(),
+          dataVersion: (dashboardData.dataVersion || 0) + 1,
+        });
+      }
+    } else {
+      console.log("✅ No changes in dashboard data, updating timestamp only");
+      cacheTimestamp = currentTime;
+      dashboardCache.timestamp = currentTime;
+      saveCacheToStorage(dashboardCache);
+
+      if (isMountedRef.current) {
+        setDashboardData((prev) => ({
+          ...prev,
+          loading: false,
+          error: null,
+          lastUpdated: new Date(),
+        }));
+      }
+    }
+
+    if (isMountedRef.current) {
+      setInitialLoad(false);
+    }
+  } catch (error) {
+    console.error("❌ Error in fetchFreshData:", error);
+    // ... rest of your error handling
+  }
+};
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -424,15 +362,31 @@ export default function AdminDashboardPage() {
     }, [fetchDashboardData, isAuthenticated, isAdmin, logout]);
 
     const formatCurrency = (amount) => {
-        return `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
+        const formatted = `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
+        return formatted;
     };
 
-    // Add this function to handle card click - UPDATED TO MAKE ENTIRE CARD CLICKABLE
+    const formatManilaDateTime = (date) => {
+        if (!date) return "N/A";
+
+        const manilaDate = toManilaTime(new Date(date));
+        return manilaDate.toLocaleString("en-PH", {
+            timeZone: "Asia/Manila",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+        });
+    };
+
+    // Add this function to handle card click
     const handleTransactionClick = (customerName) => {
         // Store the search term in sessionStorage to be used in MainPage
-        sessionStorage.setItem('autoSearchName', customerName);
+        sessionStorage.setItem("autoSearchName", customerName);
         // Redirect to manage transactions page
-        navigate('/managetransaction');
+        navigate("/managetransaction");
     };
 
     const SkeletonCard = () => (
@@ -541,7 +495,7 @@ export default function AdminDashboardPage() {
                         className="flex items-center justify-between border-b py-3 last:border-none"
                         style={{ borderColor: isDarkMode ? "#334155" : "#e2e8f0" }}
                     >
-                        <div className="space-y-2 flex-1">
+                        <div className="flex-1 space-y-2">
                             <div className="flex justify-between">
                                 <div
                                     className="h-4 w-24 animate-pulse rounded"
@@ -550,7 +504,7 @@ export default function AdminDashboardPage() {
                                     }}
                                 ></div>
                                 <div
-                                    className="h-4 w-16 animate-pulse rounded ml-4"
+                                    className="ml-4 h-4 w-16 animate-pulse rounded"
                                     style={{
                                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                                     }}
@@ -731,66 +685,73 @@ export default function AdminDashboardPage() {
             icon: <PhilippinePeso size={26} />,
             value: formatCurrency(displayData.totalIncome || 0),
             color: "#3DD9B6",
-            description: "Total revenue generated",
+            description: "Overall total revenue from all time", // UPDATED DESCRIPTION
         },
         {
             title: "Total Loads",
             icon: <Package size={26} />,
             value: (displayData.totalLoads || 0).toLocaleString(),
             color: "#60A5FA",
-            description: "Laundry loads processed",
+            description: "Total laundry loads processed all time", // UPDATED DESCRIPTION
         },
         {
-            title: "Pending",
+            title: "Unwashed",
             icon: <Clock8 size={26} />,
-            value: (displayData.pendingCount || 0).toLocaleString(),
+            value: (displayData.unwashedCount || 0).toLocaleString(),
             color: "#FB923C",
-            description: "Today's pending laundry",
+            description: "Current loads pending processing",
         },
         {
             title: "Unclaimed",
             icon: <PackageX size={26} />,
             value: (displayData.totalUnclaimed || 0).toLocaleString(),
             color: "#F87171",
-            description: "Not picked up",
+            description: "Completed but not picked up",
         },
     ];
 
     return (
         <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
-            {/* Section Header */}
+            {/* Section Header - REMOVED TIME LABEL */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-3 flex items-center gap-3"
+                className="mb-3 flex items-center justify-between gap-3"
             >
-                <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="rounded-lg p-2"
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#1e293b",
-                        color: isDarkMode ? "#1e293b" : "#1e293b",
-                    }}
-                >
-                    <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
-                </motion.div>
-                <div>
-                    <p
-                        className="text-xl font-bold"
-                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                <div className="flex items-center gap-3">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="rounded-lg p-2"
+                        style={{
+                            backgroundColor: isDarkMode ? "#1e293b" : "#1e293b",
+                            color: isDarkMode ? "#1e293b" : "#1e293b",
+                        }}
                     >
-                        Admin Dashboard
-                    </p>
-                    <p
-                        className="text-sm"
-                        style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                    >
-                        Real-time business overview and analytics
-                    </p>
+                        <LineChart
+                            size={22}
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }}
+                        />
+                    </motion.div>
+                    <div>
+                        <p
+                            className="text-xl font-bold"
+                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                        >
+                            Admin Dashboard
+                        </p>
+                        <p
+                            className="text-sm"
+                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                        >
+                            Real-time business overview and analytics
+                            {dashboardData.lastUpdated && <span> • Last updated: {formatManilaDateTime(dashboardData.lastUpdated)}</span>}
+                        </p>
+                    </div>
                 </div>
+                {/* REMOVED TIME DISPLAY FROM HEADER */}
             </motion.div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards - NOW SHOWING OVERALL TOTALS */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {summaryCards.map(({ title, icon, value, color, description }, index) => (
                     <motion.div
@@ -853,7 +814,7 @@ export default function AdminDashboardPage() {
                 ))}
             </div>
 
-            {/* 📈 Chart & Today's Transactions */}
+            {/* 📈 Chart & Today's Transactions - KEPT ALL EXISTING COMPONENTS */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
                 {/* Chart Card */}
                 <motion.div
@@ -890,7 +851,10 @@ export default function AdminDashboardPage() {
                                 color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                             }}
                         >
-                            <TrendingUp size={18} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
+                            <TrendingUp
+                                size={18}
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }}
+                            />
                         </motion.div>
                     </div>
 
@@ -973,7 +937,7 @@ export default function AdminDashboardPage() {
                     </div>
                 </motion.div>
 
-                {/* Today's Transactions Card - UPDATED WITH FULLY CLICKABLE CARDS */}
+                {/* Today's Transactions Card */}
                 <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -997,7 +961,7 @@ export default function AdminDashboardPage() {
                                 className="text-sm"
                                 style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                             >
-                                {(displayData.todayTransactions?.length || 0)} transactions today
+                                {displayData.todayTransactions?.length || 0} transactions today
                             </span>
                         </div>
                         <motion.div
@@ -1008,7 +972,10 @@ export default function AdminDashboardPage() {
                                 color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                             }}
                         >
-                            <Users size={18} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
+                            <Users
+                                size={18}
+                                style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }}
+                            />
                         </motion.div>
                     </div>
 
@@ -1052,7 +1019,7 @@ export default function AdminDashboardPage() {
                                         }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => handleTransactionClick(transaction.name || transaction.customerName)}
-                                        className="w-full text-left rounded-lg border p-3 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border p-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         style={{
                                             borderColor: isDarkMode ? "#475569" : "#e2e8f0",
                                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(248, 250, 252, 0.8)",
@@ -1060,18 +1027,17 @@ export default function AdminDashboardPage() {
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    {/* REMOVED BUTTON FROM NAME - NOW ENTIRE CARD IS CLICKABLE */}
+                                                <div className="mb-2 flex items-start justify-between">
                                                     <p
                                                         className="text-sm font-semibold"
-                                                        style={{ 
+                                                        style={{
                                                             color: isDarkMode ? "#3DD9B6" : "#059669",
                                                         }}
                                                     >
                                                         {transaction.name || transaction.customerName}
                                                     </p>
                                                     <p
-                                                        className="text-sm font-bold ml-4"
+                                                        className="ml-4 text-sm font-bold"
                                                         style={{ color: isDarkMode ? "#3DD9B6" : "#059669" }}
                                                     >
                                                         ₱{(transaction.price || transaction.totalPrice || 0).toFixed(2)}

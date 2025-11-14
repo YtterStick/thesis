@@ -109,6 +109,47 @@ public class DashboardService {
     public Map<String, Object> getAdminDashboardData() {
         Map<String, Object> data = new HashMap<>();
 
+        // Use Manila time for today's transactions
+        LocalDateTime now = ManilaTimeUtil.now();
+        LocalDate today = now.toLocalDate();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+
+        // Get today's transactions
+        List<Transaction> todayTransactions = transactionRepository.findByCreatedAtBetween(startOfDay, endOfDay);
+
+        // Process today's transactions for the dashboard
+        List<Map<String, Object>> todayTransactionsList = todayTransactions.stream()
+                .map(tx -> {
+                    Map<String, Object> transactionData = new HashMap<>();
+                    transactionData.put("id", tx.getId());
+                    transactionData.put("invoiceNumber", tx.getInvoiceNumber());
+                    transactionData.put("customerName", tx.getCustomerName());
+                    transactionData.put("service", tx.getServiceName());
+                    transactionData.put("loads", tx.getServiceQuantity());
+                    transactionData.put("price", tx.getTotalPrice());
+                    transactionData.put("paymentMethod", tx.getPaymentMethod());
+                    transactionData.put("gcashReference", tx.getGcashReference());
+                    transactionData.put("createdAt", tx.getCreatedAt());
+                    
+                    // Get pickup status from associated laundry job
+                    Optional<LaundryJob> laundryJob = laundryJobRepository.findByTransactionId(tx.getInvoiceNumber());
+                    if (laundryJob.isPresent()) {
+                        transactionData.put("pickupStatus", laundryJob.get().getPickupStatus());
+                    } else {
+                        transactionData.put("pickupStatus", "UNKNOWN");
+                    }
+                    
+                    return transactionData;
+                })
+                .sorted((a, b) -> {
+                    // Sort by creation date, newest first
+                    LocalDateTime dateA = (LocalDateTime) a.get("createdAt");
+                    LocalDateTime dateB = (LocalDateTime) b.get("createdAt");
+                    return dateB.compareTo(dateA);
+                })
+                .collect(Collectors.toList());
+
         // Use MongoDB aggregations for accurate totals
         Double totalIncome = transactionRepository.sumTotalPrice();
         if (totalIncome == null) totalIncome = 0.0;
@@ -208,6 +249,7 @@ public class DashboardService {
         System.out.println("👕 Total Loads: " + totalLoads);
         System.out.println("⏳ Unwashed Count: " + unwashedCount);
         System.out.println("📦 Unclaimed Count: " + totalUnclaimed);
+        System.out.println("📅 Today's Transactions: " + todayTransactionsList.size());
         System.out.println("📈 Chart Data Points: " + overviewData.size());
 
         data.put("totalIncome", totalIncome);
@@ -216,6 +258,7 @@ public class DashboardService {
         data.put("totalUnclaimed", totalUnclaimed);
         data.put("overviewData", overviewData);
         data.put("unclaimedList", unclaimedList);
+        data.put("todayTransactions", todayTransactionsList); // ADD THIS LINE
 
         return data;
     }
