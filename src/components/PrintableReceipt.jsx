@@ -161,7 +161,7 @@ const PrintableReceipt = ({ invoiceData, onClose }) => {
                     )}
 
                     <div className="col-span-2 flex justify-between text-[10px] font-bold text-red-600 due-date">
-                        <span>Due Date:</span>
+                        <span>Claiming Date:</span>
                         <span>{formatDate(dueDate)}</span>
                     </div>
                 </div>

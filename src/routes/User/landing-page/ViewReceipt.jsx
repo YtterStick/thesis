@@ -351,7 +351,7 @@ const ViewReceipt = ({
                 )}
 
                 <div className="col-span-2 flex justify-between text-[9px] font-bold text-red-600">
-                  <span>Due Date:</span>
+                  <span>Claiming Date:</span>
                   <span>{receiptData?.dueDate ? formatDate(receiptData.dueDate) : "—"}</span>
                 </div>
               </div>

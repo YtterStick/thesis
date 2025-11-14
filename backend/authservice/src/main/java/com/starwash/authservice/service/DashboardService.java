@@ -37,11 +37,14 @@ public class DashboardService {
 
         List<Transaction> todayTransactions = transactionRepository.findByCreatedAtBetween(startOfDay, endOfDay);
 
+        // FIXED: Apply same filter for staff dashboard
         double todayIncome = todayTransactions.stream()
+                .filter(tx -> tx.getTotalPrice() != null && tx.getTotalPrice() > 0)
                 .mapToDouble(Transaction::getTotalPrice)
                 .sum();
 
         int todayLoads = todayTransactions.stream()
+                .filter(tx -> tx.getServiceQuantity() != null)
                 .mapToInt(Transaction::getServiceQuantity)
                 .sum();
 
@@ -105,11 +108,14 @@ public class DashboardService {
 
         List<Transaction> allTransactions = transactionRepository.findAll();
 
+        // FIXED: Ensure we're only counting actual paid transactions
         double totalIncome = allTransactions.stream()
+                .filter(tx -> tx.getTotalPrice() != null && tx.getTotalPrice() > 0)
                 .mapToDouble(Transaction::getTotalPrice)
                 .sum();
 
         int totalLoads = allTransactions.stream()
+                .filter(tx -> tx.getServiceQuantity() != null)
                 .mapToInt(Transaction::getServiceQuantity)
                 .sum();
 
@@ -189,6 +195,15 @@ public class DashboardService {
                     return item;
                 })
                 .collect(Collectors.toList());
+
+        // Debug logging for income calculation
+        System.out.println("💰 Backend Total Income Calculation: " + totalIncome);
+        System.out.println("📊 Total Transactions: " + allTransactions.size());
+        
+        // Log sample transactions for debugging
+        allTransactions.stream()
+                .limit(5)
+                .forEach(tx -> System.out.println("   - " + tx.getInvoiceNumber() + ": " + tx.getTotalPrice()));
 
         data.put("totalIncome", totalIncome);
         data.put("totalLoads", totalLoads);

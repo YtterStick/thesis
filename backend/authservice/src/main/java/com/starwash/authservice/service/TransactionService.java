@@ -76,25 +76,24 @@ public class TransactionService {
         int autoPlasticBags = 0;
         String machineInfo = null;
         double machineCapacity = 0;
-        
+
         // Track if plastic should be auto-managed
         boolean shouldAutoManagePlastic = Boolean.TRUE.equals(request.getAutoCalculateLoads());
-        
+
         if (shouldAutoManagePlastic && request.getTotalWeightKg() != null && request.getTotalWeightKg() > 0) {
             try {
                 // Use service-aware calculation (detect if it's a dryer service)
                 MachineService.LoadCalculationResult calculation = machineService.calculateLoadsForService(
-                    request.getTotalWeightKg(), 
-                    service.getName()
-                );
+                        request.getTotalWeightKg(),
+                        service.getName());
                 loads = calculation.getLoads();
                 autoPlasticBags = calculation.getPlasticBags();
                 machineInfo = calculation.getMachineInfo();
                 machineCapacity = calculation.getMachineCapacity();
-                
-                System.out.println("🔄 Auto-calculated loads: " + loads + " loads for " + 
-                                 request.getTotalWeightKg() + "kg - " + machineInfo);
-                
+
+                System.out.println("🔄 Auto-calculated loads: " + loads + " loads for " +
+                        request.getTotalWeightKg() + "kg - " + machineInfo);
+
             } catch (Exception e) {
                 System.err.println("❌ Auto-calculation failed, using manual loads: " + e.getMessage());
                 loads = Optional.ofNullable(request.getLoads()).orElse(1);
@@ -119,24 +118,24 @@ public class TransactionService {
         if (request.getConsumableQuantities() != null) {
             consumableQuantities.putAll(request.getConsumableQuantities());
         }
-        
+
         // Only auto-add plastic when we're in auto-calculation mode
         if (shouldAutoManagePlastic && autoPlasticBags > 0) {
             // Find plastic items in stock
             List<StockItem> plasticItems = stockRepository.findAll().stream()
                     .filter(item -> item.getName().toLowerCase().contains("plastic"))
                     .collect(Collectors.toList());
-                
+
             if (!plasticItems.isEmpty()) {
                 StockItem plasticItem = plasticItems.get(0); // Use first plastic item found
                 String plasticName = plasticItem.getName();
-                
+
                 // Add or update plastic quantity - only if not already manually set
                 int currentPlastic = consumableQuantities.getOrDefault(plasticName, 0);
                 // Only auto-set if it matches the expected auto value (not manually overridden)
                 if (currentPlastic == 0 || currentPlastic == loads) {
                     consumableQuantities.put(plasticName, autoPlasticBags);
-                    
+
                     System.out.println("📦 Auto-added " + autoPlasticBags + " plastic bags for " + loads + " loads");
                 } else {
                     System.out.println("📦 Plastic bags manually set to " + currentPlastic + ", not auto-adjusting");
@@ -150,7 +149,8 @@ public class TransactionService {
             int quantity = entry.getValue();
 
             // Skip if quantity is 0
-            if (quantity <= 0) continue;
+            if (quantity <= 0)
+                continue;
 
             StockItem item = stockRepository.findByName(itemName)
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
@@ -175,7 +175,8 @@ public class TransactionService {
             int quantity = entry.getValue();
 
             // Skip if quantity is 0
-            if (quantity <= 0) continue;
+            if (quantity <= 0)
+                continue;
 
             StockItem item = stockRepository.findByName(itemName)
                     .orElseThrow(() -> new RuntimeException("Stock item not found: " + itemName));
@@ -199,8 +200,9 @@ public class TransactionService {
 
         // FIXED: Use ManilaTimeUtil for consistent time handling for ALL dates
         LocalDateTime now = ManilaTimeUtil.now();
-        
-        // Handle issueDate - convert to Manila time if provided, otherwise use current Manila time
+
+        // Handle issueDate - convert to Manila time if provided, otherwise use current
+        // Manila time
         LocalDateTime issueDate;
         if (request.getIssueDate() != null) {
             // Convert provided date to Manila timezone
@@ -209,7 +211,8 @@ public class TransactionService {
             issueDate = now;
         }
 
-        // Handle dueDate - convert to Manila time if provided, otherwise calculate from issueDate
+        // Handle dueDate - convert to Manila time if provided, otherwise calculate from
+        // issueDate
         LocalDateTime dueDate;
         if (request.getDueDate() != null) {
             dueDate = ManilaTimeUtil.toManilaTime(request.getDueDate());
@@ -223,7 +226,7 @@ public class TransactionService {
         System.out.println("   - Due Date: " + dueDate);
         System.out.println("   - Created At: " + now); // createdAt uses Manila time
         System.out.println("   - Timezone: " + ManilaTimeUtil.getManilaZone());
-        
+
         // Log auto-calculation info
         if (machineInfo != null) {
             System.out.println("   - Auto-calculation: " + request.getTotalWeightKg() + "kg = " + loads + " loads");
@@ -300,11 +303,11 @@ public class TransactionService {
                 plasticQty,
                 loads,
                 staffId);
-        
+
         // Add auto-calculation metadata
         if (machineInfo != null) {
-            System.out.println("✅ Auto-calculation completed: " + 
-                             request.getTotalWeightKg() + "kg → " + loads + " loads - " + machineInfo);
+            System.out.println("✅ Auto-calculation completed: " +
+                    request.getTotalWeightKg() + "kg → " + loads + " loads - " + machineInfo);
         }
 
         return invoiceDto;
@@ -481,9 +484,9 @@ public class TransactionService {
                 .filter(record -> !record.isDisposed())
                 .filter(record -> {
                     LocalDateTime createdAt = record.getCreatedAt();
-                    return createdAt != null && 
-                           createdAt.isAfter(startOfDay) && 
-                           createdAt.isBefore(endOfDay);
+                    return createdAt != null &&
+                            createdAt.isAfter(startOfDay) &&
+                            createdAt.isBefore(endOfDay);
                 })
                 .collect(Collectors.toList());
 
@@ -533,122 +536,122 @@ public class TransactionService {
     // OPTIMIZED VERSION WITH PAGINATION AND CACHING
     @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size")
     public List<AdminRecordResponseDto> getAllAdminRecords(int page, int size) {
-    long startTime = System.currentTimeMillis();
-    
-    try {
-        System.out.println("🔄 Fetching admin records - Page: " + page + ", Size: " + size);
-        
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Transaction> transactionPage = transactionRepository.findAll(pageable);
-        List<Transaction> transactions = transactionPage.getContent();
-        
-        List<String> transactionIds = transactions.stream()
-                .map(Transaction::getInvoiceNumber)
-                .collect(Collectors.toList());
-                
-        List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
-        Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
-                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+        long startTime = System.currentTimeMillis();
 
-        LocalDateTime currentManilaTime = getCurrentManilaTime();
+        try {
+            System.out.println("🔄 Fetching admin records - Page: " + page + ", Size: " + size);
 
-        List<AdminRecordResponseDto> result = transactions.stream().map(tx -> {
-            AdminRecordResponseDto dto = new AdminRecordResponseDto();
-            dto.setId(tx.getId());
-            dto.setInvoiceNumber(tx.getInvoiceNumber());
-            dto.setCustomerName(tx.getCustomerName());
-            dto.setContact(tx.getContact());
-            dto.setServiceName(tx.getServiceName());
-            dto.setLoads(tx.getServiceQuantity());
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Page<Transaction> transactionPage = transactionRepository.findAll(pageable);
+            List<Transaction> transactions = transactionPage.getContent();
 
-            String detergentQty = tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                    .map(c -> String.valueOf(c.getQuantity()))
-                    .findFirst().orElse("0");
+            List<String> transactionIds = transactions.stream()
+                    .map(Transaction::getInvoiceNumber)
+                    .collect(Collectors.toList());
 
-            String fabricQty = tx.getConsumables().stream()
-                    .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                    .map(c -> String.valueOf(c.getQuantity()))
-                    .findFirst().orElse("0");
+            List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
+            Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
+                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
-            dto.setDetergent(detergentQty);
-            dto.setFabric(fabricQty);
+            LocalDateTime currentManilaTime = getCurrentManilaTime();
 
-            dto.setTotalPrice(tx.getTotalPrice());
-            dto.setPaymentMethod(tx.getPaymentMethod());
-            dto.setProcessedByStaff(tx.getStaffId());
-            dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
-            dto.setCreatedAt(tx.getCreatedAt());
+            List<AdminRecordResponseDto> result = transactions.stream().map(tx -> {
+                AdminRecordResponseDto dto = new AdminRecordResponseDto();
+                dto.setId(tx.getId());
+                dto.setInvoiceNumber(tx.getInvoiceNumber());
+                dto.setCustomerName(tx.getCustomerName());
+                dto.setContact(tx.getContact());
+                dto.setServiceName(tx.getServiceName());
+                dto.setLoads(tx.getServiceQuantity());
 
-            dto.setGcashVerified(tx.getGcashVerified());
+                String detergentQty = tx.getConsumables().stream()
+                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                        .map(c -> String.valueOf(c.getQuantity()))
+                        .findFirst().orElse("0");
 
-            LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
-            if (job != null) {
-                dto.setPickupStatus(
-                        job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
+                String fabricQty = tx.getConsumables().stream()
+                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                        .map(c -> String.valueOf(c.getQuantity()))
+                        .findFirst().orElse("0");
 
-                // ADD CLAIM DATE HERE
-                dto.setClaimDate(job.getClaimDate()); // This is the claimed date
+                dto.setDetergent(detergentQty);
+                dto.setFabric(fabricQty);
 
-                if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
-                    long completedLoads = job.getLoadAssignments().stream()
-                            .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
-                            .count();
+                dto.setTotalPrice(tx.getTotalPrice());
+                dto.setPaymentMethod(tx.getPaymentMethod());
+                dto.setProcessedByStaff(tx.getStaffId());
+                dto.setPaid(tx.getPaymentMethod() != null && !tx.getPaymentMethod().isEmpty());
+                dto.setCreatedAt(tx.getCreatedAt());
 
-                    long totalLoads = job.getLoadAssignments().size();
+                dto.setGcashVerified(tx.getGcashVerified());
 
-                    if (completedLoads == totalLoads) {
-                        dto.setLaundryStatus("Completed");
-                    } else if (completedLoads > 0) {
-                        dto.setLaundryStatus("In Progress");
-                    } else {
-                        boolean anyInProgress = job.getLoadAssignments().stream()
-                                .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
-                                        !"COMPLETED".equalsIgnoreCase(load.getStatus()));
+                LaundryJob job = laundryJobMap.get(tx.getInvoiceNumber());
+                if (job != null) {
+                    dto.setPickupStatus(
+                            job.getPickupStatus() != null ? job.getPickupStatus() : "UNCLAIMED");
 
-                        if (anyInProgress) {
+                    // ADD CLAIM DATE HERE
+                    dto.setClaimDate(job.getClaimDate()); // This is the claimed date
+
+                    if (job.getLoadAssignments() != null && !job.getLoadAssignments().isEmpty()) {
+                        long completedLoads = job.getLoadAssignments().stream()
+                                .filter(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()))
+                                .count();
+
+                        long totalLoads = job.getLoadAssignments().size();
+
+                        if (completedLoads == totalLoads) {
+                            dto.setLaundryStatus("Completed");
+                        } else if (completedLoads > 0) {
                             dto.setLaundryStatus("In Progress");
                         } else {
-                            dto.setLaundryStatus("Not Started");
+                            boolean anyInProgress = job.getLoadAssignments().stream()
+                                    .anyMatch(load -> !"NOT_STARTED".equalsIgnoreCase(load.getStatus()) &&
+                                            !"COMPLETED".equalsIgnoreCase(load.getStatus()));
+
+                            if (anyInProgress) {
+                                dto.setLaundryStatus("In Progress");
+                            } else {
+                                dto.setLaundryStatus("Not Started");
+                            }
                         }
+
+                        long unwashedLoadsCount = job.getLoadAssignments().stream()
+                                .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                                .count();
+                        dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
+
+                    } else {
+                        dto.setLaundryStatus("Not Started");
+                        dto.setUnwashedLoadsCount(tx.getServiceQuantity());
                     }
 
-                    long unwashedLoadsCount = job.getLoadAssignments().stream()
-                            .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
-                            .count();
-                    dto.setUnwashedLoadsCount((int) unwashedLoadsCount);
-
+                    dto.setExpired(job.isExpired());
+                    dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
+                    dto.setClaimProcessedBy(job.getClaimedByStaffId());
+                    dto.setDisposed(job.isDisposed());
+                    dto.setDisposedBy(job.getDisposedBy());
                 } else {
+                    dto.setPickupStatus("UNCLAIMED");
                     dto.setLaundryStatus("Not Started");
                     dto.setUnwashedLoadsCount(tx.getServiceQuantity());
+                    dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
+                    dto.setLaundryProcessedBy(null);
+                    dto.setClaimProcessedBy(null);
+                    dto.setDisposed(false);
+                    dto.setDisposedBy(null);
+                    dto.setClaimDate(null); // No claim date if no job exists
                 }
 
-                dto.setExpired(job.isExpired());
-                dto.setLaundryProcessedBy(job.getLaundryProcessedBy());
-                dto.setClaimProcessedBy(job.getClaimedByStaffId());
-                dto.setDisposed(job.isDisposed());
-                dto.setDisposedBy(job.getDisposedBy());
-            } else {
-                dto.setPickupStatus("UNCLAIMED");
-                dto.setLaundryStatus("Not Started");
-                dto.setUnwashedLoadsCount(tx.getServiceQuantity());
-                dto.setExpired(tx.getDueDate() != null && tx.getDueDate().isBefore(currentManilaTime));
-                dto.setLaundryProcessedBy(null);
-                dto.setClaimProcessedBy(null);
-                dto.setDisposed(false);
-                dto.setDisposedBy(null);
-                dto.setClaimDate(null); // No claim date if no job exists
-            }
+                return dto;
+            }).collect(Collectors.toList());
 
-            return dto;
-        }).collect(Collectors.toList());
-        
-        return result;
-    } finally {
-        long duration = System.currentTimeMillis() - startTime;
-        System.out.println("🕒 getAllAdminRecords took: " + duration + "ms");
+            return result;
+        } finally {
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("🕒 getAllAdminRecords took: " + duration + "ms");
+        }
     }
-}
 
     // Keep old method for backward compatibility
     public List<AdminRecordResponseDto> getAllAdminRecords() {
@@ -664,10 +667,10 @@ public class TransactionService {
     @Cacheable(value = "adminSummary", key = "'all'")
     public Map<String, Object> getAdminRecordsSummary() {
         long startTime = System.currentTimeMillis();
-        
+
         try {
             System.out.println("📊 Calculating admin records summary...");
-            
+
             List<Transaction> allTransactions = transactionRepository.findAll();
             List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
 
@@ -747,14 +750,14 @@ public class TransactionService {
     @Cacheable(value = "adminSummary", key = "'optimized-' + #timeFilter")
     public Map<String, Object> getOptimizedAdminRecordsSummaryByTime(String timeFilter) {
         long startTime = System.currentTimeMillis();
-        
+
         try {
             System.out.println("🚀 OPTIMIZED: Calculating time-filtered admin records summary: " + timeFilter);
-            
+
             // Use aggregation queries instead of loading all records
             LocalDateTime currentManilaTime = getCurrentManilaTime();
             LocalDateTime startDate = calculateStartDate(timeFilter, currentManilaTime);
-            
+
             // Use MongoDB aggregation for faster calculations
             List<Transaction> filteredTransactions;
             if ("all".equals(timeFilter)) {
@@ -763,17 +766,17 @@ public class TransactionService {
             } else {
                 filteredTransactions = transactionRepository.findByCreatedAtAfter(startDate);
             }
-            
+
             // For simpler implementation, use repository methods with date ranges
             double totalIncome = calculateTotalIncome(timeFilter, startDate);
             int totalLoads = calculateTotalLoads(timeFilter, startDate);
             int totalFabric = calculateTotalFabric(timeFilter, startDate);
             int totalDetergent = calculateTotalDetergent(timeFilter, startDate);
-            
+
             // Use dedicated count queries instead of loading all records
             long expiredCount = laundryJobRepository.countByExpiredTrueAndDisposedFalse();
             long unclaimedCount = laundryJobRepository.countByPickupStatusAndExpiredFalseAndDisposedFalse("UNCLAIMED");
-            
+
             Map<String, Object> summary = new HashMap<>();
             summary.put("totalIncome", totalIncome);
             summary.put("totalLoads", totalLoads);
@@ -833,7 +836,7 @@ public class TransactionService {
         } else {
             transactions = transactionRepository.findByCreatedAtAfter(startDate);
         }
-        
+
         return transactions.stream()
                 .mapToInt(tx -> tx.getConsumables().stream()
                         .filter(c -> c.getName().toLowerCase().contains("fabric"))
@@ -850,7 +853,7 @@ public class TransactionService {
         } else {
             transactions = transactionRepository.findByCreatedAtAfter(startDate);
         }
-        
+
         return transactions.stream()
                 .mapToInt(tx -> tx.getConsumables().stream()
                         .filter(c -> c.getName().toLowerCase().contains("detergent"))
@@ -893,7 +896,8 @@ public class TransactionService {
         return Criteria.where("createdAt").gte(startDate);
     }
 
-    private List<Transaction> filterTransactionsByTime(List<Transaction> transactions, String timeFilter, LocalDateTime currentTime) {
+    private List<Transaction> filterTransactionsByTime(List<Transaction> transactions, String timeFilter,
+            LocalDateTime currentTime) {
         if ("all".equals(timeFilter)) {
             return transactions;
         }
@@ -979,7 +983,7 @@ public class TransactionService {
 
         System.out.println("✅ Fixed " + fixedCount + " transaction dates to Manila time");
     }
-    
+
     // Get total count for pagination
     public long getTotalAdminRecordsCount() {
         return transactionRepository.count();
@@ -989,13 +993,14 @@ public class TransactionService {
     @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size + '-filter-' + #timeFilter")
     public List<AdminRecordResponseDto> getAllAdminRecordsByTime(int page, int size, String timeFilter) {
         long startTime = System.currentTimeMillis();
-        
+
         try {
-            System.out.println("🔄 OPTIMIZED: Fetching time-filtered admin records - Page: " + page + ", Size: " + size + ", Filter: " + timeFilter);
-            
+            System.out.println("🔄 OPTIMIZED: Fetching time-filtered admin records - Page: " + page + ", Size: " + size
+                    + ", Filter: " + timeFilter);
+
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             List<Transaction> transactions;
-            
+
             // Use database-level filtering instead of Java filtering
             if ("all".equals(timeFilter)) {
                 transactions = transactionRepository.findAll(pageable).getContent();
@@ -1003,12 +1008,12 @@ public class TransactionService {
                 LocalDateTime startDate = calculateStartDate(timeFilter, getCurrentManilaTime());
                 transactions = transactionRepository.findByCreatedAtAfter(startDate, pageable);
             }
-            
+
             // Get only the laundry jobs needed for these transactions
             List<String> transactionIds = transactions.stream()
                     .map(Transaction::getInvoiceNumber)
                     .collect(Collectors.toList());
-                    
+
             List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
             Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
                     .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
@@ -1101,7 +1106,7 @@ public class TransactionService {
 
                 return dto;
             }).collect(Collectors.toList());
-            
+
             System.out.println("✅ OPTIMIZED: Loaded " + result.size() + " time-filtered records");
             return result;
         } finally {
@@ -1115,13 +1120,14 @@ public class TransactionService {
     public long getTotalAdminRecordsCountByTime(String timeFilter) {
         try {
             System.out.println("📊 Counting time-filtered records: " + timeFilter);
-            
+
             List<Transaction> allTransactions = transactionRepository.findAll();
             LocalDateTime currentManilaTime = getCurrentManilaTime();
 
-            List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
+            List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter,
+                    currentManilaTime);
             long count = filteredTransactions.size();
-            
+
             System.out.println("✅ Time-filtered count (" + timeFilter + "): " + count);
             return count;
         } catch (Exception e) {

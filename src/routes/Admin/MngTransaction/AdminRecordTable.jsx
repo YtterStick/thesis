@@ -9,7 +9,7 @@ import * as XLSX from "xlsx";
 import PrintableReceipt from "@/components/PrintableReceipt";
 import { api } from "@/lib/api-config";
 
-// Updated table headers - REMOVED EXPIRED STATUS COLUMN
+// Updated table headers - ADDED CLAIMED DATE COLUMN
 const tableHeaders = [
     "Invoice",
     "Name",
@@ -22,6 +22,7 @@ const tableHeaders = [
     "Payment",
     "GCash Ref",
     "Pickup Status",
+    "Claimed Date", // ADDED: Claimed date column
     "Actions",
 ];
 
@@ -523,9 +524,13 @@ const AdminRecordTable = ({
 
                 // Safe date formatting with fallback
                 let formattedDate = "—";
+                let formattedClaimDate = "—";
                 try {
                     if (item.createdAt && !isNaN(new Date(item.createdAt))) {
                         formattedDate = format(new Date(item.createdAt), "MMM dd, yyyy");
+                    }
+                    if (item.claimDate && !isNaN(new Date(item.claimDate))) {
+                        formattedClaimDate = format(new Date(item.claimDate), "MMM dd, yyyy HH:mm");
                     }
                 } catch (dateError) {
                     console.warn("Invalid date format for item:", item.id, item.createdAt);
@@ -540,6 +545,7 @@ const AdminRecordTable = ({
                     Fabric: item.fabric || "0",
                     Price: formattedPrice,
                     Date: formattedDate,
+                    "Claimed Date": formattedClaimDate, // ADDED: Claimed date to export
                     "Payment Method": item.paymentMethod || "—",
                     "GCash Reference": getGcashReference(item),
                     "Payment Status": item.paid ? "Paid" : "Pending",
@@ -562,6 +568,7 @@ const AdminRecordTable = ({
                 { wch: 15 },
                 { wch: 20 },
                 { wch: 12 },
+                { wch: 18 }, // Claimed Date column
                 { wch: 15 },
             ];
             worksheet["!cols"] = colWidths;
@@ -981,6 +988,15 @@ const AdminRecordTable = ({
                                                             />
                                                         </div>
                                                     </td>
+                                                    {/* ADDED: Claimed Date Column */}
+                                                    <td
+                                                        className="whitespace-nowrap px-3 py-2 text-xs"
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                    >
+                                                        {record.claimDate && !isNaN(new Date(record.claimDate))
+                                                            ? format(new Date(record.claimDate), "MMM dd, yyyy HH:mm")
+                                                            : "—"}
+                                                    </td>
                                                     <td className="whitespace-nowrap px-3 py-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
@@ -1028,34 +1044,36 @@ const AdminRecordTable = ({
                                                                 <div>
                                                                     <span
                                                                         className="font-medium"
-                                                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                                                                        style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
                                                                     >
                                                                         Laundry Processed By:
                                                                     </span>
-                                                                    <p style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                                                                    <p style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                                                         {record.laundryProcessedBy || "—"}
                                                                     </p>
                                                                 </div>
                                                                 <div>
                                                                     <span
                                                                         className="font-medium"
-                                                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                                                                        style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
                                                                     >
                                                                         Claim Processed By:
                                                                     </span>
-                                                                    <p style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                                                                    <p style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                                                                         {record.claimProcessedBy || "—"}
                                                                     </p>
                                                                 </div>
                                                                 <div>
                                                                     <span
                                                                         className="font-medium"
-                                                                        style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                                                                        style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
                                                                     >
-                                                                        Disposed By:
+                                                                        Claimed Date:
                                                                     </span>
-                                                                    <p style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
-                                                                        {record.disposedBy || "—"}
+                                                                    <p style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                                                        {record.claimDate && !isNaN(new Date(record.claimDate))
+                                                                            ? format(new Date(record.claimDate), "MMM dd, yyyy 'at' hh:mm a")
+                                                                            : "—"}
                                                                     </p>
                                                                 </div>
                                                             </div>
