@@ -246,7 +246,7 @@ const MainPage = () => {
                 disposed: r.disposed || false,
                 disposedBy: r.disposedBy || "—",
                 gcashReference: r.gcashReference || "—",
-                claimDate: r.claimDate, // ADDED: Claimed date
+                claimDate: r.claimDate, // Keep for expanded view
             }));
             
             setRecords(mapped);
@@ -529,11 +529,11 @@ const MainPage = () => {
                      borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                  }}>
                 <div className="min-w-full">
-                    <div className="grid grid-cols-12 gap-4 p-4"
+                    <div className="grid grid-cols-11 gap-4 p-4"
                          style={{
                              backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
                          }}>
-                        {[...Array(12)].map((_, i) => (
+                        {[...Array(11)].map((_, i) => (
                             <div key={i} className="h-4 rounded animate-pulse"
                                  style={{
                                      backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
@@ -545,12 +545,12 @@ const MainPage = () => {
 
             <div className="space-y-3">
                 {[...Array(5)].map((_, rowIndex) => (
-                    <div key={rowIndex} className="grid grid-cols-12 gap-4 p-4 rounded-lg border-2"
+                    <div key={rowIndex} className="grid grid-cols-11 gap-4 p-4 rounded-lg border-2"
                          style={{
                              backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
                              borderColor: isDarkMode ? "#475569" : "#e2e8f0",
                          }}>
-                        {[...Array(12)].map((_, colIndex) => (
+                        {[...Array(11)].map((_, colIndex) => (
                             <div key={colIndex} 
                                  className={`h-4 rounded animate-pulse ${
                                      colIndex === 0 ? "w-4" : colIndex === 4 ? "w-16" : "w-full"

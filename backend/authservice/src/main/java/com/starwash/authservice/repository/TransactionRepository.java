@@ -29,14 +29,21 @@ public interface TransactionRepository extends MongoRepository<Transaction, Stri
 
     List<Transaction> findByPaymentMethodAndGcashVerified(String paymentMethod, Boolean gcashVerified);
     
-    // Add these methods to your TransactionRepository.java
     @Query(value = "{}", fields = "{ 'totalPrice' : 1 }")
     List<Transaction> findTotalPrices();
     
-    @Aggregation("{ $group: { _id: null, total: { $sum: '$totalPrice' } } }")
+    // FIXED: MongoDB aggregation with proper filtering for positive prices
+    @Aggregation(pipeline = {
+        "{ $match: { 'totalPrice': { $gt: 0 } } }",
+        "{ $group: { _id: null, total: { $sum: '$totalPrice' } } }"
+    })
     Double sumTotalPrice();
     
-    @Aggregation("{ $group: { _id: null, total: { $sum: '$serviceQuantity' } } }")
+    // FIXED: MongoDB aggregation with proper filtering for non-null quantities
+    @Aggregation(pipeline = {
+        "{ $match: { 'serviceQuantity': { $ne: null } } }",
+        "{ $group: { _id: null, total: { $sum: '$serviceQuantity' } } }"
+    })
     Integer sumServiceQuantity();
     
     @Query("{ 'createdAt': { $gte: ?0 } }")
@@ -47,13 +54,13 @@ public interface TransactionRepository extends MongoRepository<Transaction, Stri
     List<Transaction> findByCreatedAtAfter(LocalDateTime date, Pageable pageable);
     
     @Aggregation(pipeline = {
-        "{ $match: { 'createdAt': { $gte: ?0 } } }",
+        "{ $match: { 'createdAt': { $gte: ?0 }, 'totalPrice': { $gt: 0 } } }",
         "{ $group: { _id: null, total: { $sum: '$totalPrice' } } }"
     })
     Double sumTotalPriceByCreatedAtAfter(LocalDateTime date);
     
     @Aggregation(pipeline = {
-        "{ $match: { 'createdAt': { $gte: ?0 } } }",
+        "{ $match: { 'createdAt': { $gte: ?0 }, 'serviceQuantity': { $ne: null } } }",
         "{ $group: { _id: null, total: { $sum: '$serviceQuantity' } } }"
     })
     Integer sumServiceQuantityByCreatedAtAfter(LocalDateTime date);

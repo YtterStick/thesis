@@ -6,6 +6,7 @@ import com.starwash.authservice.model.Transaction;
 import com.starwash.authservice.repository.LaundryJobRepository;
 import com.starwash.authservice.repository.MachineRepository;
 import com.starwash.authservice.repository.TransactionRepository;
+import com.starwash.authservice.security.ManilaTimeUtil;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -31,7 +32,9 @@ public class DashboardService {
     public Map<String, Object> getStaffDashboardData() {
         Map<String, Object> data = new HashMap<>();
 
-        LocalDate today = LocalDate.now();
+        // Use Manila time for consistency
+        LocalDateTime now = ManilaTimeUtil.now();
+        LocalDate today = now.toLocalDate();
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
 
@@ -106,18 +109,15 @@ public class DashboardService {
     public Map<String, Object> getAdminDashboardData() {
         Map<String, Object> data = new HashMap<>();
 
+        // FIXED: Use the optimized MongoDB aggregation methods
+        Double totalIncome = transactionRepository.sumTotalPrice();
+        if (totalIncome == null) totalIncome = 0.0;
+
+        Integer totalLoads = transactionRepository.sumServiceQuantity();
+        if (totalLoads == null) totalLoads = 0;
+
+        // For other metrics that need the actual transactions, we still load them
         List<Transaction> allTransactions = transactionRepository.findAll();
-
-        // FIXED: Ensure we're only counting actual paid transactions
-        double totalIncome = allTransactions.stream()
-                .filter(tx -> tx.getTotalPrice() != null && tx.getTotalPrice() > 0)
-                .mapToDouble(Transaction::getTotalPrice)
-                .sum();
-
-        int totalLoads = allTransactions.stream()
-                .filter(tx -> tx.getServiceQuantity() != null)
-                .mapToInt(Transaction::getServiceQuantity)
-                .sum();
 
         int unwashedCount = (int) laundryJobRepository.findAll().stream()
                 .filter(job -> job.getLoadAssignments() != null)
@@ -134,7 +134,8 @@ public class DashboardService {
 
         int totalUnclaimed = allUnclaimedJobs.size();
 
-        int currentYear = LocalDate.now().getYear();
+        // Current year data for chart (using Manila time)
+        int currentYear = ManilaTimeUtil.now().getYear();
         LocalDate startOfYear = LocalDate.of(currentYear, 1, 1);
         LocalDate endOfYear = LocalDate.of(currentYear, 12, 31);
 
@@ -196,14 +197,18 @@ public class DashboardService {
                 })
                 .collect(Collectors.toList());
 
-        // Debug logging for income calculation
-        System.out.println("💰 Backend Total Income Calculation: " + totalIncome);
-        System.out.println("📊 Total Transactions: " + allTransactions.size());
+        // Enhanced debugging
+        System.out.println("🚀 MONGODB AGGREGATION - Total Income: " + totalIncome);
+        System.out.println("📊 MONGODB AGGREGATION - Total Loads: " + totalLoads);
+        System.out.println("💾 Using MongoDB aggregation pipelines");
         
-        // Log sample transactions for debugging
-        allTransactions.stream()
-                .limit(5)
-                .forEach(tx -> System.out.println("   - " + tx.getInvoiceNumber() + ": " + tx.getTotalPrice()));
+        // Compare with Java stream calculation for verification
+        double javaStreamTotal = allTransactions.stream()
+                .filter(tx -> tx.getTotalPrice() != null && tx.getTotalPrice() > 0)
+                .mapToDouble(Transaction::getTotalPrice)
+                .sum();
+        System.out.println("🔍 VERIFICATION - Java Stream Total: " + javaStreamTotal);
+        System.out.println("📈 Difference: " + (totalIncome - javaStreamTotal));
 
         data.put("totalIncome", totalIncome);
         data.put("totalLoads", totalLoads);
