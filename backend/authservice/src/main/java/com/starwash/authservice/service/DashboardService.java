@@ -28,6 +28,85 @@ public class DashboardService {
         this.machineRepository = machineRepository;
     }
 
+    // NEW: Get dashboard totals without pagination
+    public Map<String, Object> getAdminDashboardTotals() {
+        Map<String, Object> data = new HashMap<>();
+
+        // Get ALL transactions without pagination for totals
+        List<Transaction> allTransactions = transactionRepository.findAll();
+
+        // Calculate totals from ALL records
+        double totalIncome = allTransactions.stream()
+                .mapToDouble(Transaction::getTotalPrice)
+                .sum();
+
+        int totalLoads = allTransactions.stream()
+                .mapToInt(Transaction::getServiceQuantity)
+                .sum();
+
+        // Calculate other metrics from ALL laundry jobs
+        List<LaundryJob> allLaundryJobs = laundryJobRepository.findAll();
+        
+        int unwashedCount = (int) allLaundryJobs.stream()
+                .filter(job -> job.getLoadAssignments() != null)
+                .flatMap(job -> job.getLoadAssignments().stream())
+                .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
+                .count();
+
+        List<LaundryJob> allUnclaimedJobs = allLaundryJobs.stream()
+                .filter(job -> job.getLoadAssignments() != null &&
+                        job.getLoadAssignments().stream()
+                                .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
+                .filter(job -> !job.isExpired() && !job.isDisposed())
+                .collect(Collectors.toList());
+
+        int totalUnclaimed = allUnclaimedJobs.size();
+
+        // Get today's pending count
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+        
+        List<Transaction> todayTransactions = transactionRepository.findByCreatedAtBetween(startOfDay, endOfDay);
+        
+        // Calculate pending count (transactions not completed and not claimed)
+        int pendingCount = (int) todayTransactions.stream()
+                .filter(tx -> {
+                    // Find corresponding laundry job
+                    Optional<LaundryJob> jobOpt = allLaundryJobs.stream()
+                            .filter(j -> tx.getInvoiceNumber().equals(j.getTransactionId()))
+                            .findFirst();
+                    
+                    if (jobOpt.isPresent()) {
+                        LaundryJob job = jobOpt.get();
+                        // Pending if not completed or not claimed
+                        boolean isCompleted = job.getLoadAssignments() != null &&
+                                job.getLoadAssignments().stream()
+                                        .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus()));
+                        boolean isClaimed = "CLAIMED".equalsIgnoreCase(job.getPickupStatus());
+                        return !isCompleted || !isClaimed;
+                    }
+                    return true; // If no job found, consider it pending
+                })
+                .count();
+
+        data.put("totalIncome", totalIncome);
+        data.put("totalLoads", totalLoads);
+        data.put("unwashedCount", unwashedCount);
+        data.put("totalUnclaimed", totalUnclaimed);
+        data.put("pendingCount", pendingCount);
+
+        System.out.println("💰 Dashboard Totals Calculated:");
+        System.out.println("   - Total Income: ₱" + totalIncome);
+        System.out.println("   - Total Loads: " + totalLoads);
+        System.out.println("   - Unwashed Count: " + unwashedCount);
+        System.out.println("   - Total Unclaimed: " + totalUnclaimed);
+        System.out.println("   - Pending Count: " + pendingCount);
+
+        return data;
+    }
+
     public Map<String, Object> getStaffDashboardData() {
         Map<String, Object> data = new HashMap<>();
 
@@ -103,35 +182,17 @@ public class DashboardService {
     public Map<String, Object> getAdminDashboardData() {
         Map<String, Object> data = new HashMap<>();
 
-        List<Transaction> allTransactions = transactionRepository.findAll();
+        // Use the new totals method for main metrics
+        Map<String, Object> totals = getAdminDashboardTotals();
+        data.putAll(totals);
 
-        double totalIncome = allTransactions.stream()
-                .mapToDouble(Transaction::getTotalPrice)
-                .sum();
-
-        int totalLoads = allTransactions.stream()
-                .mapToInt(Transaction::getServiceQuantity)
-                .sum();
-
-        int unwashedCount = (int) laundryJobRepository.findAll().stream()
-                .filter(job -> job.getLoadAssignments() != null)
-                .flatMap(job -> job.getLoadAssignments().stream())
-                .filter(load -> !"COMPLETED".equalsIgnoreCase(load.getStatus()))
-                .count();
-
-        List<LaundryJob> allUnclaimedJobs = laundryJobRepository.findAll().stream()
-                .filter(job -> job.getLoadAssignments() != null &&
-                        job.getLoadAssignments().stream()
-                                .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
-                .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
-                .collect(Collectors.toList());
-
-        int totalUnclaimed = allUnclaimedJobs.size();
-
+        // Keep the existing chart data logic
         int currentYear = LocalDate.now().getYear();
         LocalDate startOfYear = LocalDate.of(currentYear, 1, 1);
         LocalDate endOfYear = LocalDate.of(currentYear, 12, 31);
 
+        List<Transaction> allTransactions = transactionRepository.findAll();
+        
         Map<String, Double> monthlyIncome = new LinkedHashMap<>();
 
         String[] monthNames = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -158,6 +219,14 @@ public class DashboardService {
                     monthData.put("total", entry.getValue());
                     return monthData;
                 })
+                .collect(Collectors.toList());
+
+        // Get unclaimed list
+        List<LaundryJob> allUnclaimedJobs = laundryJobRepository.findAll().stream()
+                .filter(job -> job.getLoadAssignments() != null &&
+                        job.getLoadAssignments().stream()
+                                .allMatch(load -> "COMPLETED".equalsIgnoreCase(load.getStatus())))
+                .filter(job -> "UNCLAIMED".equalsIgnoreCase(job.getPickupStatus()))
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> unclaimedList = allUnclaimedJobs.stream()
@@ -190,10 +259,6 @@ public class DashboardService {
                 })
                 .collect(Collectors.toList());
 
-        data.put("totalIncome", totalIncome);
-        data.put("totalLoads", totalLoads);
-        data.put("unwashedCount", unwashedCount);
-        data.put("totalUnclaimed", totalUnclaimed);
         data.put("overviewData", overviewData);
         data.put("unclaimedList", unclaimedList);
 

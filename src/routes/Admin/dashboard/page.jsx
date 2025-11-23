@@ -6,7 +6,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
-import { getManilaTime, toManilaTime } from '@/utils/manilaTime';
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 10000;
@@ -105,7 +104,7 @@ const calculateUnwashedLoads = (records) => {
     return records.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
 };
 
-// Calculate total income and loads - FIXED TO CALCULATE OVERALL TOTALS
+// Calculate total income and loads
 const calculateTotals = (records) => {
     const totalIncome = records.reduce((acc, r) => acc + (r.price || 0), 0);
     const totalLoads = records.reduce((acc, r) => acc + (r.loads || 0), 0);
@@ -136,7 +135,7 @@ export default function AdminDashboardPage() {
         return {
             totalIncome: 0,
             totalLoads: 0,
-            unwashedCount: 0,
+            pendingCount: 0,
             totalUnclaimed: 0,
             overviewData: [],
             todayTransactions: [],
@@ -157,7 +156,7 @@ export default function AdminDashboardPage() {
         return (
             newData.totalIncome !== oldData.totalIncome ||
             newData.totalLoads !== oldData.totalLoads ||
-            newData.unwashedCount !== oldData.unwashedCount ||
+            newData.pendingCount !== oldData.pendingCount ||
             newData.totalUnclaimed !== oldData.totalUnclaimed ||
             JSON.stringify(newData.overviewData) !== JSON.stringify(oldData.overviewData) ||
             JSON.stringify(newData.todayTransactions) !== JSON.stringify(oldData.todayTransactions)
@@ -236,7 +235,7 @@ export default function AdminDashboardPage() {
             console.log("🔐 User authenticated, proceeding to dashboard data...");
 
             // Fetch records from the same endpoint as AdminRecordTable
-            const recordsData = await api.get("/admin/records");
+            const recordsData = await api.get("api/admin/records");
             console.log("📊 Raw records data:", recordsData);
 
             // Map the records to match AdminRecordTable structure
@@ -263,7 +262,7 @@ export default function AdminDashboardPage() {
                 unwashedLoadsCount: r.unwashedLoadsCount || 0,
             }));
 
-            // Calculate metrics using the same logic as AdminRecordTable - NOW USING ALL RECORDS FOR OVERALL TOTALS
+            // Calculate metrics using the same logic as AdminRecordTable
             const { totalIncome, totalLoads } = calculateTotals(mappedRecords);
             const unwashedCount = calculateUnwashedLoads(mappedRecords);
             const { totalUnclaimed, unclaimedList } = calculateUnclaimedLoads(mappedRecords);
@@ -282,19 +281,27 @@ export default function AdminDashboardPage() {
                 // Sort by creation date - latest first
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-            console.log("💰 Overall Total Income:", totalIncome);
-            console.log("📦 Overall Total Loads:", totalLoads);
-            console.log("🔄 Unwashed Count:", unwashedCount);
-            console.log("📦 Unclaimed Count:", totalUnclaimed);
+            const pendingCount = todayTransactions.filter(t => 
+                t.laundryStatus !== "Completed" && t.pickupStatus !== "CLAIMED"
+            ).length;
+
+            console.log("📈 Calculated metrics:", {
+                totalIncome,
+                totalLoads,
+                unwashedCount,
+                totalUnclaimed,
+                pendingCount,
+                todayTransactionsCount: todayTransactions.length
+            });
 
             // Get the chart data from your existing backend endpoint
-            const dashboardApiData = await api.get("/dashboard/admin");
+            const dashboardApiData = await api.get("/api/dashboard/admin");
             console.log("📊 Chart data from backend:", dashboardApiData.overviewData);
 
             const newDashboardData = {
                 totalIncome: totalIncome || 0,
                 totalLoads: totalLoads || 0,
-                unwashedCount: unwashedCount || 0,
+                pendingCount: pendingCount || 0,
                 totalUnclaimed: totalUnclaimed || 0,
                 todayTransactions: todayTransactions || [],
                 overviewData: dashboardApiData.overviewData || [],
@@ -417,26 +424,10 @@ export default function AdminDashboardPage() {
     }, [fetchDashboardData, isAuthenticated, isAdmin, logout]);
 
     const formatCurrency = (amount) => {
-        const formatted = `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
-        return formatted;
+        return `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
     };
 
-    const formatManilaDateTime = (date) => {
-        if (!date) return 'N/A';
-        
-        const manilaDate = toManilaTime(new Date(date));
-        return manilaDate.toLocaleString('en-PH', {
-            timeZone: 'Asia/Manila',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
-    // Add this function to handle card click
+    // Add this function to handle card click - UPDATED TO MAKE ENTIRE CARD CLICKABLE
     const handleTransactionClick = (customerName) => {
         // Store the search term in sessionStorage to be used in MainPage
         sessionStorage.setItem('autoSearchName', customerName);
@@ -740,72 +731,66 @@ export default function AdminDashboardPage() {
             icon: <PhilippinePeso size={26} />,
             value: formatCurrency(displayData.totalIncome || 0),
             color: "#3DD9B6",
-            description: "Overall total revenue from all time", // UPDATED DESCRIPTION
+            description: "Total revenue generated",
         },
         {
             title: "Total Loads",
             icon: <Package size={26} />,
             value: (displayData.totalLoads || 0).toLocaleString(),
             color: "#60A5FA",
-            description: "Total laundry loads processed all time", // UPDATED DESCRIPTION
+            description: "Laundry loads processed",
         },
         {
-            title: "Unwashed",
+            title: "Pending",
             icon: <Clock8 size={26} />,
-            value: (displayData.unwashedCount || 0).toLocaleString(),
+            value: (displayData.pendingCount || 0).toLocaleString(),
             color: "#FB923C",
-            description: "Current loads pending processing",
+            description: "Today's pending laundry",
         },
         {
             title: "Unclaimed",
             icon: <PackageX size={26} />,
             value: (displayData.totalUnclaimed || 0).toLocaleString(),
             color: "#F87171",
-            description: "Completed but not picked up",
+            description: "Not picked up",
         },
     ];
 
     return (
         <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
-            {/* Section Header - REMOVED TIME LABEL */}
+            {/* Section Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-3 flex items-center justify-between gap-3"
+                className="mb-3 flex items-center gap-3"
             >
-                <div className="flex items-center gap-3">
-                    <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="rounded-lg p-2"
-                        style={{
-                            backgroundColor: isDarkMode ? "#1e293b" : "#1e293b",
-                            color: isDarkMode ? "#1e293b" : "#1e293b",
-                        }}
+                <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="rounded-lg p-2"
+                    style={{
+                        backgroundColor: isDarkMode ? "#1e293b" : "#1e293b",
+                        color: isDarkMode ? "#1e293b" : "#1e293b",
+                    }}
+                >
+                    <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
+                </motion.div>
+                <div>
+                    <p
+                        className="text-xl font-bold"
+                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                     >
-                        <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
-                    </motion.div>
-                    <div>
-                        <p
-                            className="text-xl font-bold"
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                        >
-                            Admin Dashboard
-                        </p>
-                        <p
-                            className="text-sm"
-                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                        >
-                            Real-time business overview and analytics
-                            {dashboardData.lastUpdated && (
-                                <span> • Last updated: {formatManilaDateTime(dashboardData.lastUpdated)}</span>
-                            )}
-                        </p>
-                    </div>
+                        Admin Dashboard
+                    </p>
+                    <p
+                        className="text-sm"
+                        style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                    >
+                        Real-time business overview and analytics
+                    </p>
                 </div>
-                {/* REMOVED TIME DISPLAY FROM HEADER */}
             </motion.div>
 
-            {/* Summary Cards - NOW SHOWING OVERALL TOTALS */}
+            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {summaryCards.map(({ title, icon, value, color, description }, index) => (
                     <motion.div
@@ -868,7 +853,7 @@ export default function AdminDashboardPage() {
                 ))}
             </div>
 
-            {/* 📈 Chart & Today's Transactions - KEPT ALL EXISTING COMPONENTS */}
+            {/* 📈 Chart & Today's Transactions */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
                 {/* Chart Card */}
                 <motion.div
@@ -988,7 +973,7 @@ export default function AdminDashboardPage() {
                     </div>
                 </motion.div>
 
-                {/* Today's Transactions Card */}
+                {/* Today's Transactions Card - UPDATED WITH FULLY CLICKABLE CARDS */}
                 <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -1076,6 +1061,7 @@ export default function AdminDashboardPage() {
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start mb-2">
+                                                    {/* REMOVED BUTTON FROM NAME - NOW ENTIRE CARD IS CLICKABLE */}
                                                     <p
                                                         className="text-sm font-semibold"
                                                         style={{ 

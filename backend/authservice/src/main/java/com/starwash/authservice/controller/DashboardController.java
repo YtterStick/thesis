@@ -33,7 +33,7 @@ public class DashboardController {
         }
     }
 
-    // NEW: Admin dashboard endpoint
+    // Admin dashboard endpoint
     @GetMapping("/admin")
     public ResponseEntity<Map<String, Object>> getAdminDashboard(
             @RequestHeader("Authorization") String authHeader) {
@@ -45,6 +45,23 @@ public class DashboardController {
         try {
             Map<String, Object> dashboardData = dashboardService.getAdminDashboardData();
             return ResponseEntity.ok(dashboardData);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // NEW: Admin dashboard totals endpoint (for accurate totals without pagination)
+    @GetMapping("/admin/totals")
+    public ResponseEntity<Map<String, Object>> getAdminDashboardTotals(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            Map<String, Object> dashboardTotals = dashboardService.getAdminDashboardTotals();
+            return ResponseEntity.ok(dashboardTotals);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
