@@ -8,7 +8,7 @@ import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
-const POLLING_INTERVAL = 10000;
+const POLLING_INTERVAL = 5000; // Reduced for faster updates
 
 const initializeCache = () => {
     try {
@@ -104,13 +104,6 @@ const calculateUnwashedLoads = (records) => {
     return records.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
 };
 
-// Calculate total income and loads
-const calculateTotals = (records) => {
-    const totalIncome = records.reduce((acc, r) => acc + (r.price || 0), 0);
-    const totalLoads = records.reduce((acc, r) => acc + (r.loads || 0), 0);
-    return { totalIncome, totalLoads };
-};
-
 export default function AdminDashboardPage() {
     const { theme } = useTheme();
     const { isAuthenticated, user, logout } = useAuth();
@@ -148,6 +141,7 @@ export default function AdminDashboardPage() {
 
     const [initialLoad, setInitialLoad] = useState(!dashboardCache);
     const pollingIntervalRef = useRef(null);
+    const transactionCheckIntervalRef = useRef(null);
     const isMountedRef = useRef(true);
 
     const hasDataChanged = (newData, oldData) => {
@@ -234,11 +228,15 @@ export default function AdminDashboardPage() {
 
             console.log("🔐 User authenticated, proceeding to dashboard data...");
 
-            // Fetch records from the same endpoint as AdminRecordTable
-            const recordsData = await api.get("api/admin/records");
-            console.log("📊 Raw records data:", recordsData);
+            // ✅ Fetch TOTALS from dedicated endpoint (no pagination issues)
+            const totalsResponse = await api.get("/dashboard/admin/totals");
+            console.log("💰 Dashboard totals:", totalsResponse);
 
-            // Map the records to match AdminRecordTable structure
+            // ✅ Fetch paginated records ONLY for today's transactions display
+            const recordsData = await api.get("/admin/records?page=0&size=50");
+            console.log("📊 Today's records data:", recordsData);
+
+            // Map the records for today's transactions
             const mappedRecords = recordsData.map((r) => ({
                 id: r.id,
                 invoiceNumber: r.invoiceNumber,
@@ -254,6 +252,7 @@ export default function AdminDashboardPage() {
                 laundryProcessedBy: r.laundryProcessedBy || "—",
                 claimProcessedBy: r.claimProcessedBy || "—",
                 createdAt: r.createdAt,
+                issueDate: r.issueDate, // ✅ Add issueDate from backend
                 paid: r.paid || false,
                 expired: r.expired,
                 disposed: r.disposed || false,
@@ -262,56 +261,40 @@ export default function AdminDashboardPage() {
                 unwashedLoadsCount: r.unwashedLoadsCount || 0,
             }));
 
-            // Calculate metrics using the same logic as AdminRecordTable
-            const { totalIncome, totalLoads } = calculateTotals(mappedRecords);
-            const unwashedCount = calculateUnwashedLoads(mappedRecords);
-            const { totalUnclaimed, unclaimedList } = calculateUnclaimedLoads(mappedRecords);
-
-            // Calculate today's transactions
+            // ✅ FIXED: Use issueDate (PH time) instead of createdAt for today's transactions
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
             const todayTransactions = mappedRecords
                 .filter(record => {
-                    if (!record.createdAt) return false;
-                    const recordDate = new Date(record.createdAt);
+                    if (!record.issueDate) return false;
+                    const recordDate = new Date(record.issueDate);
                     recordDate.setHours(0, 0, 0, 0);
                     return recordDate.getTime() === today.getTime();
                 })
-                // Sort by creation date - latest first
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                .sort((a, b) => new Date(b.issueDate) - new Date(a.issueDate));
 
-            const pendingCount = todayTransactions.filter(t => 
-                t.laundryStatus !== "Completed" && t.pickupStatus !== "CLAIMED"
-            ).length;
+            console.log("📅 Today's transactions using issueDate:", todayTransactions.length);
 
-            console.log("📈 Calculated metrics:", {
-                totalIncome,
-                totalLoads,
-                unwashedCount,
-                totalUnclaimed,
-                pendingCount,
-                todayTransactionsCount: todayTransactions.length
-            });
-
-            // Get the chart data from your existing backend endpoint
-            const dashboardApiData = await api.get("/api/dashboard/admin");
+            // Get chart data from existing endpoint
+            const dashboardApiData = await api.get("/dashboard/admin");
             console.log("📊 Chart data from backend:", dashboardApiData.overviewData);
 
+            // ✅ Use accurate totals from the dedicated endpoint
             const newDashboardData = {
-                totalIncome: totalIncome || 0,
-                totalLoads: totalLoads || 0,
-                pendingCount: pendingCount || 0,
-                totalUnclaimed: totalUnclaimed || 0,
+                totalIncome: totalsResponse.totalIncome || 0,
+                totalLoads: totalsResponse.totalLoads || 0,
+                pendingCount: totalsResponse.pendingCount || 0,
+                totalUnclaimed: totalsResponse.totalUnclaimed || 0,
                 todayTransactions: todayTransactions || [],
                 overviewData: dashboardApiData.overviewData || [],
-                unclaimedList: unclaimedList || [],
+                unclaimedList: dashboardApiData.unclaimedList || [],
             };
 
             const currentTime = Date.now();
 
             if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
-                console.log("🔄 Dashboard data updated with fresh data");
+                console.log("🔄 Dashboard data updated with fresh totals");
 
                 dashboardCache = {
                     data: newDashboardData,
@@ -368,6 +351,47 @@ export default function AdminDashboardPage() {
         }
     };
 
+    // Add a function to check for new transactions specifically
+    const checkForNewTransactions = useCallback(async () => {
+        if (!isMountedRef.current || !isAuthenticated || !isAdmin) return;
+
+        try {
+            const recordsData = await api.get("/admin/records?page=0&size=10&sort=createdAt,desc");
+            const mappedRecords = recordsData.map((r) => ({
+                id: r.id,
+                invoiceNumber: r.invoiceNumber,
+                name: r.customerName,
+                service: r.serviceName,
+                loads: r.loads || 0,
+                price: r.totalPrice || 0,
+                paymentMethod: r.paymentMethod || "—",
+                issueDate: r.issueDate,
+                createdAt: r.createdAt,
+            }));
+
+            // Check if there are new transactions since last check
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const newTodayTransactions = mappedRecords
+                .filter(record => {
+                    if (!record.issueDate) return false;
+                    const recordDate = new Date(record.issueDate);
+                    recordDate.setHours(0, 0, 0, 0);
+                    return recordDate.getTime() === today.getTime();
+                });
+
+            // If new transactions found, refresh the entire dashboard
+            const currentTransactionCount = dashboardData.todayTransactions?.length || 0;
+            if (newTodayTransactions.length > currentTransactionCount) {
+                console.log("🆕 New transactions detected, refreshing dashboard...");
+                fetchDashboardData(true); // Force refresh
+            }
+        } catch (error) {
+            console.error("❌ Error checking for new transactions:", error);
+        }
+    }, [isAuthenticated, isAdmin, dashboardData.todayTransactions?.length, fetchDashboardData]);
+
     useEffect(() => {
         isMountedRef.current = true;
 
@@ -395,10 +419,17 @@ export default function AdminDashboardPage() {
 
             fetchDashboardData();
 
+            // Regular polling for overall data
             pollingIntervalRef.current = setInterval(() => {
                 console.log("🔄 Auto-refreshing dashboard data...");
                 fetchDashboardData(false);
             }, POLLING_INTERVAL);
+
+            // More frequent checking for new transactions
+            transactionCheckIntervalRef.current = setInterval(() => {
+                checkForNewTransactions();
+            }, 3000); // Check every 3 seconds for new transactions
+
         } else if (!isAuthenticated) {
             setDashboardData((prev) => ({
                 ...prev,
@@ -420,18 +451,18 @@ export default function AdminDashboardPage() {
             if (pollingIntervalRef.current) {
                 clearInterval(pollingIntervalRef.current);
             }
+            if (transactionCheckIntervalRef.current) {
+                clearInterval(transactionCheckIntervalRef.current);
+            }
         };
-    }, [fetchDashboardData, isAuthenticated, isAdmin, logout]);
+    }, [fetchDashboardData, checkForNewTransactions, isAuthenticated, isAdmin, logout]);
 
     const formatCurrency = (amount) => {
         return `₱${(amount || 0).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
     };
 
-    // Add this function to handle card click - UPDATED TO MAKE ENTIRE CARD CLICKABLE
     const handleTransactionClick = (customerName) => {
-        // Store the search term in sessionStorage to be used in MainPage
         sessionStorage.setItem('autoSearchName', customerName);
-        // Redirect to manage transactions page
         navigate('/managetransaction');
     };
 
@@ -973,7 +1004,7 @@ export default function AdminDashboardPage() {
                     </div>
                 </motion.div>
 
-                {/* Today's Transactions Card - UPDATED WITH FULLY CLICKABLE CARDS */}
+                {/* Today's Transactions Card */}
                 <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -1061,7 +1092,6 @@ export default function AdminDashboardPage() {
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start mb-2">
-                                                    {/* REMOVED BUTTON FROM NAME - NOW ENTIRE CARD IS CLICKABLE */}
                                                     <p
                                                         className="text-sm font-semibold"
                                                         style={{ 

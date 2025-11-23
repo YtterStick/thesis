@@ -1,11 +1,10 @@
 package com.starwash.authservice.dto;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class AdminRecordResponseDto {
     private String id;
-    private String invoiceNumber; // Add this field
+    private String invoiceNumber;
     private String customerName;
     private String contact;
     private String serviceName;
@@ -20,6 +19,7 @@ public class AdminRecordResponseDto {
     private boolean paid;
     private boolean expired;
     private LocalDateTime createdAt;
+    private LocalDateTime issueDate; // ✅ Added issueDate field
     private Boolean gcashVerified;
     private String laundryProcessedBy;
     private String claimProcessedBy;
@@ -34,7 +34,7 @@ public class AdminRecordResponseDto {
                                  int loads, String detergent, String fabric, double totalPrice,
                                  String paymentMethod, String pickupStatus, String laundryStatus,
                                  String processedByStaff, boolean paid, boolean expired, 
-                                 LocalDateTime createdAt, Boolean gcashVerified,
+                                 LocalDateTime createdAt, LocalDateTime issueDate, Boolean gcashVerified,
                                  String laundryProcessedBy, String claimProcessedBy,
                                  boolean disposed, String disposedBy, int unwashedLoadsCount, LocalDateTime claimDate) {
         this.id = id;
@@ -53,6 +53,7 @@ public class AdminRecordResponseDto {
         this.paid = paid;
         this.expired = expired;
         this.createdAt = createdAt;
+        this.issueDate = issueDate; // ✅ Added to constructor
         this.gcashVerified = gcashVerified;
         this.laundryProcessedBy = laundryProcessedBy;
         this.claimProcessedBy = claimProcessedBy;
@@ -62,9 +63,7 @@ public class AdminRecordResponseDto {
         this.claimDate = claimDate;
     }
 
-     // Add getter and setter
-    public LocalDateTime getClaimDate() { return claimDate; }
-    public void setClaimDate(LocalDateTime claimDate) { this.claimDate = claimDate; }
+    // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     
@@ -113,6 +112,10 @@ public class AdminRecordResponseDto {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     
+    // ✅ Added getter and setter for issueDate
+    public LocalDateTime getIssueDate() { return issueDate; }
+    public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
+    
     public Boolean getGcashVerified() { return gcashVerified; }
     public void setGcashVerified(Boolean gcashVerified) { this.gcashVerified = gcashVerified; }
     
@@ -121,6 +124,9 @@ public class AdminRecordResponseDto {
     
     public String getClaimProcessedBy() { return claimProcessedBy; }
     public void setClaimProcessedBy(String claimProcessedBy) { this.claimProcessedBy = claimProcessedBy; }
+    
+    public LocalDateTime getClaimDate() { return claimDate; }
+    public void setClaimDate(LocalDateTime claimDate) { this.claimDate = claimDate; }
     
     public boolean isDisposed() { return disposed; }
     public void setDisposed(boolean disposed) { this.disposed = disposed; }
