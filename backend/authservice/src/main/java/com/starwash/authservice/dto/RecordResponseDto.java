@@ -19,13 +19,14 @@ public class RecordResponseDto {
     private boolean washed;
     private boolean expired;
     private LocalDateTime createdAt;
+    private LocalDateTime issueDate; // ✅ Added issueDate field
 
     public RecordResponseDto() {}
 
     public RecordResponseDto(String id, String invoiceNumber, String customerName, String contact, String serviceName, int loads,
                              String detergent, String fabric, double totalPrice,
                              String paymentMethod, String pickupStatus, boolean washed,
-                             boolean expired, LocalDateTime createdAt) {
+                             boolean expired, LocalDateTime createdAt, LocalDateTime issueDate) {
         this.id = id;
         this.invoiceNumber = invoiceNumber;
         this.customerName = customerName;
@@ -40,6 +41,7 @@ public class RecordResponseDto {
         this.washed = washed;
         this.expired = expired;
         this.createdAt = createdAt;
+        this.issueDate = issueDate; // ✅ Added to constructor
     }
 
     public String getId() { return id; }
@@ -86,4 +88,8 @@ public class RecordResponseDto {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    // ✅ Added getter and setter for issueDate
+    public LocalDateTime getIssueDate() { return issueDate; }
+    public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
 }

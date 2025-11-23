@@ -231,6 +231,7 @@ const MainPage = () => {
                 laundryProcessedBy: r.laundryProcessedBy || "—",
                 claimProcessedBy: r.claimProcessedBy || "—",
                 createdAt: r.createdAt,
+                issueDate: r.issueDate, // ✅ ADDED: issueDate from backend
                 dueDate: r.dueDate, // ✅ ADDED: dueDate from backend
                 paid: r.paid || false,
                 expired: r.expired,

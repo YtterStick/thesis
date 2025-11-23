@@ -18,7 +18,8 @@ const tableHeaders = [
     "Detergent",
     "Fabric",
     "Price",
-    "Due Date", // ✅ CHANGED from "Date" to "Due Date"
+    "Date", // ✅ This will now display issueDate instead of createdAt
+    "Due Date", // ✅ ADDED: New column for dueDate
     "Payment",
     "GCash Ref",
     "Pickup Status",
@@ -256,14 +257,14 @@ const AdminRecordTable = ({
         setExpandedRows(newExpanded);
     };
 
-    // ✅ UPDATED: Use dueDate instead of createdAt for date filtering
+    // ✅ UPDATED: Use issueDate instead of createdAt for date filtering
     const isInRange = (dateStr) => {
         if (!dateStr) return false;
 
-        const dueDate = new Date(dateStr);
-        if (isNaN(dueDate.getTime())) return false;
+        const issueDate = new Date(dateStr);
+        if (isNaN(issueDate.getTime())) return false;
 
-        dueDate.setHours(0, 0, 0, 0);
+        issueDate.setHours(0, 0, 0, 0);
 
         const range = localSelectedRange || {};
         const from = range.from ? new Date(range.from) : null;
@@ -273,13 +274,13 @@ const AdminRecordTable = ({
         if (to) to.setHours(23, 59, 59, 999);
 
         if (from && to) {
-            return dueDate >= from && dueDate <= to;
+            return issueDate >= from && issueDate <= to;
         }
         if (from) {
-            return dueDate >= from;
+            return issueDate >= from;
         }
         if (to) {
-            return dueDate <= to;
+            return issueDate <= to;
         }
         return true;
     };
@@ -389,9 +390,9 @@ const AdminRecordTable = ({
                         valueB = b.loads;
                         break;
                     case "date":
-                        // ✅ UPDATED: Use dueDate instead of createdAt for sorting
-                        valueA = new Date(a.dueDate || a.createdAt);
-                        valueB = new Date(b.dueDate || b.createdAt);
+                        // ✅ UPDATED: Use issueDate instead of createdAt for sorting
+                        valueA = new Date(a.issueDate || a.createdAt);
+                        valueB = new Date(b.issueDate || b.createdAt);
                         break;
                     case "name":
                         valueA = a.name?.toLowerCase() || "";
@@ -417,8 +418,8 @@ const AdminRecordTable = ({
     };
 
     // FIXED: Use stable items for filtering to prevent flickering
-    // ✅ UPDATED: Use dueDate instead of createdAt for filtering
-    const filtered = stableItems.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.dueDate || r.createdAt));
+    // ✅ UPDATED: Use issueDate instead of createdAt for filtering
+    const filtered = stableItems.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.issueDate || r.createdAt));
     const filteredWithActive = applyFilters(filtered);
 
     // FIXED: Ensure we always have data to display
@@ -493,10 +494,10 @@ const AdminRecordTable = ({
                     console.log(`📦 Received ${allData.length} records for export`);
 
                     // Apply the same client-side filters and search
-                    // ✅ UPDATED: Use dueDate instead of createdAt for filtering
+                    // ✅ UPDATED: Use issueDate instead of createdAt for filtering
                     let filteredAllData = allData.filter((r) => {
                         const matchesSearch = r.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesDate = isInRange(r.dueDate || r.createdAt);
+                        const matchesDate = isInRange(r.issueDate || r.createdAt);
                         return matchesSearch && matchesDate;
                     });
 
@@ -529,20 +530,25 @@ const AdminRecordTable = ({
                 const formattedPrice = formatCurrency(safePrice);
 
                 // Safe date formatting with fallback
+                let formattedIssueDate = "—";
                 let formattedDueDate = "—";
                 let formattedClaimDate = "—";
                 try {
-                    // ✅ UPDATED: Use dueDate instead of createdAt
+                    // ✅ UPDATED: Use issueDate instead of createdAt for Date column
+                    if (item.issueDate && !isNaN(new Date(item.issueDate))) {
+                        formattedIssueDate = format(new Date(item.issueDate), "MMM dd, yyyy");
+                    } else if (item.createdAt && !isNaN(new Date(item.createdAt))) {
+                        formattedIssueDate = format(new Date(item.createdAt), "MMM dd, yyyy");
+                    }
+                    // ✅ ADDED: Due Date formatting
                     if (item.dueDate && !isNaN(new Date(item.dueDate))) {
                         formattedDueDate = format(new Date(item.dueDate), "MMM dd, yyyy");
-                    } else if (item.createdAt && !isNaN(new Date(item.createdAt))) {
-                        formattedDueDate = format(new Date(item.createdAt), "MMM dd, yyyy");
                     }
                     if (item.claimDate && !isNaN(new Date(item.claimDate))) {
                         formattedClaimDate = formatTimeNormal(item.claimDate);
                     }
                 } catch (dateError) {
-                    console.warn("Invalid date format for item:", item.id, item.dueDate);
+                    console.warn("Invalid date format for item:", item.id, item.issueDate, item.dueDate);
                 }
 
                 return {
@@ -553,7 +559,8 @@ const AdminRecordTable = ({
                     Detergent: item.detergent || "0",
                     Fabric: item.fabric || "0",
                     Price: formattedPrice,
-                    "Due Date": formattedDueDate, // ✅ UPDATED: Changed from "Date" to "Due Date"
+                    "Date": formattedIssueDate, // ✅ CHANGED: Now shows issueDate
+                    "Due Date": formattedDueDate, // ✅ ADDED: New column
                     "Claimed Date": formattedClaimDate,
                     "Payment Method": item.paymentMethod || "—",
                     "GCash Reference": getGcashReference(item),
@@ -573,6 +580,7 @@ const AdminRecordTable = ({
                 { wch: 15 },
                 { wch: 12 },
                 { wch: 15 },
+                { wch: 12 }, // Date column (issueDate)
                 { wch: 12 }, // Due Date column
                 { wch: 15 }, // Claimed Date column
                 { wch: 20 },
@@ -960,15 +968,24 @@ const AdminRecordTable = ({
                                                     >
                                                         {formatCurrency(record.price)}
                                                     </td>
-                                                    {/* ✅ UPDATED: Display dueDate instead of createdAt */}
+                                                    {/* ✅ UPDATED: Display issueDate instead of createdAt for Date column */}
+                                                    <td
+                                                        className="whitespace-nowrap px-3 py-2"
+                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                    >
+                                                        {record.issueDate && !isNaN(new Date(record.issueDate))
+                                                            ? format(new Date(record.issueDate), "MMM dd, yyyy")
+                                                            : record.createdAt && !isNaN(new Date(record.createdAt))
+                                                            ? format(new Date(record.createdAt), "MMM dd, yyyy")
+                                                            : "—"}
+                                                    </td>
+                                                    {/* ✅ ADDED: New Due Date column */}
                                                     <td
                                                         className="whitespace-nowrap px-3 py-2"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
                                                         {record.dueDate && !isNaN(new Date(record.dueDate))
                                                             ? format(new Date(record.dueDate), "MMM dd, yyyy")
-                                                            : record.createdAt && !isNaN(new Date(record.createdAt))
-                                                            ? format(new Date(record.createdAt), "MMM dd, yyyy")
                                                             : "—"}
                                                     </td>
                                                     <td className="whitespace-nowrap px-3 py-2">

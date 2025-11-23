@@ -463,7 +463,7 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
-    // UPDATED: Use ManilaTimeUtil consistently for all date operations
+    // UPDATED: Use issueDate instead of createdAt for today filter
     public Map<String, Object> getStaffRecordsSummary() {
         Map<String, Object> summary = new HashMap<>();
 
@@ -480,13 +480,15 @@ public class TransactionService {
 
         List<RecordResponseDto> allRecords = this.getAllRecords();
 
+        // ✅ UPDATED: Use issueDate instead of createdAt for today filter
         List<RecordResponseDto> todaysRecords = allRecords.stream()
                 .filter(record -> !record.isDisposed())
                 .filter(record -> {
-                    LocalDateTime createdAt = record.getCreatedAt();
-                    return createdAt != null &&
-                            createdAt.isAfter(startOfDay) &&
-                            createdAt.isBefore(endOfDay);
+                    // Try to get issueDate first, fall back to createdAt if issueDate is null
+                    LocalDateTime recordDate = record.getIssueDate() != null ? record.getIssueDate() : record.getCreatedAt();
+                    return recordDate != null &&
+                            recordDate.isAfter(startOfDay) &&
+                            recordDate.isBefore(endOfDay);
                 })
                 .collect(Collectors.toList());
 
@@ -526,6 +528,7 @@ public class TransactionService {
         System.out.println("📈 Summary Results:");
         System.out.println("   - Today's Income: ₱" + todayIncome);
         System.out.println("   - Today's Loads: " + todayLoads);
+        System.out.println("   - Today's Records Count: " + todaysRecords.size());
         System.out.println("   - Unwashed Count: " + unwashedCount);
         System.out.println("   - Unclaimed Count: " + unclaimedCount);
         System.out.println("   - Expired Count: " + expiredCount);
@@ -820,8 +823,17 @@ public class TransactionService {
             Double result = transactionRepository.sumTotalPrice();
             return result != null ? result : 0.0;
         } else {
-            Double result = transactionRepository.sumTotalPriceByCreatedAtAfter(startDate);
-            return result != null ? result : 0.0;
+            // ✅ UPDATED: Use issueDate for filtering
+            List<Transaction> transactions = transactionRepository.findAll().stream()
+                    .filter(tx -> {
+                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
+                        return recordDate != null && !recordDate.isBefore(startDate);
+                    })
+                    .collect(Collectors.toList());
+            
+            return transactions.stream()
+                    .mapToDouble(Transaction::getTotalPrice)
+                    .sum();
         }
     }
 
@@ -830,8 +842,17 @@ public class TransactionService {
             Integer result = transactionRepository.sumServiceQuantity();
             return result != null ? result : 0;
         } else {
-            Integer result = transactionRepository.sumServiceQuantityByCreatedAtAfter(startDate);
-            return result != null ? result : 0;
+            // ✅ UPDATED: Use issueDate for filtering
+            List<Transaction> transactions = transactionRepository.findAll().stream()
+                    .filter(tx -> {
+                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
+                        return recordDate != null && !recordDate.isBefore(startDate);
+                    })
+                    .collect(Collectors.toList());
+            
+            return transactions.stream()
+                    .mapToInt(Transaction::getServiceQuantity)
+                    .sum();
         }
     }
 
@@ -841,7 +862,13 @@ public class TransactionService {
         if ("all".equals(timeFilter)) {
             transactions = transactionRepository.findAll();
         } else {
-            transactions = transactionRepository.findByCreatedAtAfter(startDate);
+            // ✅ UPDATED: Use issueDate for filtering
+            transactions = transactionRepository.findAll().stream()
+                    .filter(tx -> {
+                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
+                        return recordDate != null && !recordDate.isBefore(startDate);
+                    })
+                    .collect(Collectors.toList());
         }
 
         return transactions.stream()
@@ -858,7 +885,13 @@ public class TransactionService {
         if ("all".equals(timeFilter)) {
             transactions = transactionRepository.findAll();
         } else {
-            transactions = transactionRepository.findByCreatedAtAfter(startDate);
+            // ✅ UPDATED: Use issueDate for filtering
+            transactions = transactionRepository.findAll().stream()
+                    .filter(tx -> {
+                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
+                        return recordDate != null && !recordDate.isBefore(startDate);
+                    })
+                    .collect(Collectors.toList());
         }
 
         return transactions.stream()
@@ -875,8 +908,13 @@ public class TransactionService {
         } else {
             LocalDateTime currentManilaTime = getCurrentManilaTime();
             LocalDateTime startDate = calculateStartDate(timeFilter, currentManilaTime);
-            // This could be optimized with a count query
-            return transactionRepository.findByCreatedAtAfter(startDate).size();
+            // ✅ UPDATED: Use issueDate for filtering
+            return transactionRepository.findAll().stream()
+                    .filter(tx -> {
+                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
+                        return recordDate != null && !recordDate.isBefore(startDate);
+                    })
+                    .count();
         }
     }
 
@@ -903,6 +941,7 @@ public class TransactionService {
         return Criteria.where("createdAt").gte(startDate);
     }
 
+    // ✅ UPDATED: Use issueDate instead of createdAt for filtering
     private List<Transaction> filterTransactionsByTime(List<Transaction> transactions, String timeFilter,
             LocalDateTime currentTime) {
         if ("all".equals(timeFilter)) {
@@ -912,7 +951,11 @@ public class TransactionService {
         LocalDateTime startDate = calculateStartDate(timeFilter, currentTime);
 
         return transactions.stream()
-                .filter(tx -> tx.getCreatedAt() != null && !tx.getCreatedAt().isBefore(startDate))
+                .filter(tx -> {
+                    // ✅ UPDATED: Use issueDate instead of createdAt for filtering
+                    LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
+                    return recordDate != null && !recordDate.isBefore(startDate);
+                })
                 .collect(Collectors.toList());
     }
 
