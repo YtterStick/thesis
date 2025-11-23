@@ -563,11 +563,9 @@ public class TransactionService {
                 dto.setContact(tx.getContact());
                 dto.setServiceName(tx.getServiceName());
                 dto.setLoads(tx.getServiceQuantity());
-                
-                // ✅ Add issueDate to the response
+
+                // ✅ Add issueDate and dueDate to the response
                 dto.setIssueDate(tx.getIssueDate());
-                
-                // ✅ Add dueDate to the response
                 dto.setDueDate(tx.getDueDate());
 
                 String detergentQty = tx.getConsumables().stream()
@@ -671,6 +669,8 @@ public class TransactionService {
 
     // Get summary data for all records (not paginated)
     @Cacheable(value = "adminSummary", key = "'all'")
+    // Also update the getAdminRecordsSummary method to only count COMPLETED
+    // unclaimed:
     public Map<String, Object> getAdminRecordsSummary() {
         long startTime = System.currentTimeMillis();
 
@@ -718,6 +718,7 @@ public class TransactionService {
                     })
                     .count();
 
+            // ✅ FIXED: Only count unclaimed if laundry is COMPLETED
             long unclaimedCount = allLaundryJobs.stream()
                     .filter(job -> job.getLoadAssignments() != null &&
                             job.getLoadAssignments().stream()
@@ -1034,10 +1035,10 @@ public class TransactionService {
                 dto.setContact(tx.getContact());
                 dto.setServiceName(tx.getServiceName());
                 dto.setLoads(tx.getServiceQuantity());
-                
+
                 // ✅ Add issueDate to the response
                 dto.setIssueDate(tx.getIssueDate());
-                
+
                 // ✅ Add dueDate to the response
                 dto.setDueDate(tx.getDueDate());
 
