@@ -9,7 +9,7 @@ import * as XLSX from "xlsx";
 import PrintableReceipt from "@/components/PrintableReceipt";
 import { api } from "@/lib/api-config";
 
-// Updated table headers - KEEP Claimed Date column in main table
+// Updated table headers - ADDED Due Date column
 const tableHeaders = [
     "Invoice",
     "Name",
@@ -18,11 +18,11 @@ const tableHeaders = [
     "Detergent",
     "Fabric",
     "Price",
-    "Date",
+    "Due Date", // ✅ CHANGED from "Date" to "Due Date"
     "Payment",
     "GCash Ref",
     "Pickup Status",
-    "Claimed Date", // KEEP in main table
+    "Claimed Date",
     "Actions",
 ];
 
@@ -191,10 +191,8 @@ const AdminRecordTable = ({
     }, [autoSearchTerm]);
 
     // Format currency with commas
-    // FIXED: Format currency with proper error handling
     const formatCurrency = (amount) => {
         try {
-            // Handle undefined, null, or invalid amounts
             const safeAmount = Number(amount) || 0;
             return `₱${safeAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
         } catch (error) {
@@ -258,13 +256,14 @@ const AdminRecordTable = ({
         setExpandedRows(newExpanded);
     };
 
+    // ✅ UPDATED: Use dueDate instead of createdAt for date filtering
     const isInRange = (dateStr) => {
         if (!dateStr) return false;
 
-        const created = new Date(dateStr);
-        if (isNaN(created.getTime())) return false;
+        const dueDate = new Date(dateStr);
+        if (isNaN(dueDate.getTime())) return false;
 
-        created.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
 
         const range = localSelectedRange || {};
         const from = range.from ? new Date(range.from) : null;
@@ -274,13 +273,13 @@ const AdminRecordTable = ({
         if (to) to.setHours(23, 59, 59, 999);
 
         if (from && to) {
-            return created >= from && created <= to;
+            return dueDate >= from && dueDate <= to;
         }
         if (from) {
-            return created >= from;
+            return dueDate >= from;
         }
         if (to) {
-            return created <= to;
+            return dueDate <= to;
         }
         return true;
     };
@@ -390,8 +389,9 @@ const AdminRecordTable = ({
                         valueB = b.loads;
                         break;
                     case "date":
-                        valueA = new Date(a.createdAt);
-                        valueB = new Date(b.createdAt);
+                        // ✅ UPDATED: Use dueDate instead of createdAt for sorting
+                        valueA = new Date(a.dueDate || a.createdAt);
+                        valueB = new Date(b.dueDate || b.createdAt);
                         break;
                     case "name":
                         valueA = a.name?.toLowerCase() || "";
@@ -417,7 +417,8 @@ const AdminRecordTable = ({
     };
 
     // FIXED: Use stable items for filtering to prevent flickering
-    const filtered = stableItems.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.createdAt));
+    // ✅ UPDATED: Use dueDate instead of createdAt for filtering
+    const filtered = stableItems.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.dueDate || r.createdAt));
     const filteredWithActive = applyFilters(filtered);
 
     // FIXED: Ensure we always have data to display
@@ -461,7 +462,6 @@ const AdminRecordTable = ({
     };
 
     // UPDATED: Handle export with option
-    // FIXED: Handle export with proper error handling and data validation
     const handleExport = async (exportType = "current") => {
         try {
             setIsExporting(true);
@@ -493,9 +493,10 @@ const AdminRecordTable = ({
                     console.log(`📦 Received ${allData.length} records for export`);
 
                     // Apply the same client-side filters and search
+                    // ✅ UPDATED: Use dueDate instead of createdAt for filtering
                     let filteredAllData = allData.filter((r) => {
                         const matchesSearch = r.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesDate = isInRange(r.createdAt);
+                        const matchesDate = isInRange(r.dueDate || r.createdAt);
                         return matchesSearch && matchesDate;
                     });
 
@@ -520,8 +521,6 @@ const AdminRecordTable = ({
             }
 
             console.log(`📊 Preparing to export ${exportItems.length} records`);
-            
-            
 
             // FIXED: Add data validation and safe property access
             const dataToExport = exportItems.map((item) => {
@@ -530,17 +529,20 @@ const AdminRecordTable = ({
                 const formattedPrice = formatCurrency(safePrice);
 
                 // Safe date formatting with fallback
-                let formattedDate = "—";
+                let formattedDueDate = "—";
                 let formattedClaimDate = "—";
                 try {
-                    if (item.createdAt && !isNaN(new Date(item.createdAt))) {
-                        formattedDate = format(new Date(item.createdAt), "MMM dd, yyyy");
+                    // ✅ UPDATED: Use dueDate instead of createdAt
+                    if (item.dueDate && !isNaN(new Date(item.dueDate))) {
+                        formattedDueDate = format(new Date(item.dueDate), "MMM dd, yyyy");
+                    } else if (item.createdAt && !isNaN(new Date(item.createdAt))) {
+                        formattedDueDate = format(new Date(item.createdAt), "MMM dd, yyyy");
                     }
                     if (item.claimDate && !isNaN(new Date(item.claimDate))) {
                         formattedClaimDate = formatTimeNormal(item.claimDate);
                     }
                 } catch (dateError) {
-                    console.warn("Invalid date format for item:", item.id, item.createdAt);
+                    console.warn("Invalid date format for item:", item.id, item.dueDate);
                 }
 
                 return {
@@ -551,7 +553,7 @@ const AdminRecordTable = ({
                     Detergent: item.detergent || "0",
                     Fabric: item.fabric || "0",
                     Price: formattedPrice,
-                    Date: formattedDate,
+                    "Due Date": formattedDueDate, // ✅ UPDATED: Changed from "Date" to "Due Date"
                     "Claimed Date": formattedClaimDate,
                     "Payment Method": item.paymentMethod || "—",
                     "GCash Reference": getGcashReference(item),
@@ -571,11 +573,11 @@ const AdminRecordTable = ({
                 { wch: 15 },
                 { wch: 12 },
                 { wch: 15 },
-                { wch: 12 },
-                { wch: 15 },
+                { wch: 12 }, // Due Date column
+                { wch: 15 }, // Claimed Date column
                 { wch: 20 },
                 { wch: 12 },
-                { wch: 18 }, // Claimed Date column for export
+                { wch: 18 },
                 { wch: 15 },
             ];
             worksheet["!cols"] = colWidths;
@@ -958,11 +960,14 @@ const AdminRecordTable = ({
                                                     >
                                                         {formatCurrency(record.price)}
                                                     </td>
+                                                    {/* ✅ UPDATED: Display dueDate instead of createdAt */}
                                                     <td
                                                         className="whitespace-nowrap px-3 py-2"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
                                                     >
-                                                        {record.createdAt && !isNaN(new Date(record.createdAt))
+                                                        {record.dueDate && !isNaN(new Date(record.dueDate))
+                                                            ? format(new Date(record.dueDate), "MMM dd, yyyy")
+                                                            : record.createdAt && !isNaN(new Date(record.createdAt))
                                                             ? format(new Date(record.createdAt), "MMM dd, yyyy")
                                                             : "—"}
                                                     </td>
@@ -995,7 +1000,6 @@ const AdminRecordTable = ({
                                                             />
                                                         </div>
                                                     </td>
-                                                    {/* KEEP: Claimed Date Column in main table */}
                                                     <td
                                                         className="whitespace-nowrap px-3 py-2 text-xs"
                                                         style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
@@ -1047,7 +1051,6 @@ const AdminRecordTable = ({
                                                             colSpan={tableHeaders.length + 1}
                                                             className="px-4 py-3"
                                                         >
-                                                            {/* REMOVED: Claimed Date from expanded view - only show Laundry Processed By and Claim Processed By */}
                                                             <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
                                                                 <div>
                                                                     <span

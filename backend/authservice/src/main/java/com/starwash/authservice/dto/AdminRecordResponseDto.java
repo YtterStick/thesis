@@ -20,6 +20,7 @@ public class AdminRecordResponseDto {
     private boolean expired;
     private LocalDateTime createdAt;
     private LocalDateTime issueDate; // ✅ Added issueDate field
+    private LocalDateTime dueDate; // ✅ Added dueDate field
     private Boolean gcashVerified;
     private String laundryProcessedBy;
     private String claimProcessedBy;
@@ -34,7 +35,7 @@ public class AdminRecordResponseDto {
                                  int loads, String detergent, String fabric, double totalPrice,
                                  String paymentMethod, String pickupStatus, String laundryStatus,
                                  String processedByStaff, boolean paid, boolean expired, 
-                                 LocalDateTime createdAt, LocalDateTime issueDate, Boolean gcashVerified,
+                                 LocalDateTime createdAt, LocalDateTime issueDate, LocalDateTime dueDate, Boolean gcashVerified,
                                  String laundryProcessedBy, String claimProcessedBy,
                                  boolean disposed, String disposedBy, int unwashedLoadsCount, LocalDateTime claimDate) {
         this.id = id;
@@ -54,6 +55,7 @@ public class AdminRecordResponseDto {
         this.expired = expired;
         this.createdAt = createdAt;
         this.issueDate = issueDate; // ✅ Added to constructor
+        this.dueDate = dueDate; // ✅ Added to constructor
         this.gcashVerified = gcashVerified;
         this.laundryProcessedBy = laundryProcessedBy;
         this.claimProcessedBy = claimProcessedBy;
@@ -115,6 +117,10 @@ public class AdminRecordResponseDto {
     // ✅ Added getter and setter for issueDate
     public LocalDateTime getIssueDate() { return issueDate; }
     public void setIssueDate(LocalDateTime issueDate) { this.issueDate = issueDate; }
+    
+    // ✅ Added getter and setter for dueDate
+    public LocalDateTime getDueDate() { return dueDate; }
+    public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
     
     public Boolean getGcashVerified() { return gcashVerified; }
     public void setGcashVerified(Boolean gcashVerified) { this.gcashVerified = gcashVerified; }

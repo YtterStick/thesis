@@ -566,6 +566,9 @@ public class TransactionService {
                 
                 // ✅ Add issueDate to the response
                 dto.setIssueDate(tx.getIssueDate());
+                
+                // ✅ Add dueDate to the response
+                dto.setDueDate(tx.getDueDate());
 
                 String detergentQty = tx.getConsumables().stream()
                         .filter(c -> c.getName().toLowerCase().contains("detergent"))
@@ -1034,6 +1037,9 @@ public class TransactionService {
                 
                 // ✅ Add issueDate to the response
                 dto.setIssueDate(tx.getIssueDate());
+                
+                // ✅ Add dueDate to the response
+                dto.setDueDate(tx.getDueDate());
 
                 String detergentQty = tx.getConsumables().stream()
                         .filter(c -> c.getName().toLowerCase().contains("detergent"))
