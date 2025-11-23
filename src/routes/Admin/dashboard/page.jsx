@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
-import { getManilaTime, toManilaTime } from "@/utils/manilaTime";
+import { getManilaTime, toManilaTime } from '@/utils/manilaTime';
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 const POLLING_INTERVAL = 10000;
@@ -48,13 +48,13 @@ const saveCacheToStorage = (data) => {
 
 const testBasicAuth = async () => {
     try {
-        console.log("🔍 Testing /me endpoint...");
-        const userInfo = await api.get("me");
-        console.log("✅ /me endpoint successful:", userInfo);
-        console.log("👤 Current user role:", userInfo.role);
+        console.log('🔍 Testing /me endpoint...');
+        const userInfo = await api.get('me');
+        console.log('✅ /me endpoint successful:', userInfo);
+        console.log('👤 Current user role:', userInfo.role);
         return userInfo;
     } catch (error) {
-        console.error("❌ /me endpoint failed:", error);
+        console.error('❌ /me endpoint failed:', error);
         return null;
     }
 };
@@ -80,16 +80,21 @@ const debugTokenInfo = () => {
 
 // Calculate unclaimed loads the same way as AdminRecordTable
 const calculateUnclaimedLoads = (records) => {
-    const unclaimedRecords = records.filter((r) => r.pickupStatus === "UNCLAIMED" && r.laundryStatus === "Completed" && !r.expired && !r.disposed);
-
+    const unclaimedRecords = records.filter((r) => 
+        r.pickupStatus === "UNCLAIMED" && 
+        r.laundryStatus === "Completed" &&
+        !r.expired && 
+        !r.disposed
+    );
+    
     const totalUnclaimed = unclaimedRecords.length;
-    const unclaimedList = unclaimedRecords.map((record) => ({
+    const unclaimedList = unclaimedRecords.map(record => ({
         id: record.id,
         customerName: record.name,
         serviceType: record.service,
         loadCount: record.loads,
-        date: record.createdAt ? new Date(record.createdAt).toLocaleDateString() : "N/A",
-        invoiceNumber: record.invoiceNumber,
+        date: record.createdAt ? new Date(record.createdAt).toLocaleDateString() : 'N/A',
+        invoiceNumber: record.invoiceNumber
     }));
 
     return { totalUnclaimed, unclaimedList };
@@ -116,7 +121,6 @@ export default function AdminDashboardPage() {
 
     const isAdmin = user?.role === "ADMIN";
 
-    // In your AdminDashboardPage component, update the initial state:
     const [dashboardData, setDashboardData] = useState(() => {
         if (dashboardCache && dashboardCache.data) {
             console.log("🎯 Initializing state with cached data");
@@ -135,8 +139,7 @@ export default function AdminDashboardPage() {
             unwashedCount: 0,
             totalUnclaimed: 0,
             overviewData: [],
-            unclaimedList: [],
-            todayTransactions: [], // ADD THIS LINE
+            todayTransactions: [],
             loading: true,
             error: null,
             lastUpdated: null,
@@ -218,93 +221,145 @@ export default function AdminDashboardPage() {
     );
 
     const fetchFreshData = async () => {
-  console.log("🔄 Fetching fresh dashboard data");
+        console.log("🔄 Fetching fresh dashboard data");
 
-  if (!isAuthenticated || !isAdmin) {
-    throw new Error("Authentication required or insufficient privileges");
-  }
+        if (!isAuthenticated || !isAdmin) {
+            throw new Error("Authentication required or insufficient privileges");
+        }
 
-  try {
-    const userInfo = await testBasicAuth();
-    if (!userInfo) {
-      throw new Error("Basic authentication failed");
-    }
+        try {
+            const userInfo = await testBasicAuth();
+            if (!userInfo) {
+                throw new Error("Basic authentication failed");
+            }
 
-    console.log("🔐 User authenticated, proceeding to dashboard data...");
+            console.log("🔐 User authenticated, proceeding to dashboard data...");
 
-    // Use the optimized backend endpoint with MongoDB aggregation
-    const dashboardApiData = await api.get("/dashboard/admin");
-    console.log("📊 Dashboard data from backend:", dashboardApiData);
+            // Fetch records from the same endpoint as AdminRecordTable
+            const recordsData = await api.get("/admin/records");
+            console.log("📊 Raw records data:", recordsData);
 
-    // ADD: Fetch today's transactions separately
-    let todayTransactions = [];
-    try {
-      const todayResponse = await api.get("/admin/records/filtered?timeFilter=today&size=50");
-      todayTransactions = Array.isArray(todayResponse) ? todayResponse : [];
-      console.log("📅 Today's transactions:", todayTransactions.length);
-    } catch (todayError) {
-      console.warn("⚠️ Could not fetch today's transactions:", todayError);
-      todayTransactions = [];
-    }
+            // Map the records to match AdminRecordTable structure
+            const mappedRecords = recordsData.map((r) => ({
+                id: r.id,
+                invoiceNumber: r.invoiceNumber,
+                name: r.customerName,
+                service: r.serviceName,
+                loads: r.loads || 0,
+                detergent: r.detergent,
+                fabric: r.fabric || "—",
+                price: r.totalPrice || 0,
+                paymentMethod: r.paymentMethod || "—",
+                pickupStatus: r.pickupStatus,
+                laundryStatus: r.laundryStatus,
+                laundryProcessedBy: r.laundryProcessedBy || "—",
+                claimProcessedBy: r.claimProcessedBy || "—",
+                createdAt: r.createdAt,
+                paid: r.paid || false,
+                expired: r.expired,
+                disposed: r.disposed || false,
+                disposedBy: r.disposedBy || "—",
+                gcashReference: r.gcashReference || "—",
+                unwashedLoadsCount: r.unwashedLoadsCount || 0,
+            }));
 
-    const newDashboardData = {
-      totalIncome: dashboardApiData.totalIncome || 0,
-      totalLoads: dashboardApiData.totalLoads || 0,
-      unwashedCount: dashboardApiData.unwashedCount || 0,
-      totalUnclaimed: dashboardApiData.totalUnclaimed || 0,
-      overviewData: dashboardApiData.overviewData || [],
-      unclaimedList: dashboardApiData.unclaimedList || [],
-      todayTransactions: todayTransactions, // ADD THIS
+            // Calculate metrics using the same logic as AdminRecordTable - NOW USING ALL RECORDS FOR OVERALL TOTALS
+            const { totalIncome, totalLoads } = calculateTotals(mappedRecords);
+            const unwashedCount = calculateUnwashedLoads(mappedRecords);
+            const { totalUnclaimed, unclaimedList } = calculateUnclaimedLoads(mappedRecords);
+
+            // Calculate today's transactions
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todayTransactions = mappedRecords
+                .filter(record => {
+                    if (!record.createdAt) return false;
+                    const recordDate = new Date(record.createdAt);
+                    recordDate.setHours(0, 0, 0, 0);
+                    return recordDate.getTime() === today.getTime();
+                })
+                // Sort by creation date - latest first
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            console.log("💰 Overall Total Income:", totalIncome);
+            console.log("📦 Overall Total Loads:", totalLoads);
+            console.log("🔄 Unwashed Count:", unwashedCount);
+            console.log("📦 Unclaimed Count:", totalUnclaimed);
+
+            // Get the chart data from your existing backend endpoint
+            const dashboardApiData = await api.get("/dashboard/admin");
+            console.log("📊 Chart data from backend:", dashboardApiData.overviewData);
+
+            const newDashboardData = {
+                totalIncome: totalIncome || 0,
+                totalLoads: totalLoads || 0,
+                unwashedCount: unwashedCount || 0,
+                totalUnclaimed: totalUnclaimed || 0,
+                todayTransactions: todayTransactions || [],
+                overviewData: dashboardApiData.overviewData || [],
+                unclaimedList: unclaimedList || [],
+            };
+
+            const currentTime = Date.now();
+
+            if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
+                console.log("🔄 Dashboard data updated with fresh data");
+
+                dashboardCache = {
+                    data: newDashboardData,
+                    timestamp: currentTime,
+                };
+                cacheTimestamp = currentTime;
+
+                saveCacheToStorage(dashboardCache);
+
+                if (isMountedRef.current) {
+                    setDashboardData({
+                        ...newDashboardData,
+                        loading: false,
+                        error: null,
+                        lastUpdated: new Date(),
+                        dataVersion: (dashboardData.dataVersion || 0) + 1,
+                    });
+                }
+            } else {
+                console.log("✅ No changes in dashboard data, updating timestamp only");
+                cacheTimestamp = currentTime;
+                dashboardCache.timestamp = currentTime;
+                saveCacheToStorage(dashboardCache);
+
+                if (isMountedRef.current) {
+                    setDashboardData((prev) => ({
+                        ...prev,
+                        loading: false,
+                        error: null,
+                        lastUpdated: new Date(),
+                    }));
+                }
+            }
+
+            if (isMountedRef.current) {
+                setInitialLoad(false);
+            }
+        } catch (error) {
+            console.error("❌ Error in fetchFreshData:", error);
+
+            if (error.message.includes("403")) {
+                console.log("🔍 403 Error Details:");
+                debugTokenInfo();
+                throw new Error("Access forbidden. You may not have admin privileges. Check backend logs.");
+            } else if (error.message.includes("401")) {
+                console.log("🔍 401 Error - Token may be invalid");
+                logout();
+                throw new Error("Authentication failed. Please log in again.");
+            } else if (error.message.includes("Failed to fetch")) {
+                throw new Error("Network error. Please check your connection.");
+            } else {
+                throw error;
+            }
+        }
     };
-
-    console.log("📈 Processed dashboard metrics:", newDashboardData);
-
-    const currentTime = Date.now();
-
-    if (!dashboardCache || hasDataChanged(newDashboardData, dashboardCache.data)) {
-      console.log("🔄 Dashboard data updated with fresh data");
-
-      dashboardCache = {
-        data: newDashboardData,
-        timestamp: currentTime,
-      };
-      cacheTimestamp = currentTime;
-
-      saveCacheToStorage(dashboardCache);
-
-      if (isMountedRef.current) {
-        setDashboardData({
-          ...newDashboardData,
-          loading: false,
-          error: null,
-          lastUpdated: new Date(),
-          dataVersion: (dashboardData.dataVersion || 0) + 1,
-        });
-      }
-    } else {
-      console.log("✅ No changes in dashboard data, updating timestamp only");
-      cacheTimestamp = currentTime;
-      dashboardCache.timestamp = currentTime;
-      saveCacheToStorage(dashboardCache);
-
-      if (isMountedRef.current) {
-        setDashboardData((prev) => ({
-          ...prev,
-          loading: false,
-          error: null,
-          lastUpdated: new Date(),
-        }));
-      }
-    }
-
-    if (isMountedRef.current) {
-      setInitialLoad(false);
-    }
-  } catch (error) {
-    console.error("❌ Error in fetchFreshData:", error);
-    // ... rest of your error handling
-  }
-};
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -367,26 +422,26 @@ export default function AdminDashboardPage() {
     };
 
     const formatManilaDateTime = (date) => {
-        if (!date) return "N/A";
-
+        if (!date) return 'N/A';
+        
         const manilaDate = toManilaTime(new Date(date));
-        return manilaDate.toLocaleString("en-PH", {
-            timeZone: "Asia/Manila",
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
+        return manilaDate.toLocaleString('en-PH', {
+            timeZone: 'Asia/Manila',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
         });
     };
 
     // Add this function to handle card click
     const handleTransactionClick = (customerName) => {
         // Store the search term in sessionStorage to be used in MainPage
-        sessionStorage.setItem("autoSearchName", customerName);
+        sessionStorage.setItem('autoSearchName', customerName);
         // Redirect to manage transactions page
-        navigate("/managetransaction");
+        navigate('/managetransaction');
     };
 
     const SkeletonCard = () => (
@@ -495,7 +550,7 @@ export default function AdminDashboardPage() {
                         className="flex items-center justify-between border-b py-3 last:border-none"
                         style={{ borderColor: isDarkMode ? "#334155" : "#e2e8f0" }}
                     >
-                        <div className="flex-1 space-y-2">
+                        <div className="space-y-2 flex-1">
                             <div className="flex justify-between">
                                 <div
                                     className="h-4 w-24 animate-pulse rounded"
@@ -504,7 +559,7 @@ export default function AdminDashboardPage() {
                                     }}
                                 ></div>
                                 <div
-                                    className="ml-4 h-4 w-16 animate-pulse rounded"
+                                    className="h-4 w-16 animate-pulse rounded ml-4"
                                     style={{
                                         backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
                                     }}
@@ -727,10 +782,7 @@ export default function AdminDashboardPage() {
                             color: isDarkMode ? "#1e293b" : "#1e293b",
                         }}
                     >
-                        <LineChart
-                            size={22}
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }}
-                        />
+                        <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
                     </motion.div>
                     <div>
                         <p
@@ -744,7 +796,9 @@ export default function AdminDashboardPage() {
                             style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                         >
                             Real-time business overview and analytics
-                            {dashboardData.lastUpdated && <span> • Last updated: {formatManilaDateTime(dashboardData.lastUpdated)}</span>}
+                            {dashboardData.lastUpdated && (
+                                <span> • Last updated: {formatManilaDateTime(dashboardData.lastUpdated)}</span>
+                            )}
                         </p>
                     </div>
                 </div>
@@ -851,10 +905,7 @@ export default function AdminDashboardPage() {
                                 color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                             }}
                         >
-                            <TrendingUp
-                                size={18}
-                                style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }}
-                            />
+                            <TrendingUp size={18} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
                         </motion.div>
                     </div>
 
@@ -961,7 +1012,7 @@ export default function AdminDashboardPage() {
                                 className="text-sm"
                                 style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                             >
-                                {displayData.todayTransactions?.length || 0} transactions today
+                                {(displayData.todayTransactions?.length || 0)} transactions today
                             </span>
                         </div>
                         <motion.div
@@ -972,10 +1023,7 @@ export default function AdminDashboardPage() {
                                 color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
                             }}
                         >
-                            <Users
-                                size={18}
-                                style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }}
-                            />
+                            <Users size={18} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
                         </motion.div>
                     </div>
 
@@ -1019,7 +1067,7 @@ export default function AdminDashboardPage() {
                                         }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => handleTransactionClick(transaction.name || transaction.customerName)}
-                                        className="w-full rounded-lg border p-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full text-left rounded-lg border p-3 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         style={{
                                             borderColor: isDarkMode ? "#475569" : "#e2e8f0",
                                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(248, 250, 252, 0.8)",
@@ -1027,17 +1075,17 @@ export default function AdminDashboardPage() {
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <div className="mb-2 flex items-start justify-between">
+                                                <div className="flex justify-between items-start mb-2">
                                                     <p
                                                         className="text-sm font-semibold"
-                                                        style={{
+                                                        style={{ 
                                                             color: isDarkMode ? "#3DD9B6" : "#059669",
                                                         }}
                                                     >
                                                         {transaction.name || transaction.customerName}
                                                     </p>
                                                     <p
-                                                        className="ml-4 text-sm font-bold"
+                                                        className="text-sm font-bold ml-4"
                                                         style={{ color: isDarkMode ? "#3DD9B6" : "#059669" }}
                                                     >
                                                         ₱{(transaction.price || transaction.totalPrice || 0).toFixed(2)}
