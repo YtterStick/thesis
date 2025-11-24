@@ -94,7 +94,7 @@ public class LaundryJobController {
     @PatchMapping("/{transactionId}/start-load")
     public ResponseEntity<LaundryJobDto> startLoad(@PathVariable String transactionId,
             @RequestParam int loadNumber,
-            @RequestParam(required = false) Integer durationMinutes,
+            @RequestParam(required = false) Double durationMinutes, // CHANGED from Integer to Double
             @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.startLoad(transactionId, loadNumber, durationMinutes, username);
@@ -132,11 +132,11 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
-    // Update load duration
+    // Update load duration - CHANGED parameter type from int to double
     @PatchMapping("/{transactionId}/update-duration")
     public ResponseEntity<LaundryJobDto> updateLoadDuration(@PathVariable String transactionId,
             @RequestParam int loadNumber,
-            @RequestParam int durationMinutes,
+            @RequestParam double durationMinutes, // CHANGED from int to double
             @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.updateLoadDuration(transactionId, loadNumber, durationMinutes, username);
@@ -193,4 +193,14 @@ public class LaundryJobController {
         List<LaundryJob> jobs = laundryJobService.searchLaundryJobsByCustomerName(customerName);
         return ResponseEntity.ok(jobs);
     }
-}//
+
+    // Release machine endpoint
+    @PatchMapping("/{transactionId}/release-machine")
+    public ResponseEntity<LaundryJobDto> releaseMachine(@PathVariable String transactionId,
+            @RequestParam int loadNumber,
+            @RequestHeader("Authorization") String authHeader) {
+        String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
+        LaundryJob job = laundryJobService.releaseMachine(transactionId, loadNumber, username);
+        return ResponseEntity.ok(toDto(job));
+    }
+}

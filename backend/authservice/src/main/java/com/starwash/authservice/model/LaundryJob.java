@@ -275,12 +275,12 @@ public class LaundryJob {
                 '}';
     }
 
-    // Inner class for per-load tracking
+    // Inner class for per-load tracking - UPDATED: durationMinutes changed from Integer to Double
     public static class LoadAssignment {
         private int loadNumber;
         private String machineId;
         private String status; // NOT_STARTED, WASHING, DRYING, COMPLETED
-        private Integer durationMinutes;
+        private Double durationMinutes; // CHANGED: Integer → Double
         private LocalDateTime startTime;
         private LocalDateTime endTime;
 
@@ -288,7 +288,7 @@ public class LaundryJob {
         }
 
         public LoadAssignment(int loadNumber, String machineId, String status,
-                              Integer durationMinutes, LocalDateTime startTime, LocalDateTime endTime) {
+                              Double durationMinutes, LocalDateTime startTime, LocalDateTime endTime) {
             this.loadNumber = loadNumber;
             this.machineId = machineId;
             this.status = status;
@@ -321,11 +321,11 @@ public class LaundryJob {
             this.status = status;
         }
 
-        public Integer getDurationMinutes() {
+        public Double getDurationMinutes() { // CHANGED: Integer → Double
             return durationMinutes;
         }
 
-        public void setDurationMinutes(Integer durationMinutes) {
+        public void setDurationMinutes(Double durationMinutes) { // CHANGED: Integer → Double
             this.durationMinutes = durationMinutes;
         }
 

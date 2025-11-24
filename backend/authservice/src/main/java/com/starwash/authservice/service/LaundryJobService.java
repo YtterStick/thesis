@@ -188,7 +188,7 @@ public class LaundryJobService {
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob startLoad(String transactionId, int loadNumber, Integer durationMinutes, String processedBy) {
+    public LaundryJob startLoad(String transactionId, int loadNumber, Double durationMinutes, String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
 
         LoadAssignment load = job.getLoadAssignments().stream()
@@ -215,20 +215,20 @@ public class LaundryJobService {
                     requiredMachineType + " but got " + machine.getType());
         }
 
-        int defaultDuration;
+        double defaultDuration;
         switch (nextStatus) {
-            case STATUS_WASHING -> defaultDuration = 35;
-            case STATUS_DRYING -> defaultDuration = 40;
-            default -> defaultDuration = 20;
+            case STATUS_WASHING -> defaultDuration = 35.0;
+            case STATUS_DRYING -> defaultDuration = 40.0;
+            default -> defaultDuration = 20.0;
         }
 
-        int finalDuration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : defaultDuration;
+        double finalDuration = (durationMinutes != null && durationMinutes > 0) ? durationMinutes : defaultDuration;
 
         LocalDateTime now = getCurrentManilaTime();
         load.setStatus(nextStatus);
         load.setStartTime(now);
         load.setDurationMinutes(finalDuration);
-        load.setEndTime(now.plusMinutes(finalDuration));
+        load.setEndTime(now.plusMinutes((long) (finalDuration * 60))); // Convert to actual minutes
 
         machine.setStatus(STATUS_IN_USE);
         machineRepository.save(machine);
@@ -248,7 +248,7 @@ public class LaundryJobService {
         scheduler.schedule(() -> {
             System.out.println("🏃‍♂️ Executing scheduled task for " + transactionId + " load " + loadNumber);
             autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber);
-        }, finalDuration, TimeUnit.MINUTES);
+        }, (long) (finalDuration * 60), TimeUnit.MINUTES);
 
         return saved;
     }
@@ -271,11 +271,11 @@ public class LaundryJobService {
         LocalDateTime now = getCurrentManilaTime();
         load.setStartTime(now);
 
-        int duration = (load.getDurationMinutes() != null && load.getDurationMinutes() > 0)
+        double duration = (load.getDurationMinutes() != null && load.getDurationMinutes() > 0)
                 ? load.getDurationMinutes()
-                : 40;
+                : 40.0;
 
-        load.setEndTime(now.plusMinutes(duration));
+        load.setEndTime(now.plusMinutes((long) (duration * 60)));
 
         // Ensure we have a dryer machine assigned
         if (load.getMachineId() == null) {
@@ -317,7 +317,7 @@ public class LaundryJobService {
         scheduler.schedule(() -> {
             System.out.println("🏃‍♂️ Executing scheduled drying task for " + transactionId + " load " + loadNumber);
             autoAdvanceAfterStepEnds("dry", transactionId, loadNumber);
-        }, duration, TimeUnit.MINUTES);
+        }, (long) (duration * 60), TimeUnit.MINUTES);
 
         return saved;
     }
@@ -619,18 +619,26 @@ public class LaundryJobService {
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
-    public LaundryJob updateLoadDuration(String transactionId, int loadNumber, int durationMinutes,
+    public LaundryJob updateLoadDuration(String transactionId, int loadNumber, double durationMinutes,
             String processedBy) {
         LaundryJob job = findSingleJobByTransaction(transactionId);
+
+        // Validate duration
+        if (durationMinutes < 0.01) {
+            throw new RuntimeException("Duration must be at least 0.01 minutes");
+        }
+        if (durationMinutes > 480) { // 8 hours max
+            throw new RuntimeException("Duration cannot exceed 480 minutes");
+        }
 
         LoadAssignment load = job.getLoadAssignments().stream()
                 .filter(l -> l.getLoadNumber() == loadNumber)
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Load number not found: : " + loadNumber));
+                .orElseThrow(() -> new RuntimeException("Load number not found: " + loadNumber));
 
         load.setDurationMinutes(durationMinutes);
         if (load.getStartTime() != null) {
-            load.setEndTime(load.getStartTime().plusMinutes(durationMinutes));
+            load.setEndTime(load.getStartTime().plusMinutes((long) (durationMinutes * 60)));
         }
 
         job.setLaundryProcessedBy(processedBy);

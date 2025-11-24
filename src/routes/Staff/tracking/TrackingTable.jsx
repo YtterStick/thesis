@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ArrowDown, ArrowUp, CheckCircle, Clock } from "lucide-react";
 import MachineSelector from "./MachineSelector";
@@ -28,9 +27,43 @@ const TrackingTable = ({
     globalLoading,
     pendingRequests,
     getJobUrgency,
-    allMachines = [], // Add allMachines prop for duration calculation
+    allMachines = [],
 }) => {
     const [completingLoads, setCompletingLoads] = useState({});
+    const [localDurations, setLocalDurations] = useState({});
+
+    // Helper function to format duration for display
+    const formatDurationForDisplay = (duration) => {
+        if (!duration && duration !== 0) return "";
+        
+        if (duration < 1) {
+            // For values less than 1 minute, show as seconds
+            const seconds = Math.round(duration * 60);
+            return `${seconds}s`;
+        } else {
+            const minutes = Math.floor(duration);
+            const seconds = Math.round((duration - minutes) * 60);
+            
+            if (seconds > 0) {
+                return `${minutes}m ${seconds}s`;
+            }
+            return `${minutes}m`;
+        }
+    };
+
+    // Helper function to parse display value back to minutes
+    const parseDisplayToMinutes = (displayValue) => {
+        if (!displayValue) return null;
+        
+        // Check if it's in seconds format (e.g., "10s")
+        if (displayValue.toLowerCase().endsWith('s')) {
+            const seconds = parseFloat(displayValue);
+            return isNaN(seconds) ? null : seconds / 60;
+        }
+        
+        // Otherwise treat as decimal minutes
+        return parseFloat(displayValue);
+    };
 
     // Add urgency badge component
     const UrgencyBadge = ({ urgency }) => {
@@ -94,8 +127,6 @@ const TrackingTable = ({
             const loadIndex = job.loads.findIndex((l) => l.loadNumber === load.loadNumber && l.status === load.status);
             const isCompleting = isLoadCompleting(jobKey, loadIndex);
 
-            // FIXED: Only show COMPLETED loads if they're currently completing
-            // Otherwise, hide them immediately
             return load.status !== "COMPLETED" || isCompleting;
         });
 
@@ -104,8 +135,6 @@ const TrackingTable = ({
 
     // Helper function to determine if machine selector should be shown
     const shouldShowMachineSelector = (loadStatus) => {
-        // Show machine selector for all statuses EXCEPT FOLDING and COMPLETED
-        // This includes DRIED status which should keep the machine visible
         return !["FOLDING", "COMPLETED"].includes(loadStatus);
     };
 
@@ -121,6 +150,104 @@ const TrackingTable = ({
         if (machineType === "WASHER") return 35;
         if (machineType === "DRYER") return 40;
         return null;
+    };
+
+    // Format duration for display in input field
+    const formatDurationForInput = (duration) => {
+        if (!duration && duration !== 0) return "";
+        
+        // For input field, show the raw decimal value
+        // This allows precise entry like 0.10 for 6 seconds
+        return duration.toString();
+    };
+
+    // Get local duration value for a specific load
+    const getLocalDuration = (jobKey, loadIndex) => {
+        const key = `${jobKey}-${loadIndex}`;
+        // If we have a local value, use it. Otherwise use the actual duration from props
+        if (localDurations[key] !== undefined) {
+            return localDurations[key];
+        }
+        
+        const job = jobs.find(j => getJobKey(j) === jobKey);
+        if (job && job.loads[loadIndex]) {
+            const actualDuration = job.loads[loadIndex].duration;
+            if (actualDuration !== null && actualDuration !== undefined) {
+                return formatDurationForInput(actualDuration);
+            }
+        }
+        
+        return "";
+    };
+
+    // Set local duration value for a specific load
+    const setLocalDuration = (jobKey, loadIndex, value) => {
+        const key = `${jobKey}-${loadIndex}`;
+        setLocalDurations(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // Handle duration input change
+    const handleDurationChange = (jobKey, loadIndex, value) => {
+        // Allow empty input, numbers, and decimal points
+        if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
+            setLocalDuration(jobKey, loadIndex, value);
+        }
+    };
+
+    // Handle duration input blur
+    const handleDurationBlur = (jobKey, loadIndex, load) => {
+        const localValue = getLocalDuration(jobKey, loadIndex);
+        const value = localValue.trim();
+        
+        if (value === "") {
+            // Clear duration if input is empty
+            updateDuration(jobKey, loadIndex, null);
+            return;
+        }
+        
+        // Parse the final value as decimal minutes
+        const numValue = parseFloat(value);
+        
+        // Validate the value
+        if (!isNaN(numValue)) {
+            let finalValue = numValue;
+            
+            // Store exactly as entered, treating it as decimal minutes
+            // 0.10 means 0.10 minutes = 6 seconds
+            // 0.50 means 0.50 minutes = 30 seconds
+            
+            // Ensure minimum value of 0.01 minutes (about 0.6 seconds)
+            if (finalValue < 0.01) {
+                finalValue = 0.01;
+            }
+            
+            // Ensure maximum value of 60 minutes
+            if (finalValue > 60) {
+                finalValue = 60;
+            }
+            
+            // Update with the final validated value (in minutes)
+            updateDuration(jobKey, loadIndex, finalValue);
+            
+            // For display, keep the original format
+            setLocalDuration(jobKey, loadIndex, finalValue.toString());
+        } else {
+            // If invalid, revert to the actual duration
+            const job = jobs.find(j => getJobKey(j) === jobKey);
+            if (job && job.loads[loadIndex]) {
+                const actualDuration = job.loads[loadIndex].duration;
+                setLocalDuration(jobKey, loadIndex, formatDurationForInput(actualDuration));
+            }
+        }
+    };
+
+    // Handle duration input focus
+    const handleDurationFocus = (e) => {
+        // Select all text when input is focused
+        e.target.select();
     };
 
     return (
@@ -209,6 +336,8 @@ const TrackingTable = ({
                                                 const currentMachineType = getMachineTypeForDuration(load);
                                                 const defaultDuration = getDefaultDuration(currentMachineType);
 
+                                                const localDurationValue = getLocalDuration(jobKey, originalIndex);
+
                                                 return (
                                                     <motion.tr
                                                         key={`${jobKey}-load${load.loadNumber}`}
@@ -294,7 +423,6 @@ const TrackingTable = ({
                                                             />
                                                         </td>
                                                         <td className="p-2">
-                                                            {/* UPDATED: Use helper function for clarity */}
                                                             {shouldShowMachineSelector(load.status) && (
                                                                 <MachineSelector
                                                                     load={load}
@@ -312,7 +440,6 @@ const TrackingTable = ({
                                                                     pendingRequests={pendingRequests}
                                                                 />
                                                             )}
-                                                            {/* Show message when machine selector is hidden */}
                                                             {!shouldShowMachineSelector(load.status) && (
                                                                 <div className="flex w-[160px] items-center gap-1 text-xs text-green-600">
                                                                     <CheckCircle className="h-3 w-3" />
@@ -341,97 +468,45 @@ const TrackingTable = ({
                                                                     (load.status === "FOLDING" || load.status === "COMPLETED")
                                                                 ) && (
                                                                     <div className="flex flex-col items-center gap-1">
-                                                                        <Select
-                                                                            value={load.duration?.toString() || ""}
-                                                                            onValueChange={(val) =>
-                                                                                updateDuration(jobKey, originalIndex, parseInt(val))
-                                                                            }
-                                                                            disabled={
-                                                                                load.status === "FOLDING" ||
-                                                                                load.status === "COMPLETED" ||
-                                                                                globalLoading
-                                                                            }
-                                                                        >
-                                                                            <SelectTrigger
-                                                                                className="mx-auto w-[140px] transition-all"
+                                                                        <div className="relative">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={localDurationValue}
+                                                                                onChange={(e) => handleDurationChange(jobKey, originalIndex, e.target.value)}
+                                                                                onBlur={() => handleDurationBlur(jobKey, originalIndex, load)}
+                                                                                onKeyDown={(e) => {
+                                                                                    if (e.key === 'Enter') {
+                                                                                        e.target.blur();
+                                                                                    }
+                                                                                }}
+                                                                                onFocus={handleDurationFocus}
+                                                                                disabled={
+                                                                                    load.status === "FOLDING" ||
+                                                                                    load.status === "COMPLETED" ||
+                                                                                    globalLoading
+                                                                                }
+                                                                                placeholder="0.00"
+                                                                                className="w-[140px] rounded-md border-2 px-3 py-2 text-center transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                                                 style={{
                                                                                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                                                                                     borderColor: isDarkMode ? "#475569" : "#cbd5e1",
                                                                                     color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                                                    opacity:
+                                                                                    opacity: (
                                                                                         load.status === "FOLDING" ||
                                                                                         load.status === "COMPLETED" ||
                                                                                         globalLoading
-                                                                                            ? 0.7
-                                                                                            : 1,
+                                                                                    ) ? 0.7 : 1,
                                                                                 }}
+                                                                            />
+                                                                            <span 
+                                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm"
+                                                                                style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
                                                                             >
-                                                                                <SelectValue placeholder="Select duration">
-                                                                                    {(() => {
-                                                                                        if (load.duration) {
-                                                                                            return `${load.duration} mins`;
-                                                                                        }
-                                                                                        // Show default text when no duration but machine is assigned
-                                                                                        if (load.machineId) {
-                                                                                            const machine = allMachines.find(
-                                                                                                (m) => m.id === load.machineId,
-                                                                                            );
-                                                                                            if (machine?.type?.toUpperCase() === "WASHER")
-                                                                                                return "35 mins (Washer)";
-                                                                                            if (machine?.type?.toUpperCase() === "DRYER")
-                                                                                                return "40 mins (Dryer)";
-                                                                                        }
-                                                                                        return "Select duration";
-                                                                                    })()}
-                                                                                </SelectValue>
-                                                                            </SelectTrigger>
-                                                                            <SelectContent
-                                                                                style={{
-                                                                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                                                                    borderColor: isDarkMode ? "#475569" : "#cbd5e1",
-                                                                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                                                }}
-                                                                            >
-                                                                                {[1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map((d) => (
-                                                                                    <SelectItem
-                                                                                        key={`${jobKey}-${originalIndex}-${d}`}
-                                                                                        value={d.toString()}
-                                                                                        className="cursor-pointer transition-colors"
-                                                                                        style={{
-                                                                                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                                                                        }}
-                                                                                    >
-                                                                                        <div className="flex items-center justify-between">
-                                                                                            <span>{d} mins</span>
-                                                                                            {load.machineId && (
-                                                                                                <span className="text-xs opacity-70">
-                                                                                                    {(() => {
-                                                                                                        const machine = allMachines.find(
-                                                                                                            (m) => m.id === load.machineId,
-                                                                                                        );
-                                                                                                        if (
-                                                                                                            machine?.type?.toUpperCase() ===
-                                                                                                                "WASHER" &&
-                                                                                                            d === 35
-                                                                                                        )
-                                                                                                            return "(Washer Default)";
-                                                                                                        if (
-                                                                                                            machine?.type?.toUpperCase() ===
-                                                                                                                "DRYER" &&
-                                                                                                            d === 40
-                                                                                                        )
-                                                                                                            return "(Dryer Default)";
-                                                                                                        return "";
-                                                                                                    })()}
-                                                                                                </span>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    </SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
+                                                                                mins
+                                                                            </span>
+                                                                        </div>
 
-                                                                        {/* Show auto-selected duration info - FIXED LOGIC */}
+                                                                        {/* Show auto-selected duration info */}
                                                                         {load.machineId && !load.duration && (
                                                                             <span className="text-xs text-blue-500">
                                                                                 {(() => {
@@ -440,7 +515,7 @@ const TrackingTable = ({
                                                                                         return "Washer default: 35 mins";
                                                                                     if (machine?.type?.toUpperCase() === "DRYER")
                                                                                         return "Dryer default: 40 mins";
-                                                                                    return "Select duration";
+                                                                                    return "Enter duration";
                                                                                 })()}
                                                                             </span>
                                                                         )}
@@ -448,7 +523,10 @@ const TrackingTable = ({
                                                                             <span className="text-xs text-green-500">
                                                                                 {(() => {
                                                                                     const machine = allMachines.find((m) => m.id === load.machineId);
-                                                                                    if (!machine) return "Custom duration";
+                                                                                    if (!machine) {
+                                                                                        // Use the new consistent display function
+                                                                                        return formatDurationForDisplay(load.duration);
+                                                                                    }
 
                                                                                     const machineType = machine.type?.toUpperCase();
                                                                                     const isWasherDefault =
@@ -458,7 +536,9 @@ const TrackingTable = ({
 
                                                                                     if (isWasherDefault) return "Washer default";
                                                                                     if (isDryerDefault) return "Dryer default";
-                                                                                    return "Custom duration";
+                                                                                    
+                                                                                    // Use the new consistent display function
+                                                                                    return formatDurationForDisplay(load.duration);
                                                                                 })()}
                                                                             </span>
                                                                         )}

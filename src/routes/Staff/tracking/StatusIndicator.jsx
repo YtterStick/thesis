@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import Lottie from "lottie-react";

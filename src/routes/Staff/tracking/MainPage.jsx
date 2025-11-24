@@ -619,32 +619,69 @@ function ServiceTrackingContent() {
         }
     };
 
+    // UPDATED: Simplified updateDuration without loading state
     const updateDuration = async (jobKey, loadIndex, duration, machineId = null) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
         if (!job?.id) return;
 
-        const requestId = `update-duration-${job.id}-${job.loads[loadIndex].loadNumber}`;
-
-        return addToQueue(requestId, async () => {
-            // If machineId is provided, auto-set duration based on machine type
-            let finalDuration = duration;
-            if (machineId && !duration) {
-                const machine = machines.find((m) => m.id === machineId);
-                if (machine) {
-                    if (machine.type?.toUpperCase() === "WASHER") {
-                        finalDuration = 35; // 35 minutes for washers
-                    } else if (machine.type?.toUpperCase() === "DRYER") {
-                        finalDuration = 40; // 40 minutes for dryers
-                    }
+        // If machineId is provided, auto-set duration based on machine type
+        let finalDuration = duration;
+        if (machineId && !duration) {
+            const machine = machines.find((m) => m.id === machineId);
+            if (machine) {
+                if (machine.type?.toUpperCase() === "WASHER") {
+                    finalDuration = 35; // 35 minutes for washers
+                } else if (machine.type?.toUpperCase() === "DRYER") {
+                    finalDuration = 40; // 40 minutes for dryers
                 }
             }
+        }
 
+        // Update local state immediately for responsive UI
+        setJobs((prev) =>
+            prev.map((j) =>
+                getJobKey(j) === jobKey
+                    ? {
+                          ...j,
+                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: finalDuration } : l)),
+                      }
+                    : j,
+            ),
+        );
+
+        // Make API call in background without showing loading state
+        try {
+            await api.patch(`/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${finalDuration}`);
+            console.log("✅ Duration updated successfully");
+        } catch (err) {
+            console.error("Failed to update duration:", err);
+            // Revert local state if API call fails
             setJobs((prev) =>
                 prev.map((j) =>
                     getJobKey(j) === jobKey
                         ? {
                               ...j,
-                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: finalDuration } : l)),
+                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: job.loads[loadIndex].duration } : l)),
+                          }
+                        : j,
+                ),
+            );
+        }
+    };
+
+    const assignMachine = async (jobKey, loadIndex, machineId) => {
+        const job = jobs.find((j) => getJobKey(j) === jobKey);
+        if (!job?.id) return;
+
+        const requestId = `assign-machine-${job.id}-${job.loads[loadIndex].loadNumber}`;
+
+        return addToQueue(requestId, async () => {
+            setJobs((prev) =>
+                prev.map((j) =>
+                    getJobKey(j) === jobKey
+                        ? {
+                              ...j,
+                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, machineId } : l)),
                           }
                         : j,
                 ),
@@ -652,116 +689,79 @@ function ServiceTrackingContent() {
 
             try {
                 await apiCallWithRetry(() =>
-                    api.patch(
-                        `/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${finalDuration}`,
-                    ),
+                    api.patch(`/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`),
                 );
+
+                // AUTO-SET DEFAULT DURATION WHEN MACHINE IS ASSIGNED (NON-BLOCKING)
+                if (machineId) {
+                    const machine = machines.find((m) => m.id === machineId);
+                    if (machine) {
+                        let defaultDuration = null;
+                        if (machine.type?.toUpperCase() === "WASHER") {
+                            defaultDuration = 35;
+                        } else if (machine.type?.toUpperCase() === "DRYER") {
+                            defaultDuration = 40;
+                        }
+
+                        // Only set default if no duration is already set
+                        const currentLoad = job.loads[loadIndex];
+                        if (defaultDuration && (!currentLoad.duration || currentLoad.duration === 0)) {
+                            // Set duration locally immediately for instant UI update
+                            setJobs((prev) =>
+                                prev.map((j) =>
+                                    getJobKey(j) === jobKey
+                                        ? {
+                                              ...j,
+                                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: defaultDuration } : l)),
+                                          }
+                                        : j,
+                                ),
+                            );
+
+                            // Update duration in background without blocking
+                            setTimeout(async () => {
+                                try {
+                                    await api.patch(
+                                        `/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${defaultDuration}`,
+                                    );
+                                    console.log("✅ Default duration set in background");
+                                } catch (err) {
+                                    console.error("Failed to set default duration:", err);
+                                    // Revert local state if API call fails
+                                    setJobs((prev) =>
+                                        prev.map((j) =>
+                                            getJobKey(j) === jobKey
+                                                ? {
+                                                      ...j,
+                                                      loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: null } : l)),
+                                                  }
+                                                : j,
+                                        ),
+                                    );
+                                }
+                            }, 100);
+                        }
+                    }
+                }
 
                 return { success: true };
             } catch (err) {
-                console.error("Failed to update duration:", err);
+                console.error("Failed to assign machine:", err);
+                // Revert local state if API call fails
+                setJobs((prev) =>
+                    prev.map((j) =>
+                        getJobKey(j) === jobKey
+                            ? {
+                                  ...j,
+                                  loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, machineId: null } : l)),
+                              }
+                            : j,
+                    ),
+                );
                 throw err;
             }
         });
     };
-
-    const assignMachine = async (jobKey, loadIndex, machineId) => {
-    const job = jobs.find((j) => getJobKey(j) === jobKey);
-    if (!job?.id) return;
-
-    const requestId = `assign-machine-${job.id}-${job.loads[loadIndex].loadNumber}`;
-    
-    return addToQueue(requestId, async () => {
-        setJobs((prev) =>
-            prev.map((j) =>
-                getJobKey(j) === jobKey
-                    ? {
-                          ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, machineId } : l)),
-                      }
-                    : j,
-            ),
-        );
-
-        try {
-            await apiCallWithRetry(() =>
-                api.patch(`/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`)
-            );
-            
-            // AUTO-SET DEFAULT DURATION WHEN MACHINE IS ASSIGNED (NON-BLOCKING)
-            if (machineId) {
-                const machine = machines.find(m => m.id === machineId);
-                if (machine) {
-                    let defaultDuration = null;
-                    if (machine.type?.toUpperCase() === "WASHER") {
-                        defaultDuration = 35;
-                    } else if (machine.type?.toUpperCase() === "DRYER") {
-                        defaultDuration = 40;
-                    }
-                    
-                    // Only set default if no duration is already set
-                    const currentLoad = job.loads[loadIndex];
-                    if (defaultDuration && (!currentLoad.duration || currentLoad.duration === 0)) {
-                        // Set duration locally immediately for instant UI update
-                        setJobs((prev) =>
-                            prev.map((j) =>
-                                getJobKey(j) === jobKey
-                                    ? {
-                                          ...j,
-                                          loads: j.loads.map((l, idx) => 
-                                              idx === loadIndex ? { ...l, duration: defaultDuration } : l
-                                          ),
-                                      }
-                                    : j,
-                            ),
-                        );
-                        
-                        // Update duration in background without blocking
-                        setTimeout(async () => {
-                            try {
-                                await apiCallWithRetry(() =>
-                                    api.patch(`/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${defaultDuration}`)
-                                );
-                                console.log("✅ Default duration set in background");
-                            } catch (err) {
-                                console.error("Failed to set default duration:", err);
-                                // Revert local state if API call fails
-                                setJobs((prev) =>
-                                    prev.map((j) =>
-                                        getJobKey(j) === jobKey
-                                            ? {
-                                                  ...j,
-                                                  loads: j.loads.map((l, idx) => 
-                                                      idx === loadIndex ? { ...l, duration: null } : l
-                                                  ),
-                                              }
-                                            : j,
-                                    ),
-                                );
-                            }
-                        }, 100);
-                    }
-                }
-            }
-            
-            return { success: true };
-        } catch (err) {
-            console.error("Failed to assign machine:", err);
-            // Revert local state if API call fails
-            setJobs((prev) =>
-                prev.map((j) =>
-                    getJobKey(j) === jobKey
-                        ? {
-                              ...j,
-                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, machineId: null } : l)),
-                          }
-                        : j,
-                ),
-            );
-            throw err;
-        }
-    });
-};
 
     const checkAndFixMachineSync = async (jobKey, loadIndex) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
@@ -1034,6 +1034,7 @@ function ServiceTrackingContent() {
             }
         });
     };
+
     const startDryingAgain = async (jobKey, loadIndex) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
         if (!job?.id) return;
