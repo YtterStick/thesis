@@ -554,7 +554,7 @@ public class TransactionService {
 
             List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
             Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
-                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
             LocalDateTime currentManilaTime = getCurrentManilaTime();
 
@@ -756,7 +756,7 @@ public class TransactionService {
         }
     }
 
-    // OPTIMIZED: Get time-filtered summary using aggregation queries
+    // OPTIMIZED: Get time-filtered summary using aggregation queries - UPDATED to use issueDate
     @Cacheable(value = "adminSummary", key = "'optimized-' + #timeFilter")
     public Map<String, Object> getOptimizedAdminRecordsSummaryByTime(String timeFilter) {
         long startTime = System.currentTimeMillis();
@@ -764,18 +764,8 @@ public class TransactionService {
         try {
             System.out.println("🚀 OPTIMIZED: Calculating time-filtered admin records summary: " + timeFilter);
 
-            // Use aggregation queries instead of loading all records
             LocalDateTime currentManilaTime = getCurrentManilaTime();
             LocalDateTime startDate = calculateStartDate(timeFilter, currentManilaTime);
-
-            // Use MongoDB aggregation for faster calculations
-            List<Transaction> filteredTransactions;
-            if ("all".equals(timeFilter)) {
-                // For "all", we can use cached counts or pre-aggregated data
-                filteredTransactions = Collections.emptyList(); // We'll use aggregation instead
-            } else {
-                filteredTransactions = transactionRepository.findByCreatedAtAfter(startDate);
-            }
 
             // For simpler implementation, use repository methods with date ranges
             double totalIncome = calculateTotalIncome(timeFilter, startDate);
@@ -800,6 +790,7 @@ public class TransactionService {
             System.out.println("🚀 OPTIMIZED Time-Filtered Summary Results (" + timeFilter + "):");
             System.out.println("   - Total Income: ₱" + totalIncome);
             System.out.println("   - Total Loads: " + totalLoads);
+            System.out.println("   - Total Records: " + summary.get("totalRecords"));
             System.out.println("   - Calculation time: " + (System.currentTimeMillis() - startTime) + "ms");
 
             return summary;
@@ -902,19 +893,27 @@ public class TransactionService {
                 .sum();
     }
 
+    // Update the helper method to use issueDate-based counting
     private long getTotalRecordsCount(String timeFilter) {
         if ("all".equals(timeFilter)) {
             return transactionRepository.count();
         } else {
             LocalDateTime currentManilaTime = getCurrentManilaTime();
             LocalDateTime startDate = calculateStartDate(timeFilter, currentManilaTime);
-            // ✅ UPDATED: Use issueDate for filtering
-            return transactionRepository.findAll().stream()
-                    .filter(tx -> {
-                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
-                        return recordDate != null && !recordDate.isBefore(startDate);
-                    })
-                    .count();
+            
+            // ✅ FIXED: Use issueDate for counting
+            try {
+                return transactionRepository.countByIssueDateAfter(startDate);
+            } catch (Exception e) {
+                System.out.println("⚠️  Falling back to Java filtering for counting: " + e.getMessage());
+                // Fallback to Java filtering
+                return transactionRepository.findAll().stream()
+                        .filter(tx -> {
+                            LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
+                            return recordDate != null && !recordDate.isBefore(startDate);
+                        })
+                        .count();
+            }
         }
     }
 
@@ -1039,7 +1038,7 @@ public class TransactionService {
         return transactionRepository.count();
     }
 
-    // OPTIMIZED: Time-filtered records with better performance
+    // OPTIMIZED: Time-filtered records with better performance - UPDATED to use issueDate
     @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size + '-filter-' + #timeFilter")
     public List<AdminRecordResponseDto> getAllAdminRecordsByTime(int page, int size, String timeFilter) {
         long startTime = System.currentTimeMillis();
@@ -1056,7 +1055,16 @@ public class TransactionService {
                 transactions = transactionRepository.findAll(pageable).getContent();
             } else {
                 LocalDateTime startDate = calculateStartDate(timeFilter, getCurrentManilaTime());
-                transactions = transactionRepository.findByCreatedAtAfter(startDate, pageable);
+                
+                // ✅ FIXED: Use issueDate instead of createdAt for filtering
+                // Try to use issueDate-based query first, fall back to createdAt if needed
+                try {
+                    transactions = transactionRepository.findByIssueDateAfter(startDate, pageable);
+                    System.out.println("✅ Using issueDate-based filtering for time filter: " + timeFilter);
+                } catch (Exception e) {
+                    System.out.println("⚠️  Falling back to createdAt filtering: " + e.getMessage());
+                    transactions = transactionRepository.findByCreatedAtAfter(startDate, pageable);
+                }
             }
 
             // Get only the laundry jobs needed for these transactions
@@ -1171,21 +1179,33 @@ public class TransactionService {
         }
     }
 
-    // Get count for time-filtered records
+    // Get count for time-filtered records - UPDATED to use issueDate
     @Cacheable(value = "adminRecordsCount", key = "'filter-' + #timeFilter")
     public long getTotalAdminRecordsCountByTime(String timeFilter) {
         try {
             System.out.println("📊 Counting time-filtered records: " + timeFilter);
 
-            List<Transaction> allTransactions = transactionRepository.findAll();
-            LocalDateTime currentManilaTime = getCurrentManilaTime();
-
-            List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter,
-                    currentManilaTime);
-            long count = filteredTransactions.size();
-
-            System.out.println("✅ Time-filtered count (" + timeFilter + "): " + count);
-            return count;
+            if ("all".equals(timeFilter)) {
+                return transactionRepository.count();
+            } else {
+                LocalDateTime startDate = calculateStartDate(timeFilter, getCurrentManilaTime());
+                
+                // ✅ FIXED: Use issueDate instead of createdAt for counting
+                try {
+                    long count = transactionRepository.countByIssueDateAfter(startDate);
+                    System.out.println("✅ Time-filtered count using issueDate (" + timeFilter + "): " + count);
+                    return count;
+                } catch (Exception e) {
+                    System.out.println("⚠️  Falling back to createdAt counting: " + e.getMessage());
+                    // Fallback: use Java filtering with issueDate
+                    List<Transaction> allTransactions = transactionRepository.findAll();
+                    LocalDateTime currentManilaTime = getCurrentManilaTime();
+                    List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
+                    long count = filteredTransactions.size();
+                    System.out.println("✅ Time-filtered count using Java filtering (" + timeFilter + "): " + count);
+                    return count;
+                }
+            }
         } catch (Exception e) {
             System.err.println("❌ Error counting time-filtered records: " + e.getMessage());
             return transactionRepository.count(); // Fallback to total count
