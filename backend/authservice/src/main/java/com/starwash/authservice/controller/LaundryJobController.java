@@ -90,11 +90,11 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
-    // Start load
+    // Start load - CHANGED: durationMinutes from Integer to Double
     @PatchMapping("/{transactionId}/start-load")
     public ResponseEntity<LaundryJobDto> startLoad(@PathVariable String transactionId,
             @RequestParam int loadNumber,
-            @RequestParam(required = false) Double durationMinutes, // CHANGED from Integer to Double
+            @RequestParam(required = false) Double durationMinutes, // CHANGED: Integer → Double
             @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.startLoad(transactionId, loadNumber, durationMinutes, username);
@@ -132,11 +132,11 @@ public class LaundryJobController {
         return ResponseEntity.ok(toDto(job));
     }
 
-    // Update load duration - CHANGED parameter type from int to double
+    // Update load duration - CHANGED: durationMinutes from int to double
     @PatchMapping("/{transactionId}/update-duration")
     public ResponseEntity<LaundryJobDto> updateLoadDuration(@PathVariable String transactionId,
             @RequestParam int loadNumber,
-            @RequestParam double durationMinutes, // CHANGED from int to double
+            @RequestParam double durationMinutes, // CHANGED: int → double
             @RequestHeader("Authorization") String authHeader) {
         String username = jwtUtil.getUsername(authHeader.replace("Bearer ", ""));
         LaundryJob job = laundryJobService.updateLoadDuration(transactionId, loadNumber, durationMinutes, username);

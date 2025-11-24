@@ -228,7 +228,10 @@ public class LaundryJobService {
         load.setStatus(nextStatus);
         load.setStartTime(now);
         load.setDurationMinutes(finalDuration);
-        load.setEndTime(now.plusMinutes((long) (finalDuration * 60))); // Convert to actual minutes
+        
+        // ✅ FIXED: Convert to seconds for end time calculation
+        long durationSeconds = (long) (finalDuration * 60);
+        load.setEndTime(now.plusSeconds(durationSeconds));
 
         machine.setStatus(STATUS_IN_USE);
         machineRepository.save(machine);
@@ -241,14 +244,15 @@ public class LaundryJobService {
         System.out.println("   Load: " + loadNumber);
         System.out.println("   Status: " + nextStatus);
         System.out.println("   Machine Type: " + machine.getType());
-        System.out.println("   Duration: " + finalDuration + " minutes");
+        System.out.println("   Duration: " + finalDuration + " minutes = " + durationSeconds + " seconds");
         System.out.println("   Start Time (Manila): " + now);
         System.out.println("   End Time (Manila): " + load.getEndTime());
 
+        // ✅ FIXED: Schedule in SECONDS, not minutes
         scheduler.schedule(() -> {
-            System.out.println("🏃‍♂️ Executing scheduled task for " + transactionId + " load " + loadNumber);
+            System.out.println("🏃‍♂️ Executing scheduled task for " + transactionId + " load " + loadNumber + " at " + getCurrentManilaTime());
             autoAdvanceAfterStepEnds(serviceType, transactionId, loadNumber);
-        }, (long) (finalDuration * 60), TimeUnit.MINUTES);
+        }, durationSeconds, TimeUnit.SECONDS);
 
         return saved;
     }
@@ -275,7 +279,9 @@ public class LaundryJobService {
                 ? load.getDurationMinutes()
                 : 40.0;
 
-        load.setEndTime(now.plusMinutes((long) (duration * 60)));
+        // ✅ FIXED: Convert to seconds for end time calculation
+        long durationSeconds = (long) (duration * 60);
+        load.setEndTime(now.plusSeconds(durationSeconds));
 
         // Ensure we have a dryer machine assigned
         if (load.getMachineId() == null) {
@@ -311,13 +317,14 @@ public class LaundryJobService {
         System.out.println("🔥 DRY AGAIN DEBUG:");
         System.out.println("   Transaction: " + transactionId);
         System.out.println("   Load: " + loadNumber);
-        System.out.println("   Duration: " + duration + " minutes");
+        System.out.println("   Duration: " + duration + " minutes = " + durationSeconds + " seconds");
         System.out.println("   Machine: " + load.getMachineId());
 
+        // ✅ FIXED: Schedule in seconds
         scheduler.schedule(() -> {
-            System.out.println("🏃‍♂️ Executing scheduled drying task for " + transactionId + " load " + loadNumber);
+            System.out.println("🏃‍♂️ Executing scheduled drying task for " + transactionId + " load " + loadNumber + " at " + getCurrentManilaTime());
             autoAdvanceAfterStepEnds("dry", transactionId, loadNumber);
-        }, (long) (duration * 60), TimeUnit.MINUTES);
+        }, durationSeconds, TimeUnit.SECONDS);
 
         return saved;
     }
@@ -399,7 +406,8 @@ public class LaundryJobService {
 
     private synchronized void autoAdvanceAfterStepEnds(String serviceType, String transactionId, int loadNumber) {
         try {
-            System.out.println("🔄 autoAdvanceAfterStepEnds called for " + transactionId + " load " + loadNumber);
+            System.out.println("🔄 autoAdvanceAfterStepEnds CALLED for " + transactionId + " load " + loadNumber);
+            System.out.println("⏰ Current Manila Time: " + getCurrentManilaTime());
 
             LaundryJob job = findSingleJobByTransaction(transactionId);
             Transaction txn = transactionRepository.findByInvoiceNumber(transactionId).orElse(null);
@@ -416,8 +424,7 @@ public class LaundryJobService {
             }
 
             String previousStatus = load.getStatus();
-            System.out
-                    .println("📊 Current status: " + previousStatus + " for " + transactionId + " load " + loadNumber);
+            System.out.println("📊 Current status: " + previousStatus + " for " + transactionId + " load " + loadNumber);
 
             if (STATUS_COMPLETED.equals(previousStatus) || STATUS_FOLDING.equals(previousStatus)) {
                 System.out.println("⏩ Skipping auto-advance - already in final state: " + previousStatus);
@@ -445,14 +452,12 @@ public class LaundryJobService {
                     case STATUS_WASHING:
                         load.setStatus(STATUS_WASHED);
                         releaseMachine(load); // Release washer when moving to WASHED
-                        System.out.println(
-                                "🕒 Auto-advanced from WASHING to WASHED for " + transactionId + " load " + loadNumber);
+                        System.out.println("🕒 Auto-advanced from WASHING to WASHED for " + transactionId + " load " + loadNumber);
                         break;
                     case STATUS_DRYING:
                         load.setStatus(STATUS_DRIED);
                         // DO NOT release dryer when moving to DRIED - keep it "In Use"
-                        System.out.println(
-                                "🕒 Auto-advanced from DRYING to DRIED for " + transactionId + " load " + loadNumber);
+                        System.out.println("🕒 Auto-advanced from DRYING to DRIED for " + transactionId + " load " + loadNumber);
                         break;
                     default:
                         System.out.println("❓ No auto-advance logic for status: " + previousStatus);
@@ -638,7 +643,9 @@ public class LaundryJobService {
 
         load.setDurationMinutes(durationMinutes);
         if (load.getStartTime() != null) {
-            load.setEndTime(load.getStartTime().plusMinutes((long) (durationMinutes * 60)));
+            // ✅ FIXED: Use seconds calculation
+            long durationSeconds = (long) (durationMinutes * 60);
+            load.setEndTime(load.getStartTime().plusSeconds(durationSeconds));
         }
 
         job.setLaundryProcessedBy(processedBy);
