@@ -455,11 +455,16 @@ const TrackingTable = ({
                                                                 >
                                                                     {(() => {
                                                                         const remaining = getRemainingTime(load);
-                                                                        return remaining < 60
-                                                                            ? `${remaining}s`
-                                                                            : `${Math.floor(remaining / 60)}m ${(remaining % 60)
-                                                                                  .toString()
-                                                                                  .padStart(2, "0")}s`;
+                                                                        // FIXED: More stable timer display
+                                                                        if (remaining <= 0) {
+                                                                            return "0s";
+                                                                        } else if (remaining < 60) {
+                                                                            return `${remaining}s`;
+                                                                        } else {
+                                                                            const minutes = Math.floor(remaining / 60);
+                                                                            const seconds = remaining % 60;
+                                                                            return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+                                                                        }
                                                                     })()}
                                                                 </span>
                                                             ) : (

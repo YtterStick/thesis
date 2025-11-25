@@ -75,15 +75,6 @@ class ErrorBoundary extends React.Component {
     }
 }
 
-// Cache store outside component to persist between navigations
-const globalCache = {
-    jobs: null,
-    machines: null,
-    completedTodayCount: null,
-    lastFetchTime: null,
-    CACHE_DURATION: 2 * 60 * 1000, // 2 minutes cache
-};
-
 function ServiceTrackingContent() {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -119,13 +110,18 @@ function ServiceTrackingContent() {
         direction: "asc", // asc = soonest first
     });
 
-    // Enhanced getRemainingTime function with better urgency calculation
-    const getRemainingTime = (load) => {
+    // FIXED: More accurate getRemainingTime function
+    const getRemainingTime = useCallback((load) => {
         if (!load?.startTime || !load?.duration) return null;
-        const end = new Date(load.startTime).getTime() + load.duration * 60000;
-        const remaining = Math.max(Math.floor((end - now) / 1000), 0);
+        
+        const start = new Date(load.startTime).getTime();
+        const durationMs = load.duration * 60 * 1000; // Convert minutes to milliseconds
+        const end = start + durationMs;
+        const currentTime = Date.now();
+        const remaining = Math.max(Math.floor((end - currentTime) / 1000), 0);
+        
         return remaining;
-    };
+    }, []);
 
     // Auto-sorting function
     const getSortedJobs = useCallback(
@@ -166,7 +162,7 @@ function ServiceTrackingContent() {
                 return 0;
             });
         },
-        [sortConfig.direction, now, getRemainingTime],
+        [sortConfig.direction, getRemainingTime],
     );
 
     // Apply sorting to jobs
@@ -583,6 +579,15 @@ function ServiceTrackingContent() {
             }
         };
     }, [checkTimerCompletions]);
+
+    // FIXED: More precise timer interval
+    useEffect(() => {
+        const timerInterval = setInterval(() => {
+            setNow(Date.now());
+        }, 1000); // Update every second
+
+        return () => clearInterval(timerInterval);
+    }, []);
 
     useEffect(() => {
         fetchInitialData();
@@ -1282,7 +1287,7 @@ function ServiceTrackingContent() {
                                 </span>
                             )}
                         </p>
-                    </div>
+                </div>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -1565,6 +1570,15 @@ const SERVICE_FLOWS = {
     Wash: ["UNWASHED", "WASHING", "WASHED", "COMPLETED"],
     Dry: ["UNWASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"],
     "Wash & Dry": ["UNWASHED", "WASHING", "WASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"],
+};
+
+// Cache store outside component to persist between navigations
+const globalCache = {
+    jobs: null,
+    machines: null,
+    completedTodayCount: null,
+    lastFetchTime: null,
+    CACHE_DURATION: 2 * 60 * 1000, // 2 minutes cache
 };
 
 export default function ServiceTrackingPage() {
