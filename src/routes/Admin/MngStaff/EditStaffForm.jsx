@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { secureFetch } from "@/lib/secureFetch";
+import { secureFetch } from "@/lib/auth";
 
 const EditStaffForm = ({ staff, onUpdate, onClose }) => {
     const { theme } = useTheme();

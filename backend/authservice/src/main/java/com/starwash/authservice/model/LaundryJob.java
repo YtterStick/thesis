@@ -1,5 +1,6 @@
 package com.starwash.authservice.model;
 
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
@@ -12,26 +13,30 @@ import java.util.List;
 
 @Document(collection = "laundry_jobs")
 @CompoundIndexes({
-    @CompoundIndex(name = "transaction_id_idx", def = "{'transactionId': 1}"),
-    @CompoundIndex(name = "status_idx", def = "{'loadAssignments.status': 1}"),
-    @CompoundIndex(name = "pickup_status_idx", def = "{'pickupStatus': 1}"),
-    @CompoundIndex(name = "due_date_idx", def = "{'dueDate': 1}"),
-    @CompoundIndex(name = "expired_idx", def = "{'expired': 1}"),
-    @CompoundIndex(name = "customer_name_idx", def = "{'customerName': 1}"),
-    @CompoundIndex(name = "service_type_idx", def = "{'serviceType': 1}"),
-    @CompoundIndex(name = "disposed_idx", def = "{'disposed': 1}")
+        @CompoundIndex(name = "transaction_id_idx", def = "{'transactionId': 1}"),
+        @CompoundIndex(name = "status_idx", def = "{'loadAssignments.status': 1}"),
+        @CompoundIndex(name = "pickup_status_idx", def = "{'pickupStatus': 1}"),
+        @CompoundIndex(name = "due_date_idx", def = "{'dueDate': 1}"),
+        @CompoundIndex(name = "expired_idx", def = "{'expired': 1}"),
+        @CompoundIndex(name = "customer_name_idx", def = "{'customerName': 1}"),
+        @CompoundIndex(name = "service_type_idx", def = "{'serviceType': 1}"),
+        @CompoundIndex(name = "disposed_idx", def = "{'disposed': 1}")
 })
 public class LaundryJob {
 
     @Id
     private String id;
 
+    @CreatedDate
+    @Indexed
+    private LocalDateTime createdAt;
+
     @Indexed
     private String transactionId;
-    
+
     @Indexed
     private String customerName;
-    
+
     private String contact;
 
     private List<LoadAssignment> loadAssignments = new ArrayList<>();
@@ -70,9 +75,9 @@ public class LaundryJob {
     }
 
     public LaundryJob(String transactionId, String customerName, String contact,
-                      List<LoadAssignment> loadAssignments,
-                      Integer detergentQty, Integer fabricQty,
-                      List<String> statusFlow, Integer currentStep) {
+            List<LoadAssignment> loadAssignments,
+            Integer detergentQty, Integer fabricQty,
+            List<String> statusFlow, Integer currentStep) {
         this.transactionId = transactionId;
         this.customerName = customerName;
         this.contact = contact;
@@ -127,14 +132,14 @@ public class LaundryJob {
     }
 
     // Laundry processed by getters and setters
-    public String getLaundryProcessedBy() { 
-        return laundryProcessedBy; 
+    public String getLaundryProcessedBy() {
+        return laundryProcessedBy;
     }
-    
-    public void setLaundryProcessedBy(String laundryProcessedBy) { 
-        this.laundryProcessedBy = laundryProcessedBy; 
+
+    public void setLaundryProcessedBy(String laundryProcessedBy) {
+        this.laundryProcessedBy = laundryProcessedBy;
     }
-    
+
     // Claiming getters and setters
     public LocalDateTime getClaimDate() {
         return claimDate;
@@ -158,6 +163,14 @@ public class LaundryJob {
 
     public void setClaimedByStaffId(String claimedByStaffId) {
         this.claimedByStaffId = claimedByStaffId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     // Core getters and setters
@@ -275,7 +288,8 @@ public class LaundryJob {
                 '}';
     }
 
-    // Inner class for per-load tracking - UPDATED: durationMinutes changed from Integer to Double
+    // Inner class for per-load tracking - UPDATED: durationMinutes changed from
+    // Integer to Double
     public static class LoadAssignment {
         private int loadNumber;
         private String machineId;
@@ -288,7 +302,7 @@ public class LaundryJob {
         }
 
         public LoadAssignment(int loadNumber, String machineId, String status,
-                              Double durationMinutes, LocalDateTime startTime, LocalDateTime endTime) {
+                Double durationMinutes, LocalDateTime startTime, LocalDateTime endTime) {
             this.loadNumber = loadNumber;
             this.machineId = machineId;
             this.status = status;
