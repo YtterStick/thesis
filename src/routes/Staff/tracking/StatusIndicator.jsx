@@ -58,10 +58,9 @@ const STATUS_LABEL_COLORS = {
     COMPLETED: "#059669",
 };
 
-const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
+const StatusIndicator = ({ load, isDarkMode }) => {
     const statusConfig = STATUS_ICONS[load.status] || STATUS_ICONS.UNWASHED;
-    const remaining = getRemainingTime(load);
-
+    
     const shouldShowStatic = !statusConfig.loop && statusConfig.staticFrame !== undefined;
     
     return (
@@ -104,11 +103,7 @@ const StatusIndicator = ({ load, now, getRemainingTime, isDarkMode }) => {
                     borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                 }}
             >
-                {remaining !== null && remaining > 0
-                    ? `${Math.ceil(remaining / 60)} min remaining`
-                    : load.status === "COMPLETED"
-                      ? "Complete"
-                      : "Ready for next step"}
+                {load.status === "COMPLETED" ? "Complete" : "Ready for next step"}
             </TooltipContent>
         </Tooltip>
     );

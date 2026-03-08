@@ -33,8 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
-const ALLOWED_SKEW_MS = 5000;
+import { api } from "@/lib/api-config";
 
 // Manila time utility functions
 const toManilaTime = (timestamp) => {
@@ -59,42 +58,6 @@ const formatManilaTime = (timestamp, options = {}) => {
   };
   
   return date.toLocaleString('en-PH', { ...defaultOptions, ...options });
-};
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const exp = decoded.exp * 1000;
-    const manilaNow = toManilaTime(new Date()).getTime();
-    return exp + ALLOWED_SKEW_MS < manilaNow;
-  } catch (err) {
-    console.warn("❌ Failed to decode token:", err);
-    return true;
-  }
-};
-
-const secureFetch = async (endpoint, method = "GET", body = null) => {
-  const token = localStorage.getItem("authToken");
-  if (!token || typeof token !== "string" || !token.includes(".") || isTokenExpired(token)) {
-    window.location.href = "/login";
-    throw new Error("Token expired or invalid");
-  }
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Request failed: ${response.status} - ${errorText}`);
-  }
-  return response.json();
 };
 
 // Skeleton Loader Components
@@ -220,8 +183,10 @@ const AuditTrailPage = () => {
   const [users, setUsers] = useState([]);
   const [knownUsernames, setKnownUsernames] = useState(new Set());
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0); // Backend uses 0-based indexing
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   const actionTypes = [
     { value: "all", label: "All Actions" },
@@ -238,51 +203,45 @@ const AuditTrailPage = () => {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const data = await secureFetch("/accounts");
-      console.log("👥 Users response:", data);
+      const data = await api.get("/accounts");
       
       const userList = data.users || data || [];
       const usernameSet = new Set();
       const uniqueUsers = userList.map(user => {
         const username = user.username || user.email;
-        if (username) {
-          usernameSet.add(username);
-        }
-        return {
-          value: username,
-          label: username
-        };
-      }).filter(user => user.value); // Filter out any null/undefined usernames
+        if (username) usernameSet.add(username);
+        return { value: username, label: username };
+      }).filter(user => user.value);
       
       setKnownUsernames(usernameSet);
-      setUsers([
-        { value: "all", label: "All Users" },
-        ...uniqueUsers,
-        { value: "unknown", label: "Unknown" }
-      ]);
+      setUsers([{ value: "all", label: "All Users" }, ...uniqueUsers, { value: "unknown", label: "Unknown" }]);
     } catch (error) {
       console.error("❌ Failed to fetch users:", error);
-      // Fallback to "All Users" and "Unknown"
-      setUsers([
-        { value: "all", label: "All Users" },
-        { value: "unknown", label: "Unknown" }
-      ]);
-      setKnownUsernames(new Set());
+      setUsers([{ value: "all", label: "All Users" }, { value: "unknown", label: "Unknown" }]);
     }
   }, []);
 
   const fetchAuditLogs = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await secureFetch("/audit-logs");
-      console.log("📊 Audit logs response:", data);
+      let endpoint = "/audit-logs";
+      const params = { page: currentPage, size: itemsPerPage };
       
-      const logs = data.logs || data || [];
-      console.log(`📋 Total logs found: ${logs.length}`);
+      // Simple logic: if a main filter is selected, use specialized endpoint
+      // Note: Backend currently doesn't support COMBINED filters in a single endpoint
+      if (selectedUser !== "all" && selectedUser !== "unknown") {
+        endpoint = `/audit-logs/user/${selectedUser}`;
+      } else if (selectedAction !== "all") {
+        endpoint = `/audit-logs/action/${selectedAction}`;
+      }
+
+      const queryString = new URLSearchParams(params).toString();
+      const data = await api.get(`${endpoint}?${queryString}`);
       
-      setAuditLogs(logs);
+      setAuditLogs(data.logs || []);
+      setTotalPages(data.totalPages || 0);
+      setTotalElements(data.totalElements || 0);
       
-      // Fetch users separately
       await fetchUsers();
     } catch (error) {
       console.error("❌ Failed to fetch audit logs:", error);
@@ -290,7 +249,7 @@ const AuditTrailPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchUsers]);
+  }, [fetchUsers, currentPage, itemsPerPage, selectedUser, selectedAction]);
 
   useEffect(() => {
     fetchAuditLogs();
@@ -302,55 +261,33 @@ const AuditTrailPage = () => {
     return !knownUsernames.has(log.username);
   };
 
+  // Frontend-only filtering for Search Term and Date Range (since backend doesn't support them combined yet)
   const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = 
+    const matchesSearch = !searchTerm || 
       log.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.action?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.entityType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.description?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesAction = selectedAction === "all" || log.action === selectedAction;
-    
-    // Handle user filtering including "unknown" case
-    const matchesUser = selectedUser === "all" || 
-      (selectedUser === "unknown" ? isUnknownUser(log) : log.username === selectedUser);
 
     let matchesDate = true;
     if (dateRange !== "all" && log.timestamp) {
       const logDate = toManilaTime(log.timestamp);
       const now = toManilaTime(new Date());
-      
       switch (dateRange) {
-        case "today":
-          matchesDate = logDate.toDateString() === now.toDateString();
-          break;
-        case "week":
-          const weekAgo = new Date(now);
-          weekAgo.setDate(now.getDate() - 7);
-          matchesDate = logDate >= weekAgo;
-          break;
+        case "today": matchesDate = logDate.toDateString() === now.toDateString(); break;
+        case "week": 
+          const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+          matchesDate = logDate >= weekAgo; break;
         case "month":
-          const monthAgo = new Date(now);
-          monthAgo.setMonth(now.getMonth() - 1);
-          matchesDate = logDate >= monthAgo;
-          break;
-        default:
-          matchesDate = true;
+          const monthAgo = new Date(now); monthAgo.setMonth(now.getMonth() - 1);
+          matchesDate = logDate >= monthAgo; break;
+        default: matchesDate = true;
       }
     }
-
-    return matchesSearch && matchesAction && matchesUser && matchesDate;
+    return matchesSearch && matchesDate;
   });
 
-  const totalItems = filteredLogs.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentLogs = filteredLogs.slice(startIndex, endIndex);
-
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedAction, selectedUser, dateRange, itemsPerPage]);
+    setCurrentPage(0);
+  }, [selectedAction, selectedUser, itemsPerPage]);
 
   const getActionColor = (action) => {
     switch (action) {
@@ -369,10 +306,10 @@ const AuditTrailPage = () => {
     return formatManilaTime(timestamp);
   };
 
-  const goToFirstPage = () => setCurrentPage(1);
-  const goToLastPage = () => setCurrentPage(totalPages);
-  const goToPreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
-  const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const goToFirstPage = () => setCurrentPage(0);
+  const goToLastPage = () => setCurrentPage(totalPages - 1);
+  const goToPreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 0));
+  const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages - 1));
 
   return (
     <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible"
@@ -615,7 +552,7 @@ const AuditTrailPage = () => {
           >
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-                Activity Logs ({filteredLogs.length} records)
+                Activity Logs ({totalElements} total)
               </CardTitle>
               
               {/* Items per page selector */}
@@ -739,7 +676,7 @@ const AuditTrailPage = () => {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6">
                   <div className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#6B7280' }}>
-                    Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} entries
+                    Showing {currentPage * itemsPerPage + 1} to {Math.min((currentPage + 1) * itemsPerPage, totalElements)} of {totalElements} entries
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -748,7 +685,7 @@ const AuditTrailPage = () => {
                       variant="outline"
                       size="sm"
                       onClick={goToFirstPage}
-                      disabled={currentPage === 1}
+                      disabled={currentPage === 0}
                       className="rounded-lg border-2 transition-all hover:opacity-80"
                       style={{
                         borderColor: isDarkMode ? "#334155" : "#0B2B26",
@@ -764,7 +701,7 @@ const AuditTrailPage = () => {
                       variant="outline"
                       size="sm"
                       onClick={goToPreviousPage}
-                      disabled={currentPage === 1}
+                      disabled={currentPage === 0}
                       className="rounded-lg border-2 transition-all hover:opacity-80"
                       style={{
                         borderColor: isDarkMode ? "#334155" : "#0B2B26",
@@ -819,7 +756,7 @@ const AuditTrailPage = () => {
                       variant="outline"
                       size="sm"
                       onClick={goToNextPage}
-                      disabled={currentPage === totalPages}
+                      disabled={currentPage === totalPages - 1}
                       className="rounded-lg border-2 transition-all hover:opacity-80"
                       style={{
                         borderColor: isDarkMode ? "#334155" : "#0B2B26",
@@ -835,7 +772,7 @@ const AuditTrailPage = () => {
                       variant="outline"
                       size="sm"
                       onClick={goToLastPage}
-                      disabled={currentPage === totalPages}
+                      disabled={currentPage === totalPages - 1}
                       className="rounded-lg border-2 transition-all hover:opacity-80"
                       style={{
                         borderColor: isDarkMode ? "#334155" : "#0B2B26",

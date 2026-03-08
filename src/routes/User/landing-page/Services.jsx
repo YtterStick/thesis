@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 // Assets
 import assetClothing from "@/assets/USER_ASSET/asset_clothing.png";
 
-const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
+const API_BASE_URL = "https://thesis-1-culv.onrender.com/api";
 
 const Services = ({ isVisible, isMobile, isDarkMode }) => {
   const [selectedService, setSelectedService] = useState(null);

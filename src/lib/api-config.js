@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://thesis-g0pr.onrender.com',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://thesis-1-culv.onrender.com',
   timeout: 10000
 };
 
@@ -19,6 +19,12 @@ const isTokenExpired = (token) => {
     const exp = decoded.exp * 1000;
     const now = Date.now();
     const ALLOWED_SKEW_MS = 5000;
+    
+    // Log only if close to expiration (optional)
+    if (exp - now < 300000) { // 5 minutes
+      console.log(`🕒 Token expiring in ${Math.round((exp-now)/1000)}s`);
+    }
+
     return exp + ALLOWED_SKEW_MS < now;
   } catch (err) {
     console.warn("❌ Failed to decode token:", err);
@@ -52,12 +58,12 @@ export const apiFetch = async (endpoint, options = {}) => {
     }
 
     if (isTokenExpired(token)) {
-      console.warn('🚨 Token expired');
+      console.warn('🚨 Token expired. Redirecting to login.');
       localStorage.removeItem('authToken');
+      window.location.href = "/login";
       throw new Error('Token expired. Please log in again.');
     }
     console.log(`🌐 Protected API Call: ${options.method || 'GET'} ${url}`);
-    console.log(`🔐 Using token: ${token.substring(0, 20)}...`);
   }
 
   const defaultOptions = {

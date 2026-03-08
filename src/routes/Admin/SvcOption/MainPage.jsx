@@ -5,17 +5,15 @@ import { Trash2, Plus, Settings, WashingMachine, X, Package } from "lucide-react
 import EditServiceModal from "./components/EditServiceModal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api-config"; // Import the api utility
+import { api } from "@/lib/api-config";
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;
 
-// Initialize cache properly
 const initializeCache = () => {
   try {
     const stored = localStorage.getItem('servicesCache');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Check if cache is still valid
       if (Date.now() - parsed.timestamp < CACHE_DURATION) {
         console.log("📦 Initializing services from stored cache");
         return parsed;
@@ -29,11 +27,9 @@ const initializeCache = () => {
   return null;
 };
 
-// Initialize global cache
 let servicesCache = initializeCache();
 let cacheTimestamp = servicesCache?.timestamp || null;
 
-// Save cache to localStorage for persistence
 const saveCacheToStorage = (data) => {
   try {
     localStorage.setItem('servicesCache', JSON.stringify({
@@ -60,28 +56,24 @@ export default function MainPage() {
     const [editTarget, setEditTarget] = useState(null);
     const [error, setError] = useState(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-    const [loading, setLoading] = useState(!servicesCache); // Only loading if no cache
-    const [initialLoad, setInitialLoad] = useState(!servicesCache); // Only initial load if no cache
+    const [loading, setLoading] = useState(!servicesCache);
+    const [initialLoad, setInitialLoad] = useState(!servicesCache);
     const isMountedRef = useRef(true);
 
-    // Function to check if data has actually changed
     const hasDataChanged = (newData, oldData) => {
       if (!oldData) return true;
       return JSON.stringify(newData) !== JSON.stringify(oldData);
     };
 
     const fetchServices = useCallback(async (forceRefresh = false) => {
-      // Don't fetch if component is unmounted
       if (!isMountedRef.current) return;
 
       try {
         const now = Date.now();
         
-        // Check cache first unless forced refresh
         if (!forceRefresh && servicesCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
           console.log("📦 Using cached services data");
           
-          // Always update with cached data to ensure UI is populated
           setServices(servicesCache.data);
           setLoading(false);
           setInitialLoad(false);
@@ -93,7 +85,6 @@ export default function MainPage() {
         console.error("❌ Error fetching services:", err.message);
         if (!isMountedRef.current) return;
         
-        // On error, keep cached data if available
         if (servicesCache) {
           console.log("⚠️ Fetch failed, falling back to cached services data");
           setServices(servicesCache.data);
@@ -106,7 +97,6 @@ export default function MainPage() {
       }
     }, []);
 
-    // Separate function for actual API call using the api utility
     const fetchFreshServices = async () => {
       console.log("🔄 Fetching fresh services data");
       setLoading(true);
@@ -117,18 +107,15 @@ export default function MainPage() {
         
         const currentTime = Date.now();
 
-        // Only update state and cache if data has actually changed
         if (!servicesCache || hasDataChanged(newServices, servicesCache.data)) {
           console.log("🔄 Services data updated with fresh data");
           
-          // Update cache
           servicesCache = {
             data: newServices,
             timestamp: currentTime
           };
           cacheTimestamp = currentTime;
           
-          // Persist to localStorage
           saveCacheToStorage(newServices);
           
           if (isMountedRef.current) {
@@ -137,7 +124,6 @@ export default function MainPage() {
           }
         } else {
           console.log("✅ No changes in services data, updating timestamp only");
-          // Just update the timestamp to extend cache life
           cacheTimestamp = currentTime;
           servicesCache.timestamp = currentTime;
           saveCacheToStorage(servicesCache.data);
@@ -160,7 +146,6 @@ export default function MainPage() {
     useEffect(() => {
       isMountedRef.current = true;
       
-      // Always show cached data immediately if available
       if (servicesCache) {
         console.log("🚀 Showing cached services data immediately");
         setServices(servicesCache.data);
@@ -168,7 +153,6 @@ export default function MainPage() {
         setInitialLoad(false);
       }
       
-      // Then fetch fresh data
       fetchServices();
       
       return () => {
@@ -227,7 +211,6 @@ export default function MainPage() {
             setServices((prev) => {
                 const newServices = prev.filter((s) => s.id !== id);
                 
-                // Update cache
                 servicesCache = {
                   data: newServices,
                   timestamp: Date.now()
@@ -254,7 +237,6 @@ export default function MainPage() {
         }
     };
 
-    // Skeleton Loader Components - Updated to match AdminDashboard pattern
     const SkeletonCard = ({ index }) => (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -390,7 +372,6 @@ export default function MainPage() {
         </motion.div>
     );
 
-    // Show skeleton loader only during initial load AND when no cached data is available
     if (initialLoad && !servicesCache) {
         return (
             <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
@@ -428,7 +409,7 @@ export default function MainPage() {
         <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
             backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
         }}>
-            {/* 🧢 Section Header */}
+
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -470,7 +451,7 @@ export default function MainPage() {
                 </motion.button>
             </motion.div>
 
-            {/* 🔥 Error Message */}
+
             {error && (
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -487,7 +468,6 @@ export default function MainPage() {
                 </motion.div>
             )}
 
-            {/* 🧼 Service Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {services.length > 0 ? (
                     services.map((service, index) => (

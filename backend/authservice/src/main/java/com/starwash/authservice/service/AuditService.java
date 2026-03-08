@@ -3,12 +3,13 @@ package com.starwash.authservice.service;
 import com.starwash.authservice.model.AuditLog;
 import com.starwash.authservice.repository.AuditLogRepository;
 import com.starwash.authservice.security.ManilaTimeUtil;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class AuditService {
@@ -18,26 +19,26 @@ public class AuditService {
         this.auditLogRepository = auditLogRepository;
     }
 
-    public void logActivity(String username, String action, String entityType, 
-                          String entityId, String description, HttpServletRequest request) {
+    public void logActivity(String username, String action, String entityType,
+            String entityId, String description, HttpServletRequest request) {
         logActivity(username, action, entityType, entityId, description, null, null, request);
     }
 
-    public void logActivity(String username, String action, String entityType, 
-                          String entityId, String description, Object oldValues, 
-                          Object newValues, HttpServletRequest request) {
-        
+    public void logActivity(String username, String action, String entityType,
+            String entityId, String description, Object oldValues,
+            Object newValues, HttpServletRequest request) {
+
         String ipAddress = getClientIpAddress(request);
-        
+
         LocalDateTime manilaTime = ManilaTimeUtil.now();
-        
+
         AuditLog auditLog = new AuditLog(username, action, entityType, entityId, description, ipAddress);
         auditLog.setTimestamp(manilaTime);
         auditLog.setOldValues(oldValues);
         auditLog.setNewValues(newValues);
-        
+
         auditLogRepository.save(auditLog);
-        
+
         System.out.println("📝 Audit log created at Manila time: " + manilaTime);
     }
 
@@ -53,19 +54,35 @@ public class AuditService {
         return auditLogRepository.findAllByOrderByTimestampDesc();
     }
 
+    public Page<AuditLog> getAllLogs(Pageable pageable) {
+        return auditLogRepository.findAllByOrderByTimestampDesc(pageable);
+    }
+
+    public Page<AuditLog> getLogsByUser(String username, Pageable pageable) {
+        return auditLogRepository.findByUsernameOrderByTimestampDesc(username, pageable);
+    }
+
+    public Page<AuditLog> getLogsByAction(String action, Pageable pageable) {
+        return auditLogRepository.findByActionOrderByTimestampDesc(action, pageable);
+    }
+
+    public Page<AuditLog> getLogsByDateRange(LocalDateTime start, LocalDateTime end, Pageable pageable) {
+        return auditLogRepository.findByTimestampBetweenOrderByTimestampDesc(start, end, pageable);
+    }
+
+    public Page<AuditLog> getLogsByEntity(String entityType, String entityId, Pageable pageable) {
+        return auditLogRepository.findByEntityTypeAndEntityIdOrderByTimestampDesc(entityType, entityId, pageable);
+    }
+
     public List<AuditLog> getLogsByUser(String username) {
-        return auditLogRepository.findByUsernameOrderByTimestampDesc(username);
+        return auditLogRepository.findAllByOrderByTimestampDesc(); // Fallback/Export
     }
 
     public List<AuditLog> getLogsByAction(String action) {
-        return auditLogRepository.findByActionOrderByTimestampDesc(action);
+        return auditLogRepository.findAllByOrderByTimestampDesc(); // Fallback/Export
     }
 
     public List<AuditLog> getLogsByDateRange(LocalDateTime start, LocalDateTime end) {
-        return auditLogRepository.findByTimestampBetweenOrderByTimestampDesc(start, end);
-    }
-
-    public List<AuditLog> getLogsByEntity(String entityType, String entityId) {
-        return auditLogRepository.findByEntityTypeAndEntityIdOrderByTimestampDesc(entityType, entityId);
+        return auditLogRepository.findAllByOrderByTimestampDesc(); // Fallback/Export
     }
 }

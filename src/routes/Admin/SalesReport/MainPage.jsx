@@ -15,8 +15,8 @@ import { getManilaTime, getManilaDateString } from "@/utils/manilaTime";
 
 let salesReportCache = null;
 let cacheTimestamp = null;
-const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
-const POLLING_INTERVAL = 10000; // 10 seconds auto-refresh
+const CACHE_DURATION = 4 * 60 * 60 * 1000;
+const POLLING_INTERVAL = 10000;
 
 const AnimatedNumber = ({ value, isChanging }) => {
     if (!isChanging) {
@@ -203,7 +203,6 @@ const SalesReportPage = () => {
         totalLoads: 0,
     });
 
-    // State for animated numbers
     const [animatedSummary, setAnimatedSummary] = useState({
         totalSales: "0",
         totalTransactions: "0",
@@ -222,7 +221,6 @@ const SalesReportPage = () => {
 
     const exportDropdownRef = useRef(null);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handlePointerDown = (e) => {
             if (exportDropdownRef.current?.contains(e.target)) return;
@@ -232,7 +230,6 @@ const SalesReportPage = () => {
         return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, []);
 
-    // Function to check if data has actually changed
     const hasDataChanged = (newData, oldData) => {
         if (!oldData) return true;
 
@@ -244,7 +241,6 @@ const SalesReportPage = () => {
         );
     };
 
-    // Fix for percentage calculation - ensure it doesn't exceed 100%
     const calculateSafeGrowthPercentage = (todaySales, yesterdaySales) => {
         if (yesterdaySales === 0) {
             return todaySales > 0 ? 100 : 0;
@@ -252,14 +248,12 @@ const SalesReportPage = () => {
 
         const percentage = ((todaySales - yesterdaySales) / yesterdaySales) * 100;
 
-        // Cap at 100% to prevent unrealistic numbers like 290%
         if (percentage > 100) return 100;
         if (percentage < -100) return -100;
 
         return Math.round(percentage);
     };
 
-    // Smart date grouping function
     const getSmartDateGrouping = (startDate, endDate) => {
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -267,11 +261,11 @@ const SalesReportPage = () => {
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
         if (diffDays <= 7) {
-            return "daily"; // Show daily data for up to 7 days
+            return "daily";
         } else if (diffDays <= 90) {
-            return "weekly"; // Show weekly data for up to 3 months
+            return "weekly";
         } else {
-            return "monthly"; // Show monthly data for longer periods
+            return "monthly";
         }
     };
 
@@ -281,11 +275,9 @@ const SalesReportPage = () => {
         return date.toLocaleDateString("en-US", { month: "long" });
     };
 
-    // Function to process sales data based on date range
     const processSalesData = (rawData, rangeType, start, end) => {
         if (!rawData || rawData.length === 0) return [];
 
-        // For "This Month", show only one bar for the whole month
         if (rangeType === "month") {
             const totalSales = rawData.reduce((sum, item) => sum + (item.sales || 0), 0);
             const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -302,7 +294,6 @@ const SalesReportPage = () => {
             const grouping = getSmartDateGrouping(start, end);
 
             if (grouping === "weekly") {
-                // Group by weeks for custom ranges longer than 1 week
                 const weeklyData = {};
                 rawData.forEach((item) => {
                     if (item.period) {
@@ -327,7 +318,6 @@ const SalesReportPage = () => {
                     month: data.month
                 }));
             } else if (grouping === "monthly") {
-                // Group by months for custom ranges longer than 3 months
                 const monthlyData = {};
                 rawData.forEach((item) => {
                     if (item.period) {
@@ -348,14 +338,12 @@ const SalesReportPage = () => {
             }
         }
 
-        // Default: return data as is (daily)
         return rawData;
     };
 
     const fetchSalesReport = useCallback(
         async (forceRefresh = false) => {
             try {
-                // Check cache first unless forced refresh
                 const now = Date.now();
                 const cacheKey = `${dateRange}-${startDate}-${endDate}-${serviceTypeFilter}`;
 
@@ -423,13 +411,10 @@ const SalesReportPage = () => {
                     params.append("serviceType", serviceTypeFilter);
                 }
 
-                // Use the api utility instead of direct fetch
                 const data = await api.get(`/reports/sales?${params}`);
 
-                // Process sales data with smart grouping
                 let processedSalesData = processSalesData(data.salesTrend || [], dateRange, requestStartDate, requestEndDate);
 
-                // Apply safe growth percentage calculation
                 const safeGrowthPercentage = calculateSafeGrowthPercentage(data.summary?.todaySales || 0, data.summary?.yesterdaySales || 0);
 
                 const newData = {
@@ -438,7 +423,7 @@ const SalesReportPage = () => {
                     recentTransactions: data.recentTransactions || [],
                     summaryData: {
                         ...data.summary,
-                        growthPercentage: safeGrowthPercentage, // Use the safe calculation
+                        growthPercentage: safeGrowthPercentage,
                         totalSales: data.summary?.totalSales || 0,
                         totalTransactions: data.summary?.totalTransactions || 0,
                         totalCustomers: data.summary?.totalCustomers || 0,
@@ -449,11 +434,9 @@ const SalesReportPage = () => {
                     },
                 };
 
-                // Only update state and cache if data has actually changed
                 if (hasDataChanged(newData, salesReportCache)) {
                     console.log("🔄 Sales report data updated");
 
-                    // Update cache
                     salesReportCache = {
                         ...newData,
                         cacheKey: cacheKey,
@@ -466,7 +449,6 @@ const SalesReportPage = () => {
                     setSummaryData(newData.summaryData);
                 } else {
                     console.log("✅ No changes in sales report data, skipping update");
-                    // Just update the timestamp to extend cache life
                     cacheTimestamp = now;
                 }
 
@@ -495,7 +477,6 @@ const SalesReportPage = () => {
         fetchSalesReport();
     }, [fetchSalesReport]);
 
-    // Auto-refresh every 10 seconds
     useEffect(() => {
         const intervalId = setInterval(() => {
             console.log("🔄 Auto-refreshing sales report data...");
@@ -505,7 +486,6 @@ const SalesReportPage = () => {
         return () => clearInterval(intervalId);
     }, [fetchSalesReport]);
 
-    // Update animated numbers when summary data changes
     useEffect(() => {
         if (!initialLoad) {
             setAnimatedSummary((prev) => ({
@@ -517,7 +497,6 @@ const SalesReportPage = () => {
                 isChanging: true,
             }));
 
-            // Reset changing state after animation
             setTimeout(() => {
                 setAnimatedSummary((prev) => ({ ...prev, isChanging: false }));
             }, 1000);
@@ -528,7 +507,6 @@ const SalesReportPage = () => {
         setDateRange(value);
         setDatesSwapped(false);
 
-        // Use Manila time instead of local time - THIS IS THE KEY FIX
         const today = getManilaTime();
         const manilaDateString = getManilaDateString();
 
@@ -550,7 +528,6 @@ const SalesReportPage = () => {
                 setEndDate(manilaDateString);
                 break;
             case "month":
-                // For "This Month", set to first day of current month to today
                 const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
                 setStartDate(monthStart.toISOString().split("T")[0]);
                 setEndDate(manilaDateString);
@@ -605,25 +582,22 @@ const SalesReportPage = () => {
             const currentDate = new Date().toISOString().split('T')[0];
             const currentDateTime = new Date().toLocaleString();
 
-            // Helper function to create styled headers
             const createStyledHeader = (title) => [
                 [title],
-                [], // Empty row for spacing
+                [],
             ];
 
-            // Helper function to add styled tables - FIXED: Only add headers once
             const addStyledTable = (sheet, data, startRow, hasHeader = true) => {
                 data.forEach((row, rowIndex) => {
                     row.forEach((cell, colIndex) => {
                         const cellRef = XLSX.utils.encode_cell({ r: startRow + rowIndex, c: colIndex });
                         
-                        // Style headers (first row of data if hasHeader is true)
                         if (hasHeader && rowIndex === 0) {
                             sheet[cellRef] = {
                                 v: cell,
                                 s: {
                                     font: { bold: true, color: { rgb: "FFFFFF" } },
-                                    fill: { fgColor: { rgb: "2C5F2D" } }, // Dark green
+                                    fill: { fgColor: { rgb: "2C5F2D" } },
                                     alignment: { horizontal: "center", vertical: "center" },
                                     border: {
                                         top: { style: "thin", color: { rgb: "1C3F3A" } },
@@ -634,7 +608,6 @@ const SalesReportPage = () => {
                                 }
                             };
                         } else {
-                            // Style data rows
                             sheet[cellRef] = {
                                 v: cell,
                                 s: {
@@ -647,12 +620,10 @@ const SalesReportPage = () => {
                                 }
                             };
                             
-                            // Alternate row coloring
                             if (rowIndex % 2 === 1) {
                                 sheet[cellRef].s.fill = { fgColor: { rgb: "F8F9FA" } };
                             }
                             
-                            // Right align numeric columns
                             if (typeof cell === 'number' || (typeof cell === 'string' && cell.includes('₱'))) {
                                 sheet[cellRef].s.alignment = { horizontal: "right", vertical: "center" };
                             }
@@ -664,7 +635,6 @@ const SalesReportPage = () => {
             };
 
             if (exportType === 'summary' || exportType === 'full') {
-                // Summary Sheet - Enhanced with better formatting
                 const summaryHeader = createStyledHeader('STARWASH SALES REPORT SUMMARY');
                 
                 const reportInfo = [
@@ -673,7 +643,7 @@ const SalesReportPage = () => {
                     ['Start Date', startDate],
                     ['End Date', endDate],
                     ['Service Type', serviceTypeFilter === 'all' ? 'All Services' : serviceTypeFilter],
-                    ['', ''], // Spacer
+                    ['', ''],
                 ];
 
                 const financialSummaryHeader = [['FINANCIAL PERFORMANCE']];
@@ -683,7 +653,7 @@ const SalesReportPage = () => {
                     ['Total Transactions', summaryData.totalTransactions.toLocaleString()],
                     ['Average Order Value', `₱${summaryData.averageOrderValue.toFixed(2)}`],
                     ['Growth Percentage', `${summaryData.growthPercentage}%`],
-                    ['', ''], // Spacer
+                    ['', ''],
                 ];
 
                 const operationalSummaryHeader = [['OPERATIONAL METRICS']];
@@ -705,7 +675,6 @@ const SalesReportPage = () => {
 
                 const summarySheet = XLSX.utils.aoa_to_sheet(summaryDataSheet);
                 
-                // Merge header cells for better appearance
                 if (!summarySheet['!merges']) summarySheet['!merges'] = [];
                 summarySheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
                 summarySheet['!merges'].push({ s: { r: 8, c: 0 }, e: { r: 8, c: 1 } });
@@ -715,7 +684,6 @@ const SalesReportPage = () => {
             }
 
             if (exportType === 'trend' || exportType === 'full') {
-                // Sales Trend Sheet - Enhanced with tables
                 const trendHeader = createStyledHeader('SALES TREND ANALYSIS');
                 
                 const summaryRow = [
@@ -725,10 +693,9 @@ const SalesReportPage = () => {
                         `₱${salesData.reduce((sum, item) => sum + item.sales, 0).toLocaleString()}`,
                         `₱${(salesData.reduce((sum, item) => sum + item.sales, 0) / salesData.length).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     ],
-                    [], // Spacer
+                    [],
                 ];
 
-                // FIXED: Only one header row
                 const trendData = [
                     ['Period', 'Sales (₱)', 'Percentage of Total'],
                     ...salesData.map(item => {
@@ -750,24 +717,20 @@ const SalesReportPage = () => {
 
                 const trendSheet = XLSX.utils.aoa_to_sheet(trendDataSheet);
                 
-                // Style the trend sheet
-                addStyledTable(trendSheet, trendData, 5); // Start at row 5 (after headers and summary)
+                addStyledTable(trendSheet, trendData, 5);
                 
                 XLSX.utils.book_append_sheet(workbook, trendSheet, 'Sales Trend');
             }
 
             if (exportType === 'services' || exportType === 'full') {
-                // Service Distribution Sheet - Enhanced with tables
                 const servicesHeader = createStyledHeader('SERVICE DISTRIBUTION ANALYSIS');
                 
                 const totalServiceTransactions = serviceDistributionData.reduce((sum, item) => sum + item.value, 0);
                 
-                // FIXED: Only one header row
                 const serviceData = [
                     ['Service Type', 'Transaction Count', 'Percentage', 'Revenue Contribution'],
                     ...serviceDistributionData.map(item => {
                         const percentage = totalServiceTransactions > 0 ? (item.value / totalServiceTransactions * 100) : 0;
-                        // Estimate revenue contribution based on average order value
                         const estimatedRevenue = item.value * summaryData.averageOrderValue;
                         return [
                             item.name,
@@ -782,23 +745,20 @@ const SalesReportPage = () => {
                     ...servicesHeader,
                     ['Total Services Offered:', serviceDistributionData.length],
                     ['Total Transactions:', totalServiceTransactions],
-                    [], // Spacer
+                    [],
                     ...serviceData,
                 ];
 
                 const servicesSheet = XLSX.utils.aoa_to_sheet(servicesDataSheet);
                 
-                // Style the services sheet
                 addStyledTable(servicesSheet, serviceData, 6); // Start at row 6
                 
                 XLSX.utils.book_append_sheet(workbook, servicesSheet, 'Service Analysis');
             }
 
             if (exportType === 'transactions' || exportType === 'full') {
-                // Transactions Sheet - FIXED: No duplicate headers
                 const transactionsHeader = createStyledHeader('CUSTOMER TRANSACTIONS');
                 
-                // FIXED: Create header row separately from data
                 const transactionHeaders = [['Transaction Date', 'Customer Name', 'Service Type', 'Amount (₱)', 'Loads', 'Status']];
                 
                 const transactionData = recentTransactions.map(transaction => [
@@ -819,27 +779,24 @@ const SalesReportPage = () => {
                     ['Transaction Summary', '', '', '', '', ''],
                     ['Total Transactions:', recentTransactions.length, '', 'Total Revenue:', `₱${recentTransactions.reduce((sum, t) => sum + t.totalPrice, 0).toLocaleString()}`, ''],
                     ['Average Transaction:', `₱${(recentTransactions.reduce((sum, t) => sum + t.totalPrice, 0) / recentTransactions.length).toFixed(2)}`, '', 'Period Covered:', `${dateRange.charAt(0).toUpperCase() + dateRange.slice(1)}`, ''],
-                    [], // Spacer
+                    [],
                 ];
 
-                // FIXED: Combine headers and data without duplication
                 const transactionsDataSheet = [
                     ...transactionsHeader,
                     ...summaryStats,
-                    ...transactionHeaders, // Header row
-                    ...transactionData,    // Data rows
+                    ...transactionHeaders,
+                    ...transactionData,
                 ];
 
                 const transactionsSheet = XLSX.utils.aoa_to_sheet(transactionsDataSheet);
                 
-                // Style the transactions sheet - FIXED: Start at correct row
                 const allTransactionData = [transactionHeaders[0], ...transactionData];
-                addStyledTable(transactionsSheet, allTransactionData, 8); // Start at row 8
+                addStyledTable(transactionsSheet, allTransactionData, 8);
                 
                 XLSX.utils.book_append_sheet(workbook, transactionsSheet, 'Transactions');
             }
 
-            // Set column widths for all sheets
             const colWidths = [
                 { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 15 }
             ];
@@ -849,10 +806,8 @@ const SalesReportPage = () => {
                 if (sheet) {
                     sheet['!cols'] = colWidths;
                     
-                    // Add auto-filter to data tables
                     if (sheetName !== 'Executive Summary') {
                         const range = XLSX.utils.decode_range(sheet['!ref']);
-                        // Set auto-filter for data rows (skip headers)
                         sheet['!autofilter'] = {
                             ref: XLSX.utils.encode_range({
                                 s: { r: range.s.r + 2, c: range.s.c },
@@ -863,7 +818,6 @@ const SalesReportPage = () => {
                 }
             });
 
-            // Generate filename based on export type
             const filename = `StarWash_Sales_Report_${exportType.charAt(0).toUpperCase() + exportType.slice(1)}_${dateRange}_${currentDate}.xlsx`;
 
             XLSX.writeFile(workbook, filename);
@@ -897,10 +851,9 @@ const SalesReportPage = () => {
     const currentItems = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
-    // Updated color scheme to match admin dashboard
     const CHART_COLORS = {
-        primary: "#0891B2", // Cyan from admin dashboard area chart
-        secondary: "#0E7490", // Darker cyan for gradient
+        primary: "#0891B2",
+        secondary: "#0E7490",
         accent: "#3DD9B6",
         highlight: "#60A5FA",
         complementary: "#FB923C",
@@ -909,15 +862,14 @@ const SalesReportPage = () => {
         error: "#EF4444",
     };
 
-    // Service colors that work well in both light and dark mode
     const SERVICE_COLORS = [
-        "#0891B2", // Cyan
-        "#10B981", // Emerald
-        "#F59E0B", // Amber
-        "#EF4444", // Red
-        "#8B5CF6", // Violet
-        "#EC4899", // Pink
-        "#14B8A6", // Teal
+        "#0891B2",
+        "#10B981",
+        "#F59E0B",
+        "#EF4444",
+        "#8B5CF6",
+        "#EC4899",
+        "#14B8A6",
     ];
 
     const summaryCards = [
@@ -952,7 +904,6 @@ const SalesReportPage = () => {
         },
     ];
 
-    // Custom XAxis tick component to ensure all labels are visible
     const renderCustomXAxisTick = ({ x, y, payload }) => {
         return (
             <g transform={`translate(${x},${y})`}>
@@ -971,7 +922,6 @@ const SalesReportPage = () => {
         );
     };
 
-    // Skeleton loader components (only for initial load)
     const SkeletonCard = () => (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1080,7 +1030,6 @@ const SalesReportPage = () => {
         </motion.div>
     );
 
-    // Show skeleton loader only during initial load
     if (initialLoad) {
         return (
             <div 
@@ -1091,7 +1040,6 @@ const SalesReportPage = () => {
             >
                 <SkeletonHeader />
 
-                {/* Filters Skeleton */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1130,20 +1078,17 @@ const SalesReportPage = () => {
                     </div>
                 </motion.div>
 
-                {/* Summary Cards Skeleton */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                     {[...Array(4)].map((_, index) => (
                         <SkeletonCard key={index} />
                     ))}
                 </div>
 
-                {/* Charts Skeleton */}
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                     <SkeletonChart />
                     <SkeletonChart />
                 </div>
 
-                {/* Transactions Skeleton */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1177,7 +1122,6 @@ const SalesReportPage = () => {
                 backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
             }}
         >
-            {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1209,8 +1153,6 @@ const SalesReportPage = () => {
                         </p>
                     </div>
                 </div>
-
-                {/* Export Button */}
                 <div className="relative" ref={exportDropdownRef}>
                     <Button
                         onClick={() => setShowExportDropdown(!showExportDropdown)}
@@ -1292,7 +1234,6 @@ const SalesReportPage = () => {
                 </div>
             </motion.div>
 
-            {/* Filters */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1462,7 +1403,6 @@ const SalesReportPage = () => {
                 </Card>
             </motion.div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
                 {summaryCards.map(({ label, value, icon, color, description, trend }, index) => (
                     <motion.div
@@ -1568,9 +1508,9 @@ const SalesReportPage = () => {
                                         dataKey="period"
                                         stroke={isDarkMode ? "#cbd5e1" : "#475569"}
                                         tickLine={{ stroke: isDarkMode ? "#cbd5e1" : "#475569" }}
-                                        interval={0} // Force show all labels
+                                        interval={0}
                                         tick={renderCustomXAxisTick}
-                                        height={50} // Increase height to accommodate all labels
+                                        height={50}
                                     />
                                     <YAxis
                                         stroke={isDarkMode ? "#cbd5e1" : "#475569"}
@@ -1616,7 +1556,6 @@ const SalesReportPage = () => {
                     </Card>
                 </motion.div>
 
-                {/* Service Distribution Chart */}
                 <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -1683,7 +1622,6 @@ const SalesReportPage = () => {
                 </motion.div>
             </div>
 
-            {/* Recent Transactions */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1812,7 +1750,6 @@ const SalesReportPage = () => {
                                 </tbody>
                             </table>
 
-                            {/* Pagination Controls */}
                             <div
                                 className="flex items-center justify-between border-t p-4"
                                 style={{

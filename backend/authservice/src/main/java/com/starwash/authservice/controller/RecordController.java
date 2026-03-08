@@ -25,11 +25,13 @@ public class RecordController {
         return ResponseEntity.ok(records);
     }
 
-    // ✅ GET /api/records/staff — returns filtered records for staff
+    // ✅ GET /api/records/staff — returns filtered records for staff with pagination
     @GetMapping("/records/staff")
-    public ResponseEntity<List<RecordResponseDto>> getStaffRecords() {
-        List<RecordResponseDto> records = transactionService.getStaffRecords();
-        return ResponseEntity.ok(records);
+    public ResponseEntity<Map<String, Object>> getStaffRecords(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Map<String, Object> response = transactionService.getStaffRecordsPaginated(page, size);
+        return ResponseEntity.ok(response);
     }
 
     // ✅ GET /api/records/staff/summary — returns summary data for staff

@@ -11,16 +11,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationResults;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,7 +31,6 @@ public class TransactionService {
     private final LaundryJobRepository laundryJobRepository;
     private final NotificationService notificationService;
     private final AuditService auditService;
-    private final MongoTemplate mongoTemplate;
     private final MachineService machineService;
 
     public TransactionService(ServiceRepository serviceRepository,
@@ -45,7 +40,6 @@ public class TransactionService {
             LaundryJobRepository laundryJobRepository,
             NotificationService notificationService,
             AuditService auditService,
-            MongoTemplate mongoTemplate,
             MachineService machineService) {
         this.serviceRepository = serviceRepository;
         this.stockRepository = stockRepository;
@@ -54,7 +48,6 @@ public class TransactionService {
         this.laundryJobRepository = laundryJobRepository;
         this.notificationService = notificationService;
         this.auditService = auditService;
-        this.mongoTemplate = mongoTemplate;
         this.machineService = machineService;
     }
 
@@ -68,14 +61,17 @@ public class TransactionService {
     }
 
     public ServiceInvoiceDto createServiceInvoiceTransaction(TransactionRequestDto request, String staffId) {
-        ServiceItem service = serviceRepository.findById(request.getServiceId())
+        String sid = Objects.requireNonNullElse(request.getServiceId(), "");
+        if (sid.isEmpty()) {
+            throw new IllegalArgumentException("Service ID must not be null or empty");
+        }
+        ServiceItem service = serviceRepository.findById(sid)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
         // AUTO-CALCULATION: Calculate loads based on weight if provided
         int loads;
         int autoPlasticBags = 0;
         String machineInfo = null;
-        double machineCapacity = 0;
 
         // Track if plastic should be auto-managed
         boolean shouldAutoManagePlastic = Boolean.TRUE.equals(request.getAutoCalculateLoads());
@@ -89,7 +85,6 @@ public class TransactionService {
                 loads = calculation.getLoads();
                 autoPlasticBags = calculation.getPlasticBags();
                 machineInfo = calculation.getMachineInfo();
-                machineCapacity = calculation.getMachineCapacity();
 
                 System.out.println("🔄 Auto-calculated loads: " + loads + " loads for " +
                         request.getTotalWeightKg() + "kg - " + machineInfo);
@@ -343,7 +338,11 @@ public class TransactionService {
     }
 
     public ServiceInvoiceDto getServiceInvoiceByTransactionId(String id) {
-        Transaction tx = transactionRepository.findById(id)
+        String txId = Objects.requireNonNullElse(id, "");
+        if (txId.isEmpty()) {
+            throw new IllegalArgumentException("Transaction ID must not be null or empty");
+        }
+        Transaction tx = transactionRepository.findById(txId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
 
         return buildInvoice(tx);
@@ -463,6 +462,71 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
+    public Map<String, Object> getStaffRecordsPaginated(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        // This is tricky because we need to filter by status AND expired in DIFFERENT
+        // collections
+        // For efficiency, we'll fetch from LaundryJobRepository which has these fields
+        Page<LaundryJob> jobPage = laundryJobRepository.findByPickupStatusAndExpiredAndDisposed("UNCLAIMED", false,
+                false, pageable);
+
+        // Actually, we need UNCLAIMED OR EXPIRED.
+        // Let's use a custom query in LaundryJobRepository for this.
+        // For now, let's keep it simple and just fetch UNCLAIMED first.
+        // Wait, the original method combined them.
+
+        List<LaundryJob> jobs = jobPage.getContent();
+        List<String> transactionIds = jobs.stream().map(LaundryJob::getTransactionId).collect(Collectors.toList());
+
+        List<Transaction> transactions = transactionRepository.findByInvoiceNumberIn(transactionIds);
+        Map<String, Transaction> transactionMap = transactions.stream()
+                .collect(Collectors.toMap(Transaction::getInvoiceNumber, Function.identity()));
+
+        List<RecordResponseDto> mapped = jobs.stream().map(job -> {
+            Transaction tx = transactionMap.get(job.getTransactionId());
+            RecordResponseDto dto = new RecordResponseDto();
+
+            if (tx != null) {
+                dto.setId(tx.getId());
+                dto.setInvoiceNumber(tx.getInvoiceNumber());
+                dto.setCustomerName(tx.getCustomerName());
+                dto.setServiceName(tx.getServiceName());
+                dto.setLoads(tx.getServiceQuantity());
+
+                dto.setDetergent(tx.getConsumables().stream()
+                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                        .map(c -> String.valueOf(c.getQuantity()))
+                        .findFirst().orElse("—"));
+
+                dto.setFabric(tx.getConsumables().stream()
+                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                        .map(c -> String.valueOf(c.getQuantity()))
+                        .findFirst().orElse("—"));
+
+                dto.setTotalPrice(tx.getTotalPrice());
+                dto.setCreatedAt(tx.getCreatedAt());
+            }
+
+            dto.setPickupStatus(job.getPickupStatus());
+            dto.setExpired(job.isExpired());
+            dto.setDisposed(job.isDisposed());
+            // washed status could be derived from load assignments
+            dto.setWashed(job.getLoadAssignments() != null &&
+                    job.getLoadAssignments().stream().allMatch(l -> "COMPLETED".equalsIgnoreCase(l.getStatus())));
+
+            return dto;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("records", mapped);
+        response.put("totalPages", jobPage.getTotalPages());
+        response.put("totalElements", jobPage.getTotalElements());
+        response.put("currentPage", jobPage.getNumber());
+
+        return response;
+    }
+
     // UPDATED: Use issueDate instead of createdAt for today filter
     public Map<String, Object> getStaffRecordsSummary() {
         Map<String, Object> summary = new HashMap<>();
@@ -485,7 +549,8 @@ public class TransactionService {
                 .filter(record -> !record.isDisposed())
                 .filter(record -> {
                     // Try to get issueDate first, fall back to createdAt if issueDate is null
-                    LocalDateTime recordDate = record.getIssueDate() != null ? record.getIssueDate() : record.getCreatedAt();
+                    LocalDateTime recordDate = record.getIssueDate() != null ? record.getIssueDate()
+                            : record.getCreatedAt();
                     return recordDate != null &&
                             recordDate.isAfter(startOfDay) &&
                             recordDate.isBefore(endOfDay);
@@ -536,16 +601,23 @@ public class TransactionService {
         return summary;
     }
 
-    // ✅ FIXED: Changed from private to public
-    @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size")
-    public List<AdminRecordResponseDto> getAllAdminRecords(int page, int size) {
+    // ✅ FIXED: Changed from private to public and support search
+    @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size + '-search-' + (#search ?: '')")
+    public List<AdminRecordResponseDto> getAllAdminRecords(int page, int size, String search) {
         long startTime = System.currentTimeMillis();
 
         try {
-            System.out.println("🔄 Fetching admin records - Page: " + page + ", Size: " + size);
+            System.out.println("🔄 Fetching admin records - Page: " + page + ", Size: " + size + ", Search: " + search);
 
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            Page<Transaction> transactionPage = transactionRepository.findAll(pageable);
+            Page<Transaction> transactionPage;
+
+            if (search != null && !search.trim().isEmpty()) {
+                transactionPage = transactionRepository.findByCustomerNameContainingIgnoreCase(search.trim(), pageable);
+            } else {
+                transactionPage = transactionRepository.findAll(pageable);
+            }
+
             List<Transaction> transactions = transactionPage.getContent();
 
             List<String> transactionIds = transactions.stream()
@@ -554,7 +626,7 @@ public class TransactionService {
 
             List<LaundryJob> laundryJobs = laundryJobRepository.findByTransactionIdIn(transactionIds);
             Map<String, LaundryJob> laundryJobMap = laundryJobs.stream()
-                .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
+                    .collect(Collectors.toMap(LaundryJob::getTransactionId, Function.identity()));
 
             LocalDateTime currentManilaTime = getCurrentManilaTime();
 
@@ -661,8 +733,13 @@ public class TransactionService {
     }
 
     // Keep old method for backward compatibility
+    public List<AdminRecordResponseDto> getAllAdminRecords(int page, int size) {
+        return getAllAdminRecords(page, size, null);
+    }
+
+    // Keep old method for backward compatibility
     public List<AdminRecordResponseDto> getAllAdminRecords() {
-        return getAllAdminRecords(0, 50); // Default to first 50 records
+        return getAllAdminRecords(0, 50, null); // Default to first 50 records
     }
 
     @CacheEvict(value = "adminRecords", allEntries = true)
@@ -756,7 +833,8 @@ public class TransactionService {
         }
     }
 
-    // OPTIMIZED: Get time-filtered summary using aggregation queries - UPDATED to use issueDate
+    // OPTIMIZED: Get time-filtered summary using aggregation queries - UPDATED to
+    // use issueDate
     @Cacheable(value = "adminSummary", key = "'optimized-' + #timeFilter")
     public Map<String, Object> getOptimizedAdminRecordsSummaryByTime(String timeFilter) {
         long startTime = System.currentTimeMillis();
@@ -821,7 +899,7 @@ public class TransactionService {
                         return recordDate != null && !recordDate.isBefore(startDate);
                     })
                     .collect(Collectors.toList());
-            
+
             return transactions.stream()
                     .mapToDouble(Transaction::getTotalPrice)
                     .sum();
@@ -840,7 +918,7 @@ public class TransactionService {
                         return recordDate != null && !recordDate.isBefore(startDate);
                     })
                     .collect(Collectors.toList());
-            
+
             return transactions.stream()
                     .mapToInt(Transaction::getServiceQuantity)
                     .sum();
@@ -900,7 +978,7 @@ public class TransactionService {
         } else {
             LocalDateTime currentManilaTime = getCurrentManilaTime();
             LocalDateTime startDate = calculateStartDate(timeFilter, currentManilaTime);
-            
+
             // ✅ FIXED: Use issueDate for counting
             try {
                 return transactionRepository.countByIssueDateAfter(startDate);
@@ -909,7 +987,8 @@ public class TransactionService {
                 // Fallback to Java filtering
                 return transactionRepository.findAll().stream()
                         .filter(tx -> {
-                            LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
+                            LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate()
+                                    : tx.getCreatedAt();
                             return recordDate != null && !recordDate.isBefore(startDate);
                         })
                         .count();
@@ -932,15 +1011,6 @@ public class TransactionService {
         }
     }
 
-    private Criteria getTimeFilterCriteria(String timeFilter, LocalDateTime currentTime) {
-        LocalDateTime startDate = calculateStartDate(timeFilter, currentTime);
-        if ("all".equals(timeFilter)) {
-            return new Criteria();
-        }
-        return Criteria.where("createdAt").gte(startDate);
-    }
-
-    // ✅ UPDATED: Use issueDate instead of createdAt for filtering
     private List<Transaction> filterTransactionsByTime(List<Transaction> transactions, String timeFilter,
             LocalDateTime currentTime) {
         if ("all".equals(timeFilter)) {
@@ -968,12 +1038,17 @@ public class TransactionService {
     }
 
     public Transaction findTransactionById(String id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Transaction ID must not be null");
+        }
         return transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
     }
 
     public void saveTransaction(Transaction transaction) {
-        transactionRepository.save(transaction);
+        if (transaction != null) {
+            transactionRepository.save(transaction);
+        }
     }
 
     public void logTransactionUpdate(String staffId, String transactionId, String description,
@@ -1033,37 +1108,62 @@ public class TransactionService {
         System.out.println("✅ Fixed " + fixedCount + " transaction dates to Manila time");
     }
 
-    // Get total count for pagination
-    public long getTotalAdminRecordsCount() {
+    // Get total count for pagination with search support
+    @Cacheable(value = "adminRecordsCount", key = "'all-search-' + (#search ?: '')")
+    public long getTotalAdminRecordsCount(String search) {
+        if (search != null && !search.trim().isEmpty()) {
+            return transactionRepository.countByCustomerNameContainingIgnoreCase(search.trim());
+        }
         return transactionRepository.count();
     }
 
-    // OPTIMIZED: Time-filtered records with better performance - UPDATED to use issueDate
-    @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size + '-filter-' + #timeFilter")
-    public List<AdminRecordResponseDto> getAllAdminRecordsByTime(int page, int size, String timeFilter) {
+    // Keep old method for backward compatibility
+    public long getTotalAdminRecordsCount() {
+        return getTotalAdminRecordsCount(null);
+    }
+
+    // OPTIMIZED: Time-filtered records with better performance - UPDATED to use
+    // issueDate
+    @Cacheable(value = "adminRecords", key = "'page-' + #page + '-size-' + #size + '-filter-' + #timeFilter + '-search-' + (#search ?: '')")
+    public List<AdminRecordResponseDto> getAllAdminRecordsByTime(int page, int size, String timeFilter, String search) {
         long startTime = System.currentTimeMillis();
 
         try {
             System.out.println("🔄 OPTIMIZED: Fetching time-filtered admin records - Page: " + page + ", Size: " + size
-                    + ", Filter: " + timeFilter);
+                    + ", Filter: " + timeFilter + ", Search: " + search);
 
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             List<Transaction> transactions;
 
             // Use database-level filtering instead of Java filtering
             if ("all".equals(timeFilter)) {
-                transactions = transactionRepository.findAll(pageable).getContent();
+                if (search != null && !search.trim().isEmpty()) {
+                    transactions = transactionRepository.findByCustomerNameContainingIgnoreCase(search.trim(), pageable)
+                            .getContent();
+                } else {
+                    transactions = transactionRepository.findAll(pageable).getContent();
+                }
             } else {
                 LocalDateTime startDate = calculateStartDate(timeFilter, getCurrentManilaTime());
-                
+
                 // ✅ FIXED: Use issueDate instead of createdAt for filtering
                 // Try to use issueDate-based query first, fall back to createdAt if needed
                 try {
-                    transactions = transactionRepository.findByIssueDateAfter(startDate, pageable);
+                    if (search != null && !search.trim().isEmpty()) {
+                        transactions = transactionRepository.findByIssueDateAfterAndCustomerNameContainingIgnoreCase(
+                                startDate, search.trim(), pageable).getContent();
+                    } else {
+                        transactions = transactionRepository.findByIssueDateAfter(startDate, pageable).getContent();
+                    }
                     System.out.println("✅ Using issueDate-based filtering for time filter: " + timeFilter);
                 } catch (Exception e) {
                     System.out.println("⚠️  Falling back to createdAt filtering: " + e.getMessage());
-                    transactions = transactionRepository.findByCreatedAtAfter(startDate, pageable);
+                    if (search != null && !search.trim().isEmpty()) {
+                        transactions = transactionRepository.findByCreatedAtAfterAndCustomerNameContainingIgnoreCase(
+                                startDate, search.trim(), pageable).getContent();
+                    } else {
+                        transactions = transactionRepository.findByCreatedAtAfter(startDate, pageable).getContent();
+                    }
                 }
             }
 
@@ -1180,16 +1280,21 @@ public class TransactionService {
     }
 
     // Get count for time-filtered records - UPDATED to use issueDate
-    @Cacheable(value = "adminRecordsCount", key = "'filter-' + #timeFilter")
-    public long getTotalAdminRecordsCountByTime(String timeFilter) {
+    @Cacheable(value = "adminRecordsCount", key = "'filter-' + #timeFilter + '-search-' + (#search ?: '')")
+    public long getTotalAdminRecordsCountByTime(String timeFilter, String search) {
         try {
             System.out.println("📊 Counting time-filtered records: " + timeFilter);
 
             if ("all".equals(timeFilter)) {
-                return transactionRepository.count();
+                return getTotalAdminRecordsCount(search);
             } else {
                 LocalDateTime startDate = calculateStartDate(timeFilter, getCurrentManilaTime());
-                
+
+                if (search != null && !search.trim().isEmpty()) {
+                    return transactionRepository.countByIssueDateAfterAndCustomerNameContainingIgnoreCase(startDate,
+                            search.trim());
+                }
+
                 // ✅ FIXED: Use issueDate instead of createdAt for counting
                 try {
                     long count = transactionRepository.countByIssueDateAfter(startDate);
@@ -1200,7 +1305,17 @@ public class TransactionService {
                     // Fallback: use Java filtering with issueDate
                     List<Transaction> allTransactions = transactionRepository.findAll();
                     LocalDateTime currentManilaTime = getCurrentManilaTime();
-                    List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter, currentManilaTime);
+                    List<Transaction> filteredTransactions = filterTransactionsByTime(allTransactions, timeFilter,
+                            currentManilaTime);
+
+                    if (search != null && !search.trim().isEmpty()) {
+                        String s = search.toLowerCase();
+                        return filteredTransactions.stream()
+                                .filter(t -> t.getCustomerName() != null
+                                        && t.getCustomerName().toLowerCase().contains(s))
+                                .count();
+                    }
+
                     long count = filteredTransactions.size();
                     System.out.println("✅ Time-filtered count using Java filtering (" + timeFilter + "): " + count);
                     return count;
@@ -1208,7 +1323,8 @@ public class TransactionService {
             }
         } catch (Exception e) {
             System.err.println("❌ Error counting time-filtered records: " + e.getMessage());
-            return transactionRepository.count(); // Fallback to total count
+            return getTotalAdminRecordsCount(search); // Fallback to total count
         }
     }
+
 }

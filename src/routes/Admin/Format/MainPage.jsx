@@ -13,7 +13,6 @@ import { api } from "@/lib/api-config";
 const ALLOWED_SKEW_MS = 5000;
 const CACHE_DURATION = 5 * 60 * 1000;
 
-// Add tracking URL as a constant
 const TRACKING_URL_BASE = "https://your-tracking-domain.com/track";
 
 const initializeCache = () => {
@@ -260,7 +259,6 @@ export default function ReceiptConfigPage() {
     paymentMethod: "Cash",
   };
 
-  // Use the constant tracking URL with the sample ID
   const previewTrackingLink = `${TRACKING_URL_BASE}?id=${sampleData.id}`;
 
   const formattedDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-PH", {
@@ -299,7 +297,6 @@ export default function ReceiptConfigPage() {
           borderWidth: '1px'
         }} />
 
-        {/* Transaction Details */}
         <div className="grid grid-cols-2 gap-2 text-xs" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
           <div>
             {activePreview === "invoice" ? "Service Invoice #:" : "Receipt #:"}{" "}
@@ -340,7 +337,6 @@ export default function ReceiptConfigPage() {
           borderWidth: '1px'
         }} />
 
-        {/* Items */}
         <div className="space-y-2 text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
           <div className="flex justify-between">
             <span>Detergents × {sampleData.detergentQty}</span>
@@ -365,13 +361,11 @@ export default function ReceiptConfigPage() {
           borderWidth: '1px'
         }} />
 
-        {/* Total */}
         <div className="flex justify-between font-bold text-sm pt-1" style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}>
           <span>Total</span>
           <span>₱{sampleData.total.toFixed(2)}</span>
         </div>
 
-        {/* QR Code */}
         <div className="flex justify-center pt-3 print:hidden">
           <div style={{ 
             background: 'white', 
@@ -390,7 +384,6 @@ export default function ReceiptConfigPage() {
           Scan to track your laundry status
         </div>
 
-        {/* Terms & Conditions for Invoice */}
         {activePreview === "invoice" && (
           <>
             <hr style={{ 
@@ -409,7 +402,6 @@ export default function ReceiptConfigPage() {
           </>
         )}
 
-        {/* Footer Note */}
         <div className="text-center text-xs pt-2" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
           {settings.footerNote || "Thank you for choosing our service!"}
         </div>
@@ -504,7 +496,6 @@ export default function ReceiptConfigPage() {
     <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
       backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
     }}>
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

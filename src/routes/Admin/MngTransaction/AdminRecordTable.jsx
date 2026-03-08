@@ -154,13 +154,15 @@ const AdminRecordTable = ({
     selectedRange,
     onDateRangeChange,
     onFilteredCountChange,
+    onSearchChange,
     activeFilters,
     autoSearchTerm = "",
     totalRecords = 0,
     currentPage = 0,
     pageSize = 50,
 }) => {
-    const [searchTerm, setSearchTerm] = useState("");
+    // Use the search term from props or local state if not provided
+    const [localSearchTerm, setLocalSearchTerm] = useState(autoSearchTerm);
     const [localSelectedRange, setLocalSelectedRange] = useState(selectedRange || { from: null, to: null });
     const [showCalendar, setShowCalendar] = useState(false);
     const [expandedRows, setExpandedRows] = useState(new Set());
@@ -185,10 +187,7 @@ const AdminRecordTable = ({
 
     // ADD AUTO SEARCH EFFECT
     useEffect(() => {
-        if (autoSearchTerm) {
-            console.log("🎯 Applying auto-search:", autoSearchTerm);
-            setSearchTerm(autoSearchTerm);
-        }
+        setLocalSearchTerm(autoSearchTerm);
     }, [autoSearchTerm]);
 
     // Format currency with commas
@@ -321,122 +320,19 @@ const AdminRecordTable = ({
         return record.pickupStatus;
     };
 
-    // Apply filters
-    const applyFilters = (records) => {
-        let filtered = [...records];
+    // Server-side filtering is now used, so we display items directly
+    const displayItems = items;
 
-        // Apply status filters
-        if (activeFilters.statusFilters.length > 0) {
-            filtered = filtered.filter((record) => {
-                if (activeFilters.statusFilters.includes("expired") && record.expired && !record.disposed) return true;
-                if (
-                    activeFilters.statusFilters.includes("unclaimed") &&
-                    record.pickupStatus === "UNCLAIMED" &&
-                    record.laundryStatus === "Completed" &&
-                    !record.expired &&
-                    !record.disposed
-                )
-                    return true;
-                if (activeFilters.statusFilters.includes("disposed") && record.disposed) return true;
-                if (activeFilters.statusFilters.includes("completed") && record.laundryStatus === "Completed") return true;
-                if (
-                    activeFilters.statusFilters.includes("in-progress") &&
-                    record.laundryStatus !== "Completed" &&
-                    !record.expired &&
-                    !record.disposed
-                )
-                    return true;
-                return false;
-            });
-        }
-
-        // Apply payment filters
-        if (activeFilters.paymentFilters.length > 0) {
-            filtered = filtered.filter((record) => {
-                if (activeFilters.paymentFilters.includes("paid") && record.paid) return true;
-                if (activeFilters.paymentFilters.includes("pending") && !record.paid) return true;
-                if (activeFilters.paymentFilters.includes("gcash") && record.paymentMethod === "GCash") return true;
-                if (activeFilters.paymentFilters.includes("cash") && record.paymentMethod === "Cash") return true;
-                return false;
-            });
-        }
-
-        // Apply service filters
-        if (activeFilters.serviceFilters.length > 0) {
-            filtered = filtered.filter((record) => {
-                const serviceLower = record.service?.toLowerCase() || "";
-                if (activeFilters.serviceFilters.includes("wash-dry") && serviceLower.includes("wash & dry")) return true;
-                if (activeFilters.serviceFilters.includes("wash") && serviceLower.includes("wash") && !serviceLower.includes("dry")) return true;
-                if (activeFilters.serviceFilters.includes("dry") && serviceLower.includes("dry") && !serviceLower.includes("wash")) return true;
-                return false;
-            });
-        }
-
-        // Apply sorting
-        if (activeFilters.sortBy) {
-            filtered.sort((a, b) => {
-                const field = activeFilters.sortBy;
-                const order = activeFilters.sortOrder;
-
-                let valueA, valueB;
-
-                switch (field) {
-                    case "income":
-                        valueA = a.price;
-                        valueB = b.price;
-                        break;
-                    case "loads":
-                        valueA = a.loads;
-                        valueB = b.loads;
-                        break;
-                    case "date":
-                        // ✅ UPDATED: Use issueDate instead of createdAt for sorting
-                        valueA = new Date(a.issueDate || a.createdAt);
-                        valueB = new Date(b.issueDate || b.createdAt);
-                        break;
-                    case "name":
-                        valueA = a.name?.toLowerCase() || "";
-                        valueB = b.name?.toLowerCase() || "";
-                        break;
-                    default:
-                        return 0;
-                }
-
-                if (valueA instanceof Date && valueB instanceof Date) {
-                    return order === "asc" ? valueA - valueB : valueB - valueA;
-                }
-
-                if (typeof valueA === "string" && typeof valueB === "string") {
-                    return order === "asc" ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
-                }
-
-                return order === "asc" ? valueA - valueB : valueB - valueA;
-            });
-        }
-
-        return filtered;
-    };
-
-    // FIXED: Use stable items for filtering to prevent flickering
-    // ✅ UPDATED: Use issueDate instead of createdAt for filtering
-    const filtered = stableItems.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()) && isInRange(r.issueDate || r.createdAt));
-    const filteredWithActive = applyFilters(filtered);
-
-    // FIXED: Ensure we always have data to display
-    const displayItems = filteredWithActive.length > 0 ? filteredWithActive : filtered.length > 0 ? filtered : stableItems;
-
-    // Calculate records count based on date range and search
     const getFilteredRecordsCount = () => {
-        return displayItems.length;
+        return items.length;
     };
 
     // Notify parent component when filtered count changes
     useEffect(() => {
         if (onFilteredCountChange) {
-            const count = getFilteredRecordsCount();
-            onFilteredCountChange(count);
+            onFilteredCountChange(totalRecords);
         }
-    }, [searchTerm, localSelectedRange, activeFilters, stableItems, onFilteredCountChange]);
+    }, [totalRecords, onFilteredCountChange]);
 
     const handlePrint = async (record) => {
         try {
@@ -683,8 +579,12 @@ const AdminRecordTable = ({
                                 />
                                 <input
                                     type="text"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    value={localSearchTerm}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setLocalSearchTerm(val);
+                                        if (onSearchChange) onSearchChange(val);
+                                    }}
                                     placeholder={autoSearchTerm ? `Searching: ${autoSearchTerm}` : "Search by name"}
                                     className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
                                     style={{
@@ -692,7 +592,7 @@ const AdminRecordTable = ({
                                     }}
                                 />
                                 {/* SHOW AUTO SEARCH INDICATOR */}
-                                {autoSearchTerm && searchTerm === autoSearchTerm && (
+                                {autoSearchTerm && localSearchTerm === autoSearchTerm && (
                                     <div className="flex items-center">
                                         <div
                                             className="mr-2 h-2 w-2 animate-pulse rounded-full bg-green-500"

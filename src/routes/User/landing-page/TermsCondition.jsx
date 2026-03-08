@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, ScrollText } from "lucide-react";
 
-const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
+const API_BASE_URL = "https://thesis-1-culv.onrender.com/api";
 
 const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
   const [isOpen, setIsOpen] = useState(true);

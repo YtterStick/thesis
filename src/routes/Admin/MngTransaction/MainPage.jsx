@@ -128,10 +128,10 @@ const MainPage = () => {
                 setLoading(true);
                 setPaginationLoading(true);
 
-                console.log(`🔄 Fetching records for page ${currentPage}`);
+                console.log(`🔄 Fetching records for page ${currentPage}, Search: ${autoSearchTerm}`);
 
                 // Only fetch records and total count, NOT summary
-                await Promise.all([fetchRecords(currentPage, pageSize, timeFilter), fetchTotalCount(timeFilter)]);
+                await Promise.all([fetchRecords(currentPage, pageSize, timeFilter, autoSearchTerm), fetchTotalCount(timeFilter, autoSearchTerm)]);
             } catch (error) {
                 console.error("❌ Error loading records data:", error);
             } finally {
@@ -140,8 +140,12 @@ const MainPage = () => {
             }
         };
 
-        loadRecordsData();
-    }, [currentPage, pageSize, timeFilter, dataLoaded]);
+        const timeout = setTimeout(() => {
+            loadRecordsData();
+        }, 300); // Debounce search
+
+        return () => clearTimeout(timeout);
+    }, [currentPage, pageSize, timeFilter, autoSearchTerm, dataLoaded]);
 
     // Fetch summary data only when timeFilter changes (after initial load)
     useEffect(() => {
@@ -204,16 +208,17 @@ const MainPage = () => {
         }
     };
 
-    const fetchRecords = async (page = 0, size = pageSize, filter = timeFilter) => {
+    const fetchRecords = async (page = 0, size = pageSize, filter = timeFilter, search = "") => {
         try {
             setLoading(true);
-            console.log(`📥 Fetching records - Page: ${page}, Size: ${size}, Filter: ${filter}`);
+            console.log(`📥 Fetching records - Page: ${page}, Size: ${size}, Filter: ${filter}, Search: ${search}`);
 
             let data;
+            const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
             if (filter === "all") {
-                data = await api.get(`/admin/records?page=${page}&size=${size}`);
+                data = await api.get(`/admin/records?page=${page}&size=${size}${searchParam}`);
             } else {
-                data = await api.get(`/admin/records/filtered?page=${page}&size=${size}&timeFilter=${filter}`);
+                data = await api.get(`/admin/records/filtered?page=${page}&size=${size}&timeFilter=${filter}${searchParam}`);
             }
 
             const mapped = data.map((r) => ({
@@ -251,14 +256,15 @@ const MainPage = () => {
         }
     };
 
-    const fetchTotalCount = async (filter = timeFilter) => {
+    const fetchTotalCount = async (filter = timeFilter, search = "") => {
         try {
             setPaginationLoading(true);
             let count;
+            const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
             if (filter === "all") {
-                count = await api.get("/admin/records/count");
+                count = await api.get(`/admin/records/count?${searchParam.substring(1)}`);
             } else {
-                count = await api.get(`/admin/records/count/filtered?timeFilter=${filter}`);
+                count = await api.get(`/admin/records/count/filtered?timeFilter=${filter}${searchParam}`);
             }
 
             setTotalRecords(count);
@@ -1051,6 +1057,10 @@ const MainPage = () => {
                         selectedRange={selectedRange}
                         onDateRangeChange={setSelectedRange}
                         onFilteredCountChange={handleFilteredCountChange}
+                        onSearchChange={(val) => {
+                            setAutoSearchTerm(val);
+                            setCurrentPage(0); // Reset to first page on search
+                        }}
                         activeFilters={activeFilters}
                         autoSearchTerm={autoSearchTerm}
                         totalRecords={totalRecords}

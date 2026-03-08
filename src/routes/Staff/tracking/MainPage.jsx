@@ -20,7 +20,7 @@ import { maskContact } from "./utils";
 import { api } from "@/lib/api-config";
 import { useLocation } from "react-router-dom";
 
-const TIMER_CHECK_INTERVAL = 1000;
+// Timer constants removed as durations are no longer used
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -94,9 +94,7 @@ function ServiceTrackingContent() {
     const [pendingRequests, setPendingRequests] = useState(new Set());
 
     const clockRef = useRef(null);
-    const timerCheckRef = useRef(null);
-    const completedTimersRef = useRef(new Set());
-    const activeTimersRef = useRef(new Map());
+    const dataRefreshRef = useRef(null);
     const requestQueueRef = useRef([]);
     const isProcessingRef = useRef(false);
     const lastNavigationTimeRef = useRef(Date.now());
@@ -106,63 +104,23 @@ function ServiceTrackingContent() {
 
     // Add sorting state
     const [sortConfig, setSortConfig] = useState({
-        key: "timeRemaining", // default sort by time remaining
-        direction: "asc", // asc = soonest first
+        key: "issueDate", // Default sort by date
+        direction: "desc", 
     });
 
-    // FIXED: More accurate getRemainingTime function
-    const getRemainingTime = useCallback((load) => {
-        if (!load?.startTime || !load?.duration) return null;
-        
-        const start = new Date(load.startTime).getTime();
-        const durationMs = load.duration * 60 * 1000; // Convert minutes to milliseconds
-        const end = start + durationMs;
-        const currentTime = Date.now();
-        const remaining = Math.max(Math.floor((end - currentTime) / 1000), 0);
-        
-        return remaining;
-    }, []);
-
-    // Auto-sorting function
+    // Basic sorting function
     const getSortedJobs = useCallback(
         (jobsToSort) => {
             if (!jobsToSort || jobsToSort.length === 0) return jobsToSort;
 
             return [...jobsToSort].sort((a, b) => {
-                // Get the most urgent load for each job (lowest remaining time)
-                const getMostUrgentLoad = (job) => {
-                    if (!job.loads || job.loads.length === 0) return null;
-
-                    return job.loads.reduce((mostUrgent, load) => {
-                        if (load.status === "WASHING" || load.status === "DRYING") {
-                            const remaining = getRemainingTime(load);
-                            if (remaining !== null && remaining > 0) {
-                                if (!mostUrgent || remaining < mostUrgent.remaining) {
-                                    return { load, remaining };
-                                }
-                            }
-                        }
-                        return mostUrgent;
-                    }, null);
-                };
-
-                const aUrgent = getMostUrgentLoad(a);
-                const bUrgent = getMostUrgentLoad(b);
-
-                // Jobs with running loads come first
-                if (aUrgent && !bUrgent) return -1;
-                if (!aUrgent && bUrgent) return 1;
-
-                // Both have running loads - sort by remaining time
-                if (aUrgent && bUrgent) {
-                    return sortConfig.direction === "asc" ? aUrgent.remaining - bUrgent.remaining : bUrgent.remaining - aUrgent.remaining;
-                }
-
-                // Neither have running loads - maintain original order
-                return 0;
+                const aDate = new Date(a.issueDate || 0).getTime();
+                const bDate = new Date(b.issueDate || 0).getTime();
+                
+                return sortConfig.direction === "asc" ? aDate - bDate : bDate - aDate;
             });
         },
-        [sortConfig.direction, getRemainingTime],
+        [sortConfig.direction],
     );
 
     // Apply sorting to jobs
@@ -177,31 +135,7 @@ function ServiceTrackingContent() {
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = sortedJobs.slice(startIndex, endIndex);
 
-    // Add a function to get job urgency for display
-    const getJobUrgency = (job) => {
-        if (!job.loads || job.loads.length === 0) return null;
-
-        let minRemaining = Infinity;
-        let hasRunningLoads = false;
-
-        job.loads.forEach((load) => {
-            if (load.status === "WASHING" || load.status === "DRYING") {
-                const remaining = getRemainingTime(load);
-                if (remaining !== null && remaining > 0) {
-                    hasRunningLoads = true;
-                    minRemaining = Math.min(minRemaining, remaining);
-                }
-            }
-        });
-
-        if (!hasRunningLoads) return null;
-
-        return {
-            minutes: Math.floor(minRemaining / 60),
-            seconds: minRemaining % 60,
-            totalSeconds: minRemaining,
-        };
-    };
+    const getJobUrgency = (job) => null;
 
     const isComingFromTransaction = useMemo(() => {
         return (
@@ -531,54 +465,18 @@ function ServiceTrackingContent() {
         lastNavigationTimeRef.current = Date.now();
     }, [location]);
 
-    const checkTimerCompletions = useCallback(() => {
-        let needsRefresh = false;
-        const currentTime = Date.now();
-
-        jobs.forEach((job) => {
-            job.loads?.forEach((load) => {
-                if (load.status === "WASHING" || load.status === "DRYING") {
-                    const timerKey = `${job.id}-${load.loadNumber}`;
-
-                    if (load.startTime && load.duration) {
-                        const endTime = new Date(load.startTime).getTime() + load.duration * 60000;
-                        const timeRemaining = endTime - currentTime;
-
-                        if (timeRemaining <= 1000 && !completedTimersRef.current.has(timerKey)) {
-                            completedTimersRef.current.add(timerKey);
-                            needsRefresh = true;
-                        }
-
-                        if (timeRemaining > 1000 && completedTimersRef.current.has(timerKey)) {
-                            completedTimersRef.current.delete(timerKey);
-                        }
-                    }
-                }
-            });
-        });
-
-        if (needsRefresh) {
-            setTimeout(() => {
-                fetchData(true);
-            }, 1000);
-        }
-    }, [jobs]);
-
     useEffect(() => {
-        if (timerCheckRef.current) {
-            clearInterval(timerCheckRef.current);
-        }
-
-        timerCheckRef.current = setInterval(() => {
-            checkTimerCompletions();
-        }, TIMER_CHECK_INTERVAL);
+        // Regular background data refresh
+        dataRefreshRef.current = setInterval(() => {
+            fetchData(false);
+        }, 60000); 
 
         return () => {
-            if (timerCheckRef.current) {
-                clearInterval(timerCheckRef.current);
+            if (dataRefreshRef.current) {
+                clearInterval(dataRefreshRef.current);
             }
         };
-    }, [checkTimerCompletions]);
+    }, []);
 
     // FIXED: More precise timer interval
     useEffect(() => {
@@ -596,7 +494,7 @@ function ServiceTrackingContent() {
 
         return () => {
             clearInterval(clockRef.current);
-            if (timerCheckRef.current) clearInterval(timerCheckRef.current);
+            if (dataRefreshRef.current) clearInterval(dataRefreshRef.current);
         };
     }, [isComingFromTransaction]);
 
@@ -624,55 +522,7 @@ function ServiceTrackingContent() {
         }
     };
 
-    // UPDATED: Simplified updateDuration without loading state
-    const updateDuration = async (jobKey, loadIndex, duration, machineId = null) => {
-        const job = jobs.find((j) => getJobKey(j) === jobKey);
-        if (!job?.id) return;
-
-        // If machineId is provided, auto-set duration based on machine type
-        let finalDuration = duration;
-        if (machineId && !duration) {
-            const machine = machines.find((m) => m.id === machineId);
-            if (machine) {
-                if (machine.type?.toUpperCase() === "WASHER") {
-                    finalDuration = 35; // 35 minutes for washers
-                } else if (machine.type?.toUpperCase() === "DRYER") {
-                    finalDuration = 40; // 40 minutes for dryers
-                }
-            }
-        }
-
-        // Update local state immediately for responsive UI
-        setJobs((prev) =>
-            prev.map((j) =>
-                getJobKey(j) === jobKey
-                    ? {
-                          ...j,
-                          loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: finalDuration } : l)),
-                      }
-                    : j,
-            ),
-        );
-
-        // Make API call in background without showing loading state
-        try {
-            await api.patch(`/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${finalDuration}`);
-            console.log("✅ Duration updated successfully");
-        } catch (err) {
-            console.error("Failed to update duration:", err);
-            // Revert local state if API call fails
-            setJobs((prev) =>
-                prev.map((j) =>
-                    getJobKey(j) === jobKey
-                        ? {
-                              ...j,
-                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: job.loads[loadIndex].duration } : l)),
-                          }
-                        : j,
-                ),
-            );
-        }
-    };
+    // Removed updateDuration as duration-based logic is disabled
 
     const assignMachine = async (jobKey, loadIndex, machineId) => {
         const job = jobs.find((j) => getJobKey(j) === jobKey);
@@ -696,58 +546,6 @@ function ServiceTrackingContent() {
                 await apiCallWithRetry(() =>
                     api.patch(`/laundry-jobs/${job.id}/assign-machine?loadNumber=${job.loads[loadIndex].loadNumber}&machineId=${machineId}`),
                 );
-
-                // AUTO-SET DEFAULT DURATION WHEN MACHINE IS ASSIGNED (NON-BLOCKING)
-                if (machineId) {
-                    const machine = machines.find((m) => m.id === machineId);
-                    if (machine) {
-                        let defaultDuration = null;
-                        if (machine.type?.toUpperCase() === "WASHER") {
-                            defaultDuration = 35;
-                        } else if (machine.type?.toUpperCase() === "DRYER") {
-                            defaultDuration = 40;
-                        }
-
-                        // Only set default if no duration is already set
-                        const currentLoad = job.loads[loadIndex];
-                        if (defaultDuration && (!currentLoad.duration || currentLoad.duration === 0)) {
-                            // Set duration locally immediately for instant UI update
-                            setJobs((prev) =>
-                                prev.map((j) =>
-                                    getJobKey(j) === jobKey
-                                        ? {
-                                              ...j,
-                                              loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: defaultDuration } : l)),
-                                          }
-                                        : j,
-                                ),
-                            );
-
-                            // Update duration in background without blocking
-                            setTimeout(async () => {
-                                try {
-                                    await api.patch(
-                                        `/laundry-jobs/${job.id}/update-duration?loadNumber=${job.loads[loadIndex].loadNumber}&durationMinutes=${defaultDuration}`,
-                                    );
-                                    console.log("✅ Default duration set in background");
-                                } catch (err) {
-                                    console.error("Failed to set default duration:", err);
-                                    // Revert local state if API call fails
-                                    setJobs((prev) =>
-                                        prev.map((j) =>
-                                            getJobKey(j) === jobKey
-                                                ? {
-                                                      ...j,
-                                                      loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, duration: null } : l)),
-                                                  }
-                                                : j,
-                                        ),
-                                    );
-                                }
-                            }, 100);
-                        }
-                    }
-                }
 
                 return { success: true };
             } catch (err) {
@@ -823,14 +621,6 @@ function ServiceTrackingContent() {
                 }
             }
 
-            const duration =
-                load.duration && load.duration > 0
-                    ? load.duration
-                    : status === "WASHING"
-                      ? DEFAULT_DURATION.washing
-                      : status === "DRYING"
-                        ? DEFAULT_DURATION.drying
-                        : null;
 
             setJobs((prev) =>
                 prev.map((j) =>
@@ -852,13 +642,10 @@ function ServiceTrackingContent() {
 
             try {
                 const startTime = new Date().toISOString();
-
-                const timerKey = `${job.id}-${load.loadNumber}`;
-                activeTimersRef.current.set(timerKey, startTime);
-                completedTimersRef.current.delete(timerKey);
+                // Timer references removed
 
                 await apiCallWithRetry(() =>
-                    api.patch(`/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}&durationMinutes=${duration}`),
+                    api.patch(`/laundry-jobs/${job.id}/start-load?loadNumber=${load.loadNumber}`),
                 );
 
                 setJobs((prev) =>
@@ -872,7 +659,6 @@ function ServiceTrackingContent() {
                                                 ...l,
                                                 status,
                                                 startTime,
-                                                duration,
                                                 pending: false,
                                             }
                                           : l,
@@ -937,11 +723,7 @@ function ServiceTrackingContent() {
 
             const currentMachineId = load.machineId;
 
-            if (load.status === "WASHING" || load.status === "DRYING") {
-                const timerKey = `${job.id}-${load.loadNumber}`;
-                activeTimersRef.current.delete(timerKey);
-                completedTimersRef.current.delete(timerKey);
-            }
+            // Timers removed
 
             let updatedLoad = { ...load, status: nextStatus, pending: true };
 
@@ -1066,10 +848,7 @@ function ServiceTrackingContent() {
 
             try {
                 const startTime = new Date().toISOString();
-
-                const timerKey = `${job.id}-${load.loadNumber}`;
-                activeTimersRef.current.set(timerKey, startTime);
-                completedTimersRef.current.delete(timerKey);
+                // Timers removed
 
                 await apiCallWithRetry(() => api.patch(`/laundry-jobs/${job.id}/dry-again?loadNumber=${load.loadNumber}`));
 
@@ -1086,7 +865,7 @@ function ServiceTrackingContent() {
                                                 startTime,
                                                 pending: false,
                                                 machineId: load.machineId,
-                                                duration: load.duration || DEFAULT_DURATION.drying,
+                                                duration: null,
                                             }
                                           : l,
                                   ),
@@ -1145,8 +924,7 @@ function ServiceTrackingContent() {
     };
 
     const isLoadRunning = (load) => {
-        const remaining = getRemainingTime(load);
-        return remaining !== null && remaining > 0 && (load?.status === "WASHING" || load?.status === "DRYING");
+        return load?.status === "WASHING" || load?.status === "DRYING";
     };
 
     const machineOptions = useMemo(() => {
@@ -1340,14 +1118,14 @@ function ServiceTrackingContent() {
                         icon: WashingMachine,
                     },
                     {
-                        label: "Urgent",
-                        value: jobs.reduce((acc, job) => {
-                            const urgency = getJobUrgency(job);
-                            return acc + (urgency && urgency.totalSeconds < 300 ? 1 : 0);
-                        }, 0),
-                        color: "#EF4444",
-                        description: "Less than 5 min remaining",
-                        icon: Clock,
+                        label: "Active Loads",
+                        value: jobs.reduce(
+                            (acc, job) => acc + (job.loads?.filter((load) => load.status === "WASHING" || load.status === "DRYING").length || 0),
+                            0,
+                        ),
+                        color: "#60A5FA",
+                        description: "Currently processing",
+                        icon: WashingMachine,
                     },
                     {
                         label: "Pending",
@@ -1438,12 +1216,10 @@ function ServiceTrackingContent() {
                             machines={machineOptions}
                             now={now}
                             assignMachine={assignMachine}
-                            updateDuration={updateDuration}
                             startAction={startAction}
                             advanceStatus={advanceStatus}
                             startDryingAgain={startDryingAgain}
                             getJobKey={getJobKey}
-                            getRemainingTime={getRemainingTime}
                             getMachineTypeForStep={getMachineTypeForStep}
                             isLoadRunning={isLoadRunning}
                             maskContact={maskContact}
@@ -1452,7 +1228,6 @@ function ServiceTrackingContent() {
                             isDarkMode={isDarkMode}
                             globalLoading={globalLoading}
                             pendingRequests={pendingRequests}
-                            getJobUrgency={getJobUrgency}
                             allMachines={machines} // Pass all machines for duration calculation
                         />
                     </ErrorBoundary>
@@ -1565,7 +1340,6 @@ function ServiceTrackingContent() {
     );
 }
 
-const DEFAULT_DURATION = { washing: 35, drying: 40 };
 const SERVICE_FLOWS = {
     Wash: ["UNWASHED", "WASHING", "WASHED", "COMPLETED"],
     Dry: ["UNWASHED", "DRYING", "DRIED", "FOLDING", "COMPLETED"],

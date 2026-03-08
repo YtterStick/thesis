@@ -19,47 +19,55 @@ const MainPage = () => {
     });
     const [loading, setLoading] = useState(true);
     const [dataLoaded, setDataLoaded] = useState(false);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [pageSize] = useState(10);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchSummary = async () => {
             try {
-                // Use the api utility instead of direct fetch calls
-                const [recordsData, summaryData] = await Promise.all([
-                    api.get("/records/staff"),
-                    api.get("/records/staff/summary")
-                ]);
+                const summary = await api.get("/records/staff/summary");
+                setSummaryData(summary);
+            } catch (error) {
+                console.error("❌ Summary fetch error:", error);
+            }
+        };
 
-                // Make sure to include the id field for the print functionality
-                const mapped = recordsData.map((r) => ({
-                    id: r.id, // This is crucial for the print API call
-                    invoice: r.invoiceNumber || "—", // Add invoice number
-                    name: r.customerName,
-                    service: r.serviceName,
-                    loads: r.loads,
-                    detergent: r.detergent,
+        const fetchRecords = async () => {
+            try {
+                setLoading(true);
+                const data = await api.get(`/records/staff?page=${currentPage}&size=${pageSize}`);
+                
+                const mapped = (data.records || []).map((r) => ({
+                    id: r.id,
+                    invoice: r.invoiceNumber || "—",
+                    name: r.customerName || "—",
+                    service: r.serviceName || "—",
+                    loads: r.loads || 0,
+                    detergent: r.detergent || "—",
                     fabric: r.fabric || "—",
-                    price: r.totalPrice,
-                    pickupStatus: r.pickupStatus,
+                    price: r.totalPrice || 0,
+                    pickupStatus: r.pickupStatus || "UNCLAIMED",
                     washed: r.washed,
                     expired: r.expired,
                     createdAt: r.createdAt,
                 }));
 
                 setRecords(mapped);
-                setSummaryData(summaryData);
+                setTotalPages(data.totalPages || 0);
+                setTotalElements(data.totalElements || 0);
                 setDataLoaded(true);
             } catch (error) {
-                console.error("❌ Data fetch error:", error);
+                console.error("❌ Records fetch error:", error);
             } finally {
-                // Small delay to ensure smooth transition
-                setTimeout(() => {
-                    setLoading(false);
-                }, 300);
+                setLoading(false);
             }
         };
 
-        fetchData();
-    }, []);
+        fetchSummary();
+        fetchRecords();
+    }, [currentPage, pageSize]);
 
     // Stable Skeleton Loader Components
     const SkeletonCard = () => (
@@ -327,15 +335,18 @@ const MainPage = () => {
                     >
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                Laundry Records
+                                Laundry Records ({totalElements} total)
                             </p>
                             <span className="text-sm font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                {records.length} records found
+                                Page {currentPage + 1} of {totalPages}
                             </span>
                         </div>
                         <RecordTable
                             items={records}
                             isDarkMode={isDarkMode}
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
                         />
                     </motion.div>
                 )}

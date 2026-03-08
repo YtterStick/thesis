@@ -698,7 +698,7 @@ export const NotificationSystem = () => {
             } catch (error) {
                 console.error('❌ Real-time polling error:', error);
             }
-        }, 8000); // Check every 8 seconds (reduced frequency)
+        }, 30000); // Check every 30 seconds (reduced frequency from 8s)
     }, [notificationOpen, showAutoNotifications, fetchUnreadCount]);
 
     // Infinite scroll setup - SMART REFRESH when scrolling to bottom

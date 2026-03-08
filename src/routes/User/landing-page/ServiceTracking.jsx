@@ -15,7 +15,7 @@ import dryerMachine from "@/assets/lottie/dryer-machine.json";
 import clothes from "@/assets/lottie/clothes.json";
 import unwashed from "@/assets/lottie/unwashed.json";
 
-const API_BASE_URL = "https://thesis-g0pr.onrender.com/api";
+const API_BASE_URL = "https://thesis-1-culv.onrender.com/api";
 
 const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSearchId }) => {
     const [receiptNumber, setReceiptNumber] = useState("");
@@ -36,7 +36,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
     const mainCardRef = useRef(null);
     const refreshIntervalRef = useRef(null);
 
-    // Auto-search when component mounts with autoSearchId
     useEffect(() => {
         if (autoSearchId && autoSearchId.trim()) {
             console.log("🚀 Auto-searching for:", autoSearchId);
@@ -46,7 +45,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         }
     }, [autoSearchId]);
 
-    // Check if mobile on mount and resize
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
@@ -60,27 +58,23 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         };
     }, []);
 
-    // Auto-refresh effect - fetch data every 1 second when tracking data is shown
     useEffect(() => {
-        // Clear any existing interval
         if (refreshIntervalRef.current) {
             clearInterval(refreshIntervalRef.current);
             refreshIntervalRef.current = null;
         }
 
-        // Set up new interval if we have tracking data and status is shown
         if (trackingData?.invoiceNumber && showStatus) {
             console.log("🔄 Starting auto-refresh every 1 second");
 
             refreshIntervalRef.current = setInterval(() => {
                 if (trackingData?.invoiceNumber) {
                     console.log("🔄 Auto-refreshing tracking data...");
-                    fetchTrackingData(trackingData.invoiceNumber, true); // true = silent refresh
+                    fetchTrackingData(trackingData.invoiceNumber, true);
                 }
-            }, 1000); // 1 second interval
+            }, 1000); 
         }
 
-        // Cleanup on unmount or when dependencies change
         return () => {
             if (refreshIntervalRef.current) {
                 clearInterval(refreshIntervalRef.current);
@@ -89,7 +83,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         };
     }, [trackingData?.invoiceNumber, showStatus]);
 
-    // Load recent searches from localStorage
     useEffect(() => {
         try {
             const saved = localStorage.getItem("recentLaundrySearches");
@@ -104,7 +97,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         }
     }, []);
 
-    // Auto-scroll to show the entire main card when status is shown
     useEffect(() => {
         if (showStatus && mainCardRef.current) {
             setTimeout(() => {
@@ -117,7 +109,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         }
     }, [showStatus]);
 
-    // Fetch tracking data with silent refresh support
     const fetchTrackingData = async (invoiceNumber, isSilentRefresh = false) => {
         if (!isSilentRefresh) {
             setIsLoading(true);
@@ -152,7 +143,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                 setShowStatus(false);
                 setTrackingData(null);
 
-                // Stop auto-refresh on error
                 if (refreshIntervalRef.current) {
                     clearInterval(refreshIntervalRef.current);
                     refreshIntervalRef.current = null;
@@ -165,13 +155,11 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         }
     };
 
-    // UPDATED: Fetch receipt data from the correct endpoint that returns ServiceInvoiceDto
     const fetchReceiptData = async (invoiceNumber) => {
         setIsLoadingReceipt(true);
         try {
             console.log(`📄 Fetching receipt data for: ${invoiceNumber}`);
             
-            // Use the tracking receipt endpoint that now includes proper format settings and amount given
             const response = await fetch(`${API_BASE_URL}/track/${invoiceNumber}/receipt`);
 
             if (!response.ok) {
@@ -181,10 +169,8 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             const data = await response.json();
             console.log("✅ Receipt data received from tracking endpoint:", data);
             
-            // Transform the data to match what ViewReceipt expects
             const transformedData = {
                 ...data,
-                // Ensure all required fields are present
                 invoiceNumber: data.invoiceNumber || invoiceNumber,
                 customerName: data.customerName,
                 contact: data.contact,
@@ -193,14 +179,12 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                 staffId: data.staffId,
                 totalPrice: data.total,
                 paymentMethod: data.paymentMethod,
-                // ✅ FIX: Use the actual amountGiven and change from the response
                 amountGiven: data.amountGiven || data.total || 0,
                 change: data.change || 0,
                 service: data.service,
                 consumables: data.consumables,
                 formatSettings: data.formatSettings,
                 loads: data.loads || trackingData?.loads || 0,
-                // Include GCash reference if available
                 gcashReference: data.gcashReference || trackingData?.gcashReference
             };
             
@@ -208,7 +192,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             return transformedData;
         } catch (error) {
             console.error("❌ Error fetching receipt data from tracking endpoint:", error);
-            // Fallback: create receipt data from tracking data with proper amount given and change
             const fallbackReceiptData = createReceiptDataFromTracking(trackingData);
             setReceiptData(fallbackReceiptData);
             return fallbackReceiptData;
@@ -217,7 +200,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         }
     };
 
-    // UPDATED: Create fallback receipt data from tracking data with proper fields including amountGiven and change
     const createReceiptDataFromTracking = (trackingData) => {
         if (!trackingData) return null;
 
@@ -231,7 +213,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             totalPrice: trackingData.totalPrice,
             total: trackingData.totalPrice,
             paymentMethod: trackingData.paymentMethod,
-            // ✅ FIX: Use the actual amountGiven and change from tracking data
             amountGiven: trackingData.amountGiven || trackingData.totalPrice,
             change: trackingData.change || 0,
             service: {
@@ -262,7 +243,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         };
     };
 
-    // Add to recent searches
     const addToRecentSearches = (receiptNum) => {
         if (!receiptNum?.trim()) return;
 
@@ -300,7 +280,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         setShowScanner(true);
     };
 
-    // Handle QR scan result
     const handleQRScanned = (receiptNumber, scannedUrl) => {
         console.log("✅ QR code scanned successfully!");
         console.log("🔗 Full scanned URL:", scannedUrl);
@@ -311,9 +290,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         fetchTrackingData(receiptNumber);
     };
 
-    // Close tracking function - stop auto-refresh
     const handleCloseTracking = () => {
-        // Stop auto-refresh
         if (refreshIntervalRef.current) {
             clearInterval(refreshIntervalRef.current);
             refreshIntervalRef.current = null;
@@ -348,7 +325,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         setCurrentLoadIndex(index);
     };
 
-    // UPDATED: handleViewReceipt to use the new fetchReceiptData
     const handleViewReceipt = async () => {
         if (!trackingData?.invoiceNumber) return;
 
@@ -358,14 +334,12 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             setShowReceiptOptions(true);
         } catch (error) {
             console.error("Error handling receipt view:", error);
-            // Fallback to tracking data
             const fallbackData = createReceiptDataFromTracking(trackingData);
             setReceiptData(fallbackData);
             setShowReceiptOptions(true);
         }
     };
 
-    // UPDATED: handlePrintReceipt to use the new fetchReceiptData
     const handlePrintReceipt = async () => {
         if (!trackingData?.invoiceNumber) return;
 
@@ -374,7 +348,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             setReceiptData(receiptData);
             setShowReceiptOptions(true);
             
-            // Small delay to ensure state is updated before printing
             setTimeout(() => {
                 const printButton = document.querySelector('[onClick*="handlePrint"]');
                 if (printButton) {
@@ -403,7 +376,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         fetchTrackingData(receiptNum);
     };
 
-    // FIXED: Enhanced status mapping with dry again support
     const convertToLaundryLoads = (trackingData, isMobile) => {
         if (!trackingData?.loadAssignments) return [];
 
@@ -411,11 +383,9 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             const status = load.status || "NOT_STARTED";
             console.log(`🔄 Load ${index + 1} status:`, status);
 
-            // Helper to determine if we're in a "dry again" scenario
             const isDryAgain = status === "DRYING" && 
                               load.startTime && 
-                              new Date(load.startTime) > new Date(Date.now() - 5 * 60 * 1000); // Started within last 5 minutes
-
+                              new Date(load.startTime) > new Date(Date.now() - 5 * 60 * 1000);
             if (isMobile) {
                 const statusSteps = [
                     {
@@ -447,7 +417,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                         active: status === "DRYING" || status === "DRIED",
                         completed: ["DRIED", "FOLDING", "COMPLETED"].includes(status) && !isDryAgain,
                         estimatedTime: isDryAgain ? "Additional drying time" : "40-60 min",
-                        isDryAgain: isDryAgain, // Flag for special styling
+                        isDryAgain: isDryAgain,
                     },
                     {
                         lottie: clothes,
@@ -478,7 +448,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                 };
             }
 
-            // Desktop version - FIXED with dry again support
             const statusSteps = [
                 {
                     lottie: washingMachine,
@@ -547,12 +516,10 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         });
     };
 
-    // Update the laundryLoads call
     const laundryLoads = convertToLaundryLoads(trackingData, isMobile);
 
     return (
         <>
-            {/* View Receipt Modal - FIXED: Now properly positioned as overlay */}
             <ViewReceipt
                 isVisible={showReceiptOptions}
                 isDarkMode={isDarkMode}
@@ -563,7 +530,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                 receiptData={receiptData}
             />
 
-            {/* Main Service Tracking Content */}
             <motion.section
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 50 }}
@@ -584,7 +550,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                             color: isDarkMode ? "#13151B" : "#F3EDE3",
                         }}
                     >
-                        {/* Receipt Input Section - Mobile Optimized */}
                         <div className="mb-6">
                             <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
                                 <h3
@@ -620,7 +585,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                     </div>
 
                                     <div className="flex w-full gap-2 sm:w-auto">
-                                        {/* View Button - Updated with Eye icon */}
                                         <motion.button
                                             type="submit"
                                             disabled={isLoading}
@@ -643,7 +607,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                             {isLoading ? "Loading..." : "View"}
                                         </motion.button>
 
-                                        {/* Scan QR Button - Updated with QrCode icon */}
                                         <motion.button
                                             type="button"
                                             onClick={handleScanQR}
@@ -681,7 +644,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                             )}
                         </div>
 
-                        {/* QR Scanner Modal */}
                         <QRScanner
                             showScanner={showScanner}
                             setShowScanner={setShowScanner}
@@ -692,7 +654,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                             onQRScanned={handleQRScanned}
                         />
 
-                        {/* Customer Information & Laundry Progress */}
                         <AnimatePresence>
                             {showStatus && trackingData && (
                                 <motion.div
@@ -703,7 +664,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                     className="border-t pt-4"
                                     style={{ borderColor: isDarkMode ? "#2A524C" : "#F3EDE3" }}
                                 >
-                                    {/* Close Tracking Button - Updated with X icon */}
                                     <div className="mb-4 flex justify-end">
                                         <motion.button
                                             onClick={handleCloseTracking}
@@ -751,16 +711,13 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                         </AnimatePresence>
                     </motion.div>
 
-                    {/* Bottom Section - 3 Columns (Recent Searches: 1, Reminder: 2) */}
                     <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-3">
-                        {/* Recent Searches - Takes 1 column */}
                         <RecentSearches
                             isDarkMode={isDarkMode}
                             recentSearches={recentSearches}
                             onRecentSearchClick={handleRecentSearchClick}
                         />
 
-                        {/* Desktop: Combined Reminder Card - Takes 2 columns */}
                         {!isMobile && (
                             <motion.div
                                 initial={{ opacity: 0, x: 30 }}
@@ -971,10 +928,8 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                             </motion.div>
                         )}
 
-                        {/* Mobile: Separate Cards */}
                         {isMobile && (
                             <>
-                                {/* Notification System Card */}
                                 <motion.div
                                     initial={{ opacity: 0, x: 30 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -1081,7 +1036,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                     </div>
                                 </motion.div>
 
-                                {/* Store Information Card */}
                                 <motion.div
                                     initial={{ opacity: 0, x: 30 }}
                                     animate={{ opacity: 1, x: 0 }}

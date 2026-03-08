@@ -28,22 +28,18 @@ const MainPage = () => {
     const [isLocked, setIsLocked] = useState(false);
     const { toast } = useToast();
 
-    // Add state for unclaimed laundry dialog
     const [showUnclaimedDialog, setShowUnclaimedDialog] = useState(false);
     const [pendingPayload, setPendingPayload] = useState(null);
     const [unclaimedItems, setUnclaimedItems] = useState([]);
     const [isCheckingLaundry, setIsCheckingLaundry] = useState(false);
-    // Add state to track if we're processing after confirmation
     const [isProcessingAfterConfirm, setIsProcessingAfterConfirm] = useState(false);
     
-    // NEW: State for claiming stub
     const [showClaimingStub, setShowClaimingStub] = useState(false);
 
     useEffect(() => {
         const handlePrintStart = () => document.body.classList.add("print-mode");
         const handlePrintEnd = () => {
             document.body.classList.remove("print-mode");
-            // NEW: Show claiming stub after invoice prints instead of transaction complete modal
             setShowClaimingStub(true);
         };
 
@@ -62,15 +58,12 @@ const MainPage = () => {
         };
     }, []);
 
-    // Function to check for unclaimed laundry
     const checkUnclaimedLaundry = async (customerName, contact) => {
         try {
-            // Get all records to check for unclaimed laundry
             const response = await api.get("/records");
 
             const currentTime = new Date();
 
-            // Filter for unclaimed, non-expired, non-disposed laundry for this customer
             const unclaimedLaundry = response.filter((record) => {
                 const isSameCustomer = record.customerName?.toLowerCase() === customerName?.toLowerCase() && record.contact === contact;
 
@@ -95,12 +88,10 @@ const MainPage = () => {
         setErrorMessage(null);
 
         try {
-            // Check for unclaimed laundry before submitting
             setIsCheckingLaundry(true);
             const unclaimedLaundry = await checkUnclaimedLaundry(payload.customerName, payload.contact);
 
             if (unclaimedLaundry.length > 0) {
-                // Show confirmation dialog
                 setUnclaimedItems(unclaimedLaundry);
                 setPendingPayload(payload);
                 setShowUnclaimedDialog(true);
@@ -109,11 +100,9 @@ const MainPage = () => {
                 return;
             }
 
-            // No unclaimed laundry, proceed with transaction creation
             await processTransaction(payload);
         } catch (error) {
             console.error("Error checking unclaimed laundry:", error);
-            // If check fails, proceed with submission
             await processTransaction(payload);
         } finally {
             setIsCheckingLaundry(false);
@@ -122,10 +111,8 @@ const MainPage = () => {
 
     const processTransaction = async (payload) => {
         try {
-            // Get staffId from localStorage BEFORE making the API call
             const staffId = localStorage.getItem("staffId");
 
-            // Include staffId in the payload
             const payloadWithStaff = {
                 ...payload,
                 staffId: staffId || "Unknown",
@@ -136,7 +123,6 @@ const MainPage = () => {
             const response = await api.post("/transactions", payloadWithStaff);
             console.log("🧾 Full backend response:", response);
 
-            // DEBUG: Check what data is actually returned
             console.log("🔍 Response data structure:", {
                 invoiceNumber: response.invoiceNumber,
                 customerName: response.customerName,
@@ -152,33 +138,26 @@ const MainPage = () => {
                 formatSettings: response.formatSettings,
             });
 
-            // FIXED: Transform the response to match ServiceInvoiceCard expectations
             const transformedInvoice = {
-                // Core transaction data
                 invoiceNumber: response.invoiceNumber,
                 customerName: response.customerName,
                 contact: response.contact,
                 staffId: response.staffId || staffId || "Unknown",
 
-                // Service data - handle both nested and flat structures
                 serviceName: response.serviceName || (response.service && response.service.name) || "Service",
                 servicePrice: response.servicePrice || (response.service && response.service.price) || 0,
                 loads: response.loads || response.serviceQuantity || 1,
 
-                // Financial data
                 totalPrice: response.totalPrice,
                 paymentMethod: response.paymentMethod,
                 amountGiven: response.amountGiven || 0,
                 change: response.change || 0,
 
-                // Dates
                 issueDate: response.issueDate,
                 dueDate: response.dueDate,
 
-                // Consumables - ensure it's always an array
                 consumables: Array.isArray(response.consumables) ? response.consumables : [],
 
-                // Settings - provide fallback
                 formatSettings: response.formatSettings || {
                     storeName: "STARWASH LAUNDRY",
                     address: "123 Laundry Street, City, State 12345",
@@ -186,28 +165,8 @@ const MainPage = () => {
                     footerNote: "Thank you for your business!",
                 },
 
-                // Include the original response as fallback
                 ...response,
             };
-
-            // DEBUG: Final check before setting invoice
-            console.log("🔍 FINAL CHECK - Does invoice have all required fields?", {
-                hasInvoiceNumber: !!transformedInvoice.invoiceNumber,
-                hasCustomerName: !!transformedInvoice.customerName,
-                hasServiceName: !!transformedInvoice.serviceName,
-                hasServicePrice: !!transformedInvoice.servicePrice,
-                hasLoads: !!transformedInvoice.loads,
-                hasTotalPrice: !!transformedInvoice.totalPrice,
-                hasAmountGiven: transformedInvoice.amountGiven !== undefined,
-                hasChange: transformedInvoice.change !== undefined,
-                hasStaffId: !!transformedInvoice.staffId,
-                hasConsumables: Array.isArray(transformedInvoice.consumables),
-                hasFormatSettings: !!transformedInvoice.formatSettings,
-                fullObject: transformedInvoice,
-            });
-
-            console.log("🎯 FINAL Transformed invoice for printing:", transformedInvoice);
-
             setInvoice(transformedInvoice);
             setPreviewData({
                 totalAmount: 0,
@@ -225,16 +184,12 @@ const MainPage = () => {
         } catch (error) {
             console.error("❌ Transaction failed:", error);
 
-            // Check if it's an insufficient stock error by looking at the response data
             const isInsufficientStock =
                 error.response?.data?.error === "Insufficient stock" || (error.message && error.message.includes("Insufficient stock"));
 
             if (isInsufficientStock) {
-                // Don't set error message and don't show toast for insufficient stock
-                // TransactionForm will handle the visual display of insufficient items
                 console.log("📦 Insufficient stock detected - handled by TransactionForm");
             } else {
-                // For other errors, show the error message and toast
                 setErrorMessage(error.message || "Transaction failed");
                 toast({
                     title: "Transaction Failed",
@@ -243,7 +198,6 @@ const MainPage = () => {
                 });
             }
 
-            // Re-throw the error so TransactionForm can handle it specifically
             throw error;
         } finally {
             setIsSubmitting(false);
@@ -252,7 +206,6 @@ const MainPage = () => {
     };
 
     const handleConfirmTransaction = async () => {
-        // Set processing state and close dialog immediately
         setIsProcessingAfterConfirm(true);
         setShowUnclaimedDialog(false);
 
@@ -260,7 +213,6 @@ const MainPage = () => {
             try {
                 await processTransaction(pendingPayload);
             } catch (error) {
-                // Error handled in processTransaction
             }
         }
         setPendingPayload(null);
@@ -282,7 +234,7 @@ const MainPage = () => {
             change: 0,
         });
         setShowActions(false);
-        setShowClaimingStub(false); // NEW: Reset claiming stub state
+        setShowClaimingStub(false);
         setErrorMessage(null);
         setIsLocked(false);
         setIsProcessingAfterConfirm(false);
@@ -301,9 +253,7 @@ const MainPage = () => {
         }));
     };
 
-    // NEW: Handle claiming stub print
     const handlePrintClaimingStub = () => {
-        // Set up print event listeners
         const handleBeforePrint = () => {
             document.body.classList.add("print-mode", "print-claiming-stub");
         };
@@ -317,23 +267,19 @@ const MainPage = () => {
         window.addEventListener("beforeprint", handleBeforePrint);
         window.addEventListener("afterprint", handleAfterPrint);
 
-        // Trigger print
         window.print();
 
-        // Clean up event listeners after a short delay
         setTimeout(() => {
             window.removeEventListener("beforeprint", handleBeforePrint);
             window.removeEventListener("afterprint", handleAfterPrint);
         }, 1000);
     };
 
-    // NEW: Handle skip claiming stub
     const handleSkipClaimingStub = () => {
         setShowClaimingStub(false);
         setShowActions(true);
     };
 
-    // Floating Preview Component
     const FloatingPreview = () => {
         const { totalAmount = 0, amountGiven = 0, change = 0 } = previewData;
         const isPaid = amountGiven > 0;
@@ -404,7 +350,6 @@ const MainPage = () => {
                     )}
                 </div>
 
-                {/* Warning for underpayment */}
                 {isUnderpaid && (
                     <div
                         className="mt-2 flex items-center gap-1 rounded p-2 text-xs"
@@ -430,7 +375,6 @@ const MainPage = () => {
         );
     };
 
-    // NEW: Claiming Stub Component
     const ClaimingStub = () => {
         if (!invoice) return null;
 
@@ -448,7 +392,6 @@ const MainPage = () => {
         return (
             <div className="printable-area">
                 <div className="mx-auto max-w-xs space-y-1 rounded border border-dashed border-gray-300 bg-white p-2 font-mono text-xs shadow-md receipt-optimized">
-                    {/* Store Header */}
                     <div className="text-center store-header">
                         <div className="text-sm font-bold uppercase text-gray-900 header-title">
                             {invoice.formatSettings?.storeName || "STARWASH LAUNDRY"}
@@ -458,7 +401,6 @@ const MainPage = () => {
 
                     <hr className="my-1 border-gray-300 divider" />
 
-                    {/* Claiming Stub Details */}
                     <div className="space-y-1 text-[10px]">
                         <div className="flex justify-between">
                             <span className="text-gray-700 label">Invoice #:</span>
@@ -484,7 +426,6 @@ const MainPage = () => {
 
                     <hr className="my-1 border-gray-300 divider" />
 
-                    {/* Important Notice */}
                     <div className="rounded bg-yellow-50 p-1 text-[9px] terms-section">
                         <div className="font-bold text-gray-900 section-title">IMPORTANT</div>
                         <p className="text-gray-700 terms-text">
@@ -492,7 +433,6 @@ const MainPage = () => {
                         </p>
                     </div>
 
-                    {/* Footer */}
                     <div className="mt-1 text-center text-[8px] text-gray-600 footer">
                         {invoice.formatSettings?.footerNote || "Thank you for your business!"}
                     </div>
@@ -505,10 +445,8 @@ const MainPage = () => {
         <div className="px-6 pb-5 pt-4 overflow-hidden" style={{
             backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
         }}>
-            {/* Main content with manual spacing - EXACTLY LIKE YOUR WORKING VERSION */}
             <div className="mb-6">
                 <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-                    {/* Left Column - Transaction Form */}
                     <TransactionForm
                         ref={formRef}
                         onSubmit={handleSubmit}
@@ -517,7 +455,6 @@ const MainPage = () => {
                         isLocked={isLocked}
                     />
 
-                    {/* Right Column - Preview Cards */}
                     {!invoice &&
                         previewData &&
                         typeof previewData.totalAmount === "number" &&
@@ -530,7 +467,6 @@ const MainPage = () => {
                             />
                         )}
 
-                    {/* FIXED: ServiceInvoiceCard rendered directly in grid - NOT hidden */}
                     {invoice && !showClaimingStub && (
                         <ServiceInvoiceCard
                             transaction={invoice}
@@ -538,25 +474,20 @@ const MainPage = () => {
                         />
                     )}
 
-                    {/* NEW: Show claiming stub when needed */}
                     {invoice && showClaimingStub && <ClaimingStub />}
                 </div>
             </div>
 
-            {/* Floating Preview - Shows on all screens */}
             {!invoice && previewData && previewData.totalAmount > 0 && <FloatingPreview />}
 
-            {/* NEW: Claiming Stub Modal - Shows after invoice prints */}
             {showClaimingStub && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    {/* Backdrop */}
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
                     />
                     
-                    {/* Modal Content */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -607,10 +538,8 @@ const MainPage = () => {
                 </div>
             )}
 
-            {/* Transaction Complete Modal - Now only shows if claiming stub is skipped */}
             {showActions && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    {/* Backdrop */}
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -618,7 +547,6 @@ const MainPage = () => {
                         onClick={handleCancel}
                     />
                     
-                    {/* Modal Content */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -662,10 +590,8 @@ const MainPage = () => {
                 </div>
             )}
 
-            {/* Unclaimed Laundry Dialog */}
             {showUnclaimedDialog && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    {/* Backdrop */}
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -673,7 +599,6 @@ const MainPage = () => {
                         onClick={handleCancelTransaction}
                     />
                     
-                    {/* Modal Content */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}

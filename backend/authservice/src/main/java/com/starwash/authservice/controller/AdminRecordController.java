@@ -20,42 +20,52 @@ public class AdminRecordController {
         this.transactionService = transactionService;
     }
 
-    // ✅ GET /api/admin/records — returns paginated transaction records with admin fields
+    // ✅ GET /api/admin/records — returns paginated transaction records with admin
+    // fields
     @GetMapping("/records")
     public ResponseEntity<List<AdminRecordResponseDto>> getAllAdminRecords(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String search) {
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
 
         // Validate pagination parameters
-        if (page < 0) page = 0;
-        if (size <= 0) size = 50;
-        if (size > 1000) size = 1000; // Limit maximum page size
+        if (page < 0)
+            page = 0;
+        if (size <= 0)
+            size = 50;
+        if (size > 1000)
+            size = 1000;
 
-        List<AdminRecordResponseDto> records = transactionService.getAllAdminRecords(page, size);
+        List<AdminRecordResponseDto> records = transactionService.getAllAdminRecords(page, size, search);
         return ResponseEntity.ok(records);
     }
 
-    // ✅ GET /api/admin/records/filtered — returns time-filtered paginated transaction records
+    // ✅ GET /api/admin/records/filtered — returns time-filtered paginated
+    // transaction records
     @GetMapping("/records/filtered")
     public ResponseEntity<List<AdminRecordResponseDto>> getAllAdminRecordsByTime(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
-            @RequestParam(defaultValue = "all") String timeFilter) {
-        
+            @RequestParam(defaultValue = "all") String timeFilter,
+            @RequestParam(required = false) String search) {
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
 
         // Validate pagination parameters
-        if (page < 0) page = 0;
-        if (size <= 0) size = 50;
-        if (size > 1000) size = 1000;
+        if (page < 0)
+            page = 0;
+        if (size <= 0)
+            size = 50;
+        if (size > 1000)
+            size = 1000;
 
         // Validate time filter
         List<String> validFilters = Arrays.asList("all", "today", "week", "month", "year");
@@ -63,29 +73,33 @@ public class AdminRecordController {
             return ResponseEntity.badRequest().build();
         }
 
-        List<AdminRecordResponseDto> records = transactionService.getAllAdminRecordsByTime(page, size, timeFilter);
+        List<AdminRecordResponseDto> records = transactionService.getAllAdminRecordsByTime(page, size, timeFilter,
+                search);
         return ResponseEntity.ok(records);
     }
 
     // ✅ GET /api/admin/records/count — returns total count for pagination
     @GetMapping("/records/count")
     public ResponseEntity<Long> getTotalRecordsCount(
-            @RequestHeader("Authorization") String authHeader) {
-        
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String search) {
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
 
-        long totalCount = transactionService.getTotalAdminRecordsCount();
+        long totalCount = transactionService.getTotalAdminRecordsCount(search);
         return ResponseEntity.ok(totalCount);
     }
 
-    // ✅ GET /api/admin/records/count/filtered — returns count for time-filtered records
+    // ✅ GET /api/admin/records/count/filtered — returns count for time-filtered
+    // records
     @GetMapping("/records/count/filtered")
     public ResponseEntity<Long> getTotalRecordsCountByTime(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam(defaultValue = "all") String timeFilter) {
-        
+            @RequestParam(defaultValue = "all") String timeFilter,
+            @RequestParam(required = false) String search) {
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -96,7 +110,7 @@ public class AdminRecordController {
             return ResponseEntity.badRequest().build();
         }
 
-        long totalCount = transactionService.getTotalAdminRecordsCountByTime(timeFilter);
+        long totalCount = transactionService.getTotalAdminRecordsCountByTime(timeFilter, search);
         return ResponseEntity.ok(totalCount);
     }
 
@@ -104,7 +118,7 @@ public class AdminRecordController {
     @GetMapping("/records/summary")
     public ResponseEntity<Map<String, Object>> getAdminRecordsSummary(
             @RequestHeader("Authorization") String authHeader) {
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -118,7 +132,7 @@ public class AdminRecordController {
     public ResponseEntity<Map<String, Object>> getAdminRecordsSummaryByTime(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable String timeFilter) {
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -135,10 +149,10 @@ public class AdminRecordController {
 
     // ✅ POST /api/admin/records/cache/clear — clear all cache (admin only)
     @PostMapping("/records/cache/clear")
-    @CacheEvict(value = {"adminRecords", "adminRecordsCount", "adminSummary"}, allEntries = true)
+    @CacheEvict(value = { "adminRecords", "adminRecordsCount", "adminSummary" }, allEntries = true)
     public ResponseEntity<Void> clearAdminRecordsCache(
             @RequestHeader("Authorization") String authHeader) {
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -150,10 +164,10 @@ public class AdminRecordController {
 
     // ✅ POST /api/admin/records/cache/clear/records — clear only records cache
     @PostMapping("/records/cache/clear/records")
-    @CacheEvict(value = {"adminRecords", "adminRecordsCount"}, allEntries = true)
+    @CacheEvict(value = { "adminRecords", "adminRecordsCount" }, allEntries = true)
     public ResponseEntity<Void> clearAdminRecordsCacheOnly(
             @RequestHeader("Authorization") String authHeader) {
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }
@@ -167,7 +181,7 @@ public class AdminRecordController {
     @CacheEvict(value = "adminSummary", allEntries = true)
     public ResponseEntity<Void> clearAdminSummaryCacheOnly(
             @RequestHeader("Authorization") String authHeader) {
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(401).build();
         }

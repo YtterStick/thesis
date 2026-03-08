@@ -8,7 +8,7 @@ import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
-const POLLING_INTERVAL = 5000; // Reduced for faster updates
+const POLLING_INTERVAL = 30000;
 
 const initializeCache = () => {
     try {
@@ -77,7 +77,6 @@ const debugTokenInfo = () => {
     }
 };
 
-// Calculate unclaimed loads the same way as AdminRecordTable
 const calculateUnclaimedLoads = (records) => {
     const unclaimedRecords = records.filter((r) => 
         r.pickupStatus === "UNCLAIMED" && 
@@ -99,7 +98,6 @@ const calculateUnclaimedLoads = (records) => {
     return { totalUnclaimed, unclaimedList };
 };
 
-// Calculate unwashed loads (same as AdminRecordTable)
 const calculateUnwashedLoads = (records) => {
     return records.reduce((acc, r) => acc + (r.unwashedLoadsCount || 0), 0);
 };
@@ -228,15 +226,12 @@ export default function AdminDashboardPage() {
 
             console.log("🔐 User authenticated, proceeding to dashboard data...");
 
-            // ✅ Fetch TOTALS from dedicated endpoint (no pagination issues)
             const totalsResponse = await api.get("/dashboard/admin/totals");
             console.log("💰 Dashboard totals:", totalsResponse);
 
-            // ✅ Fetch paginated records ONLY for today's transactions display
             const recordsData = await api.get("/admin/records?page=0&size=50");
             console.log("📊 Today's records data:", recordsData);
 
-            // Map the records for today's transactions
             const mappedRecords = recordsData.map((r) => ({
                 id: r.id,
                 invoiceNumber: r.invoiceNumber,
@@ -252,7 +247,7 @@ export default function AdminDashboardPage() {
                 laundryProcessedBy: r.laundryProcessedBy || "—",
                 claimProcessedBy: r.claimProcessedBy || "—",
                 createdAt: r.createdAt,
-                issueDate: r.issueDate, // ✅ Add issueDate from backend
+                issueDate: r.issueDate,
                 paid: r.paid || false,
                 expired: r.expired,
                 disposed: r.disposed || false,
@@ -261,7 +256,6 @@ export default function AdminDashboardPage() {
                 unwashedLoadsCount: r.unwashedLoadsCount || 0,
             }));
 
-            // ✅ FIXED: Use issueDate (PH time) instead of createdAt for today's transactions
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
@@ -276,11 +270,9 @@ export default function AdminDashboardPage() {
 
             console.log("📅 Today's transactions using issueDate:", todayTransactions.length);
 
-            // Get chart data from existing endpoint
             const dashboardApiData = await api.get("/dashboard/admin");
             console.log("📊 Chart data from backend:", dashboardApiData.overviewData);
 
-            // ✅ Use accurate totals from the dedicated endpoint
             const newDashboardData = {
                 totalIncome: totalsResponse.totalIncome || 0,
                 totalLoads: totalsResponse.totalLoads || 0,
@@ -336,8 +328,6 @@ export default function AdminDashboardPage() {
             console.error("❌ Error in fetchFreshData:", error);
 
             if (error.message.includes("403")) {
-                console.log("🔍 403 Error Details:");
-                debugTokenInfo();
                 throw new Error("Access forbidden. You may not have admin privileges. Check backend logs.");
             } else if (error.message.includes("401")) {
                 console.log("🔍 401 Error - Token may be invalid");
@@ -351,7 +341,6 @@ export default function AdminDashboardPage() {
         }
     };
 
-    // Add a function to check for new transactions specifically
     const checkForNewTransactions = useCallback(async () => {
         if (!isMountedRef.current || !isAuthenticated || !isAdmin) return;
 
@@ -369,7 +358,6 @@ export default function AdminDashboardPage() {
                 createdAt: r.createdAt,
             }));
 
-            // Check if there are new transactions since last check
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
@@ -381,11 +369,10 @@ export default function AdminDashboardPage() {
                     return recordDate.getTime() === today.getTime();
                 });
 
-            // If new transactions found, refresh the entire dashboard
             const currentTransactionCount = dashboardData.todayTransactions?.length || 0;
             if (newTodayTransactions.length > currentTransactionCount) {
                 console.log("🆕 New transactions detected, refreshing dashboard...");
-                fetchDashboardData(true); // Force refresh
+                fetchDashboardData(true);
             }
         } catch (error) {
             console.error("❌ Error checking for new transactions:", error);
@@ -419,16 +406,14 @@ export default function AdminDashboardPage() {
 
             fetchDashboardData();
 
-            // Regular polling for overall data
             pollingIntervalRef.current = setInterval(() => {
                 console.log("🔄 Auto-refreshing dashboard data...");
                 fetchDashboardData(false);
             }, POLLING_INTERVAL);
 
-            // More frequent checking for new transactions
             transactionCheckIntervalRef.current = setInterval(() => {
                 checkForNewTransactions();
-            }, 3000); // Check every 3 seconds for new transactions
+            }, 3000);
 
         } else if (!isAuthenticated) {
             setDashboardData((prev) => ({
@@ -450,9 +435,6 @@ export default function AdminDashboardPage() {
             isMountedRef.current = false;
             if (pollingIntervalRef.current) {
                 clearInterval(pollingIntervalRef.current);
-            }
-            if (transactionCheckIntervalRef.current) {
-                clearInterval(transactionCheckIntervalRef.current);
             }
         };
     }, [fetchDashboardData, checkForNewTransactions, isAuthenticated, isAdmin, logout]);
@@ -686,7 +668,6 @@ export default function AdminDashboardPage() {
                     ></div>
                 </motion.div>
 
-                {/* Summary Cards Skeleton */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     <SkeletonCard />
                     <SkeletonCard />
@@ -694,7 +675,6 @@ export default function AdminDashboardPage() {
                     <SkeletonCard />
                 </div>
 
-                {/* Chart & Today's Transactions Skeleton */}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
                     <SkeletonChart />
                     <SkeletonTodayTransactions />
@@ -789,7 +769,6 @@ export default function AdminDashboardPage() {
 
     return (
         <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
-            {/* Section Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -821,7 +800,6 @@ export default function AdminDashboardPage() {
                 </div>
             </motion.div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {summaryCards.map(({ title, icon, value, color, description }, index) => (
                     <motion.div
@@ -884,9 +862,7 @@ export default function AdminDashboardPage() {
                 ))}
             </div>
 
-            {/* 📈 Chart & Today's Transactions */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
-                {/* Chart Card */}
                 <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -1004,7 +980,6 @@ export default function AdminDashboardPage() {
                     </div>
                 </motion.div>
 
-                {/* Today's Transactions Card */}
                 <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}

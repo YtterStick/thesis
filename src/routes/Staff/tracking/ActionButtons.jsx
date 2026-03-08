@@ -29,8 +29,8 @@ const ActionButtons = ({
     const isAdvanceLoading = pendingRequests.has(advanceRequestId);
     const isDryAgainLoading = pendingRequests.has(dryAgainRequestId);
 
-    // Show loader for running loads and pending state
-    if (isLoadRunning(load) || load.pending || isStartLoading || isAdvanceLoading || isDryAgainLoading) {
+    // Show loader only for pending state
+    if (load.pending || isStartLoading || isAdvanceLoading || isDryAgainLoading) {
         return (
             <div className="flex justify-end">
                 <div className="flex h-10 min-w-[80px] items-center justify-center">
@@ -50,7 +50,6 @@ const ActionButtons = ({
     // More strict check for start button
     const canStart =
         !load.pending &&
-        !isLoadRunning(load) &&
         load.status !== "WASHING" &&
         load.status !== "DRYING" &&
         hasCorrectMachine &&
@@ -184,15 +183,16 @@ const ActionButtons = ({
                 >
                     {isStartLoading ? "Starting..." : "Start"}
                 </CustomButton>
-            ) : load.status === "DRYING" ? (
-                // Show loader animation during DRYING
-                <div className="flex justify-end">
-                    <div className="flex h-10 min-w-[80px] items-center justify-center">
-                        <div style={{ transform: "scale(0.5)" }}>
-                            <Loader />
-                        </div>
-                    </div>
-                </div>
+            ) : load.status === "WASHING" || load.status === "DRYING" ? (
+                <CustomButton
+                    onClick={() => advanceStatus(jobKey, loadIndex)}
+                    disabled={load.pending || globalLoading}
+                    icon={ArrowRight}
+                    variant="primary"
+                    isLoading={pendingRequests.has(`advance-${job.id}-${load.loadNumber}`)}
+                >
+                    Advance
+                </CustomButton>
             ) : load.status === "COMPLETED" ? (
                 <span className="flex items-center gap-1 font-medium text-green-600">
                     <Check className="h-4 w-4" />

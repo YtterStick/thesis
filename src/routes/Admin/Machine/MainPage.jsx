@@ -18,10 +18,9 @@ import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { api } from "@/lib/api-config";
 
-const POLLING_INTERVAL = 1000; // 1 second polling
-const CACHE_DURATION = 10 * 1000; // Reduced to 10 seconds since we're polling every second
+const POLLING_INTERVAL = 1000;
+const CACHE_DURATION = 10 * 1000;
 
-// Initialize cache properly
 const initializeCache = () => {
   try {
     const stored = localStorage.getItem('machinesCache');
@@ -40,11 +39,9 @@ const initializeCache = () => {
   return null;
 };
 
-// Global cache instances
 let machinesCache = initializeCache();
 let cacheTimestamp = machinesCache?.timestamp || null;
 
-// Save cache to localStorage for persistence
 const saveCacheToStorage = (data) => {
   try {
     localStorage.setItem('machinesCache', JSON.stringify({
@@ -126,7 +123,6 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
         </div>
 
         <div className="space-y-4">
-          {/* Machine Type */}
           <div>
             <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
               Machine Type
@@ -146,7 +142,6 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
             </Select>
           </div>
 
-          {/* Machine Name */}
           <div>
             <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
               Machine Name
@@ -159,7 +154,6 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
             />
           </div>
 
-          {/* Capacity */}
           <div>
             <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
               Capacity (kg)
@@ -173,7 +167,6 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
             />
           </div>
 
-          {/* Status */}
           <div>
             <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
               Status
@@ -200,7 +193,6 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
             </Select>
           </div>
 
-          {/* Save Button */}
           <div className="flex justify-end pt-2">
             <motion.div
               whileHover={{ scale: 1.02 }}
@@ -298,7 +290,6 @@ function MachineCard({ machine, animationData, onEdit, onDelete }) {
   );
 }
 
-// List Item Component for List View
 function MachineListItem({ machine, animationData, onEdit, onDelete }) {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -375,7 +366,6 @@ function MachineListItem({ machine, animationData, onEdit, onDelete }) {
   );
 }
 
-// Delete Confirmation Modal Component
 function DeleteConfirmationModal({ open, onOpenChange, onConfirm, machineId }) {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -462,7 +452,6 @@ export default function MachineMainPage() {
   const [error, setError] = useState(null);
   const [isPolling, setIsPolling] = useState(false);
   
-  // Load view mode from localStorage or default to 'grid'
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('machineViewMode') || 'grid';
@@ -474,7 +463,6 @@ export default function MachineMainPage() {
   const pollingIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
 
-  // Save view mode to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('machineViewMode', viewMode);
@@ -497,11 +485,9 @@ export default function MachineMainPage() {
     try {
       const now = Date.now();
       
-      // Check cache first unless forced refresh
       if (!forceRefresh && machinesCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
         console.log("📦 Using cached machines data");
         
-        // Always update with cached data to ensure UI is populated
         setMachines(machinesCache.data);
         setLoading(false);
         setInitialLoad(false);
@@ -512,7 +498,6 @@ export default function MachineMainPage() {
     } catch (err) {
       console.error("❌ Error fetching machines:", err.message);
       
-      // On error, keep cached data if available
       if (machinesCache) {
         console.log("⚠️ Fetch failed, falling back to cached machines data");
         setMachines(machinesCache.data);
@@ -525,38 +510,32 @@ export default function MachineMainPage() {
     }
   }, [isPolling]);
 
-  // Separate function for actual API call using the api utility
   const fetchFreshMachines = async () => {
     console.log("🔄 Fetching fresh machines data");
     setIsPolling(true);
     setLoading(true);
 
     try {
-      // Use the api utility instead of direct fetch
       const data = await api.get("/machines");
       const newMachines = data || [];
       
       const currentTime = Date.now();
 
-      // Only update state and cache if data has actually changed
       if (!machinesCache || hasDataChanged(newMachines, machinesCache.data)) {
         console.log("🔄 Machines data updated with fresh data");
         
-        // Update cache
         machinesCache = {
           data: newMachines,
           timestamp: currentTime
         };
         cacheTimestamp = currentTime;
         
-        // Persist to localStorage
         saveCacheToStorage(newMachines);
         
         setMachines(newMachines);
         setError(null);
       } else {
         console.log("✅ No changes in machines data, updating timestamp only");
-        // Just update the timestamp to extend cache life
         cacheTimestamp = currentTime;
         machinesCache.timestamp = currentTime;
         saveCacheToStorage(machinesCache.data);
@@ -574,11 +553,9 @@ export default function MachineMainPage() {
     }
   };
 
-  // Setup polling interval
   useEffect(() => {
     isMountedRef.current = true;
     
-    // Always show cached data immediately if available
     if (machinesCache) {
       console.log("🚀 Showing cached machines data immediately");
       setMachines(machinesCache.data);
@@ -586,10 +563,8 @@ export default function MachineMainPage() {
       setInitialLoad(false);
     }
     
-    // Initial fetch
     fetchMachines();
     
-    // Setup polling interval
     pollingIntervalRef.current = setInterval(() => {
       console.log("🔄 Polling machines data...");
       fetchMachines(false);
@@ -625,27 +600,23 @@ export default function MachineMainPage() {
     try {
       let saved;
       if (form.id) {
-        // Use the api utility for PUT request
         saved = await api.put(`/machines/${form.id}`, {
           ...form,
           capacityKg: parseFloat(form.capacityKg),
         });
       } else {
-        // Use the api utility for POST request
         saved = await api.post("/machines", {
           ...form,
           capacityKg: parseFloat(form.capacityKg),
         });
       }
 
-      // Update local state and cache
       const updatedMachines = form.id 
         ? machines.map(m => m.id === saved.id ? saved : m)
         : [...machines, saved];
       
       setMachines(updatedMachines);
       
-      // Update cache
       machinesCache = {
         data: updatedMachines,
         timestamp: Date.now()
@@ -692,14 +663,11 @@ export default function MachineMainPage() {
 
   const handleDelete = async (id) => {
     try {
-      // Use the api utility for DELETE request
       await api.delete(`/machines/${id}`);
 
-      // Update local state and cache
       const updatedMachines = machines.filter(m => m.id !== id);
       setMachines(updatedMachines);
       
-      // Update cache
       machinesCache = {
         data: updatedMachines,
         timestamp: Date.now()
@@ -739,13 +707,11 @@ export default function MachineMainPage() {
          style={{ backgroundColor: isDarkMode ? "#334155" : "#f1f5f9" }} />
   );
 
-  // Show skeleton loader only during initial load AND when no cached data is available
   if (initialLoad && !machinesCache) {
     return (
       <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
         backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
       }}>
-        {/* Header Skeleton */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -773,7 +739,6 @@ export default function MachineMainPage() {
                }}></div>
         </motion.div>
 
-        {/* Content Skeleton */}
         <div className="space-y-8">
           {[...Array(2)].map((_, sectionIndex) => (
             <div key={sectionIndex} className="space-y-4">
@@ -797,7 +762,6 @@ export default function MachineMainPage() {
     <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
       backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
     }}>
-      {/* Enhanced Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -826,7 +790,6 @@ export default function MachineMainPage() {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* View Mode Toggle */}
           <div className="flex rounded-lg border-2 p-1" style={{ 
             borderColor: isDarkMode ? "#334155" : "#cbd5e1",
             backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
@@ -889,10 +852,8 @@ export default function MachineMainPage() {
         </motion.div>
       )}
 
-      {/* Combined Machines Grid View */}
       {viewMode === 'grid' && (
         <div className="space-y-8">
-          {/* Washers Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -943,7 +904,6 @@ export default function MachineMainPage() {
             )}
           </motion.div>
 
-          {/* Dryers Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -997,10 +957,8 @@ export default function MachineMainPage() {
         </div>
       )}
 
-      {/* List View */}
       {viewMode === 'list' && (
         <div className="space-y-6">
-          {/* Washers List */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1042,7 +1000,6 @@ export default function MachineMainPage() {
             )}
           </motion.div>
 
-          {/* Dryers List */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1081,7 +1038,6 @@ export default function MachineMainPage() {
         </div>
       )}
 
-      {/* Unified Machine Modal */}
       <MachineModal
         open={modalOpen}
         onOpenChange={setModalOpen}
@@ -1091,7 +1047,6 @@ export default function MachineMainPage() {
         isEdit={!!form.id}
       />
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         open={!!confirmDeleteId}
         onOpenChange={() => setConfirmDeleteId(null)}

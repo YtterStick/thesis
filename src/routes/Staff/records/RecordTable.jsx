@@ -59,21 +59,20 @@ const renderStatusBadge = (status, isExpired, isDarkMode) => {
     ) : null;
 };
 
-const RecordTable = ({ items = [], isDarkMode }) => {
+const RecordTable = ({ items = [], isDarkMode, currentPage, totalPages, onPageChange }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRange, setSelectedRange] = useState({ from: null, to: null });
     const [showCalendar, setShowCalendar] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
     const [sortOrder, setSortOrder] = useState("desc");
     const [printData, setPrintData] = useState(null);
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
 
-    const rowsPerPage = 6;
+    const rowsPerPage = items.length || 1;
     const calendarRef = useRef(null);
 
     useEffect(() => {
-        setCurrentPage(1);
+        // onPageChange(0); // Optional: reset to first page on search
     }, [searchTerm, selectedRange]);
 
     useEffect(() => {
@@ -122,8 +121,8 @@ const RecordTable = ({ items = [], isDarkMode }) => {
         return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
     });
 
-    const totalPages = Math.ceil(sorted.length / rowsPerPage);
-    const paginated = sorted.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+    // const totalPages = Math.ceil(sorted.length / rowsPerPage); // Now from props
+    const paginated = items;
 
     const handlePrint = async (record) => {
         try {
@@ -145,7 +144,7 @@ const RecordTable = ({ items = [], isDarkMode }) => {
     };
 
     const handlePageChange = (page) => {
-        if (page >= 1 && page <= totalPages) setCurrentPage(page);
+        if (page >= 0 && page < totalPages) onPageChange(page);
     };
 
     const closePrintModal = () => {
@@ -452,9 +451,9 @@ const RecordTable = ({ items = [], isDarkMode }) => {
                     <div className="mt-4 flex items-center justify-center gap-4 text-sm">
                         <button
                             onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
+                            disabled={currentPage === 0}
                             className={`rounded px-4 py-2 transition-all font-medium ${
-                                currentPage === 1 
+                                currentPage === 0 
                                     ? "cursor-not-allowed opacity-50" 
                                     : "hover:scale-105 hover:opacity-90"
                             }`}
@@ -475,15 +474,15 @@ const RecordTable = ({ items = [], isDarkMode }) => {
                                 backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
                             }}
                         >
-                            Page <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{currentPage}</span> of{" "}
+                            Page <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{currentPage + 1}</span> of{" "}
                             <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{totalPages}</span>
                         </span>
 
                         <button
                             onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages}
+                            disabled={currentPage === totalPages - 1}
                             className={`rounded px-4 py-2 transition-all font-medium ${
-                                currentPage === totalPages 
+                                currentPage === totalPages - 1
                                     ? "cursor-not-allowed opacity-50" 
                                     : "hover:scale-105 hover:opacity-90"
                             }`}

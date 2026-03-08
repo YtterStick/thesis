@@ -6,7 +6,7 @@ import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
-const POLLING_INTERVAL = 1000; // Changed from 15000 to 1000ms (1 second)
+const POLLING_INTERVAL = 30000;
 
 const initializeCache = () => {
   try {
@@ -72,7 +72,6 @@ const StaffDashboardPage = () => {
     };
   });
 
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [initialLoad, setInitialLoad] = useState(!staffDashboardCache);
   const pollingIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
@@ -149,7 +148,6 @@ const StaffDashboardPage = () => {
     }
 
     try {
-      // Use the api utility instead of direct fetch
       const data = await api.get("/dashboard/staff");
       
       const newDashboardData = {
@@ -245,7 +243,6 @@ const StaffDashboardPage = () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
-      clearInterval(timeTimer);
     };
   }, [fetchDashboardData]);
 
@@ -253,41 +250,11 @@ const StaffDashboardPage = () => {
     return `₱${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
   };
 
-  const getRemainingTime = (endTime) => {
-    if (!endTime) return null;
-
-    try {
-      const end = new Date(endTime);
-      const remainingMs = end.getTime() - currentTime.getTime();
-
-      if (remainingMs <= 0) return "Done";
-
-      const remainingMinutes = Math.floor(remainingMs / 60000);
-      const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
-
-      if (remainingMinutes > 0) {
-        return `${remainingMinutes}m ${remainingSeconds}s`;
-      }
-      return `${remainingSeconds}s`;
-    } catch (error) {
-      console.error("Error calculating remaining time:", error);
-      return "In Use";
-    }
-  };
-
   const getMachineStatus = (machine) => {
-    if (machine.status === "In Use" && machine.endTime) {
-      const remaining = getRemainingTime(machine.endTime);
-      if (remaining === "Done") {
-        return "Done";
-      }
-      return remaining || "In Use";
-    }
     return machine.status || "Available";
   };
 
   const getStatusColor = (status) => {
-    if (status.includes("m") || status.includes("s")) return "#3B82F6";
     if (status === "In Use") return "#F59E0B";
     if (status === "Available") return "#10B981";
     if (status === "Maintenance") return "#EF4444";
@@ -411,7 +378,6 @@ const StaffDashboardPage = () => {
             ))}
           </div>
 
-          {/* Dryers Column */}
           <div className="space-y-3 pl-4">
             <div className="h-5 w-20 rounded mb-2 animate-pulse"
                  style={{
@@ -507,7 +473,6 @@ const StaffDashboardPage = () => {
                }}></div>
         </div>
 
-        {/* Summary Cards Skeleton */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <SkeletonCard />
           <SkeletonCard />
@@ -515,7 +480,6 @@ const StaffDashboardPage = () => {
           <SkeletonCard />
         </div>
 
-        {/* Machine Status & Unclaimed List Skeleton */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
           <div className="col-span-1 md:col-span-2 lg:col-span-4">
             <SkeletonMachineList />
@@ -619,7 +583,6 @@ const StaffDashboardPage = () => {
     <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
       backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
     }}>
-      {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -645,7 +608,6 @@ const StaffDashboardPage = () => {
         </div>
       </motion.div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {summaryCards.map(({ title, icon, value, color, description, clickable, onClick }, index) => (
           <motion.div
@@ -708,9 +670,7 @@ const StaffDashboardPage = () => {
         ))}
       </div>
 
-      {/* Machine Status & Unclaimed Transactions */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
-        {/* All Machines Card */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
@@ -727,7 +687,6 @@ const StaffDashboardPage = () => {
               <p className="text-lg font-bold mb-1" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
                 All Machines Status
               </p>
-              {/* Machine Statistics Label */}
               <span className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                 {machineStats.total} total • {machineStats.available} available • {machineStats.inUse} in use • {machineStats.maintenance} maintenance
               </span>
@@ -813,7 +772,6 @@ const StaffDashboardPage = () => {
                   )}
                 </div>
 
-                {/* Dryers */}
                 <div className="space-y-3 pl-4">
                   <p className="text-sm font-medium" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
                     Dryers ({dryers.length})
@@ -869,7 +827,6 @@ const StaffDashboardPage = () => {
           </div>
         </motion.div>
 
-        {/* Unclaimed Transactions Card */}
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}

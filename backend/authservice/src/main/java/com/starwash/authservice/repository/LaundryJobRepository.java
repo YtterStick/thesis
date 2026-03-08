@@ -1,6 +1,8 @@
 package com.starwash.authservice.repository;
 
 import com.starwash.authservice.model.LaundryJob;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -31,18 +33,25 @@ public interface LaundryJobRepository extends MongoRepository<LaundryJob, String
 
     List<LaundryJob> findByExpiredTrueOrDueDateBefore(java.time.LocalDateTime date);
 
-    List<LaundryJob> findByPickupStatusAndExpiredAndDisposed(String pickupStatus, Boolean expired, Boolean disposed);
+    Page<LaundryJob> findByPickupStatusAndExpiredAndDisposed(String pickupStatus, Boolean expired, Boolean disposed,
+            Pageable pageable);
+
+    Page<LaundryJob> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("{ 'customerName': { $regex: ?0, $options: 'i' } }")
+    Page<LaundryJob> findByCustomerNameContainingIgnoreCase(String name, Pageable pageable);
 
     // In LaundryJobRepository.java
     @Query("{ 'loadAssignments.status': { $ne: 'COMPLETED' } }")
     List<LaundryJob> findIncompleteJobs();
-    
-    
+
     @Query("{ 'transactionId': { $in: ?0 } }")
     List<LaundryJob> findByTransactionIdIn(List<String> transactionIds);
-    
+
     // Add Count Methods
     long countByExpiredTrueAndDisposedFalse();
+
     long countByPickupStatusAndExpiredFalseAndDisposedFalse(String pickupStatus);
+
     long countByPickupStatus(String pickupStatus);
 }
