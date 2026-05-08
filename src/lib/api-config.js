@@ -3,6 +3,8 @@ export const API_CONFIG = {
   timeout: 10000
 };
 
+export const API_BASE_URL = API_CONFIG.baseURL;
+
 export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
   return `${API_CONFIG.baseURL}/api/${cleanEndpoint}`;

@@ -43,9 +43,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
         // Public endpoints - FIXED: Include API paths
         if (path.equals("/api/login") || path.equals("/api/register") || 
-            path.equals("/login") || path.equals("/register") ||
-            path.equals("/health") || path.equals("/api/health") ||
-            path.equals("/")) {
+            path.equals("/api/logout") || path.equals("/api/health") ||
+            path.equals("/api") || path.equals("/api/")) {
             System.out.println("✅ Public endpoint, skipping auth: " + path);
             chain.doFilter(request, response);
             return;

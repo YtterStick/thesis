@@ -257,6 +257,7 @@ public class TransactionService {
         transactionRepository.save(transaction);
 
         createNewLaundryServiceNotification(transaction);
+        notificationService.broadcast(NotificationService.EVENT_TRANSACTION, "New transaction: " + transaction.getInvoiceNumber());
 
         FormatSettings settings = formatSettingsRepository.findTopByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException("Format settings not found"));

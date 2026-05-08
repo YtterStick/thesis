@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/")
 public class DebugController {
     
     @GetMapping("/debug/auth")
@@ -70,7 +70,7 @@ public class DebugController {
 }
 
 @RestController
-@RequestMapping("/api/test")
+@RequestMapping("/test")
 class TestController {
     
     @GetMapping("/security-context")

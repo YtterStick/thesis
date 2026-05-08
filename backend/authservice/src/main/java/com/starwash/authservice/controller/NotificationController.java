@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -27,6 +28,11 @@ public class NotificationController {
         this.notificationService = notificationService;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
+    }
+
+    @GetMapping(value = "/stream", produces = "text/event-stream")
+    public SseEmitter stream(@RequestParam(required = false) String userId) {
+        return notificationService.subscribe(userId);
     }
 
     @GetMapping

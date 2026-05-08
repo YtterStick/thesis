@@ -1,281 +1,120 @@
 import React, { useState, useCallback } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { motion } from "framer-motion";
-import { AlertTriangle, CheckCircle, Loader } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 const MachineSelector = ({ load, options, jobs, assignMachine, disabled, isDarkMode, job, pendingRequests = new Set() }) => {
-    // Local loading state for this specific machine assignment
     const [localLoading, setLocalLoading] = useState(false);
     
-    // Safe access with defaults
     const safeJob = job || {};
     const normalizedServiceType = safeJob.serviceType?.replace(" Only", "") || safeJob.serviceType || "Wash & Dry";
     const requiredMachineType = getMachineTypeForStep(load?.status, normalizedServiceType);
     
-    // FIXED: Only disable selection for FOLDING and COMPLETED, NOT for DRIED
     const shouldDisableSelection = ["FOLDING", "COMPLETED"].includes(load?.status);
     
-    // IMPORTANT: Find current machine from ALL machines, not just filtered options
+    // Ensure we are comparing IDs correctly (convert to string for Select component)
+    const currentMachineId = load?.machineId ? String(load.machineId) : "";
+    
     const currentMachine = load?.machineId ? 
-        (options.find((m) => m.id === load.machineId) || 
-         // Fallback: try to find machine in all available machines if not in filtered options
+        (options.find((m) => String(m.id) === currentMachineId) || 
          { id: load.machineId, name: `Machine ${load.machineId}`, type: "UNKNOWN" }) 
         : null;
     
-    // Check if current machine is correct type
     const isWrongMachineType = currentMachine && requiredMachineType && 
         currentMachine.type?.toUpperCase() !== requiredMachineType;
 
-    // Create unique request ID for this machine assignment
     const requestId = load ? `assign-machine-${job?.id}-${load.loadNumber}` : '';
-
-    // Check if this specific machine assignment is loading
     const isMachineLoading = pendingRequests.has(requestId) || localLoading;
 
-    // Enhanced assign machine handler with race condition protection
-    const handleMachineAssign = useCallback(async (machineId) => {
-        if (isMachineLoading || shouldDisableSelection || disabled) {
-            console.log("Machine assignment prevented: loading, disabled, or invalid state");
-            return;
-        }
-
-        // Don't assign if selecting the same machine
-        if (machineId === load?.machineId) {
-            return;
-        }
-
+    const handleMachineAssign = useCallback(async (val) => {
+        if (!val || isMachineLoading || shouldDisableSelection || disabled || val === currentMachineId) return;
         setLocalLoading(true);
-        
         try {
-            await assignMachine(machineId);
+            await assignMachine(val);
         } catch (error) {
             console.error("Failed to assign machine:", error);
         } finally {
             setLocalLoading(false);
         }
-    }, [isMachineLoading, shouldDisableSelection, disabled, load?.machineId, assignMachine]);
+    }, [isMachineLoading, shouldDisableSelection, disabled, currentMachineId, assignMachine]);
 
     const getDisplayValue = () => {
-        if (!load) return "Select machine";
-        
-        if (isMachineLoading) {
-            return "Assigning...";
-        } else if (isWrongMachineType) {
-            return `Wrong Type (${currentMachine?.name || 'Unknown'})`;
-        } else if ((load.status === "FOLDING" || load.status === "COMPLETED") && currentMachine) {
-            return `Unassigned (was ${currentMachine.name})`;
-        } else if (load.status === "FOLDING" || load.status === "COMPLETED") {
-            return "Unassigned";
-        } else if (currentMachine) {
-            // Show machine name for DRIED status too
-            return currentMachine.name;
-        } else {
-            return "Select machine";
-        }
+        if (!load) return "Select";
+        if (isMachineLoading) return "Assigning...";
+        if (isWrongMachineType) return "Wrong Type";
+        if (shouldDisableSelection) return "Released";
+        return currentMachine ? currentMachine.name : "Select";
     };
 
-    const getAvailableMachines = () => {
-        if (!options || !Array.isArray(options)) return [];
+    const availableMachines = (options || []).filter(machine => {
+        if (!machine) return false;
         
-        return options.filter(machine => {
-            if (!machine) return false;
+        // Always include the currently assigned machine so it can be shown in the trigger
+        if (String(machine.id) === currentMachineId) return true;
 
-            // Check if machine is available
-            if ((machine.status || "").toLowerCase() !== "available") {
-                return false;
-            }
-
-            // Check if machine is assigned elsewhere
-            const assignedElsewhere = jobs?.some((j) =>
-                j?.loads?.some(
-                    (l) => l?.machineId === machine.id && 
-                    l?.status !== "COMPLETED" && 
-                    l !== load,
-                ),
-            );
-
-            if (assignedElsewhere) {
-                return false;
-            }
-
-            // Check if machine type matches requirement
-            if (requiredMachineType && machine.type?.toUpperCase() !== requiredMachineType) {
-                return false;
-            }
-
-            return true;
-        });
-    };
-
-    const availableMachines = getAvailableMachines();
-
-    // If load is undefined, don't render the selector
-    if (!load) {
-        return (
-            <div className="w-[160px] text-sm text-gray-500">
-                No load data
-            </div>
+        if ((machine.status || "").toLowerCase() !== "available") return false;
+        const assignedElsewhere = jobs?.some((j) =>
+            j?.loads?.some((l) => String(l?.machineId) === String(machine.id) && l?.status !== "COMPLETED" && l !== load)
         );
-    }
-
-    // DEBUG: Log current state
-    console.log("🔧 MachineSelector Debug:", {
-        loadStatus: load.status,
-        machineId: load.machineId,
-        currentMachine: currentMachine,
-        requiredMachineType: requiredMachineType,
-        optionsCount: options?.length,
-        availableMachinesCount: availableMachines.length,
-        shouldDisableSelection: shouldDisableSelection,
-        isMachineLoading: isMachineLoading
+        if (assignedElsewhere) return false;
+        if (requiredMachineType && machine.type?.toUpperCase() !== requiredMachineType) return false;
+        return true;
     });
+
+    if (!load) return <div className="text-xs text-gray-400">No data</div>;
 
     return (
         <div className="flex flex-col gap-1">
             <Select
-                value={load.machineId ?? ""}
-                onValueChange={shouldDisableSelection || isMachineLoading ? undefined : handleMachineAssign}
+                value={currentMachineId}
+                onValueChange={handleMachineAssign}
                 disabled={disabled || shouldDisableSelection || isMachineLoading}
             >
                 <SelectTrigger 
-                    className={`w-[160px] transition-all ${
-                        isWrongMachineType ? 'border-red-500' : 
-                        (load.status === "FOLDING" || load.status === "COMPLETED") ? 'border-green-500' : 
-                        isMachineLoading ? 'border-blue-500' : ''
-                    }`}
+                    className="w-[140px] h-9 text-xs font-medium"
                     style={{
                         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isWrongMachineType ? '#ef4444' : 
-                                   (load.status === "FOLDING" || load.status === "COMPLETED") ? '#10B981' : 
-                                   isMachineLoading ? '#3b82f6' :
-                                   (isDarkMode ? "#475569" : "#cbd5e1"),
+                        borderColor: isWrongMachineType ? '#ef4444' : (isDarkMode ? "#475569" : "#cbd5e1"),
                         color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                        opacity: (shouldDisableSelection || isMachineLoading) ? 0.7 : 1,
                     }}
                 >
-                    <SelectValue placeholder="Select machine">
-                        <div className="flex items-center gap-2">
-                            {isMachineLoading && (
-                                <Loader className="h-3 w-3 text-blue-500 animate-spin" />
-                            )}
-                            {(load.status === "FOLDING" || load.status === "COMPLETED") && !isMachineLoading && (
-                                <CheckCircle className="h-3 w-3 text-green-500" />
-                            )}
-                            {isWrongMachineType && !isMachineLoading && (
-                                <AlertTriangle className="h-3 w-3 text-red-500" />
-                            )}
-                            <span>{getDisplayValue()}</span>
-                        </div>
-                    </SelectValue>
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        {isMachineLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                        <span className="truncate">{getDisplayValue()}</span>
+                    </div>
                 </SelectTrigger>
-                <SelectContent 
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#475569" : "#cbd5e1",
-                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                    }}
-                >
-                    {availableMachines.length === 0 ? (
-                        <div className="px-2 py-1.5 text-sm text-gray-500">
-                            No available {requiredMachineType?.toLowerCase() || 'machines'}
+                <SelectContent style={{ backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF" }}>
+                    {availableMachines.length === 0 && !currentMachineId ? (
+                        <div className="px-2 py-1.5 text-xs text-gray-500">
+                            No {requiredMachineType?.toLowerCase() || 'machines'}
                         </div>
                     ) : (
-                        availableMachines.map((m) => {
-                            const isCorrectType = !requiredMachineType || m.type?.toUpperCase() === requiredMachineType;
-                            const isCurrentMachine = m.id === load.machineId;
-                            const isBeingAssigned = isMachineLoading && m.id === load.machineId;
-                            
-                            return (
-                                <SelectItem
-                                    key={m.id}
-                                    value={m.id}
-                                    disabled={isMachineLoading}
-                                    className={`cursor-pointer transition-colors ${
-                                        isCurrentMachine ? 'bg-blue-100 dark:bg-blue-900' : ''
-                                    } ${isMachineLoading ? 'opacity-50' : ''}`}
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    }}
-                                >
-                                    <motion.span
-                                        whileHover={(shouldDisableSelection || isMachineLoading) ? {} : { scale: 1.02 }}
-                                        className="flex items-center gap-2"
-                                    >
-                                        {isBeingAssigned && (
-                                            <Loader className="h-3 w-3 text-blue-500 animate-spin" />
-                                        )}
-                                        {m.name} 
-                                        {isCurrentMachine && !isBeingAssigned && ' (current)'}
-                                        {isBeingAssigned && ' (assigning...)'}
-                                    </motion.span>
-                                </SelectItem>
-                            );
-                        })
+                        availableMachines.map((m) => (
+                            <SelectItem key={m.id} value={String(m.id)} className="text-xs">
+                                {m.name} {String(m.id) === currentMachineId ? "(Current)" : ""}
+                            </SelectItem>
+                        ))
                     )}
                 </SelectContent>
             </Select>
             
-            {/* Status messages */}
-            {isMachineLoading && (
-                <span className="text-xs text-blue-500 flex items-center gap-1">
-                    <Loader className="h-3 w-3 animate-spin" />
-                    Assigning machine...
-                </span>
-            )}
             {isWrongMachineType && !isMachineLoading && (
-                <span className="text-xs text-red-500 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Need {requiredMachineType?.toLowerCase()} for {load.status.toLowerCase()}
-                </span>
-            )}
-            {(load.status === "FOLDING" || load.status === "COMPLETED") && !isMachineLoading && (
-                <span className="text-xs text-green-500 flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    Machine unassigned - available for other loads
-                </span>
-            )}
-            {!isWrongMachineType && requiredMachineType && !currentMachine && 
-             load.status !== "FOLDING" && load.status !== "COMPLETED" && !isMachineLoading && (
-                <span className="text-xs text-blue-500">
-                    Select a {requiredMachineType.toLowerCase()}
-                </span>
-            )}
-            
-            {/* DEBUG INFO - Remove in production */}
-            {process.env.NODE_ENV === 'development' && (
-                <span className="text-xs text-gray-500">
-                    Status: {load.status} | Machine: {load.machineId || 'None'} | Type: {requiredMachineType} | 
-                    Loading: {isMachineLoading ? 'Yes' : 'No'}
-                </span>
+                <span className="text-[10px] text-red-500 font-bold uppercase">Need {requiredMachineType?.toLowerCase()}</span>
             )}
         </div>
     );
 };
 
-// Helper function to determine required machine type
 const getMachineTypeForStep = (status, serviceType) => {
     if (!status) return null;
-    
     const normalizedServiceType = serviceType?.replace(" Only", "") || serviceType;
-
-    // For Wash service: only need washer for washing
     if (normalizedServiceType === "Wash") {
         if (status === "UNWASHED" || status === "WASHING") return "WASHER";
-        return null; // No machine needed for WASHED or COMPLETED
-    }
-    
-    // For Dry service: need dryer for drying AND dried status
-    if (normalizedServiceType === "Dry") {
+    } else if (normalizedServiceType === "Dry") {
         if (status === "UNWASHED" || status === "DRYING" || status === "DRIED") return "DRYER";
-        return null; // No machine needed for FOLDING or COMPLETED
-    }
-    
-    // For Wash & Dry service: washer for washing, dryer for drying AND dried
-    if (normalizedServiceType === "Wash & Dry") {
+    } else if (normalizedServiceType === "Wash & Dry") {
         if (status === "UNWASHED" || status === "WASHING") return "WASHER";
         if (status === "WASHED" || status === "DRYING" || status === "DRIED") return "DRYER";
     }
-    
     return null;
 };
 

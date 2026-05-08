@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/table";
 
 import { api } from "@/lib/api-config";
+import { useSse } from "@/hooks/use-sse";
+import { useAuth } from "@/contexts/auth-context";
 
 // Manila time utility functions
 const toManilaTime = (timestamp) => {
@@ -172,21 +174,37 @@ const SkeletonTable = ({ isDarkMode }) => (
 
 const AuditTrailPage = () => {
   const { theme } = useTheme();
+  const { user } = useAuth();
+  
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedAction, setSelectedAction] = useState("all");
   const [selectedUser, setSelectedUser] = useState("all");
-  const [dateRange, setDateRange] = useState("all");
-  const [users, setUsers] = useState([]);
-  const [knownUsernames, setKnownUsernames] = useState(new Set());
-
-  const [currentPage, setCurrentPage] = useState(0); // Backend uses 0-based indexing
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedAction, setSelectedAction] = useState("all");
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+
+  const [users, setUsers] = useState([{ value: "all", label: "All Users" }]);
+  const [knownUsernames, setKnownUsernames] = useState(new Set());
+
+  // Real-time updates via SSE
+  useSse({
+    'AUDIT_UPDATE': () => {
+      console.log("🚀 Real-time audit update received!");
+      fetchAuditLogs();
+    },
+    'NOTIFICATION_UPDATE': () => fetchAuditLogs(),
+  }, user?.id);
 
   const actionTypes = [
     { value: "all", label: "All Actions" },
@@ -610,7 +628,7 @@ const AuditTrailPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentLogs.length === 0 ? (
+                    {filteredLogs.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8">
                           <div className="flex flex-col items-center justify-center">
@@ -622,7 +640,7 @@ const AuditTrailPage = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      currentLogs.map((log, index) => (
+                      filteredLogs.map((log, index) => (
                         <TableRow 
                           key={log.id || index} 
                           style={{ 

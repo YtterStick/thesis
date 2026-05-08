@@ -15,11 +15,13 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class NotificationService {
@@ -27,6 +29,63 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final StockRepository stockRepository;
     private final MongoTemplate mongoTemplate;
+
+    // Real-time SSE emitters
+    private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
+    private final List<SseEmitter> anonymousEmitters = new CopyOnWriteArrayList<>();
+
+    // Event Types
+    public static final String EVENT_TRANSACTION = "TRANSACTION_UPDATE";
+    public static final String EVENT_AUDIT = "AUDIT_UPDATE";
+    public static final String EVENT_NOTIFICATION = "NOTIFICATION_UPDATE";
+    public static final String EVENT_STOCK = "STOCK_UPDATE";
+    public static final String EVENT_LAUNDRY = "LAUNDRY_UPDATE";
+
+    public SseEmitter subscribe(String userId) {
+        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        
+        if (userId != null && !userId.isEmpty()) {
+            emitters.put(userId, emitter);
+            emitter.onCompletion(() -> emitters.remove(userId));
+            emitter.onTimeout(() -> emitters.remove(userId));
+        } else {
+            anonymousEmitters.add(emitter);
+            emitter.onCompletion(() -> anonymousEmitters.remove(emitter));
+            emitter.onTimeout(() -> anonymousEmitters.remove(emitter));
+        }
+
+        try {
+            emitter.send(SseEmitter.event().name("INIT").data("Connected"));
+        } catch (IOException e) {
+            System.err.println("❌ Failed to send INIT event: " + e.getMessage());
+        }
+
+        return emitter;
+    }
+
+    public void broadcast(String eventName, Object data) {
+        List<SseEmitter> deadEmitters = new ArrayList<>();
+        
+        // Broadcast to named users
+        emitters.forEach((userId, emitter) -> {
+            try {
+                emitter.send(SseEmitter.event().name(eventName).data(data));
+            } catch (Exception e) {
+                deadEmitters.add(emitter);
+                emitters.remove(userId);
+            }
+        });
+
+        // Broadcast to anonymous users
+        anonymousEmitters.forEach(emitter -> {
+            try {
+                emitter.send(SseEmitter.event().name(eventName).data(data));
+            } catch (Exception e) {
+                deadEmitters.add(emitter);
+                anonymousEmitters.remove(emitter);
+            }
+        });
+    }
 
     private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
 
@@ -63,6 +122,7 @@ public class NotificationService {
             String relatedEntityId) {
         Notification notification = new Notification(userId, type, title, message, relatedEntityId);
         notification.setCreatedAt(getCurrentManilaTime());
+        broadcast(EVENT_NOTIFICATION, message);
         return notificationRepository.save(notification);
     }
 

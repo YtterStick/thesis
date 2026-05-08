@@ -110,7 +110,9 @@ public class LaundryJobService {
         System.out.println("🆕 Creating laundry job with dueDate: " + job.getDueDate() +
                 " for transaction: " + dto.getTransactionId());
 
-        return laundryJobRepository.save(job);
+        LaundryJob savedJob = laundryJobRepository.save(job);
+        notificationService.broadcast(NotificationService.EVENT_LAUNDRY, "New job created: " + dto.getTransactionId());
+        return savedJob;
     }
 
     @CacheEvict(value = "laundryJobs", allEntries = true)
@@ -315,15 +317,10 @@ public class LaundryJobService {
         String previousStatus = load.getStatus();
         load.setStatus(newStatus);
 
-        // FIXED: Release machine when moving to FOLDING or COMPLETED from any previous
-        // status
-        // This includes releasing from DRIED to FOLDING
-        if ((STATUS_WASHING.equals(previousStatus) && STATUS_WASHED.equals(newStatus)) ||
-                (STATUS_DRYING.equals(previousStatus) && STATUS_DRIED.equals(newStatus)) ||
-                (STATUS_DRIED.equals(previousStatus)
-                        && (STATUS_FOLDING.equals(newStatus) || STATUS_COMPLETED.equals(newStatus)))
-                ||
-                STATUS_COMPLETED.equals(newStatus)) {
+        // FIXED: Only release machine when moving to FOLDING or COMPLETED
+        // We keep the machine for WASHED and DRIED statuses so the staff can see 
+        // which machine was used or restart the process if needed.
+        if (STATUS_FOLDING.equals(newStatus) || STATUS_COMPLETED.equals(newStatus)) {
             releaseMachine(load);
         }
 
@@ -333,6 +330,7 @@ public class LaundryJobService {
             job.setLaundryProcessedBy(processedBy);
         }
         LaundryJob savedJob = laundryJobRepository.save(job);
+        notificationService.broadcast(NotificationService.EVENT_LAUNDRY, "Load advanced: " + transactionId);
 
         // ✅ ADDED: Check if all loads are completed and send SMS
         if (STATUS_COMPLETED.equals(newStatus)) {
@@ -950,11 +948,9 @@ public class LaundryJobService {
         switch (currentStatus.toUpperCase()) {
             case STATUS_WASHING:
                 newStatus = STATUS_WASHED;
-                releaseMachine(load);
                 break;
             case STATUS_DRYING:
                 newStatus = STATUS_DRIED;
-                releaseMachine(load);
                 break;
             case STATUS_WASHED:
                 newStatus = STATUS_DRYING;

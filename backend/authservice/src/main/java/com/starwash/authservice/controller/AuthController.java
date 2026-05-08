@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
+@RequestMapping("/")
 @CrossOrigin(origins = "http://localhost:3000")
 public class AuthController {
 

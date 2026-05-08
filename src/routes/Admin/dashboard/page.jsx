@@ -6,9 +6,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
+import { useSse } from "@/hooks/use-sse";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
-const POLLING_INTERVAL = 30000;
 
 const initializeCache = () => {
     try {
@@ -378,6 +378,20 @@ export default function AdminDashboardPage() {
             console.error("❌ Error checking for new transactions:", error);
         }
     }, [isAuthenticated, isAdmin, dashboardData.todayTransactions?.length, fetchDashboardData]);
+ 
+     // Real-time updates via SSE
+     useSse({
+         'TRANSACTION_UPDATE': () => {
+             console.log("🚀 Real-time transaction update received!");
+             fetchDashboardData(true);
+         },
+         'LAUNDRY_UPDATE': () => {
+             console.log("🚀 Real-time laundry update received!");
+             fetchDashboardData(true);
+         },
+         'STOCK_UPDATE': () => fetchDashboardData(true),
+         'NOTIFICATION_UPDATE': () => fetchDashboardData(true),
+     }, user?.id);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -406,14 +420,10 @@ export default function AdminDashboardPage() {
 
             fetchDashboardData();
 
-            pollingIntervalRef.current = setInterval(() => {
-                console.log("🔄 Auto-refreshing dashboard data...");
-                fetchDashboardData(false);
-            }, POLLING_INTERVAL);
-
-            transactionCheckIntervalRef.current = setInterval(() => {
-                checkForNewTransactions();
-            }, 3000);
+            // Polling is now handled by useSse real-time events!
+            // transactionCheckIntervalRef.current = setInterval(() => {
+            //     checkForNewTransactions();
+            // }, 3000);
 
         } else if (!isAuthenticated) {
             setDashboardData((prev) => ({

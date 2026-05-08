@@ -35,40 +35,33 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                    // Public endpoints - no authentication required
+                    // Public endpoints - no authentication required (paths relative to context-path /api)
                     .requestMatchers(
-                        "/api/login", 
-                        "/api/register", 
-                        "/api/logout",
-                        "/login",
-                        "/register",
+                        "/login", 
+                        "/register", 
+                        "/logout",
+                        "/health",
                         "/",
-                        "/health",
-                        "/health",
-                        "/laundry-jobs",
-                        "/services",
+                        "/laundry-jobs/**",
                         "/services/**",
-                        "/stock",
                         "/stock/**",
-                        "/machines",
                         "/machines/**",
-                        "/terms",
-                        "/track/**"
+                        "/terms/**",
+                        "/track/**",
+                        "/notifications/stream"
                     ).permitAll()
                     
                     // OPTIONS preflight requests
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     
                     // Role-based endpoints
-                    .requestMatchers("/dashboard/admin").hasRole("ADMIN")
-                    .requestMatchers("/dashboard/staff").hasAnyRole("STAFF", "ADMIN")
+                    .requestMatchers("/dashboard/admin/**").hasRole("ADMIN")
+                    .requestMatchers("/dashboard/staff/**").hasAnyRole("STAFF", "ADMIN")
                     .requestMatchers("/accounts/**").hasRole("ADMIN")
+                    .requestMatchers("/admin/**").hasRole("ADMIN")
                     
                     // Authenticated endpoints
                     .requestMatchers("/me").authenticated()
-                    
-                    // Other API endpoints require authentication
-                    .requestMatchers("/api/**").authenticated()
                     
                     .anyRequest().authenticated()
                 )

@@ -1,111 +1,86 @@
 import React from "react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import Lottie from "lottie-react";
-import washingAnimation from "@/assets/lottie/washing-machine.json";
-import unwashedAnimation from "@/assets/lottie/unwashed.json";
-import dryingAnimation from "@/assets/lottie/dryer-machine.json";
-import foldingAnimation from "@/assets/lottie/clothes.json";
-import loaderAnimation from "@/assets/lottie/loader.json";
+import { Badge } from "@/components/ui/badge";
+import { 
+    Clock, 
+    Play, 
+    CheckCircle, 
+    Wind, 
+    Droplets, 
+    RotateCcw,
+    CircleDashed
+} from "lucide-react";
 
-const STATUS_ICONS = {
+const STATUS_CONFIG = {
     UNWASHED: { 
-        label: "Not Started", 
-        animation: unwashedAnimation,
-        loop: true 
+        label: "Pending", 
+        icon: Clock, 
+        color: "bg-slate-500",
+        textColor: "#6B7280"
     },
     WASHING: { 
         label: "Washing", 
-        animation: washingAnimation,
-        loop: true 
+        icon: Droplets, 
+        color: "bg-blue-500",
+        textColor: "#0891B2"
     },
     WASHED: { 
         label: "Washed", 
-        animation: washingAnimation,
-        loop: false,
-        staticFrame: 50
+        icon: CheckCircle, 
+        color: "bg-emerald-500",
+        textColor: "#10B981"
     },
     DRYING: { 
         label: "Drying", 
-        animation: dryingAnimation,
-        loop: true 
+        icon: Wind, 
+        color: "bg-orange-500",
+        textColor: "#FB923C"
     },
     DRIED: { 
         label: "Dried", 
-        animation: dryingAnimation,
-        loop: false,
-        staticFrame: 30
+        icon: CheckCircle, 
+        color: "bg-green-600",
+        textColor: "#059669"
     },
     FOLDING: { 
         label: "Folding", 
-        animation: foldingAnimation,
-        loop: true 
+        icon: RotateCcw, 
+        color: "bg-violet-500",
+        textColor: "#A78BFA"
     },
     COMPLETED: { 
         label: "Completed", 
-        animation: foldingAnimation,
-        loop: false,
-        staticFrame: 20
+        icon: CheckCircle, 
+        color: "bg-green-700",
+        textColor: "#059669"
     },
 };
 
-const STATUS_LABEL_COLORS = {
-    UNWASHED: "#6B7280",
-    WASHING: "#0891B2",
-    WASHED: "#10B981",
-    DRYING: "#FB923C",
-    DRIED: "#059669",
-    FOLDING: "#A78BFA",
-    COMPLETED: "#059669",
-};
-
 const StatusIndicator = ({ load, isDarkMode }) => {
-    const statusConfig = STATUS_ICONS[load.status] || STATUS_ICONS.UNWASHED;
-    
-    const shouldShowStatic = !statusConfig.loop && statusConfig.staticFrame !== undefined;
-    
+    const config = STATUS_CONFIG[load.status] || STATUS_CONFIG.UNWASHED;
+    const Icon = config.icon;
+
     return (
-        <Tooltip>
-            <TooltipTrigger>
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Lottie
-                            animationData={statusConfig.animation}
-                            loop={statusConfig.loop}
-                            style={{ width: 40, height: 40 }}
-                            {...(shouldShowStatic && {
-                                initialSegment: [statusConfig.staticFrame, statusConfig.staticFrame]
-                            })}
-                        />
-                        {load.pending && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <Lottie
-                                    animationData={loaderAnimation}
-                                    loop
-                                    style={{ width: 24, height: 24 }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                    <span
-                        className="font-semibold"
-                        style={{ 
-                            color: STATUS_LABEL_COLORS[load.status] || STATUS_LABEL_COLORS.UNWASHED
-                        }}
-                    >
-                        {statusConfig.label}
-                    </span>
-                </div>
-            </TooltipTrigger>
-            <TooltipContent
-                style={{
-                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+        <div className="flex items-center gap-2">
+            <div 
+                className="flex items-center justify-center rounded-full p-1.5"
+                style={{ 
+                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
+                    color: config.textColor 
                 }}
             >
-                {load.status === "COMPLETED" ? "Complete" : "Ready for next step"}
-            </TooltipContent>
-        </Tooltip>
+                {load.pending ? (
+                    <CircleDashed className="h-4 w-4 animate-spin" />
+                ) : (
+                    <Icon className="h-4 w-4" />
+                )}
+            </div>
+            <span
+                className="text-xs font-bold uppercase tracking-wider"
+                style={{ color: config.textColor }}
+            >
+                {config.label}
+            </span>
+        </div>
     );
 };
 

@@ -14,9 +14,11 @@ import java.util.List;
 @Service
 public class AuditService {
     private final AuditLogRepository auditLogRepository;
+    private final NotificationService notificationService;
 
-    public AuditService(AuditLogRepository auditLogRepository) {
+    public AuditService(AuditLogRepository auditLogRepository, NotificationService notificationService) {
         this.auditLogRepository = auditLogRepository;
+        this.notificationService = notificationService;
     }
 
     public void logActivity(String username, String action, String entityType,
@@ -39,6 +41,7 @@ public class AuditService {
 
         auditLogRepository.save(auditLog);
 
+        notificationService.broadcast(NotificationService.EVENT_AUDIT, description);
         System.out.println("📝 Audit log created at Manila time: " + manilaTime);
     }
 

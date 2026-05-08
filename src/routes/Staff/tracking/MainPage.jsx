@@ -19,6 +19,8 @@ import SkeletonLoader from "./SkeletonLoader";
 import { maskContact } from "./utils";
 import { api } from "@/lib/api-config";
 import { useLocation } from "react-router-dom";
+import { useSse } from "@/hooks/use-sse";
+import { useAuth } from "@/contexts/auth-context";
 
 // Timer constants removed as durations are no longer used
 
@@ -79,6 +81,17 @@ function ServiceTrackingContent() {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     const location = useLocation();
+    const { user } = useAuth();
+
+    // Real-time updates via SSE
+    useSse({
+        'LAUNDRY_UPDATE': () => {
+            console.log("🚀 Real-time laundry update received!");
+            fetchData(true);
+        },
+        'NOTIFICATION_UPDATE': () => fetchData(true),
+        'TRANSACTION_UPDATE': () => fetchData(true),
+    }, user?.id);
 
     const [jobs, setJobs] = useState(globalCache.jobs || []);
     const [machines, setMachines] = useState(globalCache.machines || []);
@@ -135,7 +148,12 @@ function ServiceTrackingContent() {
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const currentItems = sortedJobs.slice(startIndex, endIndex);
 
-    const getJobUrgency = (job) => null;
+    const getJobUrgency = useCallback((job) => {
+        const hoursSinceCreated = (Date.now() - new Date(job.issueDate).getTime()) / (1000 * 60 * 60);
+        if (hoursSinceCreated > 4) return "high";
+        if (hoursSinceCreated > 2) return "medium";
+        return "low";
+    }, []);
 
     const isComingFromTransaction = useMemo(() => {
         return (
@@ -168,7 +186,7 @@ function ServiceTrackingContent() {
         if (isProcessingRef.current || requestQueueRef.current.length === 0) return;
 
         isProcessingRef.current = true;
-        setGlobalLoading(true);
+        // globalLoading removed to prevent UI freeze during sequential requests
 
         while (requestQueueRef.current.length > 0) {
             const request = requestQueueRef.current[0];
@@ -182,7 +200,6 @@ function ServiceTrackingContent() {
         }
 
         isProcessingRef.current = false;
-        setGlobalLoading(false);
     }, []);
 
     const addToQueue = useCallback(
@@ -466,16 +483,7 @@ function ServiceTrackingContent() {
     }, [location]);
 
     useEffect(() => {
-        // Regular background data refresh
-        dataRefreshRef.current = setInterval(() => {
-            fetchData(false);
-        }, 60000); 
-
-        return () => {
-            if (dataRefreshRef.current) {
-                clearInterval(dataRefreshRef.current);
-            }
-        };
+        // Polling removed in favor of SSE!
     }, []);
 
     // FIXED: More precise timer interval
@@ -729,33 +737,8 @@ function ServiceTrackingContent() {
 
             let shouldReleaseMachine = false;
 
-            // FIXED: Release machine when moving to FOLDING or COMPLETED
-            if (normalizedServiceType === "Wash") {
-                if (load.status === "WASHING" && nextStatus === "WASHED") {
-                    shouldReleaseMachine = true;
-                }
-            } else if (normalizedServiceType === "Dry") {
-                if (load.status === "DRYING" && nextStatus === "DRIED") {
-                    shouldReleaseMachine = false; // Keep machine for DRIED status
-                } else if (load.status === "DRIED" && (nextStatus === "FOLDING" || nextStatus === "COMPLETED")) {
-                    shouldReleaseMachine = true; // Release machine when moving to FOLDING or COMPLETED
-                } else if (load.status === "DRYING" && (nextStatus === "FOLDING" || nextStatus === "COMPLETED")) {
-                    shouldReleaseMachine = true; // Also handle direct transitions
-                }
-            } else if (normalizedServiceType === "Wash & Dry") {
-                if (load.status === "WASHING" && nextStatus === "WASHED") {
-                    shouldReleaseMachine = true; // Release washer when washing is done
-                } else if (load.status === "DRYING" && nextStatus === "DRIED") {
-                    shouldReleaseMachine = false; // Keep dryer for DRIED status
-                } else if (load.status === "DRIED" && (nextStatus === "FOLDING" || nextStatus === "COMPLETED")) {
-                    shouldReleaseMachine = true; // Release dryer when moving to FOLDING or COMPLETED
-                } else if (load.status === "DRYING" && (nextStatus === "FOLDING" || nextStatus === "COMPLETED")) {
-                    shouldReleaseMachine = true; // Also handle direct transitions
-                }
-            }
-
-            // FIXED: Always release machine when moving to FOLDING or COMPLETED
-            shouldReleaseMachine = shouldReleaseMachine || nextStatus === "FOLDING" || nextStatus === "COMPLETED";
+            // FIXED: Only release machine when moving to FOLDING or COMPLETED
+            shouldReleaseMachine = nextStatus === "FOLDING" || nextStatus === "COMPLETED";
 
             if (shouldReleaseMachine) {
                 updatedLoad.machineId = null;
@@ -770,24 +753,42 @@ function ServiceTrackingContent() {
                     getJobKey(j) === jobKey
                         ? {
                               ...j,
-                              loads: j.loads.map((l, idx) => (idx === loadIndex ? updatedLoad : l)),
+                              loads: j.loads.map((l, idx) =>
+                                  idx === loadIndex
+                                      ? {
+                                            ...l,
+                                            status: nextStatus,
+                                            pending: true,
+                                            machineId: shouldReleaseMachine ? null : l.machineId,
+                                        }
+                                      : l,
+                              ),
                           }
                         : j,
                 ),
             );
 
+            // Optimistic update for COMPLETED status
+            if (nextStatus === "COMPLETED") {
+                console.log("✨ Optimistic completion for job", job.id);
+                setTimeout(() => {
+                    setJobs(prev => prev.filter(j => {
+                        if (getJobKey(j) !== jobKey) return true;
+                        // Keep job if other loads are not completed
+                        const otherLoadsActive = j.loads.some((l, idx) => idx !== loadIndex && l.status !== "COMPLETED");
+                        return otherLoadsActive;
+                    }));
+                }, 1000);
+            }
+
             try {
                 await apiCallWithRetry(() => api.patch(`/laundry-jobs/${job.id}/advance-load?loadNumber=${load.loadNumber}&status=${nextStatus}`));
 
                 if (shouldReleaseMachine && currentMachineId) {
-                    try {
-                        await apiCallWithRetry(() => api.patch(`/laundry-jobs/${job.id}/release-machine?loadNumber=${load.loadNumber}`));
-                        console.log(
-                            `✅ Machine ${currentMachineId} RELEASED for load ${load.loadNumber} when moving from ${load.status} to ${nextStatus}`,
-                        );
-                    } catch (releaseError) {
-                        console.error("Failed to release machine:", releaseError);
-                    }
+                    // Fire and forget release machine to speed up the main flow
+                    api.patch(`/laundry-jobs/${job.id}/release-machine?loadNumber=${load.loadNumber}`)
+                        .then(() => console.log(`✅ Machine ${currentMachineId} RELEASED`))
+                        .catch(e => console.error("Failed to release machine:", e));
                 }
 
                 setJobs((prev) =>
@@ -795,15 +796,13 @@ function ServiceTrackingContent() {
                         getJobKey(j) === jobKey
                             ? {
                                   ...j,
-                                  loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, pending: false } : l)),
+                                  loads: j.loads.map((l, idx) => (idx === loadIndex ? { ...l, status: nextStatus, pending: false, machineId: shouldReleaseMachine ? null : l.machineId } : l)),
                               }
                             : j,
                     ),
                 );
 
-                // 🔄 ONLY refresh cache for important actions (Advance Status)
                 updateCacheAfterAction();
-
                 return { success: true };
             } catch (err) {
                 console.error("Failed to advance load status:", err);
@@ -1031,14 +1030,9 @@ function ServiceTrackingContent() {
                 backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
             }}
         >
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-            >
+            <div className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                    <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
+                    <div
                         className="rounded-lg p-2"
                         style={{
                             backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
@@ -1046,7 +1040,7 @@ function ServiceTrackingContent() {
                         }}
                     >
                         <WashingMachine size={22} />
-                    </motion.div>
+                    </div>
                     <div>
                         <p
                             className="text-xl font-bold"
@@ -1059,43 +1053,25 @@ function ServiceTrackingContent() {
                             style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
                         >
                             Track and manage laundry service progress
-                            {globalCache.lastFetchTime && (
-                                <span className="ml-2 text-xs opacity-70">
-                                    (Updated {Math.round((Date.now() - globalCache.lastFetchTime) / 1000)}s ago)
-                                </span>
-                            )}
                         </p>
-                </div>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {globalLoading && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex items-center gap-2 text-sm"
-                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                        >
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            Processing...
-                        </motion.div>
-                    )}
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                    <button
                         onClick={() => handleRefresh()}
                         disabled={globalLoading}
-                        className="flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-all disabled:opacity-50 hover:bg-opacity-90"
                         style={{
                             backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
                             color: "#f1f5f9",
                         }}
                     >
-                        <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                        <RefreshCw className={`h-4 w-4 ${globalLoading ? "animate-spin" : ""}`} />
                         Refresh
-                    </motion.button>
+                    </button>
                 </div>
-            </motion.div>
+            </div>
 
             {/* Updated Dashboard Stats with Urgent Jobs */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-5">
@@ -1118,14 +1094,14 @@ function ServiceTrackingContent() {
                         icon: WashingMachine,
                     },
                     {
-                        label: "Active Loads",
+                        label: "Washed & Ready",
                         value: jobs.reduce(
-                            (acc, job) => acc + (job.loads?.filter((load) => load.status === "WASHING" || load.status === "DRYING").length || 0),
+                            (acc, job) => acc + (job.loads?.filter((load) => load.status === "WASHED" || load.status === "DRIED").length || 0),
                             0,
                         ),
-                        color: "#60A5FA",
-                        description: "Currently processing",
-                        icon: WashingMachine,
+                        color: "#8B5CF6",
+                        description: "Ready for next step",
+                        icon: CheckCircle,
                     },
                     {
                         label: "Pending",
@@ -1220,6 +1196,7 @@ function ServiceTrackingContent() {
                             advanceStatus={advanceStatus}
                             startDryingAgain={startDryingAgain}
                             getJobKey={getJobKey}
+                            getJobUrgency={getJobUrgency}
                             getMachineTypeForStep={getMachineTypeForStep}
                             isLoadRunning={isLoadRunning}
                             maskContact={maskContact}

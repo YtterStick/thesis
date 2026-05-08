@@ -4,9 +4,10 @@ import { PackageX, PhilippinePeso, Package, Clock8, Timer, AlertCircle, LineChar
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
+import { useSse } from "@/hooks/use-sse";
+import { useAuth } from "@/contexts/auth-context";
 
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
-const POLLING_INTERVAL = 30000;
 
 const initializeCache = () => {
   try {
@@ -43,6 +44,15 @@ const saveCacheToStorage = (data) => {
 const StaffDashboardPage = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Real-time updates via SSE
+  useSse({
+    'TRANSACTION_UPDATE': () => fetchDashboardData(true),
+    'LAUNDRY_UPDATE': () => fetchDashboardData(true),
+    'STOCK_UPDATE': () => fetchDashboardData(true),
+    'NOTIFICATION_UPDATE': () => fetchDashboardData(true),
+  }, user?.id);
   
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
@@ -72,6 +82,7 @@ const StaffDashboardPage = () => {
     };
   });
 
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [initialLoad, setInitialLoad] = useState(!staffDashboardCache);
   const pollingIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
@@ -229,10 +240,11 @@ const StaffDashboardPage = () => {
     
     fetchDashboardData();
     
-    pollingIntervalRef.current = setInterval(() => {
-      console.log("🔄 Auto-refreshing staff dashboard data...");
-      fetchDashboardData(false);
-    }, POLLING_INTERVAL);
+    // Polling is now handled by useSse real-time events!
+    // pollingIntervalRef.current = setInterval(() => {
+    //   console.log("🔄 Auto-refreshing staff dashboard data...");
+    //   fetchDashboardData(false);
+    // }, POLLING_INTERVAL);
 
     const timeTimer = setInterval(() => {
       setCurrentTime(new Date());

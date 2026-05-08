@@ -256,6 +256,95 @@ const AdminRecordTable = ({
         setExpandedRows(newExpanded);
     };
 
+    // Helper to apply all active filters (used during export)
+    const applyFilters = (data) => {
+        if (!data || !Array.isArray(data)) return [];
+
+        let result = [...data];
+
+        // Apply Status Filters
+        if (activeFilters?.statusFilters && activeFilters.statusFilters.length > 0) {
+            result = result.filter((item) => {
+                const status = getPickupStatus(item).toLowerCase();
+                const laundryStatus = (item.laundryStatus || "").toLowerCase();
+                
+                return activeFilters.statusFilters.some((f) => {
+                    if (f === "expired") return item.expired;
+                    if (f === "unclaimed") return status === "unclaimed";
+                    if (f === "disposed") return item.disposed;
+                    if (f === "completed") return laundryStatus === "completed" || laundryStatus === "done";
+                    if (f === "in-progress") return laundryStatus === "in progress" || laundryStatus === "washing";
+                    return false;
+                });
+            });
+        }
+
+        // Apply Payment Filters
+        if (activeFilters?.paymentFilters && activeFilters.paymentFilters.length > 0) {
+            result = result.filter((item) => {
+                const method = (item.paymentMethod || "").toLowerCase();
+                const isPaid = item.paid;
+                
+                return activeFilters.paymentFilters.some((f) => {
+                    if (f === "paid") return isPaid;
+                    if (f === "pending") return !isPaid;
+                    if (f === "gcash") return method === "gcash";
+                    if (f === "cash") return method === "cash";
+                    return false;
+                });
+            });
+        }
+
+        // Apply Service Filters
+        if (activeFilters?.serviceFilters && activeFilters.serviceFilters.length > 0) {
+            result = result.filter((item) => {
+                const service = (item.service || item.serviceName || "").toLowerCase();
+                
+                return activeFilters.serviceFilters.some((f) => {
+                    if (f === "wash-dry") return service.includes("wash") && service.includes("dry");
+                    if (f === "wash") return service.includes("wash") && !service.includes("dry");
+                    if (f === "dry") return service.includes("dry") && !service.includes("wash");
+                    return false;
+                });
+            });
+        }
+
+        // Apply Sorting
+        if (activeFilters?.sortBy) {
+            result.sort((a, b) => {
+                let valA, valB;
+                
+                switch (activeFilters.sortBy) {
+                    case "income":
+                        valA = a.price || a.totalPrice || 0;
+                        valB = b.price || b.totalPrice || 0;
+                        break;
+                    case "loads":
+                        valA = a.loads || 0;
+                        valB = b.loads || 0;
+                        break;
+                    case "name":
+                        valA = (a.name || a.customerName || "").toLowerCase();
+                        valB = (b.name || b.customerName || "").toLowerCase();
+                        break;
+                    case "date":
+                    default:
+                        valA = new Date(a.issueDate || a.createdAt || 0).getTime();
+                        valB = new Date(b.issueDate || b.createdAt || 0).getTime();
+                        break;
+                }
+                
+                if (activeFilters.sortOrder === "asc") {
+                    return valA > valB ? 1 : -1;
+                } else {
+                    return valA < valB ? 1 : -1;
+                }
+            });
+        }
+
+        return result;
+    };
+
     // ✅ UPDATED: Use issueDate instead of createdAt for date filtering
     const isInRange = (dateStr) => {
         if (!dateStr) return false;
@@ -323,10 +412,6 @@ const AdminRecordTable = ({
     // Server-side filtering is now used, so we display items directly
     const displayItems = items;
 
-    const getFilteredRecordsCount = () => {
-        return items.length;
-    };
-
     // Notify parent component when filtered count changes
     useEffect(() => {
         if (onFilteredCountChange) {
@@ -365,12 +450,10 @@ const AdminRecordTable = ({
             setShowExportDropdown(false);
 
             let exportItems = [];
-            let exportTitle = "";
 
             if (exportType === "current") {
                 // Use the current view data
                 exportItems = displayItems;
-                exportTitle = `Current View (${exportItems.length} records)`;
             } else {
                 // Export ALL records for the current time filter
                 console.log(`📊 Exporting ALL records for time filter: ${timeFilter}`);
@@ -392,20 +475,17 @@ const AdminRecordTable = ({
                     // Apply the same client-side filters and search
                     // ✅ UPDATED: Use issueDate instead of createdAt for filtering
                     let filteredAllData = allData.filter((r) => {
-                        const matchesSearch = r.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesSearch = (r.customerName || r.name || "").toLowerCase().includes(localSearchTerm.toLowerCase());
                         const matchesDate = isInRange(r.issueDate || r.createdAt);
                         return matchesSearch && matchesDate;
                     });
 
                     exportItems = applyFilters(filteredAllData);
-                    exportTitle = `All ${timeFilter} Records (${exportItems.length} records)`;
                 } catch (fetchError) {
                     console.error("❌ Error fetching all records for export:", fetchError);
 
                     // Fallback: Use current items
                     exportItems = displayItems;
-                    exportTitle = `Current View Only (Failed to load all records)`;
-
                     alert("Could not load all records. Exporting current view only.");
                 }
             }
@@ -769,11 +849,12 @@ const AdminRecordTable = ({
                                                     className="h-5 w-5"
                                                 />
                                                 <span>No records found.</span>
-                                                {(searchTerm || localSelectedRange.from || localSelectedRange.to) && (
+                                                {(localSearchTerm || localSelectedRange.from || localSelectedRange.to) && (
                                                     <Button
                                                         variant="ghost"
                                                         onClick={() => {
-                                                            setSearchTerm("");
+                                                            setLocalSearchTerm("");
+                                                            if (onSearchChange) onSearchChange("");
                                                             handleDateRangeChange({ from: null, to: null });
                                                         }}
                                                         className="transition-all"
@@ -796,206 +877,167 @@ const AdminRecordTable = ({
                                         const pickupStatus = getPickupStatus(record);
 
                                         return (
-                                            <>
-                                                <tr
-                                                    key={record.id}
-                                                    className="border-t transition-all hover:opacity-90"
+                                            <motion.tr
+                                                key={record.id}
+                                                initial={false}
+                                                animate={{ backgroundColor: isExpanded ? (isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(248, 250, 252, 0.9)") : (isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc") }}
+                                                className="border-t transition-all hover:opacity-90"
+                                                style={{
+                                                    borderColor: isDarkMode ? "#334155" : "#e2e8f0",
+                                                }}
+                                            >
+                                                <td className="px-2 py-2">
+                                                    <button
+                                                        onClick={() => toggleRowExpansion(record.id)}
+                                                        className="rounded p-1 transition-all hover:opacity-80"
+                                                        style={{
+                                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                                        }}
+                                                    >
+                                                        {isExpanded ? (
+                                                            <ChevronUp
+                                                                className="h-4 w-4"
+                                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                            />
+                                                        ) : (
+                                                            <ChevronDown
+                                                                className="h-4 w-4"
+                                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                            />
+                                                        )}
+                                                    </button>
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2 font-mono text-xs"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.invoiceNumber || "—"}
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2 font-medium"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.name}
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.service}
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.loads}
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.detergent}
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.fabric}
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2 font-semibold"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {formatCurrency(record.price)}
+                                                </td>
+                                                {/* ✅ UPDATED: Display issueDate instead of createdAt for Date column */}
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.issueDate && !isNaN(new Date(record.issueDate))
+                                                        ? format(new Date(record.issueDate), "MMM dd, yyyy")
+                                                        : record.createdAt && !isNaN(new Date(record.createdAt))
+                                                        ? format(new Date(record.createdAt), "MMM dd, yyyy")
+                                                        : "—"}
+                                                </td>
+                                                {/* ✅ ADDED: New Due Date column */}
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.dueDate && !isNaN(new Date(record.dueDate))
+                                                        ? format(new Date(record.dueDate), "MMM dd, yyyy")
+                                                        : "—"}
+                                                </td>
+                                                <td className="whitespace-nowrap px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{record.paymentMethod}</span>
+                                                        <StatusBadge
+                                                            status={record.paid ? "Paid" : "Pending"}
+                                                            type="payment"
+                                                            isDarkMode={isDarkMode}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2 font-mono text-xs"
                                                     style={{
-                                                        borderColor: isDarkMode ? "#334155" : "#e2e8f0",
-                                                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
+                                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                        fontFamily: "monospace",
                                                     }}
                                                 >
-                                                    <td className="px-2 py-2">
-                                                        <button
-                                                            onClick={() => toggleRowExpansion(record.id)}
-                                                            className="rounded p-1 transition-all hover:opacity-80"
-                                                            style={{
-                                                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                                            }}
-                                                        >
-                                                            {isExpanded ? (
-                                                                <ChevronUp
-                                                                    className="h-4 w-4"
-                                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                                />
-                                                            ) : (
-                                                                <ChevronDown
-                                                                    className="h-4 w-4"
-                                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                                />
-                                                            )}
-                                                        </button>
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2 font-mono text-xs"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.invoiceNumber || "—"}
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2 font-medium"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.name}
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.service}
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.loads}
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.detergent}
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.fabric}
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2 font-semibold"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {formatCurrency(record.price)}
-                                                    </td>
-                                                    {/* ✅ UPDATED: Display issueDate instead of createdAt for Date column */}
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.issueDate && !isNaN(new Date(record.issueDate))
-                                                            ? format(new Date(record.issueDate), "MMM dd, yyyy")
-                                                            : record.createdAt && !isNaN(new Date(record.createdAt))
-                                                            ? format(new Date(record.createdAt), "MMM dd, yyyy")
-                                                            : "—"}
-                                                    </td>
-                                                    {/* ✅ ADDED: New Due Date column */}
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.dueDate && !isNaN(new Date(record.dueDate))
-                                                            ? format(new Date(record.dueDate), "MMM dd, yyyy")
-                                                            : "—"}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{record.paymentMethod}</span>
-                                                            <StatusBadge
-                                                                status={record.paid ? "Paid" : "Pending"}
-                                                                type="payment"
-                                                                isDarkMode={isDarkMode}
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2 font-mono text-xs"
-                                                        style={{
-                                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                            fontFamily: "monospace",
-                                                        }}
-                                                    >
-                                                        {gcashRef}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{pickupStatus}</span>
-                                                            <StatusBadge
-                                                                status={pickupStatus}
-                                                                type="pickup"
-                                                                isDarkMode={isDarkMode}
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                    <td
-                                                        className="whitespace-nowrap px-3 py-2 text-xs"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                    >
-                                                        {record.claimDate && !isNaN(new Date(record.claimDate))
-                                                            ? formatTimeNormal(record.claimDate)
-                                                            : "—"}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-2">
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <button
-                                                                    onClick={() => handlePrint(record)}
-                                                                    disabled={isPrinting}
-                                                                    className="rounded-lg p-2 transition-all hover:opacity-80 disabled:opacity-50"
-                                                                    style={{
-                                                                        backgroundColor: isDarkMode
-                                                                            ? "rgba(51, 65, 85, 0.3)"
-                                                                            : "rgba(11, 43, 38, 0.1)",
-                                                                    }}
-                                                                >
-                                                                    <Printer
-                                                                        className="h-4 w-4"
-                                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                                    />
-                                                                </button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent
-                                                                side="top"
+                                                    {gcashRef}
+                                                </td>
+                                                <td className="whitespace-nowrap px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{pickupStatus}</span>
+                                                        <StatusBadge
+                                                            status={pickupStatus}
+                                                            type="pickup"
+                                                            isDarkMode={isDarkMode}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td
+                                                    className="whitespace-nowrap px-3 py-2 text-xs"
+                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                >
+                                                    {record.claimDate && !isNaN(new Date(record.claimDate))
+                                                        ? formatTimeNormal(record.claimDate)
+                                                        : "—"}
+                                                </td>
+                                                <td className="whitespace-nowrap px-3 py-2">
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={() => handlePrint(record)}
+                                                                disabled={isPrinting}
+                                                                className="rounded-lg p-2 transition-all hover:opacity-80 disabled:opacity-50"
                                                                 style={{
-                                                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                                    backgroundColor: isDarkMode
+                                                                        ? "rgba(51, 65, 85, 0.3)"
+                                                                        : "rgba(11, 43, 38, 0.1)",
                                                                 }}
                                                             >
-                                                                {isPrinting ? "Printing..." : "Print Receipt"}
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </td>
-                                                </tr>
-                                                {isExpanded && (
-                                                    <tr
-                                                        className="transition-all"
-                                                        style={{
-                                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(248, 250, 252, 0.9)",
-                                                        }}
-                                                    >
-                                                        <td
-                                                            colSpan={tableHeaders.length + 1}
-                                                            className="px-4 py-3"
+                                                                <Printer
+                                                                    className="h-4 w-4"
+                                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                                />
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent
+                                                            side="top"
+                                                            style={{
+                                                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                            }}
                                                         >
-                                                            <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-                                                                <div>
-                                                                    <span
-                                                                        className="font-medium"
-                                                                        style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
-                                                                    >
-                                                                        Laundry Processed By:
-                                                                    </span>
-                                                                    <p style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                                                        {record.laundryProcessedBy || "—"}
-                                                                    </p>
-                                                                </div>
-                                                                <div>
-                                                                    <span
-                                                                        className="font-medium"
-                                                                        style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
-                                                                    >
-                                                                        Claim Processed By:
-                                                                    </span>
-                                                                    <p style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                                                        {record.claimProcessedBy || "—"}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </>
+                                                            {isPrinting ? "Printing..." : "Print Receipt"}
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </td>
+                                            </motion.tr>
                                         );
                                     })
                                 )}

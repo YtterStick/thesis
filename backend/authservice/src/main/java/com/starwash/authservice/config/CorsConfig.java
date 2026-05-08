@@ -18,9 +18,7 @@ public class CorsConfig {
                 System.out.println("🔧 Configuring CORS for all endpoints");
                 
                 registry.addMapping("/**")
-                        .allowedOrigins(
-                            "https://www.starwashph.com, http://localhost:3000"
-                        )
+                        .allowedOrigins("http://localhost:3000", "https://starwashph.com")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD")
                         .allowedHeaders("*")
                         .exposedHeaders("Authorization", "Content-Type", "Content-Disposition")

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
+import { useSse } from "@/hooks/use-sse";
 
 // localStorage keys
 const STORAGE_KEYS = {
@@ -46,8 +47,6 @@ export const NotificationSystem = () => {
     const notificationRef = useRef(null);
     const notificationsEndRef = useRef(null);
     const observerRef = useRef(null);
-    const pollingRef = useRef(null);
-    const realTimePollingRef = useRef(null);
     const autoNotificationTimeoutRef = useRef(new Map());
     const shownNotificationIdsRef = useRef(new Set());
     const lastFetchedIdsRef = useRef(new Set());
@@ -658,48 +657,19 @@ export const NotificationSystem = () => {
         }
     }, []);
 
-    // Real-time polling for notifications (only for popups when dropdown is closed)
-    const startRealTimePolling = useCallback(() => {
-        if (realTimePollingRef.current) {
-            clearInterval(realTimePollingRef.current);
-        }
-
-        realTimePollingRef.current = setInterval(async () => {
-            try {
-                // Always check for new notifications, but only show popups when dropdown is closed
-                const response = await api.get("/notifications?page=1&limit=10");
-                let recentNotifications = [];
-                
-                if (Array.isArray(response)) {
-                    recentNotifications = response;
-                } else if (response && response.notifications) {
-                    recentNotifications = response.notifications;
-                } else if (response && Array.isArray(response.data)) {
-                    recentNotifications = response.data;
-                }
-                
-                // Get only unread notifications that are very recent (last 2 minutes)
-                const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-                const newUnreadNotifications = recentNotifications.filter(notif => 
-                    !notif.read && new Date(notif.createdAt) > twoMinutesAgo
-                );
-                
-                if (newUnreadNotifications.length > 0) {
-                    console.log('🔔 Real-time check found new notifications:', newUnreadNotifications.length);
-                    
-                    // Only show popups if dropdown is closed
-                    if (!notificationOpen) {
-                        showAutoNotifications(newUnreadNotifications);
-                    }
-                    
-                    // Always update the count
-                    fetchUnreadCount(true);
-                }
-            } catch (error) {
-                console.error('❌ Real-time polling error:', error);
+    // Real-time updates via SSE
+    useSse({
+        'NOTIFICATION_UPDATE': () => {
+            console.log("🚀 Real-time notification update received!");
+            fetchUnreadCount(true);
+            if (notificationOpen) {
+                smartRefreshNotifications(true);
             }
-        }, 30000); // Check every 30 seconds (reduced frequency from 8s)
-    }, [notificationOpen, showAutoNotifications, fetchUnreadCount]);
+        },
+        'TRANSACTION_UPDATE': () => fetchUnreadCount(true),
+        'LAUNDRY_UPDATE': () => fetchUnreadCount(true),
+        'STOCK_UPDATE': () => fetchUnreadCount(true),
+    }, user?.id);
 
     // Infinite scroll setup - SMART REFRESH when scrolling to bottom
     useEffect(() => {
@@ -728,24 +698,14 @@ export const NotificationSystem = () => {
         };
     }, [hasMore, notificationsLoading, page, fetchNotifications, isRefreshing]);
 
-    // Fetch notifications when dropdown opens and start real-time polling
+    // Fetch notifications when dropdown opens
     useEffect(() => {
         if (notificationOpen) {
             console.log('📂 Opening notifications dropdown');
             smartRefreshNotifications(true);
             fetchUnreadCount(true);
         }
-
-        // Start real-time polling for popups (runs regardless of dropdown state)
-        startRealTimePolling();
-
-        return () => {
-            if (realTimePollingRef.current) {
-                clearInterval(realTimePollingRef.current);
-                realTimePollingRef.current = null;
-            }
-        };
-    }, [notificationOpen, smartRefreshNotifications, fetchUnreadCount, startRealTimePolling]);
+    }, [notificationOpen, smartRefreshNotifications, fetchUnreadCount]);
 
     // Initialize notifications on component mount
     useEffect(() => {
