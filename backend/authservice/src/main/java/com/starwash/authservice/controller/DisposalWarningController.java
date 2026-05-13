@@ -12,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/disposal-warnings")
-@CrossOrigin(origins = "http://localhost:3000")
 public class DisposalWarningController {
 
     @Autowired

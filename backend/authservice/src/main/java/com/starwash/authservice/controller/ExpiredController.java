@@ -11,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/expired")
-@CrossOrigin(origins = "http://localhost:3000")
 public class ExpiredController {
 
     private final LaundryJobService laundryJobService;

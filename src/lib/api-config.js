@@ -49,19 +49,34 @@ const isPublicEndpoint = (endpoint) => {
 export const apiFetch = async (endpoint, options = {}) => {
   const url = getApiUrl(endpoint);
   
-  const token = getAuthToken();
+  let token = getAuthToken();
   
   if (isPublicEndpoint(endpoint)) {
     console.log(`🌐 Public API Call: ${options.method || 'GET'} ${url}`);
   } else {
     if (!token) {
-      console.warn('🚨 No token found for protected endpoint');
-      throw new Error('Authentication required');
+      console.warn('🚨 No token found for protected endpoint:', endpoint);
+      
+      // Try secondary keys
+      const backupKeys = ['authToken', 'token', 'auth_token'];
+      for (const key of backupKeys) {
+        const found = localStorage.getItem(key);
+        if (found) {
+          console.log(`💡 Token found via backup check (key: ${key}), recovering...`);
+          token = found;
+          break;
+        }
+      }
+
+      if (!token) {
+        console.error('❌ NO TOKEN FOUND IN ANY KEY. Current LocalStorage keys:', Object.keys(localStorage));
+        throw new Error('Authentication required');
+      }
     }
 
     if (isTokenExpired(token)) {
       console.warn('🚨 Token expired. Redirecting to login.');
-      localStorage.removeItem('authToken');
+      // Not removing token automatically to prevent session loss on network errors
       window.location.href = "/login";
       throw new Error('Token expired. Please log in again.');
     }
@@ -78,8 +93,10 @@ export const apiFetch = async (endpoint, options = {}) => {
     ...options
   };
 
-  if (options.headers?.Authorization) {
-    delete defaultOptions.headers.Authorization;
+  // Log masked token for debugging (only in development or if specific flag set)
+  if (token) {
+    const maskedToken = `${token.substring(0, 8)}...${token.substring(token.length - 8)}`;
+    console.log(`🔑 Using token: ${maskedToken} for ${endpoint}`);
   }
 
   try {    
@@ -95,7 +112,7 @@ export const apiFetch = async (endpoint, options = {}) => {
     if (response.status === 401) {
       console.error('❌ Unauthorized - token may be invalid or expired');
       if (!isPublicEndpoint(endpoint)) {
-        localStorage.removeItem('authToken');
+        // Not removing token automatically to prevent session loss on network errors
       }
       throw new Error('Authentication failed. Please log in again.');
     }

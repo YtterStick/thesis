@@ -20,7 +20,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AccountController {
 
     private final UserRepository userRepository;

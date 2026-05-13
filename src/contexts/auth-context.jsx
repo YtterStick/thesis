@@ -61,7 +61,18 @@ export const AuthProvider = ({ children }) => {
       console.log("✅ AuthContext initialized:", data);
     } catch (err) {
       console.warn("⚠️ AuthContext fetch error:", err.message);
-      resetAuth();
+      
+      // If we have a response object with status, use it
+      const status = err.response?.status;
+      console.log(`📡 Hydration failed with status: ${status || 'unknown'}`);
+
+      if (status === 401 || status === 403 || err.message.includes("401") || err.message.includes("403")) {
+        console.error("🛑 Authentication invalid. Resetting state.");
+        resetAuth();
+      } else {
+        console.log("📡 Keeping auth state due to non-auth error (network or server delay).");
+        // Don't call resetAuth here to keep the token in localStorage
+      }
     } finally {
       setLoading(false);
     }
@@ -105,7 +116,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const resetAuth = () => {
-    clearAuthTokens();
+    // We remove the explicit clearAuthTokens() here to prevent accidental wipes
+    // during hydration failures. 
+    // The user will still be directed to login if isAuthenticated is false.
     setUser(null);
     setIsAuthenticated(false);
     setLoading(false);

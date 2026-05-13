@@ -4,7 +4,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/cors-test")
-@CrossOrigin(origins = {"https://starwashph.com", "http://localhost:3000"})
 public class CorsTestController {
 
     @GetMapping

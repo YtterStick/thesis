@@ -29,7 +29,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/transactions")
-@CrossOrigin(origins = "http://localhost:3000")
 public class TransactionController {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionController.class);

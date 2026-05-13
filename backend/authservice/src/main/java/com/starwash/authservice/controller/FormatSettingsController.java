@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/format-settings")
-@CrossOrigin(origins = "http://localhost:3000")
 public class FormatSettingsController {
 
     private final FormatSettingsRepository repository;

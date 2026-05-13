@@ -11,7 +11,7 @@ import { useSse } from "@/hooks/use-sse";
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 
 const initializeCache = () => {
-    try {gaming.com
+    try {
 
         const stored = localStorage.getItem("dashboardCache");
         if (stored) {
@@ -74,7 +74,10 @@ const debugTokenInfo = () => {
             console.error("❌ Failed to decode token:", error);
         }
     } else {
-        console.log("❌ No token found in localStorage");
+        console.log("❌ No token found in localStorage (key: authToken)");
+        // Try other common keys just in case
+        const altToken = localStorage.getItem("token");
+        if (altToken) console.log("💡 Found token under alternative key 'token'");
     }
 };
 

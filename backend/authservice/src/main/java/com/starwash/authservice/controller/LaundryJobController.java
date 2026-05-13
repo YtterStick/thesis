@@ -11,7 +11,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/laundry-jobs")
-@CrossOrigin(origins = "http://localhost:3000")
 public class LaundryJobController {
 
     private final LaundryJobService laundryJobService;

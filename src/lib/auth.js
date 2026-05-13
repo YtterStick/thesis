@@ -56,7 +56,8 @@ export const secureFetch = async (endpoint, method = "GET", body = null) => {
   const options = { method, headers };
   if (body) options.body = JSON.stringify(body);
 
-  const response = await fetch(`http://localhost:8080/api${endpoint}`, options);
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://thesis-1-culv.onrender.com';
+  const response = await fetch(`${baseUrl}/api${endpoint}`, options);
 
   if (!response.ok) {
     console.error(`❌ ${method} ${endpoint} failed:`, response.status);

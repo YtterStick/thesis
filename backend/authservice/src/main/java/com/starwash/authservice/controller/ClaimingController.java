@@ -14,7 +14,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/claiming")
-@CrossOrigin(origins = "http://localhost:3000")
 public class ClaimingController {
 
     private static final Logger log = LoggerFactory.getLogger(ClaimingController.class);

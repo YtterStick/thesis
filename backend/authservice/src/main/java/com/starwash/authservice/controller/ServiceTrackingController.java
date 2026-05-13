@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/track")
-@CrossOrigin(origins = "http://localhost:3000")
 public class ServiceTrackingController {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceTrackingController.class);

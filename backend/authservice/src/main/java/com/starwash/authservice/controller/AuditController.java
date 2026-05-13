@@ -17,7 +17,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/audit-logs")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AuditController {
     private final AuditService auditService;
 

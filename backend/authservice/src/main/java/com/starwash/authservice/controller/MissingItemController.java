@@ -11,7 +11,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/missing-items")
-@CrossOrigin(origins = "http://localhost:3000")
 public class MissingItemController {
 
     @Autowired
