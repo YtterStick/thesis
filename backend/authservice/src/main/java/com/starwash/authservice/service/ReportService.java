@@ -86,6 +86,8 @@ public class ReportService {
                 LocalDate yearStart = today.withDayOfYear(1);
                 LocalDate yearEnd = today.withDayOfYear(today.lengthOfYear());
                 return new LocalDate[] { yearStart, yearEnd };
+            case "all":
+                return new LocalDate[] { LocalDate.of(2000, 1, 1), today };
             default:
                 return new LocalDate[] { today.minusDays(30), today };
         }
@@ -111,6 +113,34 @@ public class ReportService {
             });
             
             return monthlySales.entrySet().stream()
+                    .map(entry -> {
+                        Map<String, Object> dataPoint = new HashMap<>();
+                        dataPoint.put("period", entry.getKey());
+                        dataPoint.put("sales", entry.getValue());
+                        return dataPoint;
+                    })
+                    .collect(Collectors.toList());
+        }
+        else if ("all".equals(dateRange)) {
+            Map<String, Double> yearlySales = new LinkedHashMap<>();
+            
+            int currentYear = LocalDate.now().getYear();
+            int minYear = transactions.stream()
+                .mapToInt(t -> t.getCreatedAt().getYear())
+                .min()
+                .orElse(currentYear);
+                
+            for (int y = minYear; y <= currentYear; y++) {
+                yearlySales.put(String.valueOf(y), 0.0);
+            }
+            
+            transactions.forEach(transaction -> {
+                String yearKey = String.valueOf(transaction.getCreatedAt().getYear());
+                double currentTotal = yearlySales.getOrDefault(yearKey, 0.0);
+                yearlySales.put(yearKey, currentTotal + transaction.getTotalPrice());
+            });
+            
+            return yearlySales.entrySet().stream()
                     .map(entry -> {
                         Map<String, Object> dataPoint = new HashMap<>();
                         dataPoint.put("period", entry.getKey());

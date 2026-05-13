@@ -281,36 +281,36 @@ const MainPage = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="rounded-xl border-2 p-6 transition-all"
+      className="rounded-xl border p-6 transition-all shadow-sm"
       style={{
-        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+        backgroundColor: "var(--admin-card-bg)",
+        borderColor: "var(--admin-card-border)",
       }}
     >
       <div className="flex items-center gap-x-3 mb-4">
         <div className="w-fit rounded-lg p-2 animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+               backgroundColor: "var(--admin-accent-soft)"
              }}>
           <div className="h-6 w-6"></div>
         </div>
         <div className="h-5 w-28 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+               backgroundColor: "var(--admin-accent-soft)"
              }}></div>
       </div>
       <div className="space-y-3">
         <div className="h-6 w-48 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+               backgroundColor: "var(--admin-accent-soft)"
              }}></div>
         <div className="h-4 w-full rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+               backgroundColor: "var(--admin-accent-soft)"
              }}></div>
         <div className="h-4 w-3/4 rounded animate-pulse"
              style={{
-               backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+               backgroundColor: "var(--admin-accent-soft)"
              }}></div>
       </div>
     </motion.div>
@@ -319,8 +319,8 @@ const MainPage = () => {
   // Show skeleton loader only during initial load AND when no cached data is available
   if (initialLoad && !termsCache) {
     return (
-      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
-        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+      <div className="space-y-6 px-6 pb-6 pt-4 overflow-visible" style={{
+        backgroundColor: "var(--admin-bg)",
       }}>
         {/* Header Skeleton */}
         <motion.div
@@ -331,22 +331,22 @@ const MainPage = () => {
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg animate-pulse"
                  style={{
-                   backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+                   backgroundColor: "var(--admin-accent-soft)"
                  }}></div>
             <div className="space-y-2">
               <div className="h-6 w-44 rounded-lg animate-pulse"
                    style={{
-                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+                     backgroundColor: "var(--admin-accent-soft)"
                    }}></div>
               <div className="h-4 w-56 rounded animate-pulse"
                    style={{
-                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+                     backgroundColor: "var(--admin-accent-soft)"
                    }}></div>
             </div>
           </div>
           <div className="h-10 w-32 rounded-lg animate-pulse"
                style={{
-                 backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+                 backgroundColor: "var(--admin-accent-soft)"
                }}></div>
         </motion.div>
 
@@ -356,20 +356,20 @@ const MainPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="rounded-xl border-2 transition-all"
+          <Card className="rounded-xl border transition-all shadow-sm"
             style={{
-              backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-              borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+              backgroundColor: "var(--admin-card-bg)",
+              borderColor: "var(--admin-card-border)",
             }}
           >
             <CardHeader className="rounded-t-xl pb-4"
               style={{
-                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                backgroundColor: "var(--admin-accent-soft)",
               }}
             >
               <div className="h-6 w-32 rounded animate-pulse"
                    style={{
-                     backgroundColor: isDarkMode ? "#334155" : "#f1f5f9"
+                     backgroundColor: "var(--admin-bg)"
                    }}></div>
             </CardHeader>
 
@@ -387,8 +387,8 @@ const MainPage = () => {
   }
 
   return (
-    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
-      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+    <div className="space-y-6 px-6 pb-6 pt-4 overflow-visible" style={{
+      backgroundColor: "var(--admin-bg)",
     }}>
       {/* Header */}
       <motion.div
@@ -399,20 +399,20 @@ const MainPage = () => {
         <div className="flex items-center gap-3">
           <motion.div
             whileHover={{ scale: 1.1, rotate: 5 }}
-            className="rounded-lg p-2"
+            className="rounded-lg p-2 shadow-sm"
             style={{
-              backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
-              color: "#f1f5f9",
+              backgroundColor: "var(--admin-accent)",
+              color: "var(--admin-card-bg)",
             }}
           >
             <FileText size={22} />
           </motion.div>
           <div>
-            <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+            <p className="text-xl font-bold" style={{ color: "var(--admin-text-primary)" }}>
               Terms & Conditions
             </p>
-            <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-              Manage your terms and conditions
+            <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+              Manage your legal and policy content
             </p>
           </div>
         </div>
@@ -425,10 +425,10 @@ const MainPage = () => {
               setEditingTerm(null);
               setIsModalOpen(true);
             }}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
+            className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all shadow-sm"
             style={{
-              backgroundColor: "#0f172a",
-              color: "#f1f5f9",
+              backgroundColor: "var(--admin-accent)",
+              color: "var(--admin-card-bg)",
             }}
           >
             <Plus size={18} />
@@ -443,8 +443,8 @@ const MainPage = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="rounded-lg border-2 p-4"
           style={{
-            backgroundColor: "#FEF2F2",
-            borderColor: "#FECACA",
+            backgroundColor: "rgba(239, 68, 68, 0.05)",
+            borderColor: "rgba(239, 68, 68, 0.2)",
             color: "#DC2626",
           }}
         >
@@ -461,24 +461,24 @@ const MainPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="rounded-xl border-2 transition-all"
+        <Card className="rounded-xl border transition-all shadow-sm"
           style={{
-            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+            backgroundColor: "var(--admin-card-bg)",
+            borderColor: "var(--admin-card-border)",
           }}
         >
           <CardHeader className="rounded-t-xl pb-4"
             style={{
-              backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+              backgroundColor: "var(--admin-accent-soft)",
             }}
           >
-            <CardTitle className="text-base" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-              Terms List
+            <CardTitle className="text-base" style={{ color: "var(--admin-accent)" }}>
+              Legal Documents
             </CardTitle>
           </CardHeader>
 
           <CardContent className="p-6">
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
               {loading ? (
                 [...Array(3)].map((_, index) => (
                   <SkeletonCard key={index} index={index} />
@@ -496,30 +496,30 @@ const MainPage = () => {
                     >
                       <motion.div
                         whileHover={{ 
-                          scale: 1.01,
+                          scale: 1.005,
                           y: -2,
                           transition: { duration: 0.2 }
                         }}
-                        className="rounded-xl border-2 p-6 transition-all cursor-pointer"
+                        className="rounded-xl border p-6 transition-all cursor-pointer hover:shadow-md"
                         style={{
-                          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                          backgroundColor: "var(--admin-card-bg)",
+                          borderColor: "var(--admin-card-border)",
                         }}
                         onClick={() => openEditModal(term)}
                       >
-                        <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start justify-between">
                           <div className="space-y-2 flex-1">
-                            <h4 className="text-lg font-semibold" 
-                                style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            <h4 className="text-lg font-bold" 
+                                style={{ color: "var(--admin-text-primary)" }}>
                               {term.title}
                             </h4>
                             <p className="whitespace-pre-line break-words text-sm leading-relaxed"
-                               style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                               style={{ color: "var(--admin-text-secondary)" }}>
                               {term.content}
                             </p>
                           </div>
                           
-                          <div className="flex items-center gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-all">
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
@@ -527,10 +527,11 @@ const MainPage = () => {
                                 e.stopPropagation();
                                 openEditModal(term);
                               }}
-                              className="rounded-lg p-2 transition-colors"
+                              className="rounded-lg p-2 transition-colors border shadow-sm"
                               style={{
-                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                backgroundColor: "var(--admin-card-bg)",
+                                borderColor: "var(--admin-card-border)",
+                                color: "var(--admin-accent)",
                               }}
                             >
                               <Edit2 size={16} />
@@ -542,9 +543,10 @@ const MainPage = () => {
                                 e.stopPropagation();
                                 handleDeleteTerm(term.id, term.title);
                               }}
-                              className="rounded-lg p-2 transition-colors"
+                              className="rounded-lg p-2 transition-colors border shadow-sm"
                               style={{
-                                backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                                backgroundColor: "var(--admin-card-bg)",
+                                borderColor: "rgba(239, 68, 68, 0.2)",
                                 color: "#EF4444",
                               }}
                             >
@@ -560,22 +562,24 @@ const MainPage = () => {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="rounded-xl border-2 p-8 text-center transition-all"
+                  className="rounded-xl border p-12 text-center transition-all shadow-sm"
                   style={{
-                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                    backgroundColor: "var(--admin-card-bg)",
+                    borderColor: "var(--admin-card-border)",
                   }}
                 >
                   <div className="flex flex-col items-center justify-center">
-                    <FileText className="mb-4 h-16 w-16 opacity-50" 
-                             style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }} />
-                    <p className="mb-2 text-lg font-semibold" 
-                       style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                    <div className="rounded-full bg-slate-100 dark:bg-slate-800 p-6 mb-4">
+                      <FileText className="h-12 w-12 opacity-50" 
+                               style={{ color: "var(--admin-text-secondary)" }} />
+                    </div>
+                    <p className="mb-2 text-xl font-bold" 
+                       style={{ color: "var(--admin-text-primary)" }}>
                       No terms added yet
                     </p>
-                    <p className="mb-4 text-sm" 
-                       style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                      Start by creating your first terms and conditions
+                    <p className="mb-6 text-sm max-w-xs mx-auto" 
+                       style={{ color: "var(--admin-text-secondary)" }}>
+                      Your legal and policy documents will appear here once you create them.
                     </p>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -584,14 +588,14 @@ const MainPage = () => {
                         setEditingTerm(null);
                         setIsModalOpen(true);
                       }}
-                      className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
+                      className="flex items-center gap-2 rounded-lg px-6 py-2 transition-all shadow-md"
                       style={{
-                        backgroundColor: "#0f172a",
-                        color: "#f1f5f9",
+                        backgroundColor: "var(--admin-accent)",
+                        color: "var(--admin-card-bg)",
                       }}
                     >
                       <Plus size={18} />
-                      <span className="text-sm font-medium">Add Your First Terms</span>
+                      <span className="text-sm font-bold">Add Your First Document</span>
                     </motion.button>
                   </div>
                 </motion.div>

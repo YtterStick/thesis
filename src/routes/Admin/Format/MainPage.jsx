@@ -479,9 +479,7 @@ export default function ReceiptConfigPage() {
 
   if (initialLoad && !receiptSettingsCache) {
     return (
-      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
-        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-      }}>
+      <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
         <SkeletonHeader />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -493,9 +491,7 @@ export default function ReceiptConfigPage() {
   }
 
   return (
-    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
-      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-    }}>
+    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

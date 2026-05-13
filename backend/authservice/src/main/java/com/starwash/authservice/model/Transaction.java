@@ -38,6 +38,7 @@ public class Transaction {
     private Double amountGiven;
     private Double change;
 
+    @Indexed
     private LocalDateTime issueDate;
     private LocalDateTime dueDate; 
     

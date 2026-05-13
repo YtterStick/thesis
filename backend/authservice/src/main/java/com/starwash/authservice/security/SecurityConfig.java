@@ -35,36 +35,36 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                    // Public endpoints - no authentication required (paths relative to context-path /api)
-                    .requestMatchers(
-                        "/login", 
-                        "/register", 
-                        "/logout",
-                        "/health",
-                        "/",
-                        "/laundry-jobs/**",
-                        "/services/**",
-                        "/stock/**",
-                        "/machines/**",
-                        "/terms/**",
-                        "/track/**",
-                        "/notifications/stream"
-                    ).permitAll()
-                    
-                    // OPTIONS preflight requests
-                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                    
-                    // Role-based endpoints
-                    .requestMatchers("/dashboard/admin/**").hasRole("ADMIN")
-                    .requestMatchers("/dashboard/staff/**").hasAnyRole("STAFF", "ADMIN")
-                    .requestMatchers("/accounts/**").hasRole("ADMIN")
-                    .requestMatchers("/admin/**").hasRole("ADMIN")
-                    
-                    // Authenticated endpoints
-                    .requestMatchers("/me").authenticated()
-                    
-                    .anyRequest().authenticated()
-                )
+                        // Public endpoints - no authentication required (paths relative to context-path
+                        // /api)
+                        .requestMatchers(
+                                "/login",
+                                "/register",
+                                "/logout",
+                                "/health",
+                                "/",
+                                "/laundry-jobs/**",
+                                "/services/**",
+                                "/stock/**",
+                                "/machines/**",
+                                "/terms/**",
+                                "/track/**",
+                                "/notifications/stream")
+                        .permitAll()
+
+                        // OPTIONS preflight requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Role-based endpoints
+                        .requestMatchers("/dashboard/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/dashboard/staff/**").hasAnyRole("STAFF", "ADMIN")
+                        .requestMatchers("/accounts/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // Authenticated endpoints
+                        .requestMatchers("/me").authenticated()
+
+                        .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .logout(logout -> logout.disable())
                 .authenticationProvider(authenticationProvider())

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import AdminRecordTable from "./AdminRecordTable.jsx";
@@ -92,6 +92,9 @@ const MainPage = () => {
         }
     }, [activeFilters]);
 
+    // Use ref to track initial load completion (ref changes don't trigger re-renders)
+    const initialLoadDone = useRef(false);
+
     // Initial load - fetch everything together to prevent race conditions
     useEffect(() => {
         const loadInitialData = async () => {
@@ -112,6 +115,8 @@ const MainPage = () => {
                 setSummaryLoading(false);
                 setDataLoaded(true);
                 setPaginationLoading(false);
+                // Mark initial load as done AFTER state updates
+                initialLoadDone.current = true;
             }
         };
 
@@ -120,8 +125,8 @@ const MainPage = () => {
 
     // Fetch records and total count when page, pageSize, or timeFilter changes
     useEffect(() => {
-        // Skip initial load since it's handled by the effect above
-        if (!dataLoaded) return;
+        // Skip if initial load hasn't completed yet
+        if (!initialLoadDone.current) return;
 
         const loadRecordsData = async () => {
             try {
@@ -145,12 +150,12 @@ const MainPage = () => {
         }, 300); // Debounce search
 
         return () => clearTimeout(timeout);
-    }, [currentPage, pageSize, timeFilter, autoSearchTerm, dataLoaded]);
+    }, [currentPage, pageSize, timeFilter, autoSearchTerm]);
 
     // Fetch summary data only when timeFilter changes (after initial load)
     useEffect(() => {
-        // Skip initial load since it's handled by the effect above
-        if (!dataLoaded) return;
+        // Skip if initial load hasn't completed yet
+        if (!initialLoadDone.current) return;
 
         const loadSummaryData = async () => {
             try {
@@ -164,7 +169,7 @@ const MainPage = () => {
         };
 
         loadSummaryData();
-    }, [timeFilter, dataLoaded]);
+    }, [timeFilter]);
 
     useEffect(() => {
         if (timeFilter !== "today") {
@@ -668,12 +673,7 @@ const MainPage = () => {
     };
 
     return (
-        <div
-            className="min-h-screen space-y-5 overflow-visible px-6 pb-5 pt-4"
-            style={{
-                backgroundColor: isDarkMode ? "#0f172a" : "#f8fafc",
-            }}
-        >
+        <div className="space-y-5 overflow-visible px-6 pb-5 pt-4">
             {/* Header */}
             <div className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">

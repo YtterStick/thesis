@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Trash2, Plus, Settings, WashingMachine, X, Package } from "lucide-react";
 import EditServiceModal from "./components/EditServiceModal";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-config";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const CACHE_DURATION = 5 * 60 * 1000;
 
@@ -15,10 +15,7 @@ const initializeCache = () => {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Date.now() - parsed.timestamp < CACHE_DURATION) {
-        console.log("📦 Initializing services from stored cache");
         return parsed;
-      } else {
-        console.log("🗑️ Stored services cache expired");
       }
     }
   } catch (error) {
@@ -47,10 +44,7 @@ export default function MainPage() {
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     
     const [services, setServices] = useState(() => {
-      if (servicesCache && servicesCache.data) {
-        console.log("🎯 Initializing services state with cached data");
-        return servicesCache.data;
-      }
+      if (servicesCache && servicesCache.data) return servicesCache.data;
       return [];
     });
     const [editTarget, setEditTarget] = useState(null);
@@ -67,74 +61,45 @@ export default function MainPage() {
 
     const fetchServices = useCallback(async (forceRefresh = false) => {
       if (!isMountedRef.current) return;
-
       try {
         const now = Date.now();
-        
         if (!forceRefresh && servicesCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
-          console.log("📦 Using cached services data");
-          
           setServices(servicesCache.data);
           setLoading(false);
           setInitialLoad(false);
           return;
         }
-
         await fetchFreshServices();
       } catch (err) {
-        console.error("❌ Error fetching services:", err.message);
-        if (!isMountedRef.current) return;
-        
-        if (servicesCache) {
-          console.log("⚠️ Fetch failed, falling back to cached services data");
-          setServices(servicesCache.data);
-          setError("Failed to refresh services. Showing cached data.");
-        } else {
-          setError("Failed to load services. Make sure you're logged in.");
-        }
+        console.error("Error fetching services:", err.message);
+        if (servicesCache) setServices(servicesCache.data);
+        setError("Failed to refresh services.");
         setLoading(false);
         setInitialLoad(false);
       }
     }, []);
 
     const fetchFreshServices = async () => {
-      console.log("🔄 Fetching fresh services data");
       setLoading(true);
-
       try {
         const data = await api.get("/services");
         const newServices = data || [];
-        
         const currentTime = Date.now();
 
         if (!servicesCache || hasDataChanged(newServices, servicesCache.data)) {
-          console.log("🔄 Services data updated with fresh data");
-          
-          servicesCache = {
-            data: newServices,
-            timestamp: currentTime
-          };
+          servicesCache = { data: newServices, timestamp: currentTime };
           cacheTimestamp = currentTime;
-          
           saveCacheToStorage(newServices);
-          
           if (isMountedRef.current) {
             setServices(newServices);
             setError(null);
           }
-        } else {
-          console.log("✅ No changes in services data, updating timestamp only");
-          cacheTimestamp = currentTime;
-          servicesCache.timestamp = currentTime;
-          saveCacheToStorage(servicesCache.data);
         }
-
         if (isMountedRef.current) {
           setLoading(false);
           setInitialLoad(false);
         }
       } catch (error) {
-        console.error("❌ Error in fetchFreshServices:", error);
         if (isMountedRef.current) {
           setLoading(false);
           setInitialLoad(false);
@@ -145,95 +110,43 @@ export default function MainPage() {
 
     useEffect(() => {
       isMountedRef.current = true;
-      
-      if (servicesCache) {
-        console.log("🚀 Showing cached services data immediately");
-        setServices(servicesCache.data);
-        setLoading(false);
-        setInitialLoad(false);
-      }
-      
       fetchServices();
-      
-      return () => {
-        isMountedRef.current = false;
-      };
+      return () => { isMountedRef.current = false; };
     }, [fetchServices]);
 
     const handleSave = async (updated) => {
-        const method = updated.id ? "PUT" : "POST";
         const endpoint = updated.id ? `/services/${updated.id}` : "/services";
-
         try {
-            let saved;
-            if (updated.id) {
-                saved = await api.put(endpoint, updated);
-            } else {
-                saved = await api.post(endpoint, updated);
-            }
-
+            const saved = updated.id ? await api.put(endpoint, updated) : await api.post(endpoint, updated);
             setServices((prev) => {
                 const exists = prev.some((s) => s.id === saved.id);
                 const newServices = exists ? prev.map((s) => (s.id === saved.id ? saved : s)) : [...prev, saved];
-                
-                // Update cache
-                servicesCache = {
-                  data: newServices,
-                  timestamp: Date.now()
-                };
+                servicesCache = { data: newServices, timestamp: Date.now() };
                 cacheTimestamp = Date.now();
                 saveCacheToStorage(newServices);
-                
                 return newServices;
             });
-
-            toast({
-                title: updated.id ? "Service updated" : "Service added",
-                description: `${saved.name} has been ${updated.id ? "updated" : "added"}.`,
-            });
-
+            toast({ title: updated.id ? "Service updated" : "Service added" });
             setEditTarget(null);
         } catch (error) {
-            console.error("❌ Error saving service:", error.message);
-            setError("Failed to save service.");
-            toast({
-                title: "Save failed",
-                description: error.message,
-                variant: "destructive",
-            });
+            toast({ title: "Save failed", variant: "destructive" });
         }
     };
 
     const handleDelete = async (id) => {
         try {
             await api.delete(`/services/${id}`);
-            
             setServices((prev) => {
                 const newServices = prev.filter((s) => s.id !== id);
-                
-                servicesCache = {
-                  data: newServices,
-                  timestamp: Date.now()
-                };
+                servicesCache = { data: newServices, timestamp: Date.now() };
                 cacheTimestamp = Date.now();
                 saveCacheToStorage(newServices);
-                
                 return newServices;
             });
             setConfirmDeleteId(null);
-
-            toast({
-                title: "Service deleted",
-                description: "The service has been removed successfully.",
-            });
+            toast({ title: "Service deleted" });
         } catch (error) {
-            console.error("❌ Error deleting service:", error.message);
-            setError("Failed to delete service.");
-            toast({
-                title: "Delete failed",
-                description: error.message,
-                variant: "destructive",
-            });
+            toast({ title: "Delete failed", variant: "destructive" });
         }
     };
 
@@ -242,65 +155,33 @@ export default function MainPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="rounded-xl border-2 p-5 transition-all"
-            style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#0B2B26",
-            }}
+            className="rounded-xl border p-5 transition-all shadow-sm"
+            style={{ backgroundColor: "var(--admin-card-bg)", borderColor: "var(--admin-card-border)" }}
         >
             <div className="flex items-center justify-between mb-4">
-                <div className="w-fit rounded-lg p-2 animate-pulse"
-                     style={{
-                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                     }}>
+                <div className="w-fit rounded-lg p-2 animate-pulse" style={{ backgroundColor: "var(--admin-accent-soft)" }}>
                     <div className="h-6 w-6"></div>
                 </div>
-                <div className="h-8 w-24 rounded animate-pulse"
-                     style={{
-                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                     }}></div>
+                <div className="h-8 w-24 rounded animate-pulse" style={{ backgroundColor: "var(--admin-accent-soft)" }}></div>
             </div>
-            
             <div className="space-y-2">
-                <div className="h-5 w-32 rounded animate-pulse mb-2"
-                     style={{
-                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                     }}></div>
-                <div className="h-4 w-44 rounded animate-pulse"
-                     style={{
-                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                     }}></div>
+                <div className="h-5 w-32 rounded animate-pulse mb-2" style={{ backgroundColor: "var(--admin-accent-soft)" }}></div>
+                <div className="h-4 w-44 rounded animate-pulse" style={{ backgroundColor: "var(--admin-accent-soft)" }}></div>
             </div>
         </motion.div>
     );
 
     const SkeletonHeader = () => (
-        <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
-        >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg animate-pulse"
-                     style={{
-                       backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                     }}></div>
+                <div className="h-10 w-10 rounded-lg animate-pulse" style={{ backgroundColor: "var(--admin-accent-soft)" }}></div>
                 <div className="space-y-2">
-                    <div className="h-6 w-44 rounded-lg animate-pulse"
-                         style={{
-                           backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                         }}></div>
-                    <div className="h-4 w-56 rounded animate-pulse"
-                         style={{
-                           backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                         }}></div>
+                    <div className="h-6 w-44 rounded-lg animate-pulse" style={{ backgroundColor: "var(--admin-accent-soft)" }}></div>
+                    <div className="h-4 w-56 rounded animate-pulse" style={{ backgroundColor: "var(--admin-accent-soft)" }}></div>
                 </div>
             </div>
-            <div className="h-10 w-32 rounded-lg animate-pulse"
-                 style={{
-                   backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                 }}></div>
-        </motion.div>
+            <div className="h-10 w-32 rounded-lg animate-pulse" style={{ backgroundColor: "var(--admin-accent-soft)" }}></div>
+        </div>
     );
 
     const ServiceCard = ({ service, index }) => (
@@ -309,268 +190,104 @@ export default function MainPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            whileHover={{ 
-                scale: 1.03,
-                y: -2,
-                transition: { duration: 0.2 }
-            }}
+            whileHover={{ scale: 1.02, y: -4 }}
             onClick={() => setEditTarget(service)}
-            className="relative rounded-xl border-2 p-5 transition-all cursor-pointer"
-            style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#0B2B26",
-            }}
+            className="relative rounded-xl border p-5 transition-all cursor-pointer hover:shadow-lg group"
+            style={{ backgroundColor: "var(--admin-card-bg)", borderColor: "var(--admin-card-border)" }}
         >
             <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmDeleteId(service.id);
-                }}
-                className="absolute right-3 top-3 rounded-lg p-1 transition-all hover:opacity-80"
-                style={{
-                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                }}
-                title="Delete service"
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(service.id); }}
+                className="absolute right-3 top-3 rounded-lg p-1.5 transition-all opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/20"
+                style={{ backgroundColor: "var(--admin-bg)", border: "1px solid var(--admin-card-border)" }}
             >
-                <X
-                    size={16}
-                    style={{ color: isDarkMode ? '#F87171' : '#EF4444' }}
-                />
+                <Trash2 size={14} className="text-red-500" />
             </button>
-
             <div className="mb-4 flex items-center gap-3">
-                <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="rounded-lg p-2"
-                    style={{
-                        backgroundColor: "#0891B220",
-                        color: "#0891B2",
-                    }}
-                >
+                <div className="rounded-lg p-2.5 shadow-sm" style={{ backgroundColor: "var(--admin-accent-soft)", color: "var(--admin-accent)" }}>
                     <WashingMachine size={22} />
-                </motion.div>
-                <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-                    {service.name}
-                </h3>
+                </div>
+                <h3 className="text-lg font-bold" style={{ color: "var(--admin-text-primary)" }}>{service.name}</h3>
             </div>
-            
-            <p className="text-sm mb-4" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                {service.description}
+            <p className="text-sm mb-6 line-clamp-2 min-h-[40px]" style={{ color: "var(--admin-text-secondary)" }}>
+                {service.description || "No description provided."}
             </p>
-            
-            <div className="flex items-center justify-between">
-                <motion.p 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: index * 0.2 }}
-                    className="text-xl font-bold"
-                    style={{ color: isDarkMode ? '#0891B2' : '#0E7490' }}
-                >
-                    ₱{service.price.toFixed(2)}
-                </motion.p>
+            <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "var(--admin-card-border)" }}>
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-50" style={{ color: "var(--admin-text-secondary)" }}>Base Price</span>
+                    <p className="text-xl font-bold" style={{ color: "var(--admin-accent)" }}>₱{service.price.toFixed(2)}</p>
+                </div>
+                <div className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-slate-100 dark:bg-slate-800" style={{ color: "var(--admin-text-secondary)" }}>
+                    Service
+                </div>
             </div>
         </motion.div>
     );
 
     if (initialLoad && !servicesCache) {
         return (
-            <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
-                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-            }}>
+            <div className="p-6" style={{ backgroundColor: "var(--admin-bg)" }}>
                 <SkeletonHeader />
-                
-                {error && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="rounded-xl border-2 p-4 transition-all"
-                        style={{
-                            backgroundColor: isDarkMode ? "rgba(254, 226, 226, 0.1)" : "#FEF2F2",
-                            borderColor: isDarkMode ? "#F87171" : "#EF4444",
-                        }}
-                    >
-                        <div className="h-5 w-full rounded animate-pulse"
-                             style={{
-                               backgroundColor: isDarkMode ? "#334155" : "#E0EAE8"
-                             }}></div>
-                    </motion.div>
-                )}
-
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                    {[...Array(6)].map((_, index) => (
-                        <SkeletonCard key={index} index={index} />
-                    ))}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {[...Array(6)].map((_, index) => <SkeletonCard key={index} index={index} />)}
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible" style={{
-            backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-        }}>
-
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-3"
-            >
+        <div className="p-6 min-h-screen" style={{ backgroundColor: "var(--admin-bg)" }}>
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
                 <div className="flex items-center gap-3">
-                    <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="rounded-lg p-2"
-                        style={{
-                            backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
-                            color: "#f1f5f9",
-                        }}
-                    >
+                    <div className="rounded-lg p-2 shadow-sm" style={{ backgroundColor: "var(--admin-accent)", color: "var(--admin-card-bg)" }}>
                         <Settings size={22} />
-                    </motion.div>
+                    </div>
                     <div>
-                        <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-                            Service Options
-                        </p>
-                        <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                            Manage your laundry services and pricing
-                        </p>
+                        <p className="text-xl font-bold" style={{ color: "var(--admin-text-primary)" }}>Service Options</p>
+                        <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>Configure categories and pricing</p>
                     </div>
                 </div>
-                
                 <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setEditTarget({})}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
-                    style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
-                        color: "#f1f5f9",
-                    }}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all shadow-md"
+                    style={{ backgroundColor: "var(--admin-accent)", color: "var(--admin-card-bg)" }}
                 >
                     <Plus size={18} />
-                    <span className="text-sm font-medium">Add Service</span>
+                    <span className="text-sm font-bold">Add Service</span>
                 </motion.button>
             </motion.div>
 
-
-            {error && (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="rounded-xl border-2 p-4 transition-all"
-                    style={{
-                        backgroundColor: isDarkMode ? "rgba(254, 226, 226, 0.1)" : "#FEF2F2",
-                        borderColor: isDarkMode ? "#F87171" : "#EF4444",
-                    }}
-                >
-                    <p className="text-sm font-medium" style={{ color: isDarkMode ? '#F87171' : '#DC2626' }}>
-                        {error}
-                    </p>
-                </motion.div>
-            )}
-
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {services.length > 0 ? (
-                    services.map((service, index) => (
-                        <ServiceCard key={service.id} service={service} index={index} />
-                    ))
+                    services.map((service, index) => <ServiceCard key={service.id} service={service} index={index} />)
                 ) : (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="rounded-xl border-2 p-8 text-center col-span-full transition-all"
-                        style={{
-                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                        }}
-                    >
-                        <div className="flex flex-col items-center justify-center">
-                            <Package className="mb-4 h-16 w-16 opacity-50" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }} />
-                            <p className="mb-2 text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-                                No services yet.
-                            </p>
-                            <p className="mb-4 text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                                Start by adding your first service.
-                            </p>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setEditTarget({})}
-                                className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all"
-                                style={{
-                                    backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
-                                    color: "#f1f5f9",
-                                }}
-                            >
-                                <Plus size={18} />
-                                <span className="text-sm font-medium">Add Your First Service</span>
-                            </motion.button>
-                        </div>
-                    </motion.div>
+                    <div className="rounded-xl border p-12 text-center col-span-full shadow-sm" style={{ backgroundColor: "var(--admin-card-bg)", borderColor: "var(--admin-card-border)" }}>
+                        <Package className="h-12 w-12 mx-auto mb-4 opacity-50" style={{ color: "var(--admin-text-secondary)" }} />
+                        <p className="text-xl font-bold" style={{ color: "var(--admin-text-primary)" }}>No services found.</p>
+                        <button onClick={() => setEditTarget({})} className="mt-4 px-6 py-2 rounded-lg font-bold" style={{ backgroundColor: "var(--admin-accent)", color: "var(--admin-card-bg)" }}>
+                            Create First Service
+                        </button>
+                    </div>
                 )}
             </div>
 
-            {/* ✏️ Edit Modal */}
             <AnimatePresence>
-                {editTarget && (
-                    <EditServiceModal
-                        service={editTarget}
-                        onClose={() => setEditTarget(null)}
-                        onSave={handleSave}
-                    />
-                )}
+                {editTarget && <EditServiceModal service={editTarget} onClose={() => setEditTarget(null)} onSave={handleSave} />}
             </AnimatePresence>
 
-            {/* ❓ Confirm Delete */}
             <AnimatePresence>
                 {confirmDeleteId && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            className="w-full max-w-sm rounded-xl border-2 p-6 shadow-xl transition-all"
-                            style={{
-                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                            }}
-                        >
-                            <h3 className="mb-2 text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-                                Delete Service
-                            </h3>
-                            <p className="mb-4 text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
-                                Are you sure you want to delete this service? This action cannot be undone.
-                            </p>
-                            <div className="flex justify-end gap-2">
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => setConfirmDeleteId(null)}
-                                    className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                        color: isDarkMode ? '#f1f5f9' : '#0B2B26',
-                                    }}
-                                >
-                                    Cancel
-                                </motion.button>
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleDelete(confirmDeleteId)}
-                                    className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-all"
-                                    style={{
-                                        backgroundColor: '#EF4444',
-                                    }}
-                                >
-                                    Delete
-                                </motion.button>
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm rounded-2xl border p-8 shadow-2xl" style={{ backgroundColor: "var(--admin-card-bg)", borderColor: "var(--admin-card-border)" }}>
+                            <h3 className="text-xl font-bold mb-2" style={{ color: "var(--admin-text-primary)" }}>Delete Service?</h3>
+                            <p className="text-sm mb-8" style={{ color: "var(--admin-text-secondary)" }}>Permanently remove this service? This cannot be undone.</p>
+                            <div className="flex flex-col gap-2">
+                                <button onClick={() => handleDelete(confirmDeleteId)} className="w-full rounded-xl py-3 text-sm font-bold text-white bg-red-500">Delete Permanently</button>
+                                <button onClick={() => setConfirmDeleteId(null)} className="w-full rounded-xl py-3 text-sm font-bold border" style={{ color: "var(--admin-text-primary)", borderColor: "var(--admin-card-border)" }}>Cancel</button>
                             </div>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

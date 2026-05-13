@@ -72,8 +72,8 @@ const ToggleSwitch = ({ checked, onChange, disabled = false, id }) => {
         relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 ease-in-out
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         ${checked 
-          ? 'bg-[#0f172a]' 
-          : 'bg-gray-200 dark:bg-gray-700'
+          ? 'bg-[var(--admin-accent)]' 
+          : 'bg-slate-200 dark:bg-slate-800'
         }
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
       `}
@@ -122,8 +122,8 @@ const ConfirmationModal = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="relative z-50 w-full max-w-md rounded-xl border-2 p-6 shadow-xl"
         style={{
-          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+          backgroundColor: "var(--admin-card-bg)",
+          borderColor: "var(--admin-card-border)",
         }}
       >
         {/* Header */}
@@ -135,13 +135,13 @@ const ConfirmationModal = ({
           }`}>
             <AlertTriangle size={20} />
           </div>
-          <h3 className="text-lg font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+          <h3 className="text-lg font-semibold" style={{ color: "var(--admin-text-primary)" }}>
             {title}
           </h3>
         </div>
 
         {/* Description */}
-        <p className="mb-6 text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+        <p className="mb-6 text-sm" style={{ color: "var(--admin-text-secondary)" }}>
           {description}
         </p>
 
@@ -152,9 +152,9 @@ const ConfirmationModal = ({
             onClick={onClose}
             className="rounded-lg border-2 px-4 py-2 transition-all"
             style={{
-              borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-              color: isDarkMode ? "#f1f5f9" : "#0f172a",
-              backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+              borderColor: "var(--admin-card-border)",
+              color: "var(--admin-text-primary)",
+              backgroundColor: "var(--admin-card-bg)",
             }}
           >
             {cancelText}
@@ -180,7 +180,7 @@ const ConfirmationModal = ({
             backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
           }}
         >
-          <X size={16} style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }} />
+          <X size={16} style={{ color: "var(--admin-text-primary)" }} />
         </button>
       </motion.div>
     </div>
@@ -479,8 +479,8 @@ const PaymentManagementPage = () => {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border-2 p-5 transition-all"
       style={{
-        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+        backgroundColor: "var(--admin-card-bg)",
+        borderColor: "var(--admin-card-border)",
       }}
     >
       <div className="flex items-center justify-between mb-4">
@@ -532,8 +532,8 @@ const PaymentManagementPage = () => {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border-2 p-5 transition-all"
       style={{
-        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+        backgroundColor: "var(--admin-card-bg)",
+        borderColor: "var(--admin-card-border)",
       }}
     >
       <div className="flex items-center justify-between mb-4">
@@ -598,7 +598,7 @@ const PaymentManagementPage = () => {
   if (initialLoad && !paymentManagementCache) {
     return (
       <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
-        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+        backgroundColor: "var(--admin-bg)",
       }}>
         <SkeletonHeader />
         
@@ -619,7 +619,7 @@ const PaymentManagementPage = () => {
 
   return (
     <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
-      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+      backgroundColor: "var(--admin-bg)",
     }}>
       {/* Header */}
       <motion.div
@@ -631,17 +631,17 @@ const PaymentManagementPage = () => {
           whileHover={{ scale: 1.1, rotate: 5 }}
           className="rounded-lg p-2"
           style={{
-            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+            backgroundColor: "#0f172a",
             color: "#f1f5f9",
           }}
         >
           <Wallet size={22} />
         </motion.div>
         <div>
-          <p className="text-xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+          <p className="text-xl font-bold" style={{ color: "var(--admin-text-primary)" }}>
             Payment Management
           </p>
-          <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+          <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
             Manage payment methods and review pending GCash payments
           </p>
         </div>
@@ -650,22 +650,22 @@ const PaymentManagementPage = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 rounded-lg p-1 gap-1"
                   style={{
-                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                    border: isDarkMode ? "1px solid #334155" : "1px solid #cbd5e1",
+                    backgroundColor: "var(--admin-card-bg)",
+                    border: "1px solid var(--admin-card-border)",
                   }}>
           <TabsTrigger 
             value="methods"
             className="rounded-md transition-all font-medium text-sm"
             style={{
               backgroundColor: activeTab === "methods" 
-                ? "#0f172a"
-                : (isDarkMode ? "rgba(30, 41, 59, 0.1)" : "transparent"),
+                ? "var(--admin-accent)"
+                : "transparent",
               color: activeTab === "methods" 
                 ? "#FFFFFF" 
-                : (isDarkMode ? "#f1f5f9" : "#0f172a"),
+                : "var(--admin-text-primary)",
               border: activeTab === "methods" 
                 ? "none"
-                : (isDarkMode ? "1px solid #334155" : "1px solid #cbd5e1"),
+                : "1px solid var(--admin-card-border)",
               boxShadow: activeTab === "methods" ? "0 2px 4px rgba(0,0,0,0.1)" : "none",
             }}
           >
@@ -676,14 +676,14 @@ const PaymentManagementPage = () => {
             className="rounded-md transition-all font-medium text-sm"
             style={{
               backgroundColor: activeTab === "pending" 
-                ? "#0f172a"
-                : (isDarkMode ? "rgba(30, 41, 59, 0.1)" : "transparent"),
+                ? "var(--admin-accent)"
+                : "transparent",
               color: activeTab === "pending" 
                 ? "#FFFFFF" 
-                : (isDarkMode ? "#f1f5f9" : "#0f172a"),
+                : "var(--admin-text-primary)",
               border: activeTab === "pending" 
                 ? "none"
-                : (isDarkMode ? "1px solid #334155" : "1px solid #cbd5e1"),
+                : "1px solid var(--admin-card-border)",
               boxShadow: activeTab === "pending" ? "0 2px 4px rgba(0,0,0,0.1)" : "none",
             }}
           >
@@ -701,22 +701,22 @@ const PaymentManagementPage = () => {
             ) : (
               <Card className="rounded-xl border-2 transition-all"
                     style={{
-                      backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                      borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                      backgroundColor: "var(--admin-card-bg)",
+                      borderColor: "var(--admin-card-border)",
                     }}>
                 <CardHeader className="rounded-t-xl pb-4"
                            style={{
-                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.05)",
                            }}>
-                  <CardTitle style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                  <CardTitle style={{ color: "var(--admin-text-primary)" }}>
                     Available Payment Methods
                   </CardTitle>
-                  <CardDescription style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+                  <CardDescription style={{ color: "var(--admin-text-secondary)" }}>
                     Cash is always available. GCash can be enabled or disabled.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="divide-y" style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }}>
+                  <div className="divide-y" style={{ borderColor: "var(--admin-card-border)" }}>
                     {/* Cash (always enabled, no toggle) */}
                     <div className="flex items-center justify-between p-4">
                       <div className="flex items-center space-x-4">
@@ -731,17 +731,17 @@ const PaymentManagementPage = () => {
                           <Wallet className="h-5 w-5" />
                         </motion.div>
                         <div>
-                          <h3 className="font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                          <h3 className="font-medium" style={{ color: "var(--admin-text-primary)" }}>
                             Cash
                           </h3>
-                          <p className="text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+                          <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
                             Pay with physical cash
                           </p>
                         </div>
                       </div>
                       <Badge style={{ 
-                        backgroundColor: isDarkMode ? "rgba(34, 197, 94, 0.2)" : "#DCFCE7",
-                        color: isDarkMode ? "#4ADE80" : "#166534"
+                        backgroundColor: "var(--admin-accent)",
+                        color: "#FFFFFF"
                       }}>
                         Enabled
                       </Badge>
@@ -761,17 +761,17 @@ const PaymentManagementPage = () => {
                           <Smartphone className="h-5 w-5" />
                         </motion.div>
                         <div>
-                          <h3 className="font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                          <h3 className="font-medium" style={{ color: "var(--admin-text-primary)" }}>
                             GCash
                           </h3>
-                          <p className="text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}>
+                          <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
                             Pay via GCash mobile wallet
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         {isUpdating ? (
-                          <Loader2 className="h-5 w-5 animate-spin" style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }} />
+                          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--admin-text-secondary)" }} />
                         ) : (
                           <div className="flex items-center space-x-2">
                             <ToggleSwitch
@@ -783,7 +783,7 @@ const PaymentManagementPage = () => {
                             <Label
                               htmlFor="gcash-toggle"
                               className="text-sm font-medium"
-                              style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                              style={{ color: "var(--admin-text-primary)" }}
                             >
                               {paymentData.gcashEnabled ? "Enabled" : "Disabled"}
                             </Label>
@@ -849,55 +849,50 @@ const PaymentManagementPage = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow style={{ 
-                              backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)" 
-                            }}>
-                              <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Invoice #</TableHead>
-                              <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Reference #</TableHead>
-                              <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Customer</TableHead>
-                              <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Contact</TableHead>
-                              <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Amount</TableHead>
-                              <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Date</TableHead>
-                              <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Status</TableHead>
-                              <TableHead className="text-right" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
+                      <div className="overflow-x-auto rounded-xl border shadow-sm"
+                           style={{
+                             borderColor: "var(--admin-card-border)",
+                           }}>
+                        <table className="admin-table">
+                          <thead className="admin-table-thead">
+                            <tr>
+                              <th className="admin-table-th">Invoice #</th>
+                              <th className="admin-table-th">Reference #</th>
+                              <th className="admin-table-th">Customer</th>
+                              <th className="admin-table-th">Contact</th>
+                              <th className="admin-table-th">Amount</th>
+                              <th className="admin-table-th">Date</th>
+                              <th className="admin-table-th">Status</th>
+                              <th className="admin-table-th text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
                             {pendingTransactions.map((transaction) => (
-                              <TableRow key={transaction.id} style={{ 
-                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
-                              }}>
-                                <TableCell className="font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                              <tr key={transaction.id} className="admin-table-tr">
+                                <td className="admin-table-td font-bold">
                                   {transaction.invoiceNumber}
-                                </TableCell>
-                                <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                                </td>
+                                <td className="admin-table-td font-mono text-xs opacity-70">
                                   {transaction.gcashReference || "N/A"}
-                                </TableCell>
-                                <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                                </td>
+                                <td className="admin-table-td">
                                   {transaction.customerName}
-                                </TableCell>
-                                <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                                </td>
+                                <td className="admin-table-td opacity-70">
                                   {transaction.contact}
-                                </TableCell>
-                                <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                                </td>
+                                <td className="admin-table-td font-bold text-admin-accent">
                                   ₱{(transaction.totalPrice || 0).toFixed(2)}
-                                </TableCell>
-                                <TableCell style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>
+                                </td>
+                                <td className="admin-table-td text-[11px] opacity-70">
                                   {transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : 'N/A'}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge style={{ 
-                                    backgroundColor: isDarkMode ? "rgba(245, 158, 11, 0.2)" : "#FEF3C7",
-                                    color: isDarkMode ? "#F59E0B" : "#92400E"
-                                  }}>
+                                </td>
+                                <td className="admin-table-td">
+                                  <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-none font-bold text-[10px] uppercase tracking-wider">
                                     Pending
                                   </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
+                                </td>
+                                <td className="admin-table-td text-right">
                                   <motion.div
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
@@ -906,20 +901,17 @@ const PaymentManagementPage = () => {
                                       onClick={() => handleVerifyPayment(transaction)}
                                       disabled={isVerifying}
                                       size="sm"
-                                      className="rounded-lg text-white transition-all"
-                                      style={{
-                                        backgroundColor: "#0f172a",
-                                      }}
+                                      className="h-8 rounded-lg bg-admin-accent hover:opacity-90 transition-all font-bold text-white"
                                     >
-                                      <CheckCircle className="mr-1 h-4 w-4" />
+                                      <CheckCircle className="mr-1 h-3.5 w-3.5" />
                                       Verify
                                     </Button>
                                   </motion.div>
-                                </TableCell>
-                              </TableRow>
+                                </td>
+                              </tr>
                             ))}
-                          </TableBody>
-                        </Table>
+                          </tbody>
+                        </table>
                       </div>
                     </>
                   )}

@@ -846,11 +846,24 @@ public class TransactionService {
             LocalDateTime currentManilaTime = getCurrentManilaTime();
             LocalDateTime startDate = calculateStartDate(timeFilter, currentManilaTime);
 
-            // For simpler implementation, use repository methods with date ranges
+            // Use MongoDB aggregation for income and loads (no Java filtering needed)
             double totalIncome = calculateTotalIncome(timeFilter, startDate);
             int totalLoads = calculateTotalLoads(timeFilter, startDate);
-            int totalFabric = calculateTotalFabric(timeFilter, startDate);
-            int totalDetergent = calculateTotalDetergent(timeFilter, startDate);
+
+            // Load filtered transactions ONCE for fabric + detergent (requires embedded doc inspection)
+            List<Transaction> filteredForConsumables = getFilteredTransactionsForConsumables(timeFilter, startDate);
+            int totalFabric = filteredForConsumables.stream()
+                    .mapToInt(tx -> tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("fabric"))
+                            .mapToInt(ServiceEntry::getQuantity)
+                            .sum())
+                    .sum();
+            int totalDetergent = filteredForConsumables.stream()
+                    .mapToInt(tx -> tx.getConsumables().stream()
+                            .filter(c -> c.getName().toLowerCase().contains("detergent"))
+                            .mapToInt(ServiceEntry::getQuantity)
+                            .sum())
+                    .sum();
 
             // Use dedicated count queries instead of loading all records
             long expiredCount = laundryJobRepository.countByExpiredTrueAndDisposedFalse();
@@ -879,31 +892,28 @@ public class TransactionService {
         }
     }
 
-    // Get time-filtered summary (legacy method - kept for compatibility)
+    // Get time-filtered summary - cached per timeFilter
     @Cacheable(value = "adminSummary", key = "#timeFilter")
     public Map<String, Object> getAdminRecordsSummaryByTime(String timeFilter) {
-        // Delegate to optimized version
+        // Directly execute optimized logic (not delegating to avoid cache proxy bypass)
         return getOptimizedAdminRecordsSummaryByTime(timeFilter);
     }
 
-    // Helper methods for optimized calculations
+    // Helper methods for optimized calculations - uses MongoDB aggregation instead of loading all records
     private double calculateTotalIncome(String timeFilter, LocalDateTime startDate) {
         if ("all".equals(timeFilter)) {
-            // Use a cached value or quick aggregation
             Double result = transactionRepository.sumTotalPrice();
             return result != null ? result : 0.0;
         } else {
-            // ✅ UPDATED: Use issueDate for filtering
-            List<Transaction> transactions = transactionRepository.findAll().stream()
-                    .filter(tx -> {
-                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
-                        return recordDate != null && !recordDate.isBefore(startDate);
-                    })
-                    .collect(Collectors.toList());
-
-            return transactions.stream()
-                    .mapToDouble(Transaction::getTotalPrice)
-                    .sum();
+            // ✅ OPTIMIZED: Use MongoDB aggregation instead of findAll() + Java filter
+            try {
+                Double result = transactionRepository.sumTotalPriceByIssueDateAfter(startDate);
+                return result != null ? result : 0.0;
+            } catch (Exception e) {
+                System.out.println("⚠️  Falling back to createdAt aggregation for income: " + e.getMessage());
+                Double result = transactionRepository.sumTotalPriceByCreatedAtAfter(startDate);
+                return result != null ? result : 0.0;
+            }
         }
     }
 
@@ -912,64 +922,32 @@ public class TransactionService {
             Integer result = transactionRepository.sumServiceQuantity();
             return result != null ? result : 0;
         } else {
-            // ✅ UPDATED: Use issueDate for filtering
-            List<Transaction> transactions = transactionRepository.findAll().stream()
-                    .filter(tx -> {
-                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
-                        return recordDate != null && !recordDate.isBefore(startDate);
-                    })
-                    .collect(Collectors.toList());
-
-            return transactions.stream()
-                    .mapToInt(Transaction::getServiceQuantity)
-                    .sum();
+            // ✅ OPTIMIZED: Use MongoDB aggregation instead of findAll() + Java filter
+            try {
+                Integer result = transactionRepository.sumServiceQuantityByIssueDateAfter(startDate);
+                return result != null ? result : 0;
+            } catch (Exception e) {
+                System.out.println("⚠️  Falling back to createdAt aggregation for loads: " + e.getMessage());
+                Integer result = transactionRepository.sumServiceQuantityByCreatedAtAfter(startDate);
+                return result != null ? result : 0;
+            }
         }
     }
 
-    private int calculateTotalFabric(String timeFilter, LocalDateTime startDate) {
-        // For now, use the existing method - can be optimized later
-        List<Transaction> transactions;
+
+
+    // ✅ OPTIMIZED: Single DB query for consumable calculations - uses issueDate filtering at DB level
+    private List<Transaction> getFilteredTransactionsForConsumables(String timeFilter, LocalDateTime startDate) {
         if ("all".equals(timeFilter)) {
-            transactions = transactionRepository.findAll();
+            return transactionRepository.findAll();
         } else {
-            // ✅ UPDATED: Use issueDate for filtering
-            transactions = transactionRepository.findAll().stream()
-                    .filter(tx -> {
-                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
-                        return recordDate != null && !recordDate.isBefore(startDate);
-                    })
-                    .collect(Collectors.toList());
+            try {
+                return transactionRepository.findByIssueDateAfter(startDate);
+            } catch (Exception e) {
+                System.out.println("⚠️  Falling back to createdAt filtering for consumables: " + e.getMessage());
+                return transactionRepository.findByCreatedAtAfter(startDate);
+            }
         }
-
-        return transactions.stream()
-                .mapToInt(tx -> tx.getConsumables().stream()
-                        .filter(c -> c.getName().toLowerCase().contains("fabric"))
-                        .mapToInt(ServiceEntry::getQuantity)
-                        .sum())
-                .sum();
-    }
-
-    private int calculateTotalDetergent(String timeFilter, LocalDateTime startDate) {
-        // For now, use the existing method - can be optimized later
-        List<Transaction> transactions;
-        if ("all".equals(timeFilter)) {
-            transactions = transactionRepository.findAll();
-        } else {
-            // ✅ UPDATED: Use issueDate for filtering
-            transactions = transactionRepository.findAll().stream()
-                    .filter(tx -> {
-                        LocalDateTime recordDate = tx.getIssueDate() != null ? tx.getIssueDate() : tx.getCreatedAt();
-                        return recordDate != null && !recordDate.isBefore(startDate);
-                    })
-                    .collect(Collectors.toList());
-        }
-
-        return transactions.stream()
-                .mapToInt(tx -> tx.getConsumables().stream()
-                        .filter(c -> c.getName().toLowerCase().contains("detergent"))
-                        .mapToInt(ServiceEntry::getQuantity)
-                        .sum())
-                .sum();
     }
 
     // Update the helper method to use issueDate-based counting

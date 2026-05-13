@@ -72,8 +72,8 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
 
         if (isNaN(adequate) || adequate <= low) {
             toast({
-                title: "Invalid Adequate Threshold",
-                description: "Adequate stock threshold must be greater than low stock threshold.",
+                title: "Invalid Normal Threshold",
+                description: "Normal stock threshold must be greater than low stock threshold.",
                 variant: "destructive",
             });
             return;
@@ -308,12 +308,12 @@ const InventoryForm = ({ item, onAdd, onClose, existingItems = [], loading = fal
                             className="text-sm font-medium mb-2 block"
                             style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
                         >
-                            Adequate Stock Threshold
+                            Normal Stock Threshold
                         </label>
                         <Input
                             id="adequateStockThreshold"
                             type="number"
-                            placeholder="Adequate Stock Threshold"
+                            placeholder="Normal Stock Threshold"
                             value={form.adequateStockThreshold}
                             onChange={(e) => handleChange("adequateStockThreshold", e.target.value)}
                             min="1"

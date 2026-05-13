@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Search, AlertCircle, CheckCircle2, Printer, CalendarIcon, Download, Clock8, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -800,250 +800,206 @@ const AdminRecordTable = ({
                                     </button>
                                 </div>
                             )}
-                        </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    <div
-                        className="min-w-max rounded-lg border-2"
-                        style={{
-                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                        }}
-                    >
-                        <table className="min-w-full table-auto text-sm">
-                            <thead
-                                style={{
-                                    backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
-                                }}
-                            >
+            {/* Table */}
+            <div className="overflow-x-auto rounded-xl border shadow-sm"
+                    style={{
+                        borderColor: "var(--admin-card-border)",
+                    }}
+                >
+                    <table className="admin-table">
+                        <thead className="admin-table-thead">
+                            <tr>
+                                <th className="w-10 px-2 py-2"></th>
+                                {tableHeaders.map((header) => (
+                                    <th
+                                        key={header}
+                                        className="admin-table-th whitespace-nowrap"
+                                    >
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {displayItems.length === 0 ? (
                                 <tr>
-                                    <th className="w-10 px-2 py-2"></th>
-                                    {tableHeaders.map((header) => (
-                                        <th
-                                            key={header}
-                                            className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium"
-                                            style={{
-                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                            }}
-                                        >
-                                            {header}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {displayItems.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={tableHeaders.length + 1}
-                                            className="px-4 py-6 text-center text-sm"
-                                            style={{
-                                                color: isDarkMode ? "#94a3b8" : "#475569",
-                                            }}
-                                        >
-                                            <div className="flex flex-col items-center gap-2">
-                                                <AlertCircle
-                                                    style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
-                                                    className="h-5 w-5"
-                                                />
-                                                <span>No records found.</span>
-                                                {(localSearchTerm || localSelectedRange.from || localSelectedRange.to) && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        onClick={() => {
-                                                            setLocalSearchTerm("");
-                                                            if (onSearchChange) onSearchChange("");
-                                                            handleDateRangeChange({ from: null, to: null });
-                                                        }}
-                                                        className="transition-all"
-                                                        style={{
-                                                            backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
-                                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                            border: `1px solid ${isDarkMode ? "#475569" : "#cbd5e1"}`,
-                                                        }}
-                                                    >
-                                                        Clear all filters
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    displayItems.map((record) => {
-                                        const isExpanded = expandedRows.has(record.id);
-                                        const gcashRef = getGcashReference(record);
-                                        const pickupStatus = getPickupStatus(record);
-
-                                        return (
-                                            <motion.tr
-                                                key={record.id}
-                                                initial={false}
-                                                animate={{ backgroundColor: isExpanded ? (isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(248, 250, 252, 0.9)") : (isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc") }}
-                                                className="border-t transition-all hover:opacity-90"
-                                                style={{
-                                                    borderColor: isDarkMode ? "#334155" : "#e2e8f0",
-                                                }}
-                                            >
-                                                <td className="px-2 py-2">
-                                                    <button
-                                                        onClick={() => toggleRowExpansion(record.id)}
-                                                        className="rounded p-1 transition-all hover:opacity-80"
-                                                        style={{
-                                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                                        }}
-                                                    >
-                                                        {isExpanded ? (
-                                                            <ChevronUp
-                                                                className="h-4 w-4"
-                                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                            />
-                                                        ) : (
-                                                            <ChevronDown
-                                                                className="h-4 w-4"
-                                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                            />
-                                                        )}
-                                                    </button>
-                                                </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2 font-mono text-xs"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.invoiceNumber || "—"}
-                                                </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2 font-medium"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.name}
-                                                </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.service}
-                                                </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.loads}
-                                                </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.detergent}
-                                                </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.fabric}
-                                                </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2 font-semibold"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {formatCurrency(record.price)}
-                                                </td>
-                                                {/* ✅ UPDATED: Display issueDate instead of createdAt for Date column */}
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.issueDate && !isNaN(new Date(record.issueDate))
-                                                        ? format(new Date(record.issueDate), "MMM dd, yyyy")
-                                                        : record.createdAt && !isNaN(new Date(record.createdAt))
-                                                        ? format(new Date(record.createdAt), "MMM dd, yyyy")
-                                                        : "—"}
-                                                </td>
-                                                {/* ✅ ADDED: New Due Date column */}
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.dueDate && !isNaN(new Date(record.dueDate))
-                                                        ? format(new Date(record.dueDate), "MMM dd, yyyy")
-                                                        : "—"}
-                                                </td>
-                                                <td className="whitespace-nowrap px-3 py-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{record.paymentMethod}</span>
-                                                        <StatusBadge
-                                                            status={record.paid ? "Paid" : "Pending"}
-                                                            type="payment"
-                                                            isDarkMode={isDarkMode}
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2 font-mono text-xs"
-                                                    style={{
-                                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                        fontFamily: "monospace",
+                                    <td
+                                        colSpan={tableHeaders.length + 1}
+                                        className="admin-table-td p-12 text-center"
+                                    >
+                                        <div className="flex flex-col items-center gap-3">
+                                            <AlertCircle
+                                                className="h-8 w-8 opacity-20"
+                                            />
+                                            <span className="font-bold opacity-60">No records found.</span>
+                                            {(localSearchTerm || localSelectedRange.from || localSelectedRange.to) && (
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        setLocalSearchTerm("");
+                                                        if (onSearchChange) onSearchChange("");
+                                                        handleDateRangeChange({ from: null, to: null });
                                                     }}
+                                                    className="mt-2"
                                                 >
-                                                    {gcashRef}
-                                                </td>
-                                                <td className="whitespace-nowrap px-3 py-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>{pickupStatus}</span>
-                                                        <StatusBadge
-                                                            status={pickupStatus}
-                                                            type="pickup"
-                                                            isDarkMode={isDarkMode}
+                                                    Clear all filters
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                displayItems.map((record) => {
+                                    const isExpanded = expandedRows.has(record.id);
+                                    const gcashRef = getGcashReference(record);
+                                    const pickupStatus = getPickupStatus(record);
+
+                                    return (
+                                        <React.Fragment key={record.id}>
+                                        <tr
+                                            className="admin-table-tr"
+                                            style={{ backgroundColor: isExpanded ? "var(--admin-table-hover)" : undefined }}
+                                        >
+                                            <td className="admin-table-td">
+                                                <button
+                                                    onClick={() => toggleRowExpansion(record.id)}
+                                                    className="rounded p-1 transition-all hover:bg-slate-200 dark:hover:bg-slate-700"
+                                                >
+                                                    {isExpanded ? (
+                                                        <ChevronUp
+                                                            className="h-4 w-4"
+                                                            style={{ color: "var(--admin-text-primary)" }}
                                                         />
+                                                    ) : (
+                                                        <ChevronDown
+                                                            className="h-4 w-4"
+                                                            style={{ color: "var(--admin-text-primary)" }}
+                                                        />
+                                                    )}
+                                                </button>
+                                            </td>
+                                            <td className="admin-table-td font-mono text-[10px] opacity-70">
+                                                {record.invoiceNumber || "—"}
+                                            </td>
+                                            <td className="admin-table-td font-bold">
+                                                {record.name}
+                                            </td>
+                                            <td className="admin-table-td">
+                                                {record.service}
+                                            </td>
+                                            <td className="admin-table-td">
+                                                {record.loads}
+                                            </td>
+                                            <td className="admin-table-td">
+                                                {record.detergent}
+                                            </td>
+                                            <td className="admin-table-td">
+                                                {record.fabric}
+                                            </td>
+                                            <td className="admin-table-td font-bold text-admin-accent">
+                                                {formatCurrency(record.price)}
+                                            </td>
+                                            <td className="admin-table-td text-[11px] opacity-70">
+                                                {record.issueDate && !isNaN(new Date(record.issueDate))
+                                                    ? format(new Date(record.issueDate), "MMM dd, yyyy")
+                                                    : record.createdAt && !isNaN(new Date(record.createdAt))
+                                                    ? format(new Date(record.createdAt), "MMM dd, yyyy")
+                                                    : "—"}
+                                            </td>
+                                            <td className="admin-table-td text-[11px] opacity-70">
+                                                {record.dueDate && !isNaN(new Date(record.dueDate))
+                                                    ? format(new Date(record.dueDate), "MMM dd, yyyy")
+                                                    : "—"}
+                                            </td>
+                                            <td className="admin-table-td">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[11px]">{record.paymentMethod}</span>
+                                                    <StatusBadge
+                                                        status={record.paid ? "Paid" : "Pending"}
+                                                        type="payment"
+                                                        isDarkMode={isDarkMode}
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td className="admin-table-td font-mono text-[10px] opacity-70">
+                                                {gcashRef}
+                                            </td>
+                                            <td className="admin-table-td">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[11px]">{pickupStatus}</span>
+                                                    <StatusBadge
+                                                        status={pickupStatus}
+                                                        type="pickup"
+                                                        isDarkMode={isDarkMode}
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td className="admin-table-td text-[10px] opacity-60">
+                                                {record.claimDate && !isNaN(new Date(record.claimDate))
+                                                    ? formatTimeNormal(record.claimDate)
+                                                    : "—"}
+                                            </td>
+                                            <td className="admin-table-td">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <button
+                                                            onClick={() => handlePrint(record)}
+                                                            disabled={isPrinting}
+                                                            className="rounded-lg p-2 transition-all hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50"
+                                                        >
+                                                            <Printer
+                                                                className="h-4 w-4"
+                                                                style={{ color: "var(--admin-text-secondary)" }}
+                                                            />
+                                                        </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                        side="top"
+                                                        style={{
+                                                            backgroundColor: "var(--admin-card-bg)",
+                                                            color: "var(--admin-text-primary)",
+                                                            borderColor: "var(--admin-card-border)",
+                                                        }}
+                                                    >
+                                                        {isPrinting ? "Printing..." : "Print Receipt"}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </td>
+                                        </tr>
+                                        {isExpanded && (
+                                            <tr className="transition-all" style={{ backgroundColor: "var(--admin-table-hover)" }}>
+                                                <td colSpan={tableHeaders.length + 1} className="admin-table-td px-4 py-3 border-t-0">
+                                                    <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                                                        <div>
+                                                            <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                                                                Laundry Processed By:
+                                                            </span>
+                                                            <p style={{ color: "var(--admin-text-primary)" }}>
+                                                                {record.laundryProcessedBy || "—"}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                                                                Claim Processed By:
+                                                            </span>
+                                                            <p style={{ color: "var(--admin-text-primary)" }}>
+                                                                {record.claimProcessedBy || "—"}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </td>
-                                                <td
-                                                    className="whitespace-nowrap px-3 py-2 text-xs"
-                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                >
-                                                    {record.claimDate && !isNaN(new Date(record.claimDate))
-                                                        ? formatTimeNormal(record.claimDate)
-                                                        : "—"}
-                                                </td>
-                                                <td className="whitespace-nowrap px-3 py-2">
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <button
-                                                                onClick={() => handlePrint(record)}
-                                                                disabled={isPrinting}
-                                                                className="rounded-lg p-2 transition-all hover:opacity-80 disabled:opacity-50"
-                                                                style={{
-                                                                    backgroundColor: isDarkMode
-                                                                        ? "rgba(51, 65, 85, 0.3)"
-                                                                        : "rgba(11, 43, 38, 0.1)",
-                                                                }}
-                                                            >
-                                                                <Printer
-                                                                    className="h-4 w-4"
-                                                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                                                />
-                                                            </button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent
-                                                            side="top"
-                                                            style={{
-                                                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                                            }}
-                                                        >
-                                                            {isPrinting ? "Printing..." : "Print Receipt"}
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </td>
-                                            </motion.tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                            </tr>
+                                        )}
+                                        </React.Fragment>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
                 </div>
 
                 {/* Print Modal */}

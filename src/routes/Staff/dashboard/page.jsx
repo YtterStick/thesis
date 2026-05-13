@@ -46,13 +46,25 @@ const StaffDashboardPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Real-time updates via SSE
-  useSse({
-    'TRANSACTION_UPDATE': () => fetchDashboardData(true),
-    'LAUNDRY_UPDATE': () => fetchDashboardData(true),
-    'STOCK_UPDATE': () => fetchDashboardData(true),
-    'NOTIFICATION_UPDATE': () => fetchDashboardData(true),
-  }, user?.id);
+  // Real-time updates via internal broadcast (to avoid duplicate SSE connections)
+  useEffect(() => {
+    const handleUpdate = () => {
+      console.log("🚀 Staff Dashboard: Live update received via broadcast!");
+      fetchDashboardData(true);
+    };
+
+    window.addEventListener('STARWASH_TRANSACTION_UPDATE', handleUpdate);
+    window.addEventListener('STARWASH_LAUNDRY_UPDATE', handleUpdate);
+    window.addEventListener('STARWASH_STOCK_UPDATE', handleUpdate);
+    window.addEventListener('STARWASH_NOTIFICATION_UPDATE', handleUpdate);
+
+    return () => {
+      window.removeEventListener('STARWASH_TRANSACTION_UPDATE', handleUpdate);
+      window.removeEventListener('STARWASH_LAUNDRY_UPDATE', handleUpdate);
+      window.removeEventListener('STARWASH_STOCK_UPDATE', handleUpdate);
+      window.removeEventListener('STARWASH_NOTIFICATION_UPDATE', handleUpdate);
+    };
+  }, []);
   
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 

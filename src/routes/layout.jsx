@@ -60,13 +60,13 @@ const Layout = ({ children }) => {
   return (
     <div className="min-h-screen transition-colors duration-300"
          style={{ 
-           backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-           color: isDarkMode ? '#f1f5f9' : '#0f172a'
+           backgroundColor: 'var(--admin-bg)',
+           color: 'var(--admin-text-primary)'
          }}>
       <div
         className={cn(
           "pointer-events-none fixed inset-0 -z-10 bg-black opacity-0 transition-opacity",
-          !collapsed && "max-md:pointer-events-auto max-md:z-40 max-md:opacity-30" // Changed z-50 to z-40 to be lower than modals
+          !collapsed && "max-md:pointer-events-auto max-md:z-40 max-md:opacity-30"
         )}
       />
 
@@ -82,7 +82,7 @@ const Layout = ({ children }) => {
       {/* Main layout wrapper */}
       <div
         className={cn(
-          "transition-[margin] duration-300",
+          "transition-[margin] duration-300 min-h-screen",
           collapsed ? "md:ml-[70px]" : "md:ml-[240px]"
         )}
       >
@@ -93,10 +93,12 @@ const Layout = ({ children }) => {
           onSearchResultClick={handleSearchResultClick}
         />
 
-        {/* Page content - REMOVED overflow and fixed height */}
-        <div className="min-h-[calc(100vh-60px)] p-6">
-          {children}
-        </div>
+        {/* Page content */}
+        <main className="p-6">
+          <div className="mx-auto max-w-[1600px]">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

@@ -83,15 +83,23 @@ function ServiceTrackingContent() {
     const location = useLocation();
     const { user } = useAuth();
 
-    // Real-time updates via SSE
-    useSse({
-        'LAUNDRY_UPDATE': () => {
-            console.log("🚀 Real-time laundry update received!");
+    // Real-time updates via internal broadcast (to avoid duplicate SSE connections)
+    useEffect(() => {
+        const handleUpdate = () => {
+            console.log("🚀 Staff Tracking: Update received via broadcast!");
             fetchData(true);
-        },
-        'NOTIFICATION_UPDATE': () => fetchData(true),
-        'TRANSACTION_UPDATE': () => fetchData(true),
-    }, user?.id);
+        };
+
+        window.addEventListener('STARWASH_LAUNDRY_UPDATE', handleUpdate);
+        window.addEventListener('STARWASH_NOTIFICATION_UPDATE', handleUpdate);
+        window.addEventListener('STARWASH_TRANSACTION_UPDATE', handleUpdate);
+
+        return () => {
+            window.removeEventListener('STARWASH_LAUNDRY_UPDATE', handleUpdate);
+            window.removeEventListener('STARWASH_NOTIFICATION_UPDATE', handleUpdate);
+            window.removeEventListener('STARWASH_TRANSACTION_UPDATE', handleUpdate);
+        };
+    }, []);
 
     const [jobs, setJobs] = useState(globalCache.jobs || []);
     const [machines, setMachines] = useState(globalCache.machines || []);

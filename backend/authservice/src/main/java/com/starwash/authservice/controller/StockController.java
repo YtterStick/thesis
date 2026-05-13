@@ -2,6 +2,7 @@ package com.starwash.authservice.controller;
 
 import com.starwash.authservice.dto.StockItemDto;
 import com.starwash.authservice.model.StockItem;
+import com.starwash.authservice.model.StockLog;
 import com.starwash.authservice.security.JwtUtil;
 import com.starwash.authservice.service.StockService;
 import org.springframework.http.ResponseEntity;
@@ -120,5 +121,31 @@ public class StockController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error restocking item: " + e.getMessage());
         }
+    }
+
+    @PutMapping("/stock/{id}/deduct")
+    public ResponseEntity<?> deductStock(@PathVariable String id,
+                                         @RequestParam int amount,
+                                         @RequestParam(required = false) String notes,
+                                         @RequestHeader("Authorization") String authHeader) {
+        try {
+            if (amount <= 0) {
+                return ResponseEntity.badRequest().body("Invalid deduction amount");
+            }
+
+            String token = authHeader.substring(7);
+            String userId = jwtUtil.getUsername(token);
+
+            Optional<StockItem> item = stockService.deductStock(id, amount, userId, notes);
+            return item.map(ResponseEntity::ok)
+                       .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error deducting stock: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/stock/{id}/history")
+    public List<StockLog> getStockHistory(@PathVariable String id) {
+        return stockService.getItemHistory(id);
     }
 }

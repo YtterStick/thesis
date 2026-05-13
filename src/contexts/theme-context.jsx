@@ -32,7 +32,7 @@ export function ThemeProvider({
     }
 
     root.classList.add(resolvedTheme);
-  }, [theme]);
+  }, [theme, storageKey]);
 
   const setTheme = (newTheme) => {
     localStorage.setItem(storageKey, newTheme);

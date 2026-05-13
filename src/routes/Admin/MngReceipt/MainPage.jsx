@@ -82,16 +82,17 @@ const MainPage = () => {
       </div>
 
       {/* 📄 Receipt Table */}
-      <div className="w-full overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+      <div className="overflow-x-auto rounded-xl border shadow-sm"
+           style={{ borderColor: "var(--admin-card-border)" }}>
+        <table className="admin-table">
+          <thead className="admin-table-thead">
             <tr>
-              <th className="p-2">Receipt #</th>
-              <th className="p-2">Customer</th>
-              <th className="p-2">Date</th>
-              <th className="p-2">Total</th>
-              <th className="p-2">Status</th>
-              <th className="p-2">Actions</th>
+              <th className="admin-table-th">Receipt #</th>
+              <th className="admin-table-th">Customer</th>
+              <th className="admin-table-th">Date</th>
+              <th className="admin-table-th">Total</th>
+              <th className="admin-table-th">Status</th>
+              <th className="admin-table-th text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -100,37 +101,37 @@ const MainPage = () => {
               return (
                 <tr
                   key={r.id}
-                  className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="admin-table-tr"
                 >
-                  <td className="p-2 text-slate-800 dark:text-slate-100 font-semibold">{r.id}</td>
-                  <td className="p-2 text-slate-600 dark:text-slate-300">{r.customer}</td>
-                  <td className="p-2 text-slate-600 dark:text-slate-300">{r.date}</td>
-                  <td className="p-2 text-blue-600 dark:text-blue-300 font-bold">
+                  <td className="admin-table-td font-semibold">{r.id}</td>
+                  <td className="admin-table-td">{r.customer}</td>
+                  <td className="admin-table-td opacity-70">{r.date}</td>
+                  <td className="admin-table-td font-bold" style={{ color: "var(--admin-accent)" }}>
                     ₱{r.total.toFixed(2)}
                   </td>
-                  <td className="p-2">
+                  <td className="admin-table-td">
                     <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.class}`}
+                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${badge.class}`}
                     >
                       {badge.text}
                     </span>
                   </td>
-                  <td className="p-2">
-                    <div className="flex justify-start gap-1">
+                  <td className="admin-table-td">
+                    <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handlePreview(r)}
-                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                        className="hover:bg-admin-table-hover"
                       >
-                        <Eye size={16} className="text-slate-600 dark:text-slate-300" />
+                        <Eye size={16} style={{ color: "var(--admin-text-secondary)" }} />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                        className="hover:bg-admin-table-hover"
                       >
-                        <Printer size={16} className="text-blue-600 dark:text-blue-300" />
+                        <Printer size={16} style={{ color: "var(--admin-accent)" }} />
                       </Button>
                     </div>
                   </td>

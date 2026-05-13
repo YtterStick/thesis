@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/contexts/auth-context";
-import { PackageX, PhilippinePeso, Package, Clock8, LineChart, AlertCircle, TrendingUp, Users } from "lucide-react";
+import { PackageX, PhilippinePeso, Package, Clock8, LineChart, AlertCircle, TrendingUp, Users, Monitor } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api-config";
@@ -11,7 +11,8 @@ import { useSse } from "@/hooks/use-sse";
 const CACHE_DURATION = 4 * 60 * 60 * 1000;
 
 const initializeCache = () => {
-    try {
+    try {gaming.com
+
         const stored = localStorage.getItem("dashboardCache");
         if (stored) {
             const parsed = JSON.parse(stored);
@@ -379,19 +380,25 @@ export default function AdminDashboardPage() {
         }
     }, [isAuthenticated, isAdmin, dashboardData.todayTransactions?.length, fetchDashboardData]);
  
-     // Real-time updates via SSE
-     useSse({
-         'TRANSACTION_UPDATE': () => {
-             console.log("🚀 Real-time transaction update received!");
-             fetchDashboardData(true);
-         },
-         'LAUNDRY_UPDATE': () => {
-             console.log("🚀 Real-time laundry update received!");
-             fetchDashboardData(true);
-         },
-         'STOCK_UPDATE': () => fetchDashboardData(true),
-         'NOTIFICATION_UPDATE': () => fetchDashboardData(true),
-     }, user?.id);
+     // Real-time updates via internal broadcast (to avoid duplicate SSE connections)
+     useEffect(() => {
+         const handleTransactionUpdate = () => fetchDashboardData(true);
+         const handleLaundryUpdate = () => fetchDashboardData(true);
+         const handleStockUpdate = () => fetchDashboardData(true);
+         const handleNotificationUpdate = () => fetchDashboardData(true);
+
+         window.addEventListener('STARWASH_TRANSACTION_UPDATE', handleTransactionUpdate);
+         window.addEventListener('STARWASH_LAUNDRY_UPDATE', handleLaundryUpdate);
+         window.addEventListener('STARWASH_STOCK_UPDATE', handleStockUpdate);
+         window.addEventListener('STARWASH_NOTIFICATION_UPDATE', handleNotificationUpdate);
+
+         return () => {
+             window.removeEventListener('STARWASH_TRANSACTION_UPDATE', handleTransactionUpdate);
+             window.removeEventListener('STARWASH_LAUNDRY_UPDATE', handleLaundryUpdate);
+             window.removeEventListener('STARWASH_STOCK_UPDATE', handleStockUpdate);
+             window.removeEventListener('STARWASH_NOTIFICATION_UPDATE', handleNotificationUpdate);
+         };
+     }, [fetchDashboardData]);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -464,8 +471,8 @@ export default function AdminDashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-xl border-2 p-5 transition-all"
             style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                backgroundColor: "var(--admin-card-bg)",
+                borderColor: "var(--admin-card-border)",
             }}
         >
             <div className="mb-4 flex items-center gap-x-3">
@@ -506,8 +513,8 @@ export default function AdminDashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="col-span-1 rounded-xl border-2 p-5 transition-all md:col-span-2 lg:col-span-4"
             style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                backgroundColor: "var(--admin-card-bg)",
+                borderColor: "var(--admin-card-border)",
             }}
         >
             <div className="mb-5">
@@ -539,8 +546,8 @@ export default function AdminDashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="col-span-1 rounded-xl border-2 p-5 transition-all md:col-span-2 lg:col-span-3"
             style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                backgroundColor: "var(--admin-card-bg)",
+                borderColor: "var(--admin-card-border)",
             }}
         >
             <div className="mb-5">
@@ -612,7 +619,7 @@ export default function AdminDashboardPage() {
                     />
                     <p
                         className="text-xl font-bold"
-                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                        style={{ color: "var(--admin-text-primary)" }}
                     >
                         Access Denied
                     </p>
@@ -622,8 +629,8 @@ export default function AdminDashboardPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex h-52 items-center justify-center rounded-xl border-2 p-6"
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
                     }}
                 >
                     <div className="text-center">
@@ -633,7 +640,7 @@ export default function AdminDashboardPage() {
                         />
                         <p
                             className="mb-1 text-base font-semibold"
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                            style={{ color: "var(--admin-text-primary)" }}
                         >
                             Insufficient Privileges
                         </p>
@@ -719,8 +726,8 @@ export default function AdminDashboardPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex h-52 items-center justify-center rounded-xl border-2 p-6"
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
                     }}
                 >
                     <div className="text-center">
@@ -786,24 +793,24 @@ export default function AdminDashboardPage() {
             >
                 <motion.div
                     whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="rounded-lg p-2"
+                    className="rounded-lg p-2 shadow-sm"
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#1e293b",
-                        color: isDarkMode ? "#1e293b" : "#1e293b",
+                        backgroundColor: "var(--admin-accent)",
+                        color: "var(--admin-card-bg)",
                     }}
                 >
-                    <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
+                    <LineChart size={22} />
                 </motion.div>
                 <div>
                     <p
                         className="text-xl font-bold"
-                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                        style={{ color: "var(--admin-text-primary)" }}
                     >
                         Admin Dashboard
                     </p>
                     <p
                         className="text-sm"
-                        style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                        style={{ color: "var(--admin-text-secondary)" }}
                     >
                         Real-time business overview and analytics
                     </p>
@@ -820,12 +827,12 @@ export default function AdminDashboardPage() {
                         whileHover={{
                             scale: 1.03,
                             y: -2,
-                            transition: { duration: 0.2 },
+                            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
                         }}
-                        className="cursor-pointer rounded-xl border-2 p-5 transition-all"
+                        className="cursor-pointer rounded-xl border p-5 transition-all shadow-sm"
                         style={{
-                            backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                            backgroundColor: "var(--admin-card-bg)",
+                            borderColor: "var(--admin-card-border)",
                         }}
                     >
                         <div className="mb-4 flex items-center justify-between">
@@ -847,7 +854,7 @@ export default function AdminDashboardPage() {
                             >
                                 <p
                                     className="text-2xl font-bold"
-                                    style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                    style={{ color: "var(--admin-text-primary)" }}
                                 >
                                     {value}
                                 </p>
@@ -857,13 +864,13 @@ export default function AdminDashboardPage() {
                         <div>
                             <h3
                                 className="mb-2 text-lg font-semibold"
-                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                style={{ color: "var(--admin-text-primary)" }}
                             >
                                 {title}
                             </h3>
                             <p
                                 className="text-sm"
-                                style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                style={{ color: "var(--admin-text-secondary)" }}
                             >
                                 {description}
                             </p>
@@ -877,24 +884,24 @@ export default function AdminDashboardPage() {
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 }}
-                    whileHover={{ scale: 1.01 }}
-                    className="col-span-1 rounded-xl border-2 p-5 transition-all md:col-span-2 lg:col-span-4"
+                    whileHover={{ scale: 1.005 }}
+                    className="col-span-1 rounded-xl border p-5 transition-all shadow-sm md:col-span-2 lg:col-span-4"
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
                     }}
                 >
                     <div className="mb-5 flex items-center justify-between">
                         <div>
                             <p
                                 className="mb-1 text-lg font-bold"
-                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                style={{ color: "var(--admin-text-primary)" }}
                             >
                                 Revenue Overview
                             </p>
                             <span
                                 className="text-sm"
-                                style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                style={{ color: "var(--admin-text-secondary)" }}
                             >
                                 {new Date().getFullYear()} Monthly Revenue
                             </span>
@@ -903,11 +910,11 @@ export default function AdminDashboardPage() {
                             whileHover={{ scale: 1.1 }}
                             className="rounded-lg p-2"
                             style={{
-                                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
-                                color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
+                                backgroundColor: "var(--admin-accent)",
+                                color: "var(--admin-card-bg)",
                             }}
                         >
-                            <TrendingUp size={18} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
+                            <TrendingUp size={18} />
                         </motion.div>
                     </div>
 
@@ -949,13 +956,14 @@ export default function AdminDashboardPage() {
                                         "Revenue",
                                     ]}
                                     contentStyle={{
-                                        backgroundColor: isDarkMode ? "#0f172a" : "#FFFFFF",
-                                        border: `2px solid ${isDarkMode ? "#334155" : "#cbd5e1"}`,
-                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                        backgroundColor: "var(--admin-card-bg)",
+                                        border: `1px solid var(--admin-card-border)`,
+                                        color: "var(--admin-text-primary)",
                                         fontSize: "0.8rem",
                                         fontWeight: "500",
                                         borderRadius: "0.5rem",
                                         padding: "0.6rem",
+                                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                                     }}
                                     itemStyle={{
                                         color: "#0891B2",
@@ -964,14 +972,14 @@ export default function AdminDashboardPage() {
                                 <XAxis
                                     dataKey="name"
                                     strokeWidth={0}
-                                    stroke={isDarkMode ? "#cbd5e1" : "#475569"}
+                                    stroke="var(--admin-text-secondary)"
                                     tickMargin={6}
                                     tick={{ fontSize: 12 }}
                                 />
                                 <YAxis
                                     dataKey="total"
                                     strokeWidth={0}
-                                    stroke={isDarkMode ? "#cbd5e1" : "#475569"}
+                                    stroke="var(--admin-text-secondary)"
                                     tickFormatter={(value) => `₱${value > 1000 ? `${(value / 1000).toFixed(0)}k` : value}`}
                                     tickMargin={6}
                                     tick={{ fontSize: 12 }}
@@ -994,37 +1002,37 @@ export default function AdminDashboardPage() {
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.5 }}
-                    whileHover={{ scale: 1.01 }}
-                    className="col-span-1 rounded-xl border-2 p-5 transition-all md:col-span-2 lg:col-span-3"
+                    whileHover={{ scale: 1.005 }}
+                    className="col-span-1 rounded-xl border p-5 transition-all shadow-sm md:col-span-2 lg:col-span-3"
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
                     }}
                 >
                     <div className="mb-5 flex items-center justify-between">
                         <div>
                             <p
                                 className="mb-1 text-lg font-bold"
-                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                style={{ color: "var(--admin-text-primary)" }}
                             >
-                                Today's Transactions
+                                Machine Status
                             </p>
                             <span
                                 className="text-sm"
-                                style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                style={{ color: "var(--admin-text-secondary)" }}
                             >
-                                {(displayData.todayTransactions?.length || 0)} transactions today
+                                Currently active equipment
                             </span>
                         </div>
                         <motion.div
                             whileHover={{ scale: 1.1 }}
                             className="rounded-lg p-2"
                             style={{
-                                backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
-                                color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
+                                backgroundColor: "var(--admin-accent)",
+                                color: "var(--admin-card-bg)",
                             }}
                         >
-                            <Users size={18} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
+                            <Monitor size={18} />
                         </motion.div>
                     </div>
 

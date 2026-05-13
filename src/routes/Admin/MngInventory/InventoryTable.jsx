@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Layers,
   XCircle,
+  History,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -47,7 +48,7 @@ const getStatusIcon = (quantity, low, adequate) => {
   if (quantity <= low) {
     return {
       icon: <AlertTriangle className="h-4 w-4" />,
-      label: "Low Stock",
+      label: "Low",
       color: "text-orange-500",
       labelColor: "text-orange-600",
       darkLabelColor: "text-orange-400",
@@ -60,7 +61,7 @@ const getStatusIcon = (quantity, low, adequate) => {
   if (quantity <= adequate) {
     return {
       icon: <Clock className="h-4 w-4" />,
-      label: "Adequate Stock",
+      label: "Normal",
       color: "text-blue-500",
       labelColor: "text-blue-600",
       darkLabelColor: "text-blue-400",
@@ -72,7 +73,7 @@ const getStatusIcon = (quantity, low, adequate) => {
   }
   return {
     icon: <Layers className="h-4 w-4" />,
-    label: "Full Stock",
+    label: "Full",
     color: "text-green-600",
     labelColor: "text-green-600",
     darkLabelColor: "text-green-400",
@@ -83,7 +84,7 @@ const getStatusIcon = (quantity, low, adequate) => {
   };
 };
 
-const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
+const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest, onViewHistory }) => {
   const { theme } = useTheme();
   const [searchTerm, setSearchTerm] = useState("");
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -153,22 +154,20 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-lg border-2"
+        <div className="overflow-x-auto rounded-lg border shadow-sm"
              style={{
-               borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+               borderColor: "var(--admin-card-border)",
              }}>
-          <table className="min-w-full text-left text-sm">
-            <thead style={{
-              backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
-            }}>
+          <table className="admin-table">
+            <thead className="admin-table-thead">
               <tr>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Supply Item</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Quantity</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Status</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Price</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Last Restock</th>
-                <th className="p-3 text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Restock Qty</th>
-                <th className="p-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Action</th>
+                <th className="admin-table-th">Supply Item</th>
+                <th className="admin-table-th">Quantity</th>
+                <th className="admin-table-th text-center">Status</th>
+                <th className="admin-table-th">Price</th>
+                <th className="admin-table-th">Last Restock</th>
+                <th className="admin-table-th">Restock Qty</th>
+                <th className="admin-table-th text-right">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -187,60 +186,44 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: index * 0.1 }}
-                      className="border-t transition-colors hover:opacity-90"
-                      style={{
-                        borderColor: isDarkMode ? "#334155" : "#e2e8f0",
-                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
-                      }}
+                      className="admin-table-tr"
                     >
-                      <td className="p-3">
+                      <td className="admin-table-td">
                         <div className="flex items-center gap-3">
                           <div
                             className="rounded-lg p-2"
                             style={{
-                              backgroundColor: isDarkMode
-                                ? "rgba(51, 65, 85, 0.3)"
-                                : "rgba(11, 43, 38, 0.1)",
+                              backgroundColor: "var(--admin-table-hover)",
                             }}
                           >
                             <Package
                               className="h-4 w-4"
-                              style={{ color: isDarkMode ? "#3DD9B6" : "#0f172a" }}
+                              style={{ color: "var(--admin-accent)" }}
                             />
                           </div>
                           <div>
-                            <p className="font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                            <p className="font-bold">
                               {item.name}
                             </p>
                             {item.category && (
-                              <p className="text-xs" style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}>
+                              <p className="text-[10px] uppercase tracking-wider opacity-60">
                                 {item.category}
                               </p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="p-3">
+                      <td className="admin-table-td">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                          <span className="font-bold">
                             {item.quantity}
                           </span>
-                          <Badge
-                            variant="outline"
-                            className="rounded-lg border-2 capitalize"
-                            style={{
-                              borderColor: isDarkMode ? "#475569" : "#cbd5e1",
-                              color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                              backgroundColor: isDarkMode
-                                ? "rgba(51, 65, 85, 0.3)"
-                                : "rgba(243, 237, 227, 0.9)",
-                            }}
-                          >
+                          <span className="text-[10px] font-medium uppercase tracking-widest opacity-60">
                             {item.unit || "units"}
-                          </Badge>
+                          </span>
                         </div>
                       </td>
-                      <td className="p-3">
+                      <td className="admin-table-td">
                         <div className="flex justify-center">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -254,84 +237,80 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                                 <span className={isDarkMode ? status.color : status.color}>
                                   {status.icon}
                                 </span>
-                                <span className={isDarkMode ? status.darkLabelColor : status.labelColor}>
+                                <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? status.darkLabelColor : status.labelColor}`}>
                                   {status.label}
                                 </span>
                               </Badge>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
+                            <TooltipContent style={{ backgroundColor: "var(--admin-card-bg)", color: "var(--admin-text-primary)", border: "1px solid var(--admin-card-border)" }}>
+                              <p className="text-xs">
                                 Current stock level: {item.quantity} {item.unit}
                               </p>
                               {item.lowStockThreshold && (
-                                <p>Low stock threshold: {item.lowStockThreshold}</p>
+                                <p className="text-[10px] opacity-70">Low stock threshold: {item.lowStockThreshold}</p>
                               )}
                             </TooltipContent>
                           </Tooltip>
                         </div>
                       </td>
-                      <td className="p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                      <td className="admin-table-td font-bold text-admin-accent">
                         ₱{item.price?.toFixed(2) ?? "—"}
                       </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <span style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                            {formatDate(item.lastRestock)}
-                          </span>
-                        </div>
+                      <td className="admin-table-td text-[11px] opacity-70">
+                        {formatDate(item.lastRestock)}
                       </td>
-                      <td className="p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                        {item.lastRestockAmount != null ? `+${item.lastRestockAmount}` : "—"}
+                      <td className="admin-table-td font-medium">
+                        {item.lastRestockAmount != null ? (
+                          <span className="text-green-500">+{item.lastRestockAmount}</span>
+                        ) : "—"}
                       </td>
-                      <td className="p-3 text-right">
+                      <td className="admin-table-td text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <motion.button 
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              className="rounded-md p-1 transition-colors hover:opacity-80"
+                              className="rounded-md p-1 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
                               style={{
-                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                color: "var(--admin-text-secondary)",
                               }}
                             >
-                              <MoreVertical className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
+                              <MoreVertical className="h-4 w-4" />
                             </motion.button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
-                            className="w-36 border-2 transition-all"
+                            className="w-36 border shadow-lg"
                             style={{
-                              backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                              borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                              color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                              backgroundColor: "var(--admin-card-bg)",
+                              borderColor: "var(--admin-card-border)",
+                              color: "var(--admin-text-primary)",
                             }}
                           >
                             <DropdownMenuItem
                               onClick={() => onAddStock(item)}
-                              className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:opacity-80"
-                              style={{
-                                color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                              }}
+                              className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                             >
                               <Plus className="h-4 w-4" />
-                              Add Stock
+                              Stock Control
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onViewHistory(item)}
+                              className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                              <History className="h-4 w-4" />
+                              History
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onEditItem(item)}
-                              className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:opacity-80"
-                              style={{
-                                color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                                }}
+                              className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                             >
                               <Pencil className="h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onDeleteRequest(item)}
-                              className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:opacity-80"
-                              style={{
-                                color: "#EF4444",
-                              }}
+                              className="flex cursor-pointer items-center gap-2 text-xs font-bold text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
                             >
                               <Trash2 className="h-4 w-4" />
                               Delete
@@ -346,15 +325,14 @@ const InventoryTable = ({ items, onAddStock, onEditItem, onDeleteRequest }) => {
                 <tr>
                   <td
                     colSpan={7}
-                    className="p-8 text-center"
-                    style={{ color: isDarkMode ? '#cbd5e1' : '#475569' }}
+                    className="admin-table-td p-12 text-center"
                   >
                     <div className="flex flex-col items-center gap-3">
-                      <Boxes className="h-12 w-12 opacity-50" />
+                      <Boxes className="h-12 w-12 opacity-30" />
                       <div>
-                        <p className="font-medium">No inventory items found</p>
+                        <p className="font-bold">No inventory items found</p>
                         {searchTerm && (
-                          <p className="text-sm">Try adjusting your search terms</p>
+                          <p className="text-xs opacity-60">Try adjusting your search terms</p>
                         )}
                       </div>
                     </div>
@@ -374,6 +352,7 @@ InventoryTable.propTypes = {
   onAddStock: PropTypes.func.isRequired,
   onEditItem: PropTypes.func.isRequired,
   onDeleteRequest: PropTypes.func.isRequired,
+  onViewHistory: PropTypes.func.isRequired,
 };
 
 export default InventoryTable;

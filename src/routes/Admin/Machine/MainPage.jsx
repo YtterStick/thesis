@@ -709,9 +709,7 @@ export default function MachineMainPage() {
 
   if (initialLoad && !machinesCache) {
     return (
-      <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
-        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-      }}>
+      <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -759,9 +757,7 @@ export default function MachineMainPage() {
   }
 
   return (
-    <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
-      backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-    }}>
+    <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

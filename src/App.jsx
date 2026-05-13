@@ -60,45 +60,74 @@ const UnauthorizedPage = () => (
   </div>
 );
 
+import { Outlet } from "react-router-dom";
+
+const AdminThemeProvider = ({ children }) => (
+  <ThemeProvider storageKey="admin-theme" defaultTheme="dark">
+    {children}
+  </ThemeProvider>
+);
+
+const UserThemeProvider = ({ children }) => (
+  <ThemeProvider storageKey="user-theme" defaultTheme="light">
+    {children}
+  </ThemeProvider>
+);
+
 function App() {
   const router = createBrowserRouter([
-    { path: "/", element: <LandingPage /> },
+    { 
+      path: "/", 
+      element: (
+        <UserThemeProvider>
+          <LandingPage />
+        </UserThemeProvider>
+      ) 
+    },
     { path: "/login", element: <LoginPage /> },
     { path: "/unauthorized", element: <UnauthorizedPage /> },
 
-    //Admin Routes
-    { path: "/dashboard", element: <AdminRoute element={<DashboardPage />} /> },
-    { path: "/salesreports", element: <AdminRoute element={<SalesReportPage />} /> },
-    { path: "/managetransaction", element: <AdminRoute element={<ManageTransactionPage />} /> },
-    { path: "/managestaff", element: <AdminRoute element={<ManageStaffPage />} /> },
-    { path: "/manageinventory", element: <AdminRoute element={<ManageInventoryPage />} /> },
-    { path: "/managereceipts", element: <AdminRoute element={<ManageReceiptPage />} /> },
-    { path: "/serviceoption", element: <AdminRoute element={<ServiceOptionPage />} /> },
-    { path: "/paymentmethod", element: <AdminRoute element={<PaymentMethodsPage/>} /> },
-    { path: "/documentsettings", element: <AdminRoute element={<DocumentSettingsPage />} /> },
-    { path: "/machines", element: <AdminRoute element={<MachineMainPage />} /> },
-    { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
-    { path: "/audittrail", element: <AdminRoute element={<AuditTrailPage />} /> },
+    // Admin & Staff Routes wrapped in their own ThemeProvider
+    {
+      element: (
+        <AdminThemeProvider>
+          <Outlet />
+        </AdminThemeProvider>
+      ),
+      children: [
+        // Admin Routes
+        { path: "/dashboard", element: <AdminRoute element={<DashboardPage />} /> },
+        { path: "/salesreports", element: <AdminRoute element={<SalesReportPage />} /> },
+        { path: "/managetransaction", element: <AdminRoute element={<ManageTransactionPage />} /> },
+        { path: "/managestaff", element: <AdminRoute element={<ManageStaffPage />} /> },
+        { path: "/manageinventory", element: <AdminRoute element={<ManageInventoryPage />} /> },
+        { path: "/managereceipts", element: <AdminRoute element={<ManageReceiptPage />} /> },
+        { path: "/serviceoption", element: <AdminRoute element={<ServiceOptionPage />} /> },
+        { path: "/paymentmethod", element: <AdminRoute element={<PaymentMethodsPage/>} /> },
+        { path: "/documentsettings", element: <AdminRoute element={<DocumentSettingsPage />} /> },
+        { path: "/machines", element: <AdminRoute element={<MachineMainPage />} /> },
+        { path: "/termssettings", element: <AdminRoute element={<TermsSettingsPage />} /> },
+        { path: "/audittrail", element: <AdminRoute element={<AuditTrailPage />} /> },
 
-    //Staff Routes
-    { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },
-    { path: "/staff/transactions/new", element: <StaffRoute element={<NewTransactionPage />} /> },
-    { path: "/staff/inventory", element: <StaffRoute element={<StaffInventoryPage/> } /> },
-    { path: "/staff/records", element: <StaffRoute element={<StaffRecordsPage />} /> },
-    { path: "/staff/tracking", element: <StaffRoute element={<StaffServiceTracking />} /> },
-    { path: "/staff/claiming", element: <StaffRoute element={<StaffClaimingLaundry/>} /> },
-    { path: "/staff/missing-items", element: <StaffRoute element={<MissingItemsPage/>} /> },
+        // Staff Routes
+        { path: "/staff/dashboard", element: <StaffRoute element={<StaffDashboardPage />} /> },
+        { path: "/staff/transactions/new", element: <StaffRoute element={<NewTransactionPage />} /> },
+        { path: "/staff/inventory", element: <StaffRoute element={<StaffInventoryPage/> } /> },
+        { path: "/staff/records", element: <StaffRoute element={<StaffRecordsPage />} /> },
+        { path: "/staff/tracking", element: <StaffRoute element={<StaffServiceTracking />} /> },
+        { path: "/staff/claiming", element: <StaffRoute element={<StaffClaimingLaundry/>} /> },
+        { path: "/staff/missing-items", element: <StaffRoute element={<MissingItemsPage/>} /> },
+      ]
+    },
 
     { path: "*", element: <NotFoundPage /> },
   ]);
 
   return (
-    <ThemeProvider storageKey="theme">
-      <AuthProvider>
-        <RouterProvider router={router} />
-        <Toaster />
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <RouterProvider router={router} />
+      <Toaster />
+    </AuthProvider>
   );
 }
 

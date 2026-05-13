@@ -64,10 +64,10 @@ const formatManilaTime = (timestamp, options = {}) => {
 
 // Skeleton Loader Components
 const SkeletonCard = ({ isDarkMode }) => (
-  <Card className="rounded-xl border-2 animate-pulse"
+  <Card className="rounded-xl border animate-pulse"
     style={{
-      borderColor: isDarkMode ? "#334155" : "#0B2B26",
-      backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+      borderColor: "var(--admin-card-border)",
+      backgroundColor: "var(--admin-card-bg)",
     }}
   >
     <CardContent className="p-4">
@@ -91,11 +91,9 @@ const SkeletonCard = ({ isDarkMode }) => (
 
 const SkeletonTableRow = ({ isDarkMode, index }) => (
   <TableRow 
+    className="border-b transition-all duration-200"
     style={{ 
-      backgroundColor: index % 2 === 0 
-        ? (isDarkMode ? "rgba(30, 41, 59, 0.5)" : "rgba(243, 237, 227, 0.9)") 
-        : "transparent",
-      borderColor: isDarkMode ? "#334155" : "#E0EAE8",
+      borderColor: "var(--admin-card-border)",
     }}
   >
     <TableCell>
@@ -197,15 +195,6 @@ const AuditTrailPage = () => {
   const [users, setUsers] = useState([{ value: "all", label: "All Users" }]);
   const [knownUsernames, setKnownUsernames] = useState(new Set());
 
-  // Real-time updates via SSE
-  useSse({
-    'AUDIT_UPDATE': () => {
-      console.log("🚀 Real-time audit update received!");
-      fetchAuditLogs();
-    },
-    'NOTIFICATION_UPDATE': () => fetchAuditLogs(),
-  }, user?.id);
-
   const actionTypes = [
     { value: "all", label: "All Actions" },
     { value: "LOGIN", label: "Login" },
@@ -273,6 +262,23 @@ const AuditTrailPage = () => {
     fetchAuditLogs();
   }, [fetchAuditLogs]);
 
+  // Real-time updates via internal broadcast (to avoid duplicate SSE connections)
+  useEffect(() => {
+    const handleAuditUpdate = () => {
+      console.log("🚀 Audit Trail: Update received via broadcast!");
+      fetchAuditLogs();
+    };
+    const handleNotifUpdate = () => fetchAuditLogs();
+
+    window.addEventListener('STARWASH_AUDIT_UPDATE', handleAuditUpdate);
+    window.addEventListener('STARWASH_NOTIFICATION_UPDATE', handleNotifUpdate);
+
+    return () => {
+      window.removeEventListener('STARWASH_AUDIT_UPDATE', handleAuditUpdate);
+      window.removeEventListener('STARWASH_NOTIFICATION_UPDATE', handleNotifUpdate);
+    };
+  }, [fetchAuditLogs]);
+
   // Helper function to check if a log entry belongs to an unknown user
   const isUnknownUser = (log) => {
     if (!log.username) return true;
@@ -330,11 +336,9 @@ const AuditTrailPage = () => {
   const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages - 1));
 
   return (
-    <div className="space-y-5 px-6 pb-5 pt-4 overflow-visible"
-      style={{
-        backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-      }}
-    >
+    <div className="space-y-6 px-6 pb-5 pt-4 overflow-visible" style={{
+      backgroundColor: "var(--admin-bg)",
+    }}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -610,84 +614,76 @@ const AuditTrailPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border-2 overflow-hidden"
+              <div className="overflow-x-auto rounded-xl border shadow-sm"
                 style={{
-                  borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                  borderColor: "var(--admin-card-border)",
                 }}
               >
-                <Table>
-                  <TableHeader>
-                    <TableRow style={{ 
-                      backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
-                    }}>
-                      <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>Timestamp</TableHead>
-                      <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>User</TableHead>
-                      <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>Action</TableHead>
-                      <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>Role</TableHead>
-                      <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>Description</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <table className="admin-table">
+                  <thead className="admin-table-thead">
+                    <tr>
+                      <th className="admin-table-th">Timestamp</th>
+                      <th className="admin-table-th">User</th>
+                      <th className="admin-table-th">Action</th>
+                      <th className="admin-table-th">Role</th>
+                      <th className="admin-table-th">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {filteredLogs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
-                          <div className="flex flex-col items-center justify-center">
-                            <History size={48} style={{ color: isDarkMode ? '#cbd5e1' : '#6B7280' }} className="mb-2" />
-                            <p style={{ color: isDarkMode ? '#cbd5e1' : '#6B7280' }}>
+                      <tr>
+                        <td colSpan={5} className="admin-table-td p-12 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <History size={48} className="opacity-20" />
+                            <p className="font-bold opacity-60">
                               {auditLogs.length === 0 ? 'No audit logs available' : 'No logs match your filters'}
                             </p>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ) : (
                       filteredLogs.map((log, index) => (
-                        <TableRow 
+                        <tr 
                           key={log.id || index} 
-                          style={{ 
-                            backgroundColor: index % 2 === 0 
-                              ? (isDarkMode ? "rgba(30, 41, 59, 0.5)" : "rgba(243, 237, 227, 0.9)") 
-                              : "transparent",
-                            borderColor: isDarkMode ? "#334155" : "#E0EAE8",
-                          }}
+                          className="admin-table-tr"
                         >
-                          <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#374151' }}>
+                          <td className="admin-table-td text-[11px] opacity-70">
                             {formatTimestamp(log.timestamp)}
-                          </TableCell>
-                          <TableCell>
+                          </td>
+                          <td className="admin-table-td">
                             <div className="flex items-center gap-2">
-                              <User size={14} style={{ color: isDarkMode ? '#cbd5e1' : '#6B7280' }} />
-                              <span style={{ color: isDarkMode ? '#f1f5f9' : '#374151' }}>
+                              <User size={14} className="opacity-50" />
+                              <span className="font-medium">
                                 {log.username || 'Unknown'}
                                 {isUnknownUser(log) && (
-                                  <Badge variant="outline" className="ml-2 text-xs">
+                                  <Badge variant="outline" className="ml-2 text-[10px] uppercase font-bold opacity-50">
                                     Unknown
                                   </Badge>
                                 )}
                               </span>
                             </div>
-                          </TableCell>
-                          <TableCell>
+                          </td>
+                          <td className="admin-table-td">
                             <Badge 
-                              className="transition-all hover:opacity-80"
+                              className="border-none font-bold text-[10px] uppercase tracking-wider text-white"
                               style={{ 
                                 backgroundColor: getActionColor(log.action),
-                                color: 'white'
                               }}
                             >
                               {log.action || 'UNKNOWN'}
                             </Badge>
-                          </TableCell>
-                          <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#374151' }}>
+                          </td>
+                          <td className="admin-table-td font-medium opacity-70">
                             {log.entityType || 'System'}
-                          </TableCell>
-                          <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#374151' }}>
+                          </td>
+                          <td className="admin-table-td text-xs leading-relaxed opacity-80">
                             {log.description || 'No description'}
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       ))
                     )}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
 
               {/* Pagination Controls */}

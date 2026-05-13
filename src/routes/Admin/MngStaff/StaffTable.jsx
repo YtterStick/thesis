@@ -1,53 +1,30 @@
 import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
-import { Pencil, Trash2, Search } from "lucide-react";
+import { Pencil, Trash2, Search, MoreVertical, Users } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/utils/cn";
 import EditStaffForm from "./EditStaffForm";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
-const ITEMS_PER_PAGE = 4;
+const ITEMS_PER_PAGE = 8;
 
 const StaffTable = ({ staff, onStatusChange, onStaffUpdate, onDeleteRequest }) => {
   const { theme } = useTheme();
-  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loadingId, setLoadingId] = useState(null);
   const [editingStaff, setEditingStaff] = useState(null);
   const [sortField, setSortField] = useState("username");
   const [sortOrder, setSortOrder] = useState("asc");
-  const { toast } = useToast();
+  const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-  if (!staff || staff.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border-2 p-6 transition-all"
-        style={{
-          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-          borderColor: isDarkMode ? "#334155" : "#0B2B26",
-        }}
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-            Account List
-          </p>
-          <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} isDarkMode={isDarkMode} />
-          <div className="pt-6 text-center" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
-            No accounts found
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  // Filter and sort staff
-  const filtered = staff
+  // Filter and sort
+  const filtered = (staff || [])
     .filter((acc) =>
       [acc.username, acc.contact, acc.role]
         .join(" ")
@@ -55,21 +32,10 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate, onDeleteRequest }) =
         .includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
-
-      if (sortField === "contact") {
-        aValue = aValue?.replace(/^\+63/, "0") || "";
-        bValue = bValue?.replace(/^\+63/, "0") || "";
-      }
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortOrder === "asc" 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+      const aVal = (a[sortField] || "").toString().toLowerCase();
+      const bVal = (b[sortField] || "").toString().toLowerCase();
+      if (sortOrder === "asc") return aVal > bVal ? 1 : -1;
+      return aVal < bVal ? 1 : -1;
     });
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -92,227 +58,185 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate, onDeleteRequest }) =
     setCurrentPage(1);
   };
 
-  // Updated handleDelete to use the confirmation modal
-  const handleDelete = (account) => {
-    if (onDeleteRequest) {
-      onDeleteRequest(account);
-    } else {
-      // Fallback to direct deletion if no modal handler provided
-      handleDirectDelete(account.id);
-    }
+  const SortIndicator = ({ field }) => {
+    if (sortField !== field) return null;
+    return (
+      <span className="ml-1" style={{ color: "var(--admin-accent)" }}>
+        {sortOrder === "asc" ? "↑" : "↓"}
+      </span>
+    );
   };
-
-  // Fallback function for direct deletion (without modal)
-  const handleDirectDelete = async (id) => {
-    setLoadingId(id);
-    try {
-      await onStatusChange(id, "Inactive");
-      toast({
-        title: "Success",
-        description: "Account disabled successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingId(null);
-    }
-  };
-
-  const SortableHeader = ({ children, field }) => (
-    <th 
-      className="p-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors hover:opacity-80"
-      style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}
-      onClick={() => handleSort(field)}
-    >
-      <div className="flex items-center">
-        {children}
-        {sortField === field && (
-          <span className="ml-1" style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>
-            {sortOrder === "asc" ? "↑" : "↓"}
-          </span>
-        )}
-      </div>
-    </th>
-  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border-2 p-5 transition-all"
-      style={{
-        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-        borderColor: isDarkMode ? "#334155" : "#0B2B26",
-      }}
-    >
-      {/* Header with Search */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-lg font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-            Account List
-          </p>
-          <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
-            {filtered.length} accounts found
-          </p>
+    <div>
+      {/* Search Bar */}
+      <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ borderColor: "var(--admin-card-border)" }}>
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            placeholder="Search accounts..."
+            className="w-full pl-9 pr-4 py-2 rounded-lg border text-sm transition-all focus:outline-none focus:ring-2"
+            style={{
+              backgroundColor: "var(--admin-bg)",
+              borderColor: "var(--admin-card-border)",
+              color: "var(--admin-text-primary)",
+            }}
+          />
         </div>
-        <SearchBar 
-          searchTerm={searchTerm} 
-          setSearchTerm={(term) => {
-            setSearchTerm(term);
-            setCurrentPage(1);
-          }}
-          isDarkMode={isDarkMode}
-        />
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--admin-text-secondary)" }}>
+          {filtered.length} accounts
+        </p>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border-2"
-           style={{
-             borderColor: isDarkMode ? "#334155" : "#0B2B26",
-           }}>
-        <table className="min-w-full text-left text-sm">
-          <thead style={{
-            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-          }}>
-            <tr>
-              <SortableHeader field="username">Username</SortableHeader>
-              <SortableHeader field="role">Role</SortableHeader>
-              <SortableHeader field="contact">Contact</SortableHeader>
-              <th className="p-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedStaff.length > 0 ? (
-              paginatedStaff.map((account, index) => (
-                <motion.tr
-                  key={account.id || `${account.contact}-${Math.random()}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="border-t transition-colors hover:opacity-90"
-                  style={{
-                    borderColor: isDarkMode ? "#334155" : "#E0EAE8",
-                    backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#F3EDE3",
-                  }}
-                >
-                  <td className="p-3 font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-                    {account.username}
-                  </td>
-                  <td className="p-3 font-medium uppercase"
-                      style={{ 
-                        color: account.role === "ADMIN" 
-                          ? (isDarkMode ? "#60A5FA" : "#2563EB")
-                          : account.role === "STAFF"
-                          ? (isDarkMode ? "#FB923C" : "#EA580C")
-                          : (isDarkMode ? '#f1f5f9' : '#0B2B26')
-                      }}>
-                    {account.role}
-                  </td>
-                  <td className="p-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-                    {account.contact?.replace(/^\+63/, "0")}
-                  </td>
-                  <td className="p-3 text-right">
-                    <div className="flex justify-end space-x-2">
-                      {/* Edit Button */}
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => setEditingStaff(account)}
-                        className="rounded-lg p-2 transition-colors hover:opacity-80"
-                        style={{
-                          backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }} />
-                      </motion.button>
-                      
-                      {/* Delete Button - Now opens confirmation modal */}
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => handleDelete(account)}
-                        disabled={loadingId === account.id}
-                        className="rounded-lg p-2 transition-colors hover:opacity-80 disabled:opacity-50"
-                        style={{
-                          backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                          color: isDarkMode ? "#FCA5A5" : "#DC2626",
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </motion.button>
+      <table className="admin-table">
+        <thead className="admin-table-thead">
+          <tr>
+            <th className="admin-table-th cursor-pointer" onClick={() => handleSort("username")}>
+              Username <SortIndicator field="username" />
+            </th>
+            <th className="admin-table-th cursor-pointer" onClick={() => handleSort("role")}>
+              Role <SortIndicator field="role" />
+            </th>
+            <th className="admin-table-th cursor-pointer" onClick={() => handleSort("contact")}>
+              Contact <SortIndicator field="contact" />
+            </th>
+            <th className="admin-table-th text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedStaff.length > 0 ? (
+            paginatedStaff.map((account, index) => (
+              <motion.tr
+                key={account.id || index}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.05 }}
+                className="admin-table-tr"
+              >
+                <td className="admin-table-td">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="rounded-lg p-2"
+                      style={{ backgroundColor: "var(--admin-table-hover)" }}
+                    >
+                      <Users className="h-4 w-4" style={{ color: "var(--admin-accent)" }} />
                     </div>
-                  </td>
-                </motion.tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={4}
-                  className="p-8 text-center"
-                  style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
-                >
-                  <div className="flex flex-col items-center gap-3">
-                    <Search className="h-12 w-12 opacity-50" />
-                    <div>
-                      <p className="font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>No matching accounts found</p>
-                      {searchTerm && (
-                        <p className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>Try adjusting your search terms</p>
-                      )}
-                    </div>
+                    <span className="font-bold">{account.username}</span>
                   </div>
                 </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                <td className="admin-table-td">
+                  <span
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm"
+                    style={{
+                      backgroundColor: account.role === "ADMIN"
+                        ? "rgba(96, 165, 250, 0.1)"
+                        : "rgba(251, 146, 60, 0.1)",
+                      color: account.role === "ADMIN" ? "#3b82f6" : "#f59e0b",
+                      borderColor: account.role === "ADMIN"
+                        ? "rgba(96, 165, 250, 0.2)"
+                        : "rgba(251, 146, 60, 0.2)",
+                    }}
+                  >
+                    {account.role}
+                  </span>
+                </td>
+                <td className="admin-table-td text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                  {account.contact?.replace(/^\+63/, "0") || "—"}
+                </td>
+                <td className="admin-table-td text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="rounded-md p-1 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+                        style={{ color: "var(--admin-text-secondary)" }}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </motion.button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-36 border shadow-lg"
+                      style={{
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
+                        color: "var(--admin-text-primary)",
+                      }}
+                    >
+                      <DropdownMenuItem
+                        onClick={() => setEditingStaff(account)}
+                        className="flex cursor-pointer items-center gap-2 text-xs transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onDeleteRequest?.(account)}
+                        className="flex cursor-pointer items-center gap-2 text-xs font-bold text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+              </motion.tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={4} className="admin-table-td p-12 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <Search className="h-12 w-12 opacity-20" />
+                  <div>
+                    <p className="font-bold" style={{ color: "var(--admin-text-primary)" }}>No accounts found</p>
+                    {searchTerm && (
+                      <p className="text-xs" style={{ color: "var(--admin-text-secondary)" }}>Try adjusting your search</p>
+                    )}
+                  </div>
+                </div>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm" style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}>
-            Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} accounts
-          </div>
-          
+        <div className="p-4 border-t flex items-center justify-between" style={{ borderColor: "var(--admin-card-border)" }}>
+          <p className="text-xs" style={{ color: "var(--admin-text-secondary)" }}>
+            Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
+          </p>
           <div className="flex items-center gap-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="rounded-lg px-3 py-1 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-30"
               style={{
-                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                color: isDarkMode ? '#f1f5f9' : '#0B2B26',
+                backgroundColor: "var(--admin-table-hover)",
+                color: "var(--admin-text-primary)",
               }}
             >
               Previous
-            </motion.button>
-
-            <span className="text-sm font-medium px-3" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
-              Page <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{currentPage}</span> of{" "}
-              <span style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}>{totalPages}</span>
+            </button>
+            <span className="text-xs font-medium px-2" style={{ color: "var(--admin-text-secondary)" }}>
+              {currentPage} / {totalPages}
             </span>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="rounded-lg px-3 py-1 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-30"
               style={{
-                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                color: isDarkMode ? '#f1f5f9' : '#0B2B26',
+                backgroundColor: "var(--admin-table-hover)",
+                color: "var(--admin-text-primary)",
               }}
             >
               Next
-            </motion.button>
+            </button>
           </div>
         </div>
       )}
@@ -328,42 +252,15 @@ const StaffTable = ({ staff, onStatusChange, onStaffUpdate, onDeleteRequest }) =
           onClose={() => setEditingStaff(null)}
         />
       )}
-    </motion.div>
+    </div>
   );
 };
-
-const SearchBar = ({ searchTerm, setSearchTerm, isDarkMode }) => (
-  <div className="w-full max-w-xs">
-    <div className="relative">
-      <div className="flex h-[38px] items-center rounded-lg border-2 px-3 transition-all"
-           style={{
-             backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-             borderColor: isDarkMode ? "#334155" : "#0B2B26",
-           }}>
-        <Search
-          size={16}
-          style={{ color: isDarkMode ? '#94a3b8' : '#475569' }}
-        />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by username, contact, role..."
-          className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
-          style={{
-            color: isDarkMode ? '#f1f5f9' : '#0B2B26',
-          }}
-        />
-      </div>
-    </div>
-  </div>
-);
 
 StaffTable.propTypes = {
   staff: PropTypes.array.isRequired,
   onStatusChange: PropTypes.func.isRequired,
   onStaffUpdate: PropTypes.func.isRequired,
-  onDeleteRequest: PropTypes.func, // Optional prop for delete confirmation modal
+  onDeleteRequest: PropTypes.func,
 };
 
 export default StaffTable;

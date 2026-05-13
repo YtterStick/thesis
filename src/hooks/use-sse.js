@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { API_BASE_URL } from '@/lib/api-config';
+import { useEffect, useRef, useState } from 'react';
+import { getApiUrl } from '@/lib/api-config';
 
 /**
  * Custom hook for Server-Sent Events (SSE)
@@ -8,48 +8,90 @@ import { API_BASE_URL } from '@/lib/api-config';
  */
 export const useSse = (eventHandlers = {}, userId = '') => {
     const eventSourceRef = useRef(null);
+    const [retryCount, setRetryCount] = useState(0);
+    const handlersRef = useRef(eventHandlers);
+    
+    // Update ref when handlers change to avoid stale closures
+    useEffect(() => {
+        handlersRef.current = eventHandlers;
+    }, [eventHandlers]);
 
     useEffect(() => {
-        // Construct the SSE URL with /api context path
-        const url = new URL(`${API_BASE_URL}/api/notifications/stream`);
-        if (userId) {
-            url.searchParams.append('userId', userId);
+        if (!userId || userId === 'anonymous') {
+            console.log("🔌 SSE: Waiting for valid User ID to connect...");
+            return;
         }
 
-        console.log(`🔌 Connecting to SSE stream: ${url.toString()}`);
+        let isMounted = true;
+        const baseUrl = getApiUrl('notifications/stream');
+        const url = new URL(baseUrl);
+        url.searchParams.append('userId', userId);
 
-        // Initialize EventSource
-        const eventSource = new EventSource(url.toString());
+        console.log(`🔌 SSE: Connecting for User ${userId}... (Attempt ${retryCount + 1})`);
+
+        // Initialize EventSource with credentials support
+        const eventSource = new EventSource(url.toString(), { withCredentials: true });
         eventSourceRef.current = eventSource;
 
-        // Default handlers
         eventSource.onopen = () => {
-            console.log('✅ SSE Connection opened');
+            console.log("✅ SSE: Connection Established");
+            setRetryCount(0); // Reset retry count on success
+            if (handlersRef.current.onStatus) handlersRef.current.onStatus('connected');
         };
 
-        eventSource.onerror = (error) => {
-            console.error('❌ SSE Connection error:', error);
-            // EventSource automatically tries to reconnect
-        };
+        // Default handlers
+        eventSource.addEventListener('INIT', (event) => {
+            console.log("✅ SSE: System Online:", event.data);
+            if (handlersRef.current.onStatus) handlersRef.current.onStatus('connected');
+        });
 
-        // Custom handlers
-        Object.entries(eventHandlers).forEach(([eventName, handler]) => {
+        eventSource.addEventListener('heartbeat', () => {
+            if (handlersRef.current.onStatus) handlersRef.current.onStatus('connected');
+        });
+
+        // Dynamic event handlers
+        Object.keys(eventHandlers).forEach((eventName) => {
+            if (eventName === 'onStatus') return;
+            
             eventSource.addEventListener(eventName, (event) => {
-                console.log(`📡 SSE Event received: ${eventName}`, event.data);
+                const handler = handlersRef.current[eventName];
                 if (handler && typeof handler === 'function') {
-                    handler(event.data);
+                    let parsedData = event.data;
+                    try {
+                        if (typeof event.data === 'string' && (event.data.startsWith('{') || event.data.startsWith('['))) {
+                            parsedData = JSON.parse(event.data);
+                        }
+                    } catch (e) {
+                        // Not JSON
+                    }
+                    handler(parsedData);
                 }
             });
         });
 
-        // Cleanup on unmount
+        eventSource.onerror = (error) => {
+            console.error("❌ SSE: Connection Error:", error);
+            if (handlersRef.current.onStatus) handlersRef.current.onStatus('error');
+            
+            eventSource.close();
+            
+            if (isMounted) {
+                const timeout = Math.min(1000 * Math.pow(2, retryCount), 15000);
+                console.log(`🔌 SSE: Retrying in ${timeout/1000}s...`);
+                setTimeout(() => {
+                    if (isMounted) setRetryCount(prev => prev + 1);
+                }, timeout);
+            }
+        };
+
         return () => {
+            isMounted = false;
             if (eventSourceRef.current) {
-                console.log('🔌 Closing SSE Connection');
+                console.log("🔌 SSE: Closing connection");
                 eventSourceRef.current.close();
             }
         };
-    }, [userId, JSON.stringify(Object.keys(eventHandlers))]);
+    }, [userId, retryCount, JSON.stringify(Object.keys(eventHandlers))]);
 
     return eventSourceRef.current;
 };

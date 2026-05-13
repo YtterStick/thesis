@@ -1,7 +1,9 @@
 package com.starwash.authservice.service;
 
 import com.starwash.authservice.model.StockItem;
+import com.starwash.authservice.model.StockLog;
 import com.starwash.authservice.repository.StockRepository;
+import com.starwash.authservice.repository.StockLogRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,12 +15,14 @@ import java.util.Optional;
 public class StockService {
 
     private final StockRepository stockRepository;
+    private final StockLogRepository stockLogRepository;
     private final NotificationService notificationService;
 
     private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
 
-    public StockService(StockRepository stockRepository, NotificationService notificationService) {
+    public StockService(StockRepository stockRepository, StockLogRepository stockLogRepository, NotificationService notificationService) {
         this.stockRepository = stockRepository;
+        this.stockLogRepository = stockLogRepository;
         this.notificationService = notificationService;
     }
 
@@ -43,6 +47,20 @@ public class StockService {
 
         StockItem savedItem = stockRepository.save(newItem);
 
+        // Log initial stock
+        StockLog log = new StockLog(
+            savedItem.getId(),
+            savedItem.getName(),
+            "INITIAL",
+            savedItem.getQuantity(),
+            0,
+            savedItem.getQuantity(),
+            savedItem.getUpdatedBy(),
+            "Initial inventory entry"
+        );
+        log.setTimestamp(manilaTime);
+        stockLogRepository.save(log);
+
         notificationService.notifyCurrentStockStatus(savedItem);
         return savedItem;
     }
@@ -52,17 +70,35 @@ public class StockService {
 
         return stockRepository.findById(id).map(existing -> {
             Integer previousQuantity = existing.getQuantity();
+            int newQuantity = updatedItem.getQuantity();
 
             existing.setName(updatedItem.getName());
-            existing.setQuantity(updatedItem.getQuantity());
+            existing.setQuantity(newQuantity);
             existing.setUnit(updatedItem.getUnit());
             existing.setPrice(updatedItem.getPrice());
             existing.setUpdatedBy(updatedItem.getUpdatedBy());
             existing.setLowStockThreshold(updatedItem.getLowStockThreshold());
             existing.setAdequateStockThreshold(updatedItem.getAdequateStockThreshold());
-            existing.setLastUpdated(getCurrentManilaTime());
+            LocalDateTime manilaTime = getCurrentManilaTime();
+            existing.setLastUpdated(manilaTime);
 
             StockItem savedItem = stockRepository.save(existing);
+
+            // Log update if quantity changed
+            if (previousQuantity != newQuantity) {
+                StockLog log = new StockLog(
+                    savedItem.getId(),
+                    savedItem.getName(),
+                    "UPDATE",
+                    newQuantity - previousQuantity,
+                    previousQuantity,
+                    newQuantity,
+                    savedItem.getUpdatedBy(),
+                    "Manual quantity adjustment"
+                );
+                log.setTimestamp(manilaTime);
+                stockLogRepository.save(log);
+            }
 
             notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
             return savedItem;
@@ -90,6 +126,20 @@ public class StockService {
 
             StockItem savedItem = stockRepository.save(item);
 
+            // Log restock
+            StockLog log = new StockLog(
+                savedItem.getId(),
+                savedItem.getName(),
+                "ADD",
+                amount,
+                previousQuantity,
+                savedItem.getQuantity(),
+                updatedBy,
+                "Regular restock"
+            );
+            log.setTimestamp(manilaTime);
+            stockLogRepository.save(log);
+
             // Send ONLY ONE restock notification
             if (amount > 0) {
                 String message = String.format("%s was restocked. Added %d %s. New quantity: %d %s", 
@@ -103,11 +153,44 @@ public class StockService {
                 System.out.println("📢 Restock notification sent: " + message);
             }
 
-            // REMOVED: Don't check stock level status to avoid duplicate notifications
-            // notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
-
             return savedItem;
         });
+    }
+
+    public Optional<StockItem> deductStock(String id, int amount, String updatedBy, String notes) {
+        return stockRepository.findById(id).map(item -> {
+            Integer previousQuantity = item.getQuantity();
+            int newQuantity = Math.max(0, item.getQuantity() - amount);
+            int actualDeduction = previousQuantity - newQuantity;
+
+            item.setQuantity(newQuantity);
+            LocalDateTime manilaTime = getCurrentManilaTime();
+            item.setLastUpdated(manilaTime);
+            item.setUpdatedBy(updatedBy);
+
+            StockItem savedItem = stockRepository.save(item);
+
+            // Log deduction
+            StockLog log = new StockLog(
+                savedItem.getId(),
+                savedItem.getName(),
+                "DEDUCT",
+                -actualDeduction,
+                previousQuantity,
+                newQuantity,
+                updatedBy,
+                notes != null ? notes : "Manual deduction"
+            );
+            log.setTimestamp(manilaTime);
+            stockLogRepository.save(log);
+
+            notificationService.checkAndNotifyStockLevel(savedItem, previousQuantity);
+            return savedItem;
+        });
+    }
+
+    public List<com.starwash.authservice.model.StockLog> getItemHistory(String itemId) {
+        return stockLogRepository.findByItemIdOrderByTimestampDesc(itemId);
     }
 
     private void validateThresholds(StockItem item) {

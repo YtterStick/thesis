@@ -65,17 +65,16 @@ public class AuthController {
 
         // Save user
         User savedUser = userRepository.save(registerRequest);
-        
+
         // Log user registration
         auditService.logActivity(
-            "system",
-            "CREATE",
-            savedUser.getRole().toUpperCase(), // Use actual role (ADMIN/STAFF)
-            savedUser.getId(),
-            "New user registered: " + savedUser.getUsername() + " with role: " + savedUser.getRole(),
-            request
-        );
-        
+                "system",
+                "CREATE",
+                savedUser.getRole().toUpperCase(), // Use actual role (ADMIN/STAFF)
+                savedUser.getId(),
+                "New user registered: " + savedUser.getUsername() + " with role: " + savedUser.getRole(),
+                request);
+
         System.out.println("✅ User registered: " + savedUser.getUsername());
 
         return ResponseEntity.ok(savedUser);
@@ -87,60 +86,56 @@ public class AuthController {
 
         if (foundUser.isPresent()) {
             User user = foundUser.get();
-            
+
             // Check if account is inactive
             if ("Inactive".equals(user.getStatus())) {
                 // Log failed login attempt due to inactive account
                 auditService.logActivity(
-                    loginRequest.getUsername(),
-                    "LOGIN",
-                    user.getRole().toUpperCase(), // Use actual role
-                    user.getId(),
-                    "Failed login attempt - Account is deactivated",
-                    request
-                );
-                
+                        loginRequest.getUsername(),
+                        "LOGIN",
+                        user.getRole().toUpperCase(), // Use actual role
+                        user.getId(),
+                        "Failed login attempt - Account is deactivated",
+                        request);
+
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Collections.singletonMap("error", "Account is deactivated"));
             }
-            
+
             boolean matches = passwordEncoder.matches(loginRequest.getPassword(), user.getPassword());
 
             if (matches) {
                 String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
-                
+
                 // Log successful login
                 auditService.logActivity(
-                    user.getUsername(),
-                    "LOGIN",
-                    user.getRole().toUpperCase(), // Use actual role
-                    user.getId(),
-                    "User logged in successfully",
-                    request
-                );
-                
+                        user.getUsername(),
+                        "LOGIN",
+                        user.getRole().toUpperCase(), // Use actual role
+                        user.getId(),
+                        "User logged in successfully",
+                        request);
+
                 return ResponseEntity.ok(Collections.singletonMap("token", token));
             } else {
                 // Log failed login attempt due to invalid password
                 auditService.logActivity(
-                    loginRequest.getUsername(),
-                    "LOGIN",
-                    "UNKNOWN", // Role unknown for failed login
-                    null,
-                    "Failed login attempt - Invalid password",
-                    request
-                );
+                        loginRequest.getUsername(),
+                        "LOGIN",
+                        "UNKNOWN", // Role unknown for failed login
+                        null,
+                        "Failed login attempt - Invalid password",
+                        request);
             }
         } else {
             // Log failed login attempt due to non-existent user
             auditService.logActivity(
-                loginRequest.getUsername(),
-                "LOGIN",
-                "UNKNOWN", // Role unknown for failed login
-                null,
-                "Failed login attempt - User not found",
-                request
-            );
+                    loginRequest.getUsername(),
+                    "LOGIN",
+                    "UNKNOWN", // Role unknown for failed login
+                    null,
+                    "Failed login attempt - User not found",
+                    request);
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -149,7 +144,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader,
-                                   HttpServletRequest request) {
+            HttpServletRequest request) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", "Missing or invalid token"));
@@ -164,17 +159,16 @@ public class AuthController {
 
         String username = jwtUtil.getUsername(token);
         String role = jwtUtil.getRole(token);
-        
+
         // Log logout activity
         auditService.logActivity(
-            username,
-            "LOGOUT",
-            role.toUpperCase(), // Use role from token
-            null,
-            "User logged out successfully",
-            request
-        );
-        
+                username,
+                "LOGOUT",
+                role.toUpperCase(), // Use role from token
+                null,
+                "User logged out successfully",
+                request);
+
         System.out.println("👋 Logout for: " + username);
 
         return ResponseEntity.ok(Collections.singletonMap("message", "Logged out successfully"));
@@ -197,6 +191,16 @@ public class AuthController {
         String username = jwtUtil.getUsername(token);
         String role = jwtUtil.getRole(token);
 
-        return ResponseEntity.ok(Map.of("user", username, "role", role));
+        Optional<User> user = userRepository.findByUsername(username);
+        if (user.isPresent()) {
+            return ResponseEntity.ok(Map.of(
+                "user", username, 
+                "role", role, 
+                "id", user.get().getId()
+            ));
+        }
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Collections.singletonMap("error", "User not found"));
     }
 }

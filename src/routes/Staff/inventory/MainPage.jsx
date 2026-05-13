@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Boxes, PackageX, Package, Clock, CheckCircle2, AlertTriangle, TrendingUp, Calendar, Layers } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { api } from "@/lib/api-config";
+import { useSse } from "@/hooks/use-sse";
+import { useAuth } from "@/contexts/auth-context";
 
 const fetchInventory = async () => {
     try {
@@ -207,19 +209,32 @@ const SkeletonTableRow = ({ isDarkMode }) => (
 
 const StaffInventoryPage = () => {
     const { theme } = useTheme();
+    const { user } = useAuth();
     const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const loadInventory = async () => {
-            const data = await fetchInventory();
-            setItems(Array.isArray(data) ? data : []);
-            setLoading(false);
-        };
-        loadInventory();
+    const loadInventory = useCallback(async () => {
+        const data = await fetchInventory();
+        setItems(Array.isArray(data) ? data : []);
+        setLoading(false);
     }, []);
+
+    useEffect(() => {
+        loadInventory();
+    }, [loadInventory]);
+
+    // Real-time updates via internal broadcast (to avoid duplicate SSE connections)
+    useEffect(() => {
+        const handleUpdate = () => {
+            console.log("🔄 Staff: Real-time stock update received via broadcast!");
+            loadInventory();
+        };
+
+        window.addEventListener('STARWASH_STOCK_UPDATE', handleUpdate);
+        return () => window.removeEventListener('STARWASH_STOCK_UPDATE', handleUpdate);
+    }, [loadInventory]);
 
     const getStockStatusCounts = (items) => {
         let out = 0, low = 0, adequate = 0, full = 0;

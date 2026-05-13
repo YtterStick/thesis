@@ -15,7 +15,8 @@ import dryerMachine from "@/assets/lottie/dryer-machine.json";
 import clothes from "@/assets/lottie/clothes.json";
 import unwashed from "@/assets/lottie/unwashed.json";
 
-const API_BASE_URL = "https://thesis-1-culv.onrender.com/api";
+import { API_BASE_URL, getApiUrl } from "@/lib/api-config";
+import { useSse } from "@/hooks/use-sse";
 
 const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSearchId }) => {
     const [receiptNumber, setReceiptNumber] = useState("");
@@ -58,28 +59,21 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         };
     }, []);
 
+    // Real-time updates via internal broadcast (to avoid duplicate SSE connections)
     useEffect(() => {
-        if (refreshIntervalRef.current) {
-            clearInterval(refreshIntervalRef.current);
-            refreshIntervalRef.current = null;
-        }
+        const handleUpdate = () => {
+            if (trackingData?.invoiceNumber && showStatus) {
+                console.log("🚀 User Tracking: Update received via broadcast!");
+                fetchTrackingData(trackingData.invoiceNumber, true);
+            }
+        };
 
-        if (trackingData?.invoiceNumber && showStatus) {
-            console.log("🔄 Starting auto-refresh every 1 second");
-
-            refreshIntervalRef.current = setInterval(() => {
-                if (trackingData?.invoiceNumber) {
-                    console.log("🔄 Auto-refreshing tracking data...");
-                    fetchTrackingData(trackingData.invoiceNumber, true);
-                }
-            }, 1000); 
-        }
+        window.addEventListener('STARWASH_LAUNDRY_UPDATE', handleUpdate);
+        window.addEventListener('STARWASH_TRANSACTION_UPDATE', handleUpdate);
 
         return () => {
-            if (refreshIntervalRef.current) {
-                clearInterval(refreshIntervalRef.current);
-                refreshIntervalRef.current = null;
-            }
+            window.removeEventListener('STARWASH_LAUNDRY_UPDATE', handleUpdate);
+            window.removeEventListener('STARWASH_TRANSACTION_UPDATE', handleUpdate);
         };
     }, [trackingData?.invoiceNumber, showStatus]);
 
@@ -117,7 +111,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
 
         try {
             console.log(`🔍 ${isSilentRefresh ? "Refreshing" : "Fetching"} tracking data for: ${invoiceNumber}`);
-            const response = await fetch(`${API_BASE_URL}/track/${invoiceNumber}`);
+            const response = await fetch(getApiUrl(`track/${invoiceNumber}`));
 
             if (!response.ok) {
                 if (response.status === 404) {
@@ -160,7 +154,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
         try {
             console.log(`📄 Fetching receipt data for: ${invoiceNumber}`);
             
-            const response = await fetch(`${API_BASE_URL}/track/${invoiceNumber}/receipt`);
+            const response = await fetch(getApiUrl(`track/${invoiceNumber}/receipt`));
 
             if (!response.ok) {
                 throw new Error("Failed to fetch receipt data from tracking endpoint");

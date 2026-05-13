@@ -117,20 +117,27 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
 
     return (
         <header
-            className={`relative z-10 flex h-[60px] items-center justify-between border-b px-4 shadow-sm transition-colors ${
-                isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-slate-50"
-            }`}
+            className="relative z-10 flex h-[60px] items-center justify-between border-b px-4 shadow-sm transition-colors"
+            style={{
+                backgroundColor: "var(--admin-header-bg)",
+                borderColor: "var(--admin-card-border)",
+            }}
         >
             {/* 🔧 Sidebar toggle + Search */}
             <div className="relative flex flex-1 items-center gap-x-3">
                 {!searchActive && (
                     <button
-                        className="group size-10 rounded-md transition-colors hover:opacity-80 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                        className="group size-10 rounded-md transition-all hover:opacity-80 border shadow-sm"
+                        style={{
+                            backgroundColor: "var(--admin-accent-soft)",
+                            color: "var(--admin-accent)",
+                            borderColor: "var(--admin-card-border)",
+                        }}
                         onClick={() => setCollapsed(!collapsed)}
                         title="Toggle sidebar"
                     >
                         <ChevronsLeft
-                            className={`mx-auto transition-colors ${collapsed ? "rotate-180" : ""}`}
+                            className={`mx-auto transition-transform ${collapsed ? "rotate-180" : ""}`}
                         />
                     </button>
                 )}
@@ -138,31 +145,42 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                 {/* 🔍 Desktop Search */}
                 <div
                     ref={searchRef}
-                    className={`input relative hidden h-[38px] w-full max-w-[250px] items-center rounded-md border px-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-cyan-500 sm:flex ${
-                        isDarkMode ? "border-slate-700 bg-slate-800" : "border-slate-300 bg-white"
-                    }`}
+                    className="input relative hidden h-[38px] w-full max-w-[250px] items-center rounded-md border px-3 shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20 sm:flex"
+                    style={{
+                        backgroundColor: "var(--admin-bg)",
+                        borderColor: "var(--admin-card-border)",
+                    }}
                 >
                     <Search
                         size={18}
-                        className="text-slate-600 dark:text-slate-400"
+                        style={{ color: "var(--admin-text-secondary)" }}
                     />
                     <input
                         type="text"
-                        placeholder="Search menu items..."
+                        placeholder="Search menu..."
                         value={searchQuery}
                         onChange={handleSearchChange}
                         onFocus={() => searchQuery && setShowSearchResults(true)}
-                        className={`w-full bg-transparent px-2 text-sm outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-900 dark:text-slate-100`}
+                        className="w-full bg-transparent px-2 text-sm outline-none placeholder:opacity-50"
+                        style={{ color: "var(--admin-text-primary)" }}
                     />
                     {searchQuery && (
                         <button
                             onClick={clearSearch}
-                            className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                            className="hover:opacity-70"
+                            style={{ color: "var(--admin-text-secondary)" }}
                         >
                             <X size={16} />
                         </button>
                     )}
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100">
+                    <span 
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[10px] font-bold border"
+                        style={{
+                            backgroundColor: "var(--admin-card-bg)",
+                            borderColor: "var(--admin-card-border)",
+                            color: "var(--admin-text-secondary)",
+                        }}
+                    >
                         /
                     </span>
 
@@ -170,20 +188,24 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                     <AnimatePresence>
                         {showSearchResults && searchResults.length > 0 && (
                             <motion.div
-                                className="absolute left-0 right-0 top-full mt-1 max-h-80 overflow-y-auto rounded-md border shadow-lg bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                                className="absolute left-0 right-0 top-full mt-2 max-h-80 overflow-y-auto rounded-md border shadow-xl z-50"
+                                style={{
+                                    backgroundColor: "var(--admin-card-bg)",
+                                    borderColor: "var(--admin-card-border)",
+                                }}
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
                             >
                                 <div className="p-2">
-                                    <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                        Search Results ({searchResults.length})
+                                    <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-widest opacity-50 pt-2" style={{ color: "var(--admin-text-secondary)" }}>
+                                        Results ({searchResults.length})
                                     </div>
                                     {searchResults.map((result, index) => (
                                         <motion.button
                                             key={`${result.path}-${index}`}
-                                            className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
+                                            className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/50"
                                             onClick={() => handleSearchResultClick(result)}
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
@@ -193,13 +215,14 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                         >
                                             <result.icon
                                                 size={18}
-                                                className="flex-shrink-0 text-slate-600 dark:text-slate-400"
+                                                className="flex-shrink-0"
+                                                style={{ color: "var(--admin-text-secondary)" }}
                                             />
                                             <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-medium truncate text-slate-900 dark:text-slate-100">
+                                                <div className="text-sm font-medium truncate" style={{ color: "var(--admin-text-primary)" }}>
                                                     {result.label}
                                                 </div>
-                                                <div className="text-xs truncate text-slate-500 dark:text-slate-400">
+                                                <div className="text-xs truncate opacity-70" style={{ color: "var(--admin-text-secondary)" }}>
                                                     {result.groupTitle}
                                                 </div>
                                             </div>
@@ -216,7 +239,12 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                     {!searchActive && (
                         <motion.button
                             onClick={() => setSearchActive(true)}
-                            className="group flex size-10 items-center justify-center rounded-md transition-colors hover:opacity-80 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 sm:hidden"
+                            className="group flex size-10 items-center justify-center rounded-md transition-all hover:opacity-80 border shadow-sm sm:hidden"
+                            style={{
+                                backgroundColor: "var(--admin-card-bg)",
+                                borderColor: "var(--admin-card-border)",
+                                color: "var(--admin-text-primary)",
+                            }}
                             title="Search"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -229,7 +257,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                             >
                                 <Search
                                     size={18}
-                                    className="text-slate-600 dark:text-slate-400"
+                                    style={{ color: "var(--admin-text-secondary)" }}
                                 />
                             </motion.div>
                         </motion.button>
@@ -242,7 +270,12 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                 <div className="relative flex items-center gap-x-3">
                     {/* 🌗 Enhanced Theme toggle with animation */}
                     <motion.button
-                        className="group relative size-10 rounded-md transition-colors hover:opacity-80 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                        className="group relative size-10 rounded-md transition-all hover:opacity-80 border shadow-sm"
+                        style={{
+                            backgroundColor: "var(--admin-card-bg)",
+                            borderColor: "var(--admin-card-border)",
+                            color: "var(--admin-text-primary)",
+                        }}
                         onClick={toggleTheme}
                         title="Toggle theme"
                         whileHover={{ scale: 1.1, rotate: 5 }}
@@ -285,7 +318,11 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                     >
                         <div
                             ref={searchRef}
-                            className={`flex h-[38px] items-center rounded-md border px-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-cyan-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700`}
+                            className="flex h-[38px] items-center rounded-md border px-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-blue-500/20"
+                            style={{
+                                backgroundColor: "var(--admin-bg)",
+                                borderColor: "var(--admin-card-border)",
+                            }}
                         >
                             <motion.div
                                 layoutId="search-icon"
@@ -293,7 +330,7 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                             >
                                 <Search
                                     size={18}
-                                    className="text-slate-600 dark:text-slate-400"
+                                    style={{ color: "var(--admin-text-secondary)" }}
                                 />
                             </motion.div>
                             <input
@@ -303,38 +340,43 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                 onChange={handleSearchChange}
                                 onFocus={() => searchQuery && setShowSearchResults(true)}
                                 autoFocus
-                                className={`w-full bg-transparent px-2 text-sm outline-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-900 dark:text-slate-100`}
+                                className="w-full bg-transparent px-2 text-sm outline-none placeholder:opacity-50"
+                                style={{ color: "var(--admin-text-primary)" }}
                             />
                             <button
                                 onClick={() => {
                                     setSearchActive(false);
                                     clearSearch();
                                 }}
-                                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                                style={{ color: "var(--admin-text-secondary)" }}
+                                className="hover:opacity-70"
                                 title="Close search"
                             >
                                 <X size={16} />
                             </button>
                         </div>
 
-                        {/* Mobile Search Results */}
                         <AnimatePresence>
                             {showSearchResults && searchResults.length > 0 && (
                                 <motion.div
-                                    className="absolute left-4 right-4 top-full mt-1 max-h-80 overflow-y-auto rounded-md border shadow-lg bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                                    className="absolute left-4 right-4 top-full mt-1 max-h-80 overflow-y-auto rounded-md border shadow-lg z-50"
+                                    style={{
+                                        backgroundColor: "var(--admin-card-bg)",
+                                        borderColor: "var(--admin-card-border)",
+                                    }}
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     transition={{ duration: 0.2 }}
                                 >
                                     <div className="p-2">
-                                        <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-widest opacity-50 pt-2" style={{ color: "var(--admin-text-secondary)" }}>
                                             Search Results ({searchResults.length})
                                         </div>
                                         {searchResults.map((result, index) => (
                                             <motion.button
                                                 key={`${result.path}-${index}`}
-                                                className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
+                                                className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/50"
                                                 onClick={() => handleSearchResultClick(result)}
                                                 initial={{ opacity: 0, x: -10 }}
                                                 animate={{ opacity: 1, x: 0 }}
@@ -342,13 +384,14 @@ export const Header = ({ collapsed, setCollapsed, sidebarLinks = [], onSearchRes
                                             >
                                                 <result.icon
                                                     size={18}
-                                                    className="flex-shrink-0 text-slate-600 dark:text-slate-400"
+                                                    className="flex-shrink-0"
+                                                    style={{ color: "var(--admin-text-secondary)" }}
                                                 />
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-sm font-medium truncate text-slate-900 dark:text-slate-100">
+                                                    <div className="text-sm font-medium truncate" style={{ color: "var(--admin-text-primary)" }}>
                                                         {result.label}
                                                     </div>
-                                                    <div className="text-xs truncate text-slate-500 dark:text-slate-400">
+                                                    <div className="text-xs truncate opacity-70" style={{ color: "var(--admin-text-secondary)" }}>
                                                         {result.groupTitle}
                                                     </div>
                                                 </div>

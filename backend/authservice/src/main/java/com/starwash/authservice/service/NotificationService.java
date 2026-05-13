@@ -29,6 +29,7 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final StockRepository stockRepository;
     private final MongoTemplate mongoTemplate;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     // Real-time SSE emitters
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
@@ -45,46 +46,88 @@ public class NotificationService {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         
         if (userId != null && !userId.isEmpty()) {
+            // Remove any existing emitter for this user to avoid duplicates
+            SseEmitter oldEmitter = emitters.remove(userId);
+            if (oldEmitter != null) {
+                try { oldEmitter.complete(); } catch (Exception e) {}
+            }
+            
             emitters.put(userId, emitter);
             emitter.onCompletion(() -> emitters.remove(userId));
             emitter.onTimeout(() -> emitters.remove(userId));
+            emitter.onError((e) -> emitters.remove(userId));
+            System.out.println("🔌 User " + userId + " subscribed to SSE");
         } else {
             anonymousEmitters.add(emitter);
             emitter.onCompletion(() -> anonymousEmitters.remove(emitter));
             emitter.onTimeout(() -> anonymousEmitters.remove(emitter));
+            emitter.onError((e) -> anonymousEmitters.remove(emitter));
+            System.out.println("🔌 Anonymous user subscribed to SSE");
         }
 
         try {
             emitter.send(SseEmitter.event().name("INIT").data("Connected"));
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("❌ Failed to send INIT event: " + e.getMessage());
         }
 
         return emitter;
     }
 
-    public void broadcast(String eventName, Object data) {
-        List<SseEmitter> deadEmitters = new ArrayList<>();
+    // Keep connections alive
+    @Scheduled(fixedRate = 20000)
+    public void sendHeartbeat() {
+        SseEmitter.SseEventBuilder heartbeat = SseEmitter.event().name("heartbeat").data("ping");
         
-        // Broadcast to named users
         emitters.forEach((userId, emitter) -> {
             try {
-                emitter.send(SseEmitter.event().name(eventName).data(data));
+                emitter.send(heartbeat);
             } catch (Exception e) {
-                deadEmitters.add(emitter);
+                emitter.complete();
                 emitters.remove(userId);
             }
         });
+        
+        anonymousEmitters.removeIf(emitter -> {
+            try {
+                emitter.send(heartbeat);
+                return false;
+            } catch (Exception e) {
+                emitter.complete();
+                return true;
+            }
+        });
+    }
+
+    public void broadcast(String eventName, Object data) {
+        List<SseEmitter> deadEmitters = new ArrayList<>();
+        int count = 0;
+        
+        // Broadcast to named users
+        for (Map.Entry<String, SseEmitter> entry : emitters.entrySet()) {
+            try {
+                entry.getValue().send(SseEmitter.event().name(eventName).data(data));
+                count++;
+            } catch (Exception e) {
+                deadEmitters.add(entry.getValue());
+                emitters.remove(entry.getKey());
+            }
+        }
 
         // Broadcast to anonymous users
-        anonymousEmitters.forEach(emitter -> {
+        for (SseEmitter emitter : anonymousEmitters) {
             try {
                 emitter.send(SseEmitter.event().name(eventName).data(data));
+                count++;
             } catch (Exception e) {
                 deadEmitters.add(emitter);
                 anonymousEmitters.remove(emitter);
             }
-        });
+        }
+        
+        if (count > 0) {
+            System.out.println("📡 Broadcast [" + eventName + "] sent to " + count + " emitters");
+        }
     }
 
     private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
@@ -107,11 +150,13 @@ public class NotificationService {
     public NotificationService(NotificationRepository notificationRepository,
             UserRepository userRepository,
             StockRepository stockRepository,
-            MongoTemplate mongoTemplate) {
+            MongoTemplate mongoTemplate,
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.stockRepository = stockRepository;
         this.mongoTemplate = mongoTemplate;
+        this.objectMapper = objectMapper;
     }
 
     private LocalDateTime getCurrentManilaTime() {
@@ -122,8 +167,37 @@ public class NotificationService {
             String relatedEntityId) {
         Notification notification = new Notification(userId, type, title, message, relatedEntityId);
         notification.setCreatedAt(getCurrentManilaTime());
-        broadcast(EVENT_NOTIFICATION, message);
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        
+        // Broadcast to specific user if they are connected
+        SseEmitter emitter = emitters.get(userId);
+        if (emitter != null) {
+            try {
+                // Use a simplified map for transmission to avoid serialization issues
+                Map<String, Object> data = new HashMap<>();
+                data.put("id", saved.getId());
+                data.put("userId", saved.getUserId());
+                data.put("type", saved.getType());
+                data.put("title", saved.getTitle());
+                data.put("message", saved.getMessage());
+                data.put("read", saved.isRead());
+                data.put("createdAt", saved.getCreatedAt().toString());
+                data.put("relatedEntityId", saved.getRelatedEntityId());
+                
+                        emitter.send(SseEmitter.event().name(EVENT_NOTIFICATION).data(objectMapper.writeValueAsString(data)));
+                
+                // If it's a laundry update, also broadcast to sync dashboard
+                if (type.startsWith("load_") || type.equals(NEW_LAUNDRY_SERVICE)) {
+                    broadcast(EVENT_LAUNDRY, "updated");
+                    broadcast(EVENT_TRANSACTION, "updated");
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error sending SSE to user " + userId + ": " + e.getMessage());
+                emitters.remove(userId);
+            }
+        }
+        
+        return saved;
     }
 
     // Updated to filter notifications based on user role to use bulk saving
@@ -140,7 +214,36 @@ public class NotificationService {
         });
 
         if (!bulkNotifications.isEmpty()) {
-            notificationRepository.saveAll(bulkNotifications);
+            List<Notification> saved = notificationRepository.saveAll(bulkNotifications);
+            
+            // Broadcast to connected users
+            saved.forEach(notif -> {
+                SseEmitter emitter = emitters.get(notif.getUserId());
+                if (emitter != null) {
+                    try {
+                        // Use a simplified map for transmission to avoid serialization issues
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("id", notif.getId());
+                        data.put("userId", notif.getUserId());
+                        data.put("type", notif.getType());
+                        data.put("title", notif.getTitle());
+                        data.put("message", notif.getMessage());
+                        data.put("read", notif.isRead());
+                        data.put("createdAt", notif.getCreatedAt().toString());
+                        data.put("relatedEntityId", notif.getRelatedEntityId());
+                        
+                                emitter.send(SseEmitter.event().name(EVENT_NOTIFICATION).data(objectMapper.writeValueAsString(data)));
+                    } catch (Exception e) {
+                        System.err.println("❌ Error sending SSE to user " + notif.getUserId() + ": " + e.getMessage());
+                        emitters.remove(notif.getUserId());
+                    }
+                }
+            });
+
+            // Also broadcast a general STOCK_UPDATE if it's stock related
+            if (isStockRelatedNotification(type)) {
+                broadcast(EVENT_STOCK, "updated");
+            }
         }
     }
 
@@ -157,7 +260,34 @@ public class NotificationService {
         });
 
         if (!bulkNotifications.isEmpty()) {
-            notificationRepository.saveAll(bulkNotifications);
+            List<Notification> saved = notificationRepository.saveAll(bulkNotifications);
+            // Broadcast to connected staff
+            saved.forEach(notif -> {
+                SseEmitter emitter = emitters.get(notif.getUserId());
+                if (emitter != null) {
+                    try {
+                        // Use a simplified map for transmission to avoid serialization issues
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("id", notif.getId());
+                        data.put("userId", notif.getUserId());
+                        data.put("type", notif.getType());
+                        data.put("title", notif.getTitle());
+                        data.put("message", notif.getMessage());
+                        data.put("read", notif.isRead());
+                        data.put("createdAt", notif.getCreatedAt().toString());
+                        data.put("relatedEntityId", notif.getRelatedEntityId());
+                        
+                                emitter.send(SseEmitter.event().name(EVENT_NOTIFICATION).data(objectMapper.writeValueAsString(data)));
+                    } catch (Exception e) {
+                        System.err.println("❌ Error sending SSE to staff " + notif.getUserId() + ": " + e.getMessage());
+                        emitters.remove(notif.getUserId());
+                    }
+                }
+            });
+
+            // Laundry updates should trigger sync for staff dashboard
+            broadcast(EVENT_LAUNDRY, "updated");
+            broadcast(EVENT_TRANSACTION, "updated");
         }
     }
 
@@ -174,7 +304,35 @@ public class NotificationService {
         });
 
         if (!bulkNotifications.isEmpty()) {
-            notificationRepository.saveAll(bulkNotifications);
+            List<Notification> saved = notificationRepository.saveAll(bulkNotifications);
+            // Broadcast to connected admins
+            saved.forEach(notif -> {
+                SseEmitter emitter = emitters.get(notif.getUserId());
+                if (emitter != null) {
+                    try {
+                        // Use a simplified map for transmission to avoid serialization issues
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("id", notif.getId());
+                        data.put("userId", notif.getUserId());
+                        data.put("type", notif.getType());
+                        data.put("title", notif.getTitle());
+                        data.put("message", notif.getMessage());
+                        data.put("read", notif.isRead());
+                        data.put("createdAt", notif.getCreatedAt().toString());
+                        data.put("relatedEntityId", notif.getRelatedEntityId());
+                        
+                                emitter.send(SseEmitter.event().name(EVENT_NOTIFICATION).data(objectMapper.writeValueAsString(data)));
+                    } catch (Exception e) {
+                        System.err.println("❌ Error sending SSE to admin " + notif.getUserId() + ": " + e.getMessage());
+                        emitters.remove(notif.getUserId());
+                    }
+                }
+            });
+
+            // Admin updates are usually stock related
+            if (isStockRelatedNotification(type)) {
+                broadcast(EVENT_STOCK, "updated");
+            }
         }
     }
 
@@ -182,13 +340,8 @@ public class NotificationService {
     private boolean shouldReceiveNotification(User user, String notificationType) {
         String userRole = user.getRole();
 
-        // ADMIN only receives stock-related and important system notifications
-        if ("ADMIN".equals(userRole)) {
-            return isStockRelatedNotification(notificationType);
-        }
-
-        // STAFF receives all notifications
-        if ("STAFF".equals(userRole)) {
+        // ADMIN and STAFF receive all system notifications
+        if ("ADMIN".equals(userRole) || "STAFF".equals(userRole)) {
             return true;
         }
 

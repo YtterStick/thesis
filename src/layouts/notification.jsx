@@ -43,6 +43,7 @@ export const NotificationSystem = () => {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [sseStatus, setSseStatus] = useState('connecting'); // 'connected', 'connecting', 'error'
 
     const notificationRef = useRef(null);
     const notificationsEndRef = useRef(null);
@@ -158,23 +159,35 @@ export const NotificationSystem = () => {
         initializeShownNotifications();
     }, [saveShownNotificationIds]);
 
-    // Format time ago in PH Time (GMT+8)
+    // Format time ago correctly handling Manila Time (GMT+8)
     const formatTimeAgo = useCallback((dateString) => {
+        if (!dateString) return "Recently";
         try {
-            const date = new Date(dateString);
-            const phDate = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-            const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            // If dateString doesn't have a timezone offset, assume it's Manila time (+08:00)
+            let normalizedDateString = dateString;
+            if (dateString.includes('T') && !dateString.includes('+') && !dateString.endsWith('Z')) {
+                normalizedDateString = `${dateString}+08:00`;
+            }
             
-            const diffInSeconds = Math.floor((now - phDate) / 1000);
+            const itemDate = new Date(normalizedDateString);
+            const now = new Date();
+            
+            // Calculate difference in seconds
+            const diffInSeconds = Math.floor((now - itemDate) / 1000);
 
-            if (diffInSeconds < 60) {
-                return `${diffInSeconds} seconds ago`;
-            } else if (diffInSeconds < 3600) {
-                return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-            } else if (diffInSeconds < 86400) {
-                return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+            // Ensure we never return negative time
+            const absSeconds = Math.max(0, diffInSeconds);
+
+            if (absSeconds < 5) {
+                return "Just now";
+            } else if (absSeconds < 60) {
+                return `${absSeconds} seconds ago`;
+            } else if (absSeconds < 3600) {
+                return `${Math.floor(absSeconds / 60)} minutes ago`;
+            } else if (absSeconds < 86400) {
+                return `${Math.floor(absSeconds / 3600)} hours ago`;
             } else {
-                return `${Math.floor(diffInSeconds / 86400)} days ago`;
+                return `${Math.floor(absSeconds / 86400)} days ago`;
             }
         } catch (error) {
             console.error("Error formatting time:", error);
@@ -299,6 +312,14 @@ export const NotificationSystem = () => {
             return 0;
         }
     }, [getCachedData, setCachedData]);
+    
+    // Initial fetch of unread count on mount
+    useEffect(() => {
+        if (user?.id) {
+            console.log("🔄 Initial sync: Fetching unread count...");
+            fetchUnreadCount(true);
+        }
+    }, [user?.id, fetchUnreadCount]);
 
     // Smart refresh functionality - load initial 30 items
     const smartRefreshNotifications = useCallback(async (forceRefresh = false) => {
@@ -306,7 +327,7 @@ export const NotificationSystem = () => {
         try {
             console.log('🔄 Starting smart refresh...');
             
-            const response = await api.get(`/notifications?page=1&limit=30`);
+            const response = await api.get(`/notifications?page=0&limit=30`);
             
             let notificationsData = [];
             let hasMoreData = false;
@@ -385,7 +406,7 @@ export const NotificationSystem = () => {
                 setLoading(true);
             }
 
-            const response = await api.get(`/notifications?page=${pageNum}&limit=30`);
+            const response = await api.get(`/notifications?page=${pageNum - 1}&limit=30`);
             
             let notificationsData = [];
             let hasMoreData = false;
@@ -601,6 +622,27 @@ export const NotificationSystem = () => {
         handleNotificationNavigation(notification);
     }, [markAsRead, handleNotificationNavigation]);
 
+    // Global test function for console debugging
+    useEffect(() => {
+        window.starwashTestNotif = () => {
+            const testNotif = {
+                id: 'test-' + Date.now(),
+                type: 'inventory_update',
+                title: '🧪 Test Connection',
+                message: 'This is a manual test to verify the popup system is working.',
+                createdAt: new Date().toISOString(),
+                read: false
+            };
+            console.log("🧪 Manually triggering test notification:", testNotif);
+            showAutoNotifications([testNotif]);
+            setUnreadCount(prev => prev + 1);
+        };
+        
+        return () => {
+            delete window.starwashTestNotif;
+        };
+    }, [showAutoNotifications]);
+
     // Helper functions for notification styling
     const getNotificationColor = useCallback((type) => {
         switch (type) {
@@ -659,16 +701,69 @@ export const NotificationSystem = () => {
 
     // Real-time updates via SSE
     useSse({
-        'NOTIFICATION_UPDATE': () => {
-            console.log("🚀 Real-time notification update received!");
-            fetchUnreadCount(true);
-            if (notificationOpen) {
-                smartRefreshNotifications(true);
+        'onStatus': (status) => setSseStatus(status),
+        'INIT': () => setSseStatus('connected'),
+        'NOTIFICATION_UPDATE': (data) => {
+            console.log("🚀 Real-time notification update received!", data);
+            
+            // If data is a full notification object, update state directly
+            if (data && typeof data === 'object' && data.id) {
+                console.log(`📬 Processing new notification: ${data.title} (${data.id})`);
+                
+                // 1. Show as auto-popup FIRST before adding to main list to ensure it's not filtered
+                showAutoNotifications([data]);
+
+                // 2. Update unread count locally for immediate feedback
+                if (!data.read) {
+                    setUnreadCount(prev => {
+                        const newCount = prev + 1;
+                        console.log(`🔢 Unread count updated: ${prev} -> ${newCount}`);
+                        return newCount;
+                    });
+                }
+                
+                // 3. Add to notifications list immediately (if not duplicate)
+                setNotifications(prev => {
+                    if (prev.some(n => n.id === data.id)) {
+                        console.log(`📭 Notification ${data.id} already in state, skipping list update`);
+                        return prev;
+                    }
+                    const updated = [data, ...prev].slice(0, 50);
+                    // Update cache too
+                    setCachedData(STORAGE_KEYS.NOTIFICATIONS_CACHE, updated);
+                    return updated;
+                });
+            } else {
+                // Fallback for legacy message-only events
+                console.log("📡 Received legacy notification update, refreshing everything...");
+                fetchUnreadCount(true);
+                if (notificationOpen) {
+                    smartRefreshNotifications(true);
+                }
             }
         },
-        'TRANSACTION_UPDATE': () => fetchUnreadCount(true),
-        'LAUNDRY_UPDATE': () => fetchUnreadCount(true),
-        'STOCK_UPDATE': () => fetchUnreadCount(true),
+        'TRANSACTION_UPDATE': () => {
+            console.log("💰 Real-time Transaction update! Refreshing count...");
+            fetchUnreadCount(true);
+            // Broadcast locally so other components don't need their own SSE connection
+            window.dispatchEvent(new CustomEvent('STARWASH_TRANSACTION_UPDATE'));
+        },
+        'LAUNDRY_UPDATE': () => {
+            console.log("🧺 Real-time Laundry update! Refreshing count...");
+            fetchUnreadCount(true);
+            // Broadcast locally so other components don't need their own SSE connection
+            window.dispatchEvent(new CustomEvent('STARWASH_LAUNDRY_UPDATE'));
+        },
+        'STOCK_UPDATE': () => {
+            console.log("📦 Real-time Stock update! Refreshing count...");
+            fetchUnreadCount(true);
+            // Broadcast locally so other components don't need their own SSE connection
+            window.dispatchEvent(new CustomEvent('STARWASH_STOCK_UPDATE'));
+        },
+        'AUDIT_UPDATE': () => {
+            console.log("📝 Real-time Audit update! Broadcasting...");
+            window.dispatchEvent(new CustomEvent('STARWASH_AUDIT_UPDATE'));
+        },
     }, user?.id);
 
     // Infinite scroll setup - SMART REFRESH when scrolling to bottom
@@ -706,6 +801,22 @@ export const NotificationSystem = () => {
             fetchUnreadCount(true);
         }
     }, [notificationOpen, smartRefreshNotifications, fetchUnreadCount]);
+
+    // Handle click outside to close dropdown
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setNotificationOpen(false);
+            }
+        };
+
+        if (notificationOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [notificationOpen]);
 
     // Initialize notifications on component mount
     useEffect(() => {
@@ -856,13 +967,26 @@ export const NotificationSystem = () => {
                     className="group relative size-10 rounded-md transition-colors hover:opacity-80 flex items-center justify-center bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     title="Notifications"
                     onClick={() => {
-                        setNotificationOpen(!notificationOpen);
-                        if (!notificationOpen) {
+                        const willOpen = !notificationOpen;
+                        setNotificationOpen(willOpen);
+                        if (willOpen) {
                             smartRefreshNotifications(true);
+                            // Auto-read when seen (dropdown opened)
+                            if (unreadCount > 0) {
+                                markAllAsRead();
+                            }
                         }
                     }}
                 >
-                    <Bell size={20} />
+                    <div className="relative">
+                        <Bell size={20} />
+                        {/* SSE Status Pulse Indicator - Top Left */}
+                        <div className={`absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-800 transition-all duration-500 ${
+                            sseStatus === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse' :
+                            sseStatus === 'connecting' ? 'bg-yellow-500 animate-bounce' :
+                            'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                        }`} title={sseStatus === 'connected' ? 'Live Connected' : 'Connecting...'} />
+                    </div>
                     {unreadCount > 0 && (
                         <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                             {unreadCount > 99 ? '99+' : unreadCount}

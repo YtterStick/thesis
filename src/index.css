@@ -18,6 +18,34 @@
 
     :root {
         --radius: 0.5rem;
+        
+        /* 🏛️ Admin/Staff Theme Variables (Light) - Soft Premium Gray Palette */
+        --admin-bg: #f3f4f6; /* Gray 100 - Deep, soft background */
+        --admin-card-bg: #ffffff;
+        --admin-card-border: #e5e7eb;
+        --admin-sidebar-bg: #f9fafb; /* Gray 50 - Subtle sidebar */
+        --admin-header-bg: #ffffff;
+        --admin-accent: #111827; /* Gray 900 - Sharp accent */
+        --admin-accent-soft: rgba(17, 24, 39, 0.05);
+        --admin-text-primary: #111827;
+        --admin-text-secondary: #4b5563; /* Gray 600 */
+        --admin-table-header: #f9fafb;
+        --admin-table-hover: #f3f4f6;
+    }
+
+    .dark {
+        /* 🏛️ Admin/Staff Theme Variables (Dark) - Deep Galactic Palette */
+        --admin-bg: #020617; /* Deepest Slate */
+        --admin-card-bg: #0f172a; /* Deep Slate */
+        --admin-card-border: #1e293b;
+        --admin-sidebar-bg: #020617;
+        --admin-header-bg: #020617;
+        --admin-accent: #3DD9B6; /* Vibrant Teal */
+        --admin-accent-soft: rgba(61, 217, 182, 0.1);
+        --admin-text-primary: #f8fafc; /* Slate 50 */
+        --admin-text-secondary: #94a3b8; /* Slate 400 */
+        --admin-table-header: #020617;
+        --admin-table-hover: #0f172a;
     }
 
     /* 🎯 Scrollbar styling */
@@ -367,6 +395,35 @@
 
     .form-input {
         @apply relative flex items-center gap-x-2 rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 dark:border-slate-700 dark:text-slate-50 dark:placeholder:text-slate-500;
+    }
+
+    /* 🏛️ Admin Table Utilities */
+    .admin-table {
+        @apply w-full text-left border-collapse overflow-hidden;
+    }
+
+    .admin-table-thead {
+        @apply transition-colors;
+        background-color: var(--admin-table-header);
+    }
+
+    .admin-table-th {
+        @apply p-4 text-[10px] font-bold uppercase tracking-widest;
+        color: var(--admin-text-secondary);
+    }
+
+    .admin-table-tr {
+        @apply border-b transition-all duration-200;
+        border-color: var(--admin-card-border);
+    }
+
+    .admin-table-tr:hover {
+        background-color: var(--admin-table-hover);
+    }
+
+    .admin-table-td {
+        @apply p-4 text-sm transition-colors;
+        color: var(--admin-text-primary);
     }
 }
 

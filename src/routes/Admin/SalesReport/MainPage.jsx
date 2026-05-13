@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, TrendingUp, BarChart3, Package, ChevronLeft,PhilippinePeso, ChevronRight, Info, Calendar, LineChart, Download, Loader2 } from "lucide-react";
+import { Search, TrendingUp, BarChart3, Package, ChevronLeft,PhilippinePeso, ChevronRight, Info, Calendar, LineChart, Download, Loader2, FileSpreadsheet, ChevronDown} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
@@ -82,18 +82,18 @@ const ServiceSelector = ({ services, serviceId, onChange, isLocked }) => {
                 <SelectTrigger
                     className="transition-all"
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
+                        color: "var(--admin-text-primary)",
                     }}
                 >
                     <SelectValue placeholder="Select service" />
                 </SelectTrigger>
                 <SelectContent
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
+                        color: "var(--admin-text-primary)",
                     }}
                 >
                     {services.map((service) => (
@@ -128,15 +128,15 @@ const CustomBarTooltip = ({ active, payload, label, isDarkMode }) => {
         
         return (
             <div
-                className="rounded-lg border-2 p-3 shadow-lg"
+                className="rounded-lg border p-3 shadow-lg"
                 style={{
-                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                    backgroundColor: "var(--admin-card-bg)",
+                    borderColor: "var(--admin-card-border)",
+                    color: "var(--admin-text-primary)",
                 }}
             >
                 <p className="font-medium">{label}{monthInfo}</p>
-                <p className="text-sm">
+                <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
                     Income: <span className="font-medium">₱{payload[0].value.toLocaleString()}</span>
                 </p>
             </div>
@@ -151,18 +151,18 @@ const CustomPieTooltip = ({ active, payload, isDarkMode }) => {
 
         return (
             <div
-                className="rounded-lg border-2 p-3 shadow-lg"
+                className="rounded-lg border p-3 shadow-lg"
                 style={{
-                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                    backgroundColor: "var(--admin-card-bg)",
+                    borderColor: "var(--admin-card-border)",
+                    color: "var(--admin-text-primary)",
                 }}
             >
                 <p className="font-medium">{data.name}</p>
-                <p className="text-sm">
+                <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
                     Count: <span className="font-medium">{data.value} transactions</span>
                 </p>
-                <p className="text-sm">
+                <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
                     Percentage: <span className="font-medium">{Math.round(data.percent * 100)}%</span>
                 </p>
             </div>
@@ -537,6 +537,10 @@ const SalesReportPage = () => {
                 const yearEnd = new Date(today.getFullYear(), 11, 31);
                 setStartDate(yearStart.toISOString().split("T")[0]);
                 setEndDate(yearEnd.toISOString().split("T")[0]);
+                break;
+            case "all":
+                setStartDate("2000-01-01");
+                setEndDate(manilaDateString);
                 break;
             default:
                 break;
@@ -1034,9 +1038,6 @@ const SalesReportPage = () => {
         return (
             <div 
                 className="space-y-5 overflow-visible px-6 pb-5 pt-4 min-h-screen"
-                style={{
-                    backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-                }}
             >
                 <SkeletonHeader />
 
@@ -1116,121 +1117,101 @@ const SalesReportPage = () => {
     }
 
     return (
-        <div 
-            className="space-y-5 overflow-visible px-6 pb-5 pt-4 min-h-screen"
-            style={{
-                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
-            }}
-        >
+        <div className="space-y-6 px-6 pb-6 pt-4">
+            {/* Header section */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
                 <div className="flex items-center gap-3">
                     <motion.div
                         whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="rounded-lg p-2"
+                        className="rounded-lg p-2 shadow-sm"
                         style={{
-                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
-                            color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
+                            backgroundColor: "var(--admin-accent)",
+                            color: "var(--admin-card-bg)",
                         }}
                     >
-                        <LineChart size={22} style={{ color: isDarkMode ? "#f1f5f9" : "#f1f5f9" }} />
+                        <BarChart3 size={24} />
                     </motion.div>
                     <div>
-                        <p
-                            className="text-xl font-bold"
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                        >
-                            Sales Reports
-                        </p>
-                        <p
-                            className="text-sm"
-                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
-                        >
-                            Analyze and track your business performance
+                        <h1 className="text-2xl font-bold" style={{ color: "var(--admin-text-primary)" }}>
+                            Sales & Analytics
+                        </h1>
+                        <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                            Performance monitoring and financial insights
                         </p>
                     </div>
                 </div>
-                <div className="relative" ref={exportDropdownRef}>
-                    <Button
-                        onClick={() => setShowExportDropdown(!showExportDropdown)}
-                        className="transition-all"
-                        style={{
-                            backgroundColor: "#10B981",
-                            color: "#FFFFFF",
-                            border: "2px solid #10B981",
-                        }}
-                        disabled={isExporting}
-                    >
-                        {isExporting ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Download className="mr-2 h-4 w-4" />
-                        )}
-                        {isExporting ? "Exporting..." : "Export Report"}
-                    </Button>
 
-                    {showExportDropdown && (
-                        <div
-                            className="absolute right-0 z-50 mt-2 w-48 rounded-lg border-2 p-2 shadow-lg"
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowExportDropdown(!showExportDropdown)}
+                            disabled={isLoading || isExporting}
+                            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all shadow-sm"
                             style={{
-                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                backgroundColor: "var(--admin-card-bg)",
+                                color: "var(--admin-text-primary)",
+                                border: "1px solid var(--admin-card-border)",
                             }}
                         >
-                            <button
-                                onClick={() => handleExportSalesReport('full')}
-                                className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
-                                style={{
-                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                }}
-                            >
-                                📊 Full Report
-                                <div className="mt-1 text-xs opacity-70">Complete analysis with all data</div>
-                            </button>
+                            {isExporting ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <FileSpreadsheet size={16} />
+                            )}
+                            <span>Export Report</span>
+                            <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                        </button>
 
-                            <div className="my-2 border-t" style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }} />
+                        <AnimatePresence>
+                            {showExportDropdown && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border p-2 shadow-xl"
+                                    style={{
+                                        backgroundColor: "var(--admin-card-bg)",
+                                        borderColor: "var(--admin-card-border)",
+                                    }}
+                                >
+                                    <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: "var(--admin-text-secondary)" }}>
+                                        Export Options
+                                    </div>
 
-                            <button
-                                onClick={() => handleExportSalesReport('summary')}
-                                className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
-                                style={{
-                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                }}
-                            >
-                                📈 Executive Summary
-                                <div className="mt-1 text-xs opacity-70">Key metrics and performance</div>
-                            </button>
+                                    <button
+                                        onClick={() => handleExportSalesReport('summary')}
+                                        className="flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        style={{ color: "var(--admin-text-primary)" }}
+                                    >
+                                        <span className="text-sm font-medium">📈 Executive Summary</span>
+                                        <span className="text-xs opacity-60">Key metrics and performance</span>
+                                    </button>
 
-                            <button
-                                onClick={() => handleExportSalesReport('trend')}
-                                className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
-                                style={{
-                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                }}
-                            >
-                                📅 Sales Trend
-                                <div className="mt-1 text-xs opacity-70">Revenue over time analysis</div>
-                            </button>
+                                    <button
+                                        onClick={() => handleExportSalesReport('trend')}
+                                        className="flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        style={{ color: "var(--admin-text-primary)" }}
+                                    >
+                                        <span className="text-sm font-medium">📅 Sales Trend</span>
+                                        <span className="text-xs opacity-60">Revenue over time analysis</span>
+                                    </button>
 
-                            <button
-                                onClick={() => handleExportSalesReport('transactions')}
-                                className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
-                                style={{
-                                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                }}
-                            >
-                                👥 Customer Transactions
-                                <div className="mt-1 text-xs opacity-70">Detailed transaction data</div>
-                            </button>
-                        </div>
-                    )}
+                                    <button
+                                        onClick={() => handleExportSalesReport('transactions')}
+                                        className="flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        style={{ color: "var(--admin-text-primary)" }}
+                                    >
+                                        <span className="text-sm font-medium">👥 Customer Transactions</span>
+                                        <span className="text-xs opacity-60">Detailed transaction data</span>
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             </motion.div>
 
@@ -1303,6 +1284,7 @@ const SalesReportPage = () => {
                                         <SelectItem value="week">Last 7 Days</SelectItem>
                                         <SelectItem value="month">This Month</SelectItem>
                                         <SelectItem value="year">This Year</SelectItem>
+                                        <SelectItem value="all">All Time</SelectItem>
                                         <SelectItem value="custom">Custom Range</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -1673,72 +1655,31 @@ const SalesReportPage = () => {
                                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                             }}
                         >
-                            <table className="w-full">
-                                <thead>
-                                    <tr
-                                        style={{
-                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
-                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                        }}
-                                    >
-                                        <th
-                                            className="p-4 text-left font-medium"
-                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                        >
-                                            Customer
-                                        </th>
-                                        <th
-                                            className="p-4 text-left font-medium"
-                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                        >
-                                            Service
-                                        </th>
-                                        <th
-                                            className="p-4 text-left font-medium"
-                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                        >
-                                            Amount
-                                        </th>
-                                        <th
-                                            className="p-4 text-left font-medium"
-                                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                        >
-                                            Date
-                                        </th>
+                            <table className="admin-table">
+                                <thead className="admin-table-thead">
+                                    <tr>
+                                        <th className="admin-table-th text-left">Customer</th>
+                                        <th className="admin-table-th text-left">Service</th>
+                                        <th className="admin-table-th text-left">Amount</th>
+                                        <th className="admin-table-th text-left">Date</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {currentItems.map((transaction) => (
                                         <tr
                                             key={transaction.id}
-                                            className="border-t transition-all hover:opacity-90"
-                                            style={{
-                                                borderColor: isDarkMode ? "#334155" : "#e2e8f0",
-                                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "#f8fafc",
-                                            }}
+                                            className="admin-table-tr"
                                         >
-                                            <td
-                                                className="p-4 font-medium"
-                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                            >
+                                            <td className="admin-table-td font-medium">
                                                 {transaction.customerName}
                                             </td>
-                                            <td
-                                                className="p-4"
-                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                            >
+                                            <td className="admin-table-td">
                                                 {transaction.serviceType}
                                             </td>
-                                            <td
-                                                className="p-4 font-medium"
-                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                            >
+                                            <td className="admin-table-td font-bold">
                                                 ₱{transaction.totalPrice}
                                             </td>
-                                            <td
-                                                className="p-4"
-                                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
-                                            >
+                                            <td className="admin-table-td text-xs opacity-70">
                                                 {new Date(transaction.createdAt).toLocaleDateString("en-US", {
                                                     month: "2-digit",
                                                     day: "2-digit",
@@ -1774,18 +1715,18 @@ const SalesReportPage = () => {
                                         <SelectTrigger
                                             className="w-20 transition-all"
                                             style={{
-                                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                backgroundColor: "var(--admin-card-bg)",
+                                                borderColor: "var(--admin-card-border)",
+                                                color: "var(--admin-text-primary)",
                                             }}
                                         >
                                             <SelectValue placeholder="10" />
                                         </SelectTrigger>
                                         <SelectContent
                                             style={{
-                                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                backgroundColor: "var(--admin-card-bg)",
+                                                borderColor: "var(--admin-card-border)",
+                                                color: "var(--admin-text-primary)",
                                             }}
                                         >
                                             <SelectItem value="10">10</SelectItem>
@@ -1808,7 +1749,7 @@ const SalesReportPage = () => {
                                     </Button>
                                     <span
                                         className="text-sm font-medium"
-                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                        style={{ color: "var(--admin-text-primary)" }}
                                     >
                                         Page <span style={{ color: CHART_COLORS.accent }}>{currentPage}</span> of{" "}
                                         <span style={{ color: CHART_COLORS.accent }}>{totalPages}</span>

@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       const data = await res.json();
-      setUser({ username: data.user, role: data.role });
+      setUser({ id: data.id, username: data.user, role: data.role });
       setIsAuthenticated(true);
       console.log("✅ AuthContext initialized:", data);
     } catch (err) {

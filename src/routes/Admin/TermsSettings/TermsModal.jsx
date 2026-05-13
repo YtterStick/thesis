@@ -63,35 +63,36 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative z-50 w-full max-w-2xl rounded-xl border-2 p-6 shadow-xl transition-all"
+        className="relative z-50 w-full max-w-2xl rounded-xl border p-6 shadow-xl transition-all"
         style={{
-          backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-          borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+          backgroundColor: "var(--admin-card-bg)",
+          borderColor: "var(--admin-card-border)",
         }}
       >
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+          <h2 className="text-xl font-bold" style={{ color: "var(--admin-text-primary)" }}>
             {initialData?.id ? "Edit Terms" : "Add New Terms"}
           </h2>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onClose}
-            className="rounded-lg p-1 transition-colors hover:opacity-80"
+            className="rounded-lg p-2 transition-all hover:opacity-80"
             style={{
-              backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+              backgroundColor: "var(--admin-accent-soft)",
+              color: "var(--admin-accent)",
             }}
           >
-            <X className="h-5 w-5" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />
+            <X className="h-5 w-5" />
           </motion.button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label 
-              className="text-sm font-medium mb-2 block"
-              style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
+              className="text-sm font-bold mb-2 block"
+              style={{ color: "var(--admin-text-primary)" }}
             >
               Title
             </Label>
@@ -100,19 +101,19 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
               value={form.title}
               onChange={(e) => handleChange("title", e.target.value)}
               required
-              className="rounded-lg border-2 transition-all"
+              className="rounded-lg transition-all"
               style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                backgroundColor: "var(--admin-bg)",
+                borderColor: "var(--admin-card-border)",
+                color: "var(--admin-text-primary)",
               }}
             />
           </div>
 
           <div>
             <Label 
-              className="text-sm font-medium mb-2 block"
-              style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}
+              className="text-sm font-bold mb-2 block"
+              style={{ color: "var(--admin-text-primary)" }}
             >
               Content
             </Label>
@@ -122,41 +123,38 @@ const TermsModal = ({ open, onClose, onSubmit, initialData }) => {
               onChange={(e) => handleChange("content", e.target.value)}
               rows={8}
               required
-              className="rounded-lg border-2 transition-all resize-none"
+              className="rounded-lg transition-all resize-none"
               style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                backgroundColor: "var(--admin-bg)",
+                borderColor: "var(--admin-card-border)",
+                color: "var(--admin-text-primary)",
               }}
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <Button
+              variant="ghost"
               type="button"
               onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
+              className="rounded-lg px-6"
               style={{
-                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                backgroundColor: "var(--admin-accent-soft)",
+                color: "var(--admin-accent)",
               }}
             >
               Cancel
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            </Button>
+            <Button
               type="submit"
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all"
+              className="flex items-center gap-2 rounded-lg px-6 text-white shadow-md transition-all active:scale-95"
               style={{
-                backgroundColor: "#0f172a",
+                backgroundColor: "var(--admin-accent)",
               }}
             >
               <Save className="h-4 w-4" />
               {initialData?.id ? "Update Terms" : "Save Terms"}
-            </motion.button>
+            </Button>
           </div>
         </form>
       </motion.div>
