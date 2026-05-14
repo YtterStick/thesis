@@ -41,10 +41,7 @@ public class AccountController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllAccounts(HttpServletRequest request) {
         try {
-            // Extract current user from token for audit
-            String currentUser = getCurrentUsername(request);
-            String currentUserRole = getCurrentUserRole(request);
-            
+
             List<User> users = userRepository.findAll();
             if (users.isEmpty()) {
                 return ResponseEntity.ok("No user accounts found.");

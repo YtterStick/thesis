@@ -24,19 +24,19 @@ public class StockController {
         this.jwtUtil = jwtUtil;
     }
 
-    @GetMapping("/stock")
+    @GetMapping
     public List<StockItem> getAllStockItems() {
         return stockService.getAllItems();
     }
 
-    @GetMapping("/stock/{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<StockItem> getStockItemById(@PathVariable String id) {
         Optional<StockItem> item = stockService.getItemById(id);
         return item.map(ResponseEntity::ok)
                    .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/stock")
+    @PostMapping
     public ResponseEntity<?> createStockItem(@RequestBody StockItemDto dto,
                                              @RequestHeader("Authorization") String authHeader) {
         try {
@@ -69,7 +69,7 @@ public class StockController {
         }
     }
 
-    @PutMapping("/stock/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<?> updateStockItem(@PathVariable String id,
                                              @RequestBody StockItemDto dto,
                                              @RequestHeader("Authorization") String authHeader) {
@@ -97,13 +97,13 @@ public class StockController {
         }
     }
 
-    @DeleteMapping("/stock/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteStockItem(@PathVariable String id) {
         boolean deleted = stockService.deleteItem(id);
         return deleted ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
     }
 
-    @PutMapping("/stock/{id}/restock")
+    @PutMapping("/{id}/restock")
     public ResponseEntity<?> addStock(@PathVariable String id,
                                       @RequestParam int amount,
                                       @RequestHeader("Authorization") String authHeader) {
@@ -123,7 +123,7 @@ public class StockController {
         }
     }
 
-    @PutMapping("/stock/{id}/deduct")
+    @PutMapping("/{id}/deduct")
     public ResponseEntity<?> deductStock(@PathVariable String id,
                                          @RequestParam int amount,
                                          @RequestParam(required = false) String notes,
@@ -144,7 +144,7 @@ public class StockController {
         }
     }
 
-    @GetMapping("/stock/{id}/history")
+    @GetMapping("/{id}/history")
     public List<StockLog> getStockHistory(@PathVariable String id) {
         return stockService.getItemHistory(id);
     }

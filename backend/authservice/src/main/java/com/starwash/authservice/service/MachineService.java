@@ -114,22 +114,7 @@ public class MachineService {
         return capacity > 8.0 ? "Machine" : "Washer";
     }
     
-    /**
-     * Enhanced machine naming logic
-     */
-    private String getMachineDisplayName(MachineItem machine, double capacity) {
-        if (capacity > 8.0) {
-            return "Machine";
-        } else {
-            // For smaller machines, use their actual name or default to "Washer"
-            String name = machine.getName();
-            if (name == null || name.trim().isEmpty()) {
-                return "Washer";
-            }
-            // If name contains numbers or specific identifiers, keep them
-            return name;
-        }
-    }
+
     
     /**
      * Calculate loads using default washing machine type

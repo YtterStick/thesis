@@ -230,9 +230,5 @@ public class DashboardService {
                 return data;
         }
 
-        private double getTransactionAmount(String transactionId) {
-                return transactionRepository.findByInvoiceNumber(transactionId)
-                                .map(Transaction::getTotalPrice)
-                                .orElse(0.0);
-        }
+
 }
