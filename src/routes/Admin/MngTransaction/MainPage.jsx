@@ -475,7 +475,7 @@ const MainPage = () => {
 
     const SkeletonCard = () => (
         <div
-            className="rounded-xl border-2 p-5"
+            className="rounded-xl border p-5"
             style={{
                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
@@ -485,7 +485,7 @@ const MainPage = () => {
                 <div
                     className="animate-pulse rounded-lg p-2"
                     style={{
-                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                        backgroundColor: "var(--admin-accent-soft)",
                     }}
                 >
                     <div className="h-6 w-6 opacity-0">icon</div>
@@ -494,7 +494,7 @@ const MainPage = () => {
                     <div
                         className="h-6 w-20 animate-pulse rounded"
                         style={{
-                            backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                            backgroundColor: "var(--admin-accent-soft)",
                         }}
                     />
                 </div>
@@ -504,7 +504,7 @@ const MainPage = () => {
                 <div
                     className="h-5 w-28 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                        backgroundColor: "var(--admin-accent-soft)",
                     }}
                 />
             </div>
@@ -513,38 +513,38 @@ const MainPage = () => {
 
     const SkeletonTable = () => (
         <div
-            className="rounded-xl border-2 p-5"
+            className="rounded-xl border p-5 shadow-sm"
             style={{
-                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                backgroundColor: "var(--admin-card-bg)",
+                borderColor: "var(--admin-card-border)",
             }}
         >
             <div className="mb-4 flex items-center justify-between">
                 <div
                     className="h-6 w-32 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                        backgroundColor: "var(--admin-accent-soft)",
                     }}
                 />
                 <div
                     className="h-4 w-24 animate-pulse rounded"
                     style={{
-                        backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                        backgroundColor: "var(--admin-accent-soft)",
                     }}
                 />
             </div>
 
             <div
-                className="mb-4 overflow-x-auto rounded-lg border-2"
+                className="mb-4 overflow-x-auto rounded-lg border"
                 style={{
-                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                    borderColor: "var(--admin-card-border)",
                 }}
             >
                 <div className="min-w-full">
                     <div
                         className="grid grid-cols-12 gap-4 p-4"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: "var(--admin-accent-soft)",
                         }}
                     >
                         {[...Array(12)].map((_, i) => (
@@ -552,7 +552,7 @@ const MainPage = () => {
                                 key={i}
                                 className="h-4 animate-pulse rounded"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#334155" : "#f1f5f9",
+                                    backgroundColor: "var(--admin-accent-soft)",
                                 }}
                             />
                         ))}
@@ -564,10 +564,10 @@ const MainPage = () => {
                 {[...Array(5)].map((_, rowIndex) => (
                     <div
                         key={rowIndex}
-                        className="grid grid-cols-12 gap-4 rounded-lg border-2 p-4"
+                        className="grid grid-cols-12 gap-4 rounded-lg border p-4"
                         style={{
-                            backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
-                            borderColor: isDarkMode ? "#475569" : "#e2e8f0",
+                            backgroundColor: "var(--admin-card-bg)",
+                            borderColor: "var(--admin-card-border)",
                         }}
                     >
                         {[...Array(12)].map((_, colIndex) => (
@@ -575,7 +575,7 @@ const MainPage = () => {
                                 key={colIndex}
                                 className={`h-4 animate-pulse rounded ${colIndex === 0 ? "w-4" : colIndex === 4 ? "w-16" : "w-full"}`}
                                 style={{
-                                    backgroundColor: isDarkMode ? "#475569" : "#e2e8f0",
+                                    backgroundColor: "var(--admin-accent-soft)",
                                 }}
                             />
                         ))}
@@ -592,10 +592,10 @@ const MainPage = () => {
 
         return (
             <div
-                className="rounded-xl border-2 p-5 transition-all hover:scale-105"
+                className="rounded-xl border p-5 transition-all shadow-sm hover:scale-[1.03] hover:-translate-y-0.5"
                 style={{
-                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                    backgroundColor: "var(--admin-card-bg)",
+                    borderColor: "var(--admin-card-border)",
                 }}
                 title={tooltip}
             >
@@ -612,7 +612,7 @@ const MainPage = () => {
                     <div className="text-right">
                         <p
                             className="text-2xl font-bold"
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                            style={{ color: "var(--admin-text-primary)" }}
                         >
                             {value}
                         </p>
@@ -622,7 +622,7 @@ const MainPage = () => {
                 <div className="flex items-center justify-between">
                     <h3
                         className="text-lg font-semibold"
-                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                        style={{ color: "var(--admin-text-primary)" }}
                     >
                         {label}
                     </h3>
@@ -678,10 +678,10 @@ const MainPage = () => {
             <div className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                     <div
-                        className="hover:rotate-5 rounded-lg p-2 transition-transform hover:scale-110"
+                        className="rounded-lg p-2 shadow-sm transition-transform hover:scale-110"
                         style={{
-                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
-                            color: isDarkMode ? "#f1f5f9" : "#f1f5f9",
+                            backgroundColor: "var(--admin-accent)",
+                            color: "var(--admin-card-bg)",
                         }}
                     >
                         <Package size={22} />
@@ -689,13 +689,13 @@ const MainPage = () => {
                     <div>
                         <p
                             className="text-xl font-bold"
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                            style={{ color: "var(--admin-text-primary)" }}
                         >
                             Admin Laundry Records
                         </p>
                         <p
                             className="text-sm"
-                            style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                            style={{ color: "var(--admin-text-secondary)" }}
                         >
                             Manage and track all laundry transactions
                             {!summaryLoading &&
@@ -717,18 +717,18 @@ const MainPage = () => {
                     <div className="flex items-center gap-2">
                         <span
                             className="text-sm"
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                            style={{ color: "var(--admin-text-primary)" }}
                         >
                             Show:
                         </span>
                         <select
                             value={pageSize}
                             onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
-                            className="rounded-lg border-2 px-3 py-2 text-sm transition-all focus:outline-none"
+                            className="rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none"
                             style={{
-                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                backgroundColor: "var(--admin-card-bg)",
+                                borderColor: "var(--admin-card-border)",
+                                color: "var(--admin-text-primary)",
                             }}
                         >
                             <option value={25}>25</option>
@@ -742,16 +742,16 @@ const MainPage = () => {
                     <div className="flex items-center gap-2">
                         <Calendar
                             size={18}
-                            style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                            style={{ color: "var(--admin-text-primary)" }}
                         />
                         <select
                             value={timeFilter}
                             onChange={(e) => setTimeFilter(e.target.value)}
-                            className="rounded-lg border-2 px-3 py-2 text-sm transition-all focus:outline-none"
+                            className="rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none"
                             style={{
-                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                backgroundColor: "var(--admin-card-bg)",
+                                borderColor: "var(--admin-card-border)",
+                                color: "var(--admin-text-primary)",
                             }}
                         >
                             {timeFilters.map((filter) => (
@@ -772,13 +772,13 @@ const MainPage = () => {
                     >
                         <button
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                            className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-all ${
+                            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-all ${
                                 getActiveFilterCount() > 0 ? "ring-2 ring-blue-500 ring-offset-2" : ""
                             }`}
                             style={{
-                                backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                backgroundColor: "var(--admin-card-bg)",
+                                borderColor: "var(--admin-card-border)",
+                                color: "var(--admin-text-primary)",
                             }}
                         >
                             <Filter size={16} />
@@ -791,16 +791,16 @@ const MainPage = () => {
                         {/* Filter Dropdown */}
                         {showFilterDropdown && (
                             <div
-                                className="absolute right-0 z-50 mt-2 w-80 rounded-lg border-2 p-4 shadow-lg"
+                                className="absolute right-0 z-50 mt-2 w-80 rounded-lg border p-4 shadow-lg"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                    backgroundColor: "var(--admin-card-bg)",
+                                    borderColor: "var(--admin-card-border)",
                                 }}
                             >
                                 <div className="mb-4 flex items-center justify-between">
                                     <h3
                                         className="font-semibold"
-                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                        style={{ color: "var(--admin-text-primary)" }}
                                     >
                                         Filters
                                     </h3>
@@ -834,14 +834,14 @@ const MainPage = () => {
                                                         name="sortBy"
                                                         checked={activeFilters.sortBy === option.id}
                                                         onChange={() => handleSortChange(option.id)}
-                                                        className="rounded border-2"
+                                                        className="rounded border"
                                                         style={{
-                                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                            borderColor: "var(--admin-card-border)",
                                                         }}
                                                     />
                                                     <span
                                                         className="text-sm"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                        style={{ color: "var(--admin-text-primary)" }}
                                                     >
                                                         {option.label}
                                                     </span>
@@ -894,14 +894,14 @@ const MainPage = () => {
                                                         type="checkbox"
                                                         checked={activeFilters.statusFilters.includes(option.id)}
                                                         onChange={() => handleStatusFilterChange(option.id)}
-                                                        className="rounded border-2"
+                                                        className="rounded border"
                                                         style={{
-                                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                            borderColor: "var(--admin-card-border)",
                                                         }}
                                                     />
                                                     <span
                                                         className="text-sm"
-                                                        style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                                        style={{ color: "var(--admin-text-primary)" }}
                                                     >
                                                         {option.label}
                                                     </span>
@@ -928,9 +928,9 @@ const MainPage = () => {
                                                         type="checkbox"
                                                         checked={activeFilters.paymentFilters.includes(option.id)}
                                                         onChange={() => handlePaymentFilterChange(option.id)}
-                                                        className="rounded border-2"
+                                                        className="rounded border"
                                                         style={{
-                                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                            borderColor: "var(--admin-card-border)",
                                                         }}
                                                     />
                                                     <span
@@ -962,9 +962,9 @@ const MainPage = () => {
                                                         type="checkbox"
                                                         checked={activeFilters.serviceFilters.includes(option.id)}
                                                         onChange={() => handleServiceFilterChange(option.id)}
-                                                        className="rounded border-2"
+                                                        className="rounded border"
                                                         style={{
-                                                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                                            borderColor: "var(--admin-card-border)",
                                                         }}
                                                     />
                                                     <span
@@ -1012,17 +1012,17 @@ const MainPage = () => {
                 <SkeletonTable />
             ) : (
                 <div
-                    className="rounded-xl border-2 p-5 transition-all"
+                    className="rounded-xl border p-5 transition-all shadow-sm"
                     style={{
-                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
                     }}
                 >
                     <div className="mb-4 flex items-center justify-between">
                         <div>
                             <p
                                 className="text-lg font-bold"
-                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                style={{ color: "var(--admin-text-primary)" }}
                             >
                                 Laundry Records ({timeFilter.charAt(0).toUpperCase() + timeFilter.slice(1)})
                             </p>
@@ -1031,7 +1031,7 @@ const MainPage = () => {
                             ) : (
                                 <p
                                     className="text-sm"
-                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                    style={{ color: "var(--admin-text-secondary)" }}
                                 >
                                     {getPageInfoText()}
                                 </p>
@@ -1042,7 +1042,7 @@ const MainPage = () => {
                         ) : (
                             <span
                                 className="text-sm font-semibold"
-                                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
+                                style={{ color: "var(--admin-text-primary)" }}
                             >
                                 {getRecordsFoundText()}
                             </span>
@@ -1072,14 +1072,14 @@ const MainPage = () => {
                     {totalPages > 1 && (
                         <div
                             className="mt-6 flex items-center justify-between border-t pt-4"
-                            style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }}
+                            style={{ borderColor: "var(--admin-card-border)" }}
                         >
                             {paginationLoading ? (
                                 <PaginationInfoLoader />
                             ) : (
                                 <div
                                     className="text-sm"
-                                    style={{ color: isDarkMode ? "#cbd5e1" : "#475569" }}
+                                    style={{ color: "var(--admin-text-secondary)" }}
                                 >
                                     Page {currentPage + 1} of {totalPages}
                                 </div>
@@ -1093,9 +1093,9 @@ const MainPage = () => {
                                         currentPage === 0 || paginationLoading ? "cursor-not-allowed opacity-50" : "hover:scale-105 hover:opacity-90"
                                     }`}
                                     style={{
-                                        backgroundColor: isDarkMode ? "#334155" : "#0f172a",
-                                        color: "#f1f5f9",
-                                        border: `2px solid ${isDarkMode ? "#475569" : "#0f172a"}`,
+                                        backgroundColor: "var(--admin-accent)",
+                                        color: "var(--admin-card-bg)",
+                                        border: `1px solid var(--admin-card-border)`,
                                     }}
                                 >
                                     <ChevronLeft size={16} />
@@ -1129,14 +1129,10 @@ const MainPage = () => {
                                                 style={{
                                                     backgroundColor:
                                                         currentPage === pageNum
-                                                            ? isDarkMode
-                                                                ? "#3DD9B6"
-                                                                : "#0891B2"
-                                                            : isDarkMode
-                                                              ? "#334155"
-                                                              : "#f1f5f9",
-                                                    color: currentPage === pageNum ? "#ffffff" : isDarkMode ? "#f1f5f9" : "#0f172a",
-                                                    border: `1px solid ${isDarkMode ? "#475569" : "#cbd5e1"}`,
+                                                            ? "var(--admin-accent)"
+                                                            : "var(--admin-card-bg)",
+                                                    color: currentPage === pageNum ? "var(--admin-card-bg)" : "var(--admin-text-primary)",
+                                                    border: `1px solid var(--admin-card-border)`,
                                                 }}
                                             >
                                                 {pageNum + 1}
@@ -1154,9 +1150,9 @@ const MainPage = () => {
                                             : "hover:scale-105 hover:opacity-90"
                                     }`}
                                     style={{
-                                        backgroundColor: isDarkMode ? "#334155" : "#0f172a",
-                                        color: "#f1f5f9",
-                                        border: `2px solid ${isDarkMode ? "#475569" : "#0f172a"}`,
+                                        backgroundColor: "var(--admin-accent)",
+                                        color: "var(--admin-card-bg)",
+                                        border: `1px solid var(--admin-card-border)`,
                                     }}
                                 >
                                     Next

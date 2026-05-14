@@ -12,18 +12,19 @@ import { api } from "@/lib/api-config";
 // Updated table headers - ADDED Due Date column
 const tableHeaders = [
     "Invoice",
-    "Name",
+    "Customer",
     "Service",
     "Loads",
     "Detergent",
     "Fabric",
     "Price",
-    "Date", // ✅ This will now display issueDate instead of createdAt
-    "Due Date", // ✅ ADDED: New column for dueDate
+    "Date",
+    "Due Date",
     "Payment",
     "GCash Ref",
-    "Pickup Status",
-    "Claimed Date",
+    "Status",
+    "Claimed At",
+    "Staff",
     "Actions",
 ];
 
@@ -86,6 +87,11 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
                 tooltip: "Laundry has been completed and picked up",
                 color: "green",
             },
+            CLAIMED: {
+                icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+                tooltip: "Laundry has been picked up by customer",
+                color: "green",
+            },
             UNCLAIMED: {
                 icon: <AlertCircle className="h-4 w-4 text-orange-500" />,
                 tooltip: "Laundry is ready but not yet claimed",
@@ -127,9 +133,9 @@ const StatusBadge = ({ status, type = "pickup", isDarkMode }) => {
             <TooltipContent
                 side="top"
                 style={{
-                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                    color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                    backgroundColor: "var(--admin-card-bg)",
+                    color: "var(--admin-text-primary)",
+                    borderColor: "var(--admin-card-border)",
                 }}
             >
                 <div className="text-sm font-medium">{status}</div>
@@ -647,15 +653,15 @@ const AdminRecordTable = ({
                     <div className="w-full max-w-xs flex-1">
                         <div className="relative w-full max-w-xs">
                             <div
-                                className="flex h-[38px] items-center rounded-lg border-2 px-3 transition-all"
+                                className="flex h-[38px] items-center rounded-lg border px-3 transition-all shadow-sm"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#334155" : "#cbd5e1",
+                                    backgroundColor: "var(--admin-card-bg)",
+                                    borderColor: "var(--admin-card-border)",
                                 }}
                             >
                                 <Search
                                     size={16}
-                                    style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}
+                                    style={{ color: "var(--admin-text-secondary)" }}
                                 />
                                 <input
                                     type="text"
@@ -668,7 +674,7 @@ const AdminRecordTable = ({
                                     placeholder={autoSearchTerm ? `Searching: ${autoSearchTerm}` : "Search by name"}
                                     className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
                                     style={{
-                                        color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                        color: "var(--admin-text-primary)",
                                     }}
                                 />
                                 {/* SHOW AUTO SEARCH INDICATOR */}
@@ -696,26 +702,27 @@ const AdminRecordTable = ({
                             className="relative"
                             ref={calendarRef}
                         >
-                            <Button
-                                onClick={() => setShowCalendar((p) => !p)}
-                                className="transition-all"
-                                style={{
-                                    backgroundColor: isDarkMode ? "#0f172a" : "#0f172a",
-                                    color: "#f1f5f9",
-                                    border: `2px solid ${isDarkMode ? "#0f172a" : "#0f172a"}`,
-                                }}
-                            >
+                             <Button
+                                 onClick={() => setShowCalendar((p) => !p)}
+                                 variant="outline"
+                                 className="transition-all"
+                                 style={{
+                                     backgroundColor: "var(--admin-card-bg)",
+                                     color: "var(--admin-text-primary)",
+                                     borderColor: "var(--admin-card-border)",
+                                 }}
+                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {formatDateRange()}
                             </Button>
                             {showCalendar && (
-                                <div
-                                    className="absolute right-0 z-50 mt-2 rounded-lg border-2 p-2 shadow-lg"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#0f172a" : "#FFFFFF",
-                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                    }}
-                                >
+                                 <div
+                                     className="absolute right-0 z-50 mt-2 rounded-lg border p-2 shadow-lg"
+                                     style={{
+                                         backgroundColor: "var(--admin-card-bg)",
+                                         borderColor: "var(--admin-card-border)",
+                                     }}
+                                 >
                                     <Calendar
                                         isDarkMode={isDarkMode}
                                         mode="range"
@@ -730,9 +737,9 @@ const AdminRecordTable = ({
                                             onClick={clearDateFilter}
                                             className="mt-2 w-full transition-all"
                                             style={{
-                                                backgroundColor: isDarkMode ? "#334155" : "#f8fafc",
-                                                borderColor: isDarkMode ? "#475569" : "#cbd5e1",
-                                                color: isDarkMode ? "#f1f5f9" : "#0f172a",
+                                                backgroundColor: "var(--admin-card-bg)",
+                                                borderColor: "var(--admin-card-border)",
+                                                color: "var(--admin-text-primary)",
                                             }}
                                         >
                                             Clear Date Filter
@@ -763,37 +770,37 @@ const AdminRecordTable = ({
 
                             {/* Export Dropdown */}
                             {showExportDropdown && (
-                                <div
-                                    className="absolute right-0 z-50 mt-2 w-48 rounded-lg border-2 p-2 shadow-lg"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                    }}
-                                >
+                                 <div
+                                     className="absolute right-0 z-50 mt-2 w-48 rounded-lg border p-2 shadow-lg"
+                                     style={{
+                                         backgroundColor: "var(--admin-card-bg)",
+                                         borderColor: "var(--admin-card-border)",
+                                     }}
+                                 >
                                     <button
                                         onClick={handleExportCurrent}
-                                        className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
-                                        style={{
-                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                        }}
+                                         className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
+                                         style={{
+                                             color: "var(--admin-text-primary)",
+                                             backgroundColor: "var(--admin-accent-soft)",
+                                         }}
                                     >
                                         Export Current View
                                         <div className="mt-1 text-xs opacity-70">{displayItems.length} records</div>
                                     </button>
 
-                                    <div
-                                        className="my-2 border-t"
-                                        style={{ borderColor: isDarkMode ? "#334155" : "#cbd5e1" }}
-                                    />
+                                     <div
+                                         className="my-2 border-t"
+                                         style={{ borderColor: "var(--admin-card-border)" }}
+                                     />
 
                                     <button
                                         onClick={handleExportAll}
-                                        className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
-                                        style={{
-                                            color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                        }}
+                                         className="w-full rounded px-3 py-2 text-left text-sm transition-all hover:bg-opacity-20"
+                                         style={{
+                                             color: "var(--admin-text-primary)",
+                                             backgroundColor: "var(--admin-accent-soft)",
+                                         }}
                                     >
                                         Export All {timeFilter} Records
                                         <div className="mt-1 text-xs opacity-70">{totalRecords.toLocaleString()} total records</div>
@@ -805,19 +812,51 @@ const AdminRecordTable = ({
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto rounded-xl border shadow-sm"
-                    style={{
-                        borderColor: "var(--admin-card-border)",
-                    }}
-                >
-                    <table className="admin-table">
-                        <thead className="admin-table-thead">
+                 <div className="overflow-x-auto rounded-xl border shadow-sm"
+                     style={{
+                         borderColor: "var(--admin-card-border)",
+                     }}
+                 >
+                    <table 
+                        className="w-full text-left border-separate" 
+                        style={{ 
+                            minWidth: "1800px", 
+                            borderSpacing: 0,
+                        }}
+                    >
+                        <thead className="transition-colors" style={{ backgroundColor: "var(--admin-table-header)" }}>
                             <tr>
-                                <th className="w-10 px-2 py-2"></th>
-                                {tableHeaders.map((header) => (
-                                    <th
-                                        key={header}
-                                        className="admin-table-th whitespace-nowrap"
+                                {/* Sticky Invoice Header */}
+                                <th 
+                                    className="sticky left-0 z-30 px-4 py-4 text-[10px] font-bold uppercase tracking-widest border-b"
+                                    style={{ 
+                                        backgroundColor: "var(--admin-table-header)",
+                                        borderColor: "var(--admin-card-border)",
+                                        minWidth: "120px"
+                                    }}
+                                >
+                                    Invoice
+                                </th>
+                                {/* Sticky Customer Header */}
+                                <th 
+                                    className="sticky left-[120px] z-30 px-4 py-4 text-[10px] font-bold uppercase tracking-widest border-b"
+                                    style={{ 
+                                        backgroundColor: "var(--admin-table-header)",
+                                        borderColor: "var(--admin-card-border)",
+                                        borderRight: "2px solid var(--admin-card-border)",
+                                        minWidth: "180px"
+                                    }}
+                                >
+                                    Customer
+                                </th>
+                                {tableHeaders.slice(2).map((header) => (
+                                    <th 
+                                        key={header} 
+                                        className="p-4 text-[10px] font-bold uppercase tracking-widest border-b" 
+                                        style={{ 
+                                            borderColor: "var(--admin-card-border)",
+                                            color: "var(--admin-text-secondary)"
+                                        }}
                                     >
                                         {header}
                                     </th>
@@ -828,7 +867,7 @@ const AdminRecordTable = ({
                             {displayItems.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={tableHeaders.length + 1}
+                                        colSpan={tableHeaders.length}
                                         className="admin-table-td p-12 text-center"
                                     >
                                         <div className="flex flex-col items-center gap-3">
@@ -854,75 +893,74 @@ const AdminRecordTable = ({
                                 </tr>
                             ) : (
                                 displayItems.map((record) => {
-                                    const isExpanded = expandedRows.has(record.id);
                                     const gcashRef = getGcashReference(record);
                                     const pickupStatus = getPickupStatus(record);
-
+                                    
                                     return (
-                                        <React.Fragment key={record.id}>
                                         <tr
-                                            className="admin-table-tr"
-                                            style={{ backgroundColor: isExpanded ? "var(--admin-table-hover)" : undefined }}
+                                            key={record.id}
+                                            className="admin-table-tr group"
                                         >
-                                            <td className="admin-table-td">
-                                                <button
-                                                    onClick={() => toggleRowExpansion(record.id)}
-                                                    className="rounded p-1 transition-all hover:bg-slate-200 dark:hover:bg-slate-700"
-                                                >
-                                                    {isExpanded ? (
-                                                        <ChevronUp
-                                                            className="h-4 w-4"
-                                                            style={{ color: "var(--admin-text-primary)" }}
-                                                        />
-                                                    ) : (
-                                                        <ChevronDown
-                                                            className="h-4 w-4"
-                                                            style={{ color: "var(--admin-text-primary)" }}
-                                                        />
-                                                    )}
-                                                </button>
+                                            {/* Sticky Invoice Cell */}
+                                            <td 
+                                                className="sticky left-0 z-20 p-4 font-mono transition-colors group-hover:brightness-110"
+                                                style={{ 
+                                                    backgroundColor: "var(--admin-card-bg)",
+                                                    borderColor: "var(--admin-card-border)",
+                                                    borderBottomWidth: "1px"
+                                                }}
+                                            >
+                                                <span className="text-xs opacity-70">{record.invoiceNumber || "—"}</span>
                                             </td>
-                                            <td className="admin-table-td font-mono text-[10px] opacity-70">
-                                                {record.invoiceNumber || "—"}
-                                            </td>
-                                            <td className="admin-table-td font-bold">
+                                            {/* Sticky Customer Cell */}
+                                            <td 
+                                                className="sticky left-[120px] z-20 p-4 text-sm font-bold whitespace-nowrap transition-colors group-hover:brightness-110"
+                                                style={{ 
+                                                    backgroundColor: "var(--admin-card-bg)",
+                                                    borderColor: "var(--admin-card-border)",
+                                                    borderRight: "2px solid var(--admin-card-border)",
+                                                    borderBottomWidth: "1px"
+                                                }}
+                                            >
                                                 {record.name}
                                             </td>
-                                            <td className="admin-table-td">
+                                            
+                                            {/* Regular Columns */}
+                                            <td className="admin-table-td whitespace-nowrap">
                                                 {record.service}
                                             </td>
-                                            <td className="admin-table-td">
+                                            <td className="admin-table-td text-center">
                                                 {record.loads}
                                             </td>
-                                            <td className="admin-table-td">
-                                                {record.detergent}
+                                            <td className="admin-table-td whitespace-nowrap">
+                                                {record.detergent || "—"}
                                             </td>
-                                            <td className="admin-table-td">
-                                                {record.fabric}
+                                            <td className="admin-table-td whitespace-nowrap">
+                                                {record.fabric || "—"}
                                             </td>
-                                            <td className="admin-table-td font-bold text-admin-accent">
+                                            <td className="admin-table-td font-bold" style={{ color: "var(--admin-accent)" }}>
                                                 {formatCurrency(record.price)}
                                             </td>
-                                            <td className="admin-table-td text-[11px] opacity-70">
+                                            <td className="admin-table-td text-[11px] opacity-70 whitespace-nowrap">
                                                 {record.issueDate && !isNaN(new Date(record.issueDate))
                                                     ? format(new Date(record.issueDate), "MMM dd, yyyy")
                                                     : record.createdAt && !isNaN(new Date(record.createdAt))
                                                     ? format(new Date(record.createdAt), "MMM dd, yyyy")
                                                     : "—"}
                                             </td>
-                                            <td className="admin-table-td text-[11px] opacity-70">
+                                            <td className="admin-table-td text-[11px] opacity-70 whitespace-nowrap">
                                                 {record.dueDate && !isNaN(new Date(record.dueDate))
                                                     ? format(new Date(record.dueDate), "MMM dd, yyyy")
                                                     : "—"}
                                             </td>
                                             <td className="admin-table-td">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[11px]">{record.paymentMethod}</span>
                                                     <StatusBadge
                                                         status={record.paid ? "Paid" : "Pending"}
                                                         type="payment"
                                                         isDarkMode={isDarkMode}
                                                     />
+                                                    <span className="text-[11px] font-medium uppercase">{record.paymentMethod}</span>
                                                 </div>
                                             </td>
                                             <td className="admin-table-td font-mono text-[10px] opacity-70">
@@ -930,20 +968,25 @@ const AdminRecordTable = ({
                                             </td>
                                             <td className="admin-table-td">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[11px]">{pickupStatus}</span>
                                                     <StatusBadge
                                                         status={pickupStatus}
                                                         type="pickup"
                                                         isDarkMode={isDarkMode}
                                                     />
+                                                    <span className="text-[11px] font-medium whitespace-nowrap">{pickupStatus}</span>
                                                 </div>
                                             </td>
-                                            <td className="admin-table-td text-[10px] opacity-60">
+                                            <td className="admin-table-td text-[10px] opacity-60 whitespace-nowrap">
                                                 {record.claimDate && !isNaN(new Date(record.claimDate))
-                                                    ? formatTimeNormal(record.claimDate)
+                                                    ? format(new Date(record.claimDate), "MMM dd, hh:mm a")
                                                     : "—"}
                                             </td>
-                                            <td className="admin-table-td">
+                                            <td className="admin-table-td text-[10px] opacity-60">
+                                                <div className="truncate max-w-[120px]" title={`${record.laundryProcessedBy || "—"} / ${record.claimProcessedBy || "—"}`}>
+                                                    {record.laundryProcessedBy || "—"} / {record.claimProcessedBy || "—"}
+                                                </div>
+                                            </td>
+                                            <td className="admin-table-td" onClick={(e) => e.stopPropagation()}>
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <button
@@ -970,31 +1013,6 @@ const AdminRecordTable = ({
                                                 </Tooltip>
                                             </td>
                                         </tr>
-                                        {isExpanded && (
-                                            <tr className="transition-all" style={{ backgroundColor: "var(--admin-table-hover)" }}>
-                                                <td colSpan={tableHeaders.length + 1} className="admin-table-td px-4 py-3 border-t-0">
-                                                    <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-                                                        <div>
-                                                            <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
-                                                                Laundry Processed By:
-                                                            </span>
-                                                            <p style={{ color: "var(--admin-text-primary)" }}>
-                                                                {record.laundryProcessedBy || "—"}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
-                                                                Claim Processed By:
-                                                            </span>
-                                                            <p style={{ color: "var(--admin-text-primary)" }}>
-                                                                {record.claimProcessedBy || "—"}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                        </React.Fragment>
                                     );
                                 })
                             )}
