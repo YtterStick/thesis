@@ -2,6 +2,7 @@ package com.starwash.authservice.config;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -22,16 +23,14 @@ import java.util.Date;
 @EnableMongoRepositories(basePackages = "com.starwash.authservice.repository")
 public class MongoConfig {
 
+    @Value("${spring.data.mongodb.uri}")
+    private String mongoUri;
+
     // Manila timezone constant
     private static final ZoneId MANILA_ZONE = ZoneId.of("Asia/Manila");
 
     @Bean
     public MongoClient mongoClient() {
-        String mongoUri = System.getenv("MONGODB_URI");
-        if (mongoUri == null || mongoUri.isEmpty()) {
-            mongoUri = "mongodb+srv://ytterstick:vQjnfLWfTnN43tyf@starwash-cluster.fp7frav.mongodb.net";
-        }
-        
         System.out.println("🔗 Connecting to MongoDB with Manila timezone: " + MANILA_ZONE);
         return MongoClients.create(mongoUri);
     }

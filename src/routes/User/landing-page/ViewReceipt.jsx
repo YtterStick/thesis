@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { X, FileText } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import QRCode from "react-qr-code";
 import QR from "qrcode";
 import html2canvas from "html2canvas";
@@ -16,6 +17,18 @@ const ViewReceipt = ({
 }) => {
   const [qrImage, setQrImage] = useState(null);
   const receiptRef = useRef(null);
+
+  // Prevent scroll of main body when receipt modal is active
+  useEffect(() => {
+    if (showReceiptOptions) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showReceiptOptions]);
 
   // Format currency
   const formatCurrency = (value) => {
@@ -271,14 +284,14 @@ const ViewReceipt = ({
   // Don't render anything if not visible
   if (!showReceiptOptions) return null;
 
-  return (
+  return typeof document !== 'undefined' && createPortal(
     <>
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isVisible ? 1 : 0 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-75 p-4"
         onClick={closeReceiptOptions}
       >
         {/* Modal Container */}
@@ -287,9 +300,28 @@ const ViewReceipt = ({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl"
+          className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl modal-scroll"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: isDarkMode ? 'rgba(255, 255, 255, 0.15) transparent' : 'rgba(15, 23, 42, 0.1) transparent',
+          }}
           onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
         >
+          <style>{`
+            .modal-scroll::-webkit-scrollbar {
+              width: 6px;
+            }
+            .modal-scroll::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .modal-scroll::-webkit-scrollbar-thumb {
+              background: ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(15, 23, 42, 0.1)'};
+              border-radius: 9999px;
+            }
+            .modal-scroll::-webkit-scrollbar-thumb:hover {
+              background: ${isDarkMode ? 'rgba(255, 255, 255, 0.25)' : 'rgba(15, 23, 42, 0.2)'};
+            }
+          `}</style>
           {/* Modal Content */}
           <div 
             className="rounded-xl p-4"
@@ -461,7 +493,8 @@ const ViewReceipt = ({
           </div>
         </motion.div>
       </motion.div>
-    </>
+    </>,
+    document.body
   );
 };
 

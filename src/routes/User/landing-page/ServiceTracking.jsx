@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, CheckCircle2, Bell, AlertTriangle, Clock, Phone, Eye, QrCode, X } from "lucide-react";
+import { Search, Loader2, CheckCircle2, Bell, AlertTriangle, Clock, Phone, Eye, QrCode, X, ChevronLeft } from "lucide-react";
 
 // Import components
 import ViewReceipt from "./ViewReceipt";
@@ -102,6 +102,17 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
             }, 100);
         }
     }, [showStatus]);
+
+    useEffect(() => {
+        if (showStatus && trackingData) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [showStatus, trackingData]);
 
     const fetchTrackingData = async (invoiceNumber, isSilentRefresh = false) => {
         if (!isSilentRefresh) {
@@ -524,11 +535,155 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                 receiptData={receiptData}
             />
 
+            {/* IMMERSIVE FOCUS LAUNDRY TRACKER PORTAL */}
+            <AnimatePresence>
+                {showStatus && trackingData && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="fixed inset-0 z-50 overflow-y-auto w-full min-h-screen flex flex-col items-center justify-start py-8 px-4 md:py-12"
+                        style={{
+                            background: isDarkMode 
+                                ? "radial-gradient(circle at 10% 20%, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98))"
+                                : "radial-gradient(circle at 10% 20%, rgba(241, 245, 249, 0.95), rgba(248, 250, 252, 0.98))",
+                        }}
+                    >
+                        {/* Ambient decorative glowing backdrops */}
+                        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 dark:bg-blue-500/5 blur-[120px] pointer-events-none" />
+                        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] pointer-events-none" />
+
+                        <div className="w-full max-w-7xl flex flex-col gap-6 md:gap-8 relative z-10">
+                            {/* Immersive Glass Header Banner */}
+                            <motion.div
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="w-full rounded-2xl border p-4 md:p-6 shadow-xl backdrop-blur-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                                style={{
+                                    backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.6)" : "rgba(255, 255, 255, 0.75)",
+                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                                    color: isDarkMode ? "#cbd5e1" : "#475569",
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <motion.button
+                                        onClick={handleCloseTracking}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-200/50 dark:border-slate-800"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                        <span>Back to Home</span>
+                                    </motion.button>
+                                    
+                                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase">Tracker Active</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:items-end">
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Tracked Invoice Number</span>
+                                    <span className="text-base md:text-lg font-mono font-black text-blue-500 dark:text-blue-400 tracking-wide mt-0.5">
+                                        #{trackingData.invoiceNumber}
+                                    </span>
+                                </div>
+                            </motion.div>
+
+                            {/* Content Workspace Grid */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start w-full">
+                                {/* Timeline: Takes Center Stage */}
+                                <div className="grid grid-cols-1 gap-6 md:gap-8 lg:col-span-2">
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.98 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="rounded-3xl border p-6 md:p-8 shadow-2xl backdrop-blur-md"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
+                                            borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                                        }}
+                                    >
+                                        {laundryLoads.length > 0 ? (
+                                            <LaundryProgress
+                                                isVisible={showStatus}
+                                                isDarkMode={isDarkMode}
+                                                isMobile={isMobile}
+                                                currentLoadIndex={currentLoadIndex}
+                                                laundryLoads={laundryLoads}
+                                                prevLoad={prevLoad}
+                                                nextLoad={nextLoad}
+                                                goToLoad={goToLoad}
+                                            />
+                                        ) : (
+                                            <div className="text-center py-12">
+                                                <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-500 mb-3" />
+                                                <p className="text-sm font-semibold">Preparing tracking details...</p>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                </div>
+
+                                {/* Sidebar Customer / Store Info Cards */}
+                                <div className="flex flex-col gap-6 md:gap-8">
+                                    <CustomerInfo
+                                        isVisible={showStatus}
+                                        isDarkMode={isDarkMode}
+                                        isMobile={isMobile}
+                                        showFullCustomerInfo={showFullCustomerInfo}
+                                        toggleFullCustomerInfo={toggleFullCustomerInfo}
+                                        handleViewReceipt={handleViewReceipt}
+                                        handlePrintReceipt={handlePrintReceipt}
+                                        customerData={trackingData}
+                                    />
+
+                                    {/* Support Alert / Operating Hours */}
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="rounded-2xl border p-5 shadow-xl backdrop-blur-md"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
+                                            borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                                            color: isDarkMode ? "#cbd5e1" : "#475569",
+                                        }}
+                                    >
+                                        <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Live Support & Hours</h4>
+                                        <div className="space-y-4">
+                                            <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-800/10 dark:bg-slate-100/5">
+                                                <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                                                    <Clock className="h-4 w-4" />
+                                                </div>
+                                                <div>
+                                                    <h5 className="text-xs font-bold" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>Daily Pickup Window</h5>
+                                                    <p className="text-[11px] opacity-75 mt-0.5">Mon - Sun: 7:00 AM - 7:00 PM</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-800/10 dark:bg-slate-100/5">
+                                                <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500">
+                                                    <Phone className="h-4 w-4" />
+                                                </div>
+                                                <div>
+                                                    <h5 className="text-xs font-bold" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>Need Assistance?</h5>
+                                                    <p className="text-[11px] opacity-75 mt-0.5">Contact counter staff or request help directly.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <motion.section
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 50 }}
                 transition={{ duration: 0.8, delay: 1.6 }}
-                className={`px-4 py-12 md:py-16 ${isDarkMode ? "bg-[#0B2B26]" : "bg-[#E0EAE8]"}`}
+                className="px-4 py-12 md:py-16 transition-colors duration-300 bg-transparent"
                 id="service_tracking"
             >
                 <div className="mx-auto max-w-[90%]">
@@ -537,18 +692,18 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 2.0 }}
-                        className="mb-8 rounded-xl border-2 p-4 md:p-6"
+                        className="mb-8 rounded-3xl border p-6 md:p-8 shadow-2xl backdrop-blur-md transition-all duration-300"
                         style={{
-                            backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
-                            borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                            color: isDarkMode ? "#13151B" : "#F3EDE3",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
+                            borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                            color: isDarkMode ? "#cbd5e1" : "#475569",
                         }}
                     >
                         <div className="mb-6">
                             <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
                                 <h3
-                                    className="whitespace-nowrap text-base font-bold md:text-xl"
-                                    style={{ color: isDarkMode ? "#13151B" : "#F3EDE3" }}
+                                    className="whitespace-nowrap text-base font-black tracking-wider md:text-lg"
+                                    style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}
                                 >
                                     ENTER RECEIPT NUMBER:
                                 </h3>
@@ -561,7 +716,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 transform">
                                             <Search
                                                 className="h-4 w-4"
-                                                style={{ color: isDarkMode ? "#6B7280" : "#F3EDE3" }}
+                                                style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
                                             />
                                         </div>
                                         <input
@@ -569,11 +724,11 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                             value={receiptNumber}
                                             onChange={(e) => setReceiptNumber(e.target.value)}
                                             placeholder="Write here..."
-                                            className="w-full rounded-lg border-2 py-3 pl-9 pr-3 text-sm placeholder-gray-500 focus:outline-none sm:py-2"
+                                            className="w-full rounded-xl border py-3 pl-10 pr-4 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all sm:py-2.5"
                                             style={{
-                                                backgroundColor: "#FFFFFF",
-                                                borderColor: isDarkMode ? "#2A524C" : "#F3EDE3",
-                                                color: "#13151B",
+                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.6)" : "#ffffff",
+                                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(15, 23, 42, 0.1)",
+                                                color: isDarkMode ? "#f8fafc" : "#0f172a",
                                             }}
                                         />
                                     </div>
@@ -584,18 +739,12 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                             disabled={isLoading}
                                             whileHover={{
                                                 scale: 1.05,
-                                                backgroundColor: isDarkMode ? "#2A524C" : "#D5DCDB",
                                                 transition: { duration: 0.2 },
                                             }}
                                             whileTap={{ scale: 0.95 }}
-                                            className={`flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-4 py-3 text-sm font-semibold shadow sm:flex-shrink-0 sm:py-2 ${
+                                            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-5 py-3 text-sm font-bold shadow-md transition-all active:scale-95 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-none sm:flex-shrink-0 sm:py-2.5 cursor-pointer ${
                                                 isLoading ? "cursor-not-allowed opacity-50" : ""
                                             }`}
-                                            style={{
-                                                backgroundColor: isDarkMode ? "#18442AF5" : "#F3EDE3",
-                                                color: isDarkMode ? "#D5DCDB" : "#183D3D",
-                                                borderColor: isDarkMode ? "#18442AF5" : "#F3EDE3",
-                                            }}
                                         >
                                             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                                             {isLoading ? "Loading..." : "View"}
@@ -607,17 +756,16 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                             disabled={isLoading || isScanning}
                                             whileHover={{
                                                 scale: 1.05,
-                                                backgroundColor: isDarkMode ? "#3A635C" : "#E8F0EF",
                                                 transition: { duration: 0.2 },
                                             }}
                                             whileTap={{ scale: 0.95 }}
-                                            className={`flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-4 py-3 text-sm font-semibold shadow sm:flex-shrink-0 sm:py-2 ${
+                                            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-5 py-3 text-sm font-bold shadow-md transition-all hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 sm:flex-shrink-0 sm:py-2.5 cursor-pointer ${
                                                 isLoading ? "cursor-not-allowed opacity-50" : ""
                                             }`}
                                             style={{
-                                                backgroundColor: isDarkMode ? "#2A524C" : "#F3EDE3",
-                                                color: isDarkMode ? "#D5DCDB" : "#183D3D",
-                                                borderColor: isDarkMode ? "#2A524C" : "#F3EDE3",
+                                                backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "#ffffff",
+                                                color: isDarkMode ? "#f8fafc" : "#0f172a",
+                                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(15, 23, 42, 0.1)",
                                             }}
                                         >
                                             {isScanning ? (
@@ -647,62 +795,6 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                             isMobile={isMobile}
                             onQRScanned={handleQRScanned}
                         />
-
-                        <AnimatePresence>
-                            {showStatus && trackingData && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    transition={{ duration: 0.5 }}
-                                    className="border-t pt-4"
-                                    style={{ borderColor: isDarkMode ? "#2A524C" : "#F3EDE3" }}
-                                >
-                                    <div className="mb-4 flex justify-end">
-                                        <motion.button
-                                            onClick={handleCloseTracking}
-                                            whileHover={{
-                                                scale: 1.05,
-                                                backgroundColor: isDarkMode ? "#EF4444" : "#DC2626",
-                                                transition: { duration: 0.2 },
-                                            }}
-                                            whileTap={{ scale: 0.95 }}
-                                            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg"
-                                            style={{
-                                                backgroundColor: isDarkMode ? "#DC2626" : "#EF4444",
-                                            }}
-                                        >
-                                            <X className="h-4 w-4" />
-                                            Close Tracking
-                                        </motion.button>
-                                    </div>
-
-                                    <CustomerInfo
-                                        isVisible={showStatus}
-                                        isDarkMode={isDarkMode}
-                                        isMobile={isMobile}
-                                        showFullCustomerInfo={showFullCustomerInfo}
-                                        toggleFullCustomerInfo={toggleFullCustomerInfo}
-                                        handleViewReceipt={handleViewReceipt}
-                                        handlePrintReceipt={handlePrintReceipt}
-                                        customerData={trackingData}
-                                    />
-
-                                    {laundryLoads.length > 0 && (
-                                        <LaundryProgress
-                                            isVisible={showStatus}
-                                            isDarkMode={isDarkMode}
-                                            isMobile={isMobile}
-                                            currentLoadIndex={currentLoadIndex}
-                                            laundryLoads={laundryLoads}
-                                            prevLoad={prevLoad}
-                                            nextLoad={nextLoad}
-                                            goToLoad={goToLoad}
-                                        />
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </motion.div>
 
                     <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-3">
@@ -717,14 +809,14 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                 initial={{ opacity: 0, x: 30 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.5, delay: 2.6 }}
-                                className="rounded-2xl border-2 p-4 md:p-6 lg:col-span-2"
+                                className="rounded-3xl border p-6 md:p-8 lg:col-span-2 shadow-2xl backdrop-blur-md transition-all duration-300"
                                 style={{
-                                    backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
-                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                    color: isDarkMode ? "#13151B" : "#F3EDE3",
+                                    backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
+                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                                    color: isDarkMode ? "#cbd5e1" : "#475569",
                                 }}
                             >
-                                <h3 className="mb-4 text-lg font-bold md:text-xl">Reminder & Information</h3>
+                                <h3 className="mb-4 text-lg font-black tracking-tight md:text-xl" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>Reminder & Information</h3>
 
                                 <div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                                     <div className="flex flex-col">
@@ -763,13 +855,13 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                                         y: -2,
                                                         transition: { duration: 0.2 },
                                                     }}
-                                                    className={`rounded-xl border p-3 transition-all ${
-                                                        isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
+                                                    className={`rounded-2xl border p-4 transition-all ${
+                                                        isDarkMode ? "hover:bg-slate-800/40 hover:border-blue-500/30" : "hover:bg-slate-100/40 hover:border-blue-500/30"
                                                     }`}
                                                     style={{
-                                                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                                        borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                                        color: isDarkMode ? "#13151B" : "#183D3D",
+                                                        backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
+                                                        borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
+                                                        color: isDarkMode ? "#cbd5e1" : "#475569",
                                                     }}
                                                 >
                                                     <div className="flex items-start gap-3">
@@ -795,7 +887,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                                             <div className="flex items-start justify-between gap-2">
                                                                 <h5
                                                                     className="break-words text-sm font-bold md:text-base"
-                                                                    style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                                    style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}
                                                                 >
                                                                     {item.text}
                                                                 </h5>
@@ -835,44 +927,41 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                                     y: -2,
                                                     transition: { duration: 0.2 },
                                                 }}
-                                                className={`rounded-xl border p-4 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
+                                                className={`rounded-2xl border p-5 transition-all ${
+                                                    isDarkMode ? "hover:bg-slate-800/40 hover:border-blue-500/30" : "hover:bg-slate-100/40 hover:border-blue-500/30"
+                                                }`}
                                                 style={{
-                                                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                                    color: isDarkMode ? "#13151B" : "#183D3D",
+                                                    backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
+                                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
                                                 }}
                                             >
-                                                <div className="mb-3 flex items-center gap-2">
-                                                    <motion.div
-                                                        whileHover={{ scale: 1.1, rotate: 5 }}
-                                                        className={`rounded-full p-2 ${
-                                                            isDarkMode ? "bg-blue-100 text-blue-600" : "bg-blue-50 text-blue-700"
+                                                <div className="mb-3 flex items-center gap-3">
+                                                    <div
+                                                        className={`rounded-full p-2.5 ${
+                                                            isDarkMode ? "bg-blue-500/10 text-blue-400" : "bg-blue-50 text-blue-600"
                                                         }`}
                                                     >
-                                                        <Clock className="h-4 w-4" />
-                                                    </motion.div>
+                                                        <Clock className="h-5 w-5" />
+                                                    </div>
                                                     <h5
-                                                        className="text-sm font-bold md:text-base"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                        className="text-base font-bold"
+                                                        style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
                                                     >
                                                         Operating Hours
-                                                    </h5>
+                                                     </h5>
                                                 </div>
-                                                <div className="text-sm">
+                                                <div className="text-sm mt-2">
                                                     <div className="flex items-center justify-between py-1">
                                                         <span
-                                                            className="font-medium"
-                                                            style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                            className="font-medium text-slate-400 dark:text-slate-500"
                                                         >
                                                             Mon - Sun
                                                         </span>
-                                                        <motion.span
-                                                            whileHover={{ scale: 1.05 }}
-                                                            className="font-semibold"
-                                                            style={{ color: isDarkMode ? "#18442A" : "#18442A" }}
+                                                        <span
+                                                            className="font-black text-blue-500 dark:text-blue-400"
                                                         >
                                                             7:00 AM - 7:00 PM
-                                                        </motion.span>
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </motion.div>
@@ -886,32 +975,31 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                                     y: -2,
                                                     transition: { duration: 0.2 },
                                                 }}
-                                                className={`rounded-xl border p-4 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
+                                                className={`rounded-2xl border p-5 transition-all ${
+                                                    isDarkMode ? "hover:bg-slate-800/40 hover:border-purple-500/30" : "hover:bg-slate-100/40 hover:border-purple-500/30"
+                                                }`}
                                                 style={{
-                                                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                                    color: isDarkMode ? "#13151B" : "#183D3D",
+                                                    backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
+                                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
                                                 }}
                                             >
-                                                <div className="mb-3 flex items-center gap-2">
-                                                    <motion.div
-                                                        whileHover={{ scale: 1.1, rotate: -5 }}
-                                                        className={`rounded-full p-2 ${
-                                                            isDarkMode ? "bg-purple-100 text-purple-600" : "bg-purple-50 text-purple-700"
+                                                <div className="mb-3 flex items-center gap-3">
+                                                    <div
+                                                        className={`rounded-full p-2.5 ${
+                                                            isDarkMode ? "bg-purple-500/10 text-purple-400" : "bg-purple-50 text-purple-600"
                                                         }`}
                                                     >
-                                                        <Phone className="h-4 w-4" />
-                                                    </motion.div>
+                                                        <Phone className="h-5 w-5" />
+                                                    </div>
                                                     <h5
-                                                        className="text-sm font-bold md:text-base"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                        className="text-base font-bold"
+                                                        style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
                                                     >
                                                         Contact Information
                                                     </h5>
                                                 </div>
                                                 <p
-                                                    className="break-words text-sm leading-relaxed"
-                                                    style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
+                                                    className="break-words text-sm leading-relaxed text-slate-400 dark:text-slate-500 mt-2"
                                                 >
                                                     Ensure your contact number is accurate to receive service updates and notifications.
                                                 </p>
@@ -928,11 +1016,11 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                     initial={{ opacity: 0, x: 30 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.5, delay: 2.6 }}
-                                    className="rounded-2xl border-2 p-4"
+                                    className="rounded-3xl border p-6 shadow-2xl backdrop-blur-md transition-all duration-300"
                                     style={{
-                                        backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
-                                        borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                        color: isDarkMode ? "#13151B" : "#F3EDE3",
+                                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
+                                        borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                                        color: isDarkMode ? "#cbd5e1" : "#475569",
                                     }}
                                 >
                                     <h3 className="mb-4 text-lg font-bold">Notification System</h3>
@@ -970,13 +1058,13 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                                     y: -2,
                                                     transition: { duration: 0.2 },
                                                 }}
-                                                className={`rounded-xl border p-3 transition-all ${
-                                                    isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"
+                                                className={`rounded-2xl border p-4 transition-all ${
+                                                    isDarkMode ? "hover:bg-slate-800/40 hover:border-blue-500/30" : "hover:bg-slate-100/40 hover:border-blue-500/30"
                                                 }`}
                                                 style={{
-                                                    backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                                    borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                                    color: isDarkMode ? "#13151B" : "#183D3D",
+                                                    backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
+                                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
+                                                    color: isDarkMode ? "#cbd5e1" : "#475569",
                                                 }}
                                             >
                                                 <div className="flex items-start gap-3">
@@ -1034,11 +1122,11 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                     initial={{ opacity: 0, x: 30 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.5, delay: 2.8 }}
-                                    className="rounded-2xl border-2 p-4"
+                                    className="rounded-3xl border p-6 shadow-2xl backdrop-blur-md transition-all duration-300"
                                     style={{
-                                        backgroundColor: isDarkMode ? "#F3EDE3" : "#183D3D",
-                                        borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                        color: isDarkMode ? "#13151B" : "#F3EDE3",
+                                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
+                                        borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                                        color: isDarkMode ? "#cbd5e1" : "#475569",
                                     }}
                                 >
                                     <h3 className="mb-4 text-lg font-bold">Store Information</h3>
@@ -1052,44 +1140,41 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                                 y: -2,
                                                 transition: { duration: 0.2 },
                                             }}
-                                            className={`rounded-xl border p-4 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
+                                            className={`rounded-2xl border p-5 transition-all ${
+                                                isDarkMode ? "hover:bg-slate-800/40 hover:border-blue-500/30" : "hover:bg-slate-100/40 hover:border-blue-500/30"
+                                            }`}
                                             style={{
-                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                                borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                                color: isDarkMode ? "#13151B" : "#183D3D",
+                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
+                                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
                                             }}
                                         >
-                                            <div className="mb-3 flex items-center gap-2">
-                                                <motion.div
-                                                    whileHover={{ scale: 1.1, rotate: 5 }}
-                                                    className={`rounded-full p-2 ${
-                                                        isDarkMode ? "bg-blue-100 text-blue-600" : "bg-blue-50 text-blue-700"
+                                            <div className="mb-3 flex items-center gap-3">
+                                                <div
+                                                    className={`rounded-full p-2.5 ${
+                                                        isDarkMode ? "bg-blue-500/10 text-blue-400" : "bg-blue-50 text-blue-600"
                                                     }`}
                                                 >
-                                                    <Clock className="h-4 w-4" />
-                                                </motion.div>
+                                                    <Clock className="h-5 w-5" />
+                                                </div>
                                                 <h5
-                                                    className="text-sm font-bold"
-                                                    style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                    className="text-base font-bold"
+                                                    style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
                                                 >
                                                     Operating Hours
                                                 </h5>
                                             </div>
-                                            <div className="text-sm">
+                                            <div className="text-sm mt-2">
                                                 <div className="flex items-center justify-between py-1">
                                                     <span
-                                                        className="font-medium"
-                                                        style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                        className="font-medium text-slate-400 dark:text-slate-500"
                                                     >
                                                         Mon - Sun
                                                     </span>
-                                                    <motion.span
-                                                        whileHover={{ scale: 1.05 }}
-                                                        className="font-semibold"
-                                                        style={{ color: isDarkMode ? "#18442A" : "#18442A" }}
+                                                    <span
+                                                        className="font-black text-blue-500 dark:text-blue-400"
                                                     >
                                                         7:00 AM - 7:00 PM
-                                                    </motion.span>
+                                                    </span>
                                                 </div>
                                             </div>
                                         </motion.div>
@@ -1103,32 +1188,31 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                                 y: -2,
                                                 transition: { duration: 0.2 },
                                             }}
-                                            className={`rounded-xl border p-4 transition-all ${isDarkMode ? "hover:bg-[#2A524C]" : "hover:bg-[#D5DCDB]"}`}
+                                            className={`rounded-2xl border p-5 transition-all ${
+                                                isDarkMode ? "hover:bg-slate-800/40 hover:border-purple-500/30" : "hover:bg-slate-100/40 hover:border-purple-500/30"
+                                            }`}
                                             style={{
-                                                backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                                                borderColor: isDarkMode ? "#2A524C" : "#183D3D",
-                                                color: isDarkMode ? "#13151B" : "#183D3D",
+                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
+                                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
                                             }}
                                         >
-                                            <div className="mb-3 flex items-center gap-2">
-                                                <motion.div
-                                                    whileHover={{ scale: 1.1, rotate: -5 }}
-                                                    className={`rounded-full p-2 ${
-                                                        isDarkMode ? "bg-purple-100 text-purple-600" : "bg-purple-50 text-purple-700"
+                                            <div className="mb-3 flex items-center gap-3">
+                                                <div
+                                                    className={`rounded-full p-2.5 ${
+                                                        isDarkMode ? "bg-purple-500/10 text-purple-400" : "bg-purple-50 text-purple-600"
                                                     }`}
                                                 >
-                                                    <Phone className="h-4 w-4" />
-                                                </motion.div>
+                                                    <Phone className="h-5 w-5" />
+                                                </div>
                                                 <h5
-                                                    className="text-sm font-bold"
-                                                    style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
+                                                    className="text-base font-bold"
+                                                    style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
                                                 >
                                                     Contact Information
                                                 </h5>
                                             </div>
                                             <p
-                                                className="break-words text-sm leading-relaxed"
-                                                style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
+                                                className="break-words text-sm leading-relaxed text-slate-400 dark:text-slate-500 mt-2"
                                             >
                                                 Ensure your contact number is accurate to receive service updates and notifications.
                                             </p>

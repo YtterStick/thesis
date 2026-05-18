@@ -8,8 +8,7 @@ import TermsCondition from "./TermsCondition";
 import { useScrollSpy } from "./useScrollSpy";
 import assetLanding from "@/assets/USER_ASSET/asset_landing.jpg";
 import { useTheme } from "@/hooks/use-theme";
-
-const API_BASE_URL = "https://thesis-1-culv.onrender.com/api";
+import { getApiUrl } from "@/lib/api-config";
 
 const AnimatedNumber = ({ value, isChanging }) => {
     if (!isChanging) {
@@ -54,7 +53,6 @@ const AnimatedNumber = ({ value, isChanging }) => {
         </div>
     );
 };
-
 const LandingPage = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -159,7 +157,7 @@ const LandingPage = () => {
             controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const response = await fetch(`${API_BASE_URL}/laundry-jobs`, {
+            const response = await fetch(getApiUrl("laundry-jobs"), {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -270,161 +268,185 @@ const LandingPage = () => {
 
     return (
         <div
-            className={`min-h-screen transition-colors duration-300 ${
-                isDarkMode ? "bg-[#0B2B26] text-white" : "bg-[#E0EAE8] text-[#0B2B26]"
+            className={`min-h-screen transition-colors duration-500 overflow-hidden relative ${
+                isDarkMode ? "bg-[#030712] text-slate-100" : "bg-[#f8fafc] text-slate-900"
             } font-poppins`}
             id="home"
         >
-            {/* Remove onThemeChange prop since Header now uses the theme hook internally */}
+            {/* Ambient background decorative elements */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 dark:bg-blue-500/5 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] pointer-events-none" />
+
+
+
+            {/* Header layout */}
             <Header activeSection={activeSection} />
 
             <div className="h-24" />
 
+            {/* HERO: INTERACTIVE TRACKING HUB */}
             <motion.section
                 initial={{ opacity: 0 }}
                 animate={{ opacity: isVisible ? 1 : 0 }}
                 transition={{ duration: 0.8 }}
-                className={`relative mt-0 w-full ${isDarkMode ? "bg-[#0B2B26]" : "bg-[#E0EAE8]"}`}
+                className="relative py-12 md:py-20 z-10"
             >
-                <div
-                    className={`relative mx-auto max-w-[90%] overflow-hidden rounded-tl-2xl rounded-tr-2xl ${
-                        isDarkMode ? "bg-[#0B2B26]" : "bg-[#E0EAE8]"
-                    }`}
-                >
-                    <div className="relative">
-                        <img
-                            src={assetLanding}
-                            alt="Laundry scene"
-                            className="h-[300px] w-full rounded-tl-2xl rounded-tr-2xl object-cover md:h-[650px]"
-                        />
+                <div className="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                    {/* Left Column: Title & Launch Console */}
+                    <div className="lg:col-span-7 flex flex-col justify-center">
 
-                        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-                            <motion.h2
-                                className="mb-8 text-3xl font-bold leading-tight md:mb-12 md:text-6xl"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.5, delay: 0.6 }}
-                                style={{ color: isDarkMode ? "#183D3D" : "#18442AF5" }}
-                            >
-                                Fresh Laundry,
-                                <br />
-                                <span
-                                    className="font-light"
-                                    style={{ color: isDarkMode ? "#183D3D" : "#18442AF5" }}
-                                >
-                                    Made Easy.
-                                </span>
-                            </motion.h2>
+                        <motion.h1
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.1 }}
+                            className="text-4xl md:text-6xl font-black tracking-tight leading-none"
+                            style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
+                        >
+                            Track Your
+                            <br />
+                            <span className="font-extrabold bg-gradient-to-r from-blue-500 via-sky-500 to-indigo-500 bg-clip-text text-transparent">
+                                Laundry Freshness
+                            </span>
+                            <br />
+                            In Real Time.
+                        </motion.h1>
 
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.5, delay: 0.8 }}
-                                className="flex flex-col items-center justify-center gap-4 sm:flex-row md:gap-6"
+                        <motion.p
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.2 }}
+                            className="text-base md:text-lg text-slate-400 dark:text-slate-500 leading-relaxed mt-6 max-w-xl"
+                        >
+                            Skip the phone calls and guesswork. Use our state-of-the-art live tracking engine to watch your garments go from washing, to drying, to folding, and ready for pickup.
+                        </motion.p>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.3 }}
+                            className="flex flex-col sm:flex-row gap-4 mt-8"
+                        >
+                            <button
+                                onClick={handleMyLaundryClick}
+                                className="px-8 py-4 rounded-xl text-base font-bold shadow-xl transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white cursor-pointer text-center"
                             >
-                                <button
-                                    onClick={handleOurServiceClick}
-                                    className="transform rounded-xl border-2 px-6 py-3 text-base font-semibold shadow-lg transition-all hover:scale-105 md:px-10 md:py-4 md:text-lg"
-                                    style={{
-                                        backgroundColor: "#D5DCDB",
-                                        color: "#183D3D",
-                                        borderColor: "#D5DCDB",
-                                    }}
-                                >
-                                    Our Service
-                                </button>
-                                <button
-                                    onClick={handleMyLaundryClick}
-                                    className="transform rounded-xl border-2 px-6 py-3 text-base font-semibold shadow-lg transition-all hover:scale-105 md:px-10 md:py-4 md:text-lg"
-                                    style={{
-                                        backgroundColor: "#18442AF5",
-                                        color: "#D5DCDB",
-                                        borderColor: "#18442AF5",
-                                    }}
-                                >
-                                    My Laundry
-                                </button>
-                            </motion.div>
-                        </div>
+                                Track My Laundry Now
+                            </button>
+                            <button
+                                onClick={handleOurServiceClick}
+                                className="px-8 py-4 rounded-xl text-base font-bold border transition-all hover:scale-105 active:scale-95 cursor-pointer text-center bg-slate-100/50 dark:bg-slate-900/50 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 border-slate-200 dark:border-slate-800"
+                                style={{
+                                    color: isDarkMode ? "#ffffff" : "#0f172a",
+                                }}
+                            >
+                                View Pricing & Services
+                            </button>
+                        </motion.div>
                     </div>
 
-                    <div className="absolute bottom-0 right-0 hidden h-[180px] w-[480px] overflow-hidden md:block">
-                        <svg
-                            className="absolute bottom-0 right-0 h-full w-full"
-                            viewBox="0 0 500 180"
-                            preserveAspectRatio="none"
+                    {/* Right Column: Live Shop Monitor Dashboard */}
+                    <div className="lg:col-span-5 relative">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                            className="w-full rounded-3xl border p-6 md:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden"
+                            style={{
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
+                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                            }}
                         >
-                            <path
-                                d="M500,180 L500,100 Q500,0 500,0 L0,0 L0,180 Z"
-                                fill={isDarkMode ? "#0B2B26" : "#E0EAE8"}
+                            {/* Decorative ambient background grid for deep styling */}
+                            <div 
+                                className="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none" 
+                                style={{
+                                    backgroundImage: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 1px, transparent 1px)',
+                                    backgroundSize: '16px 16px'
+                                }}
                             />
-                        </svg>
 
-                        <div className="absolute bottom-8 left-2 right-2 z-10 ml-8 flex items-end justify-end space-x-12">
-                            {stats.map((stat, i) => (
-                                <div
-                                    key={i}
-                                    className="flex flex-col items-center text-center"
-                                >
-                                    <div className={`mb-1 text-6xl font-bold ${isDarkMode ? "text-white" : "text-[#1C3F3A]"}`}>
-                                        <AnimatedNumber
-                                            value={stat.number}
-                                            isChanging={stat.changing}
-                                        />
+                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-6">
+                                LIVE SHOP ACTIVITY
+                            </h3>
+
+                            <div className="flex flex-col gap-6">
+                                {/* Washing Machine Live Card */}
+                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 backdrop-blur-sm">
+                                    <div className="h-12 w-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
+                                        <svg
+                                            className="h-7 w-7 animate-spin"
+                                            style={{ animationDuration: '6s' }}
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth={2}
+                                        >
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeDasharray="4 4" />
+                                            <path d="M12 8a4 4 0 100 8 4 4 0 000-8z" fill="currentColor" fillOpacity={0.2} />
+                                        </svg>
                                     </div>
-                                    <div
-                                        className={`max-w-[140px] text-sm font-normal leading-tight ${
-                                            isDarkMode ? "text-white/80" : "text-[#1C3F3A]/80"
-                                        }`}
-                                    >
-                                        {stat.label}
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Washing Station</h4>
+                                        <div className="text-xl font-black tracking-tight mt-0.5" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                                            <AnimatedNumber value={stats[1].number} isChanging={stats[1].changing} /> Machines Active
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
 
-                <div className={`w-full py-8 md:hidden ${isDarkMode ? "bg-[#0B2B26]" : "bg-[#E0EAE8]"}`}>
-                    <div className="mx-auto max-w-6xl px-4">
-                        <div className="grid grid-cols-1 gap-6">
-                            {stats.map((stat, i) => (
-                                <motion.div
-                                    key={i}
-                                    className="flex flex-col items-center rounded-2xl border-2 p-6 text-center"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "#1C3F3A" : "#FFFFFF",
-                                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                                    }}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.5, delay: 1 + i * 0.1 }}
-                                >
-                                    <div className={`mb-2 text-4xl font-bold ${isDarkMode ? "text-white" : "text-[#1C3F3A]"}`}>
-                                        <AnimatedNumber
-                                            value={stat.number}
-                                            isChanging={stat.changing}
-                                        />
+                                {/* Dryer Machine Live Card */}
+                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 backdrop-blur-sm">
+                                    <div className="h-12 w-12 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center flex-shrink-0">
+                                        <svg
+                                            className="h-7 w-7 animate-pulse"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth={2}
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
                                     </div>
-                                    <div className={`text-base font-normal leading-tight ${isDarkMode ? "text-white/80" : "text-[#1C3F3A]/80"}`}>
-                                        {stat.label}
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Dryer Station</h4>
+                                        <div className="text-xl font-black tracking-tight mt-0.5" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                                            <AnimatedNumber value={stats[2].number} isChanging={stats[2].changing} /> Machines Drying
+                                        </div>
                                     </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                                </div>
+
+                                {/* Active Queue Counter */}
+                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-sm">
+                                    <div className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                                        <svg
+                                            className="h-7 w-7"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth={2}
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Loads In Queue</h4>
+                                        <div className="text-xl font-black tracking-tight mt-0.5" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                                            <AnimatedNumber value={stats[0].number} isChanging={stats[0].changing} /> In Assembly
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
                     </div>
                 </div>
             </motion.section>
 
-            <div id="services">
-                <Services
-                    isVisible={isVisible}
-                    isMobile={isMobile}
-                    isDarkMode={isDarkMode}
-                />
-            </div>
-
-            <div id="service_tracking">
+            {/* LIVE ACTION PORTAL: SERVICE TRACKING (Centerpiece) */}
+            <div id="service_tracking" className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 mb-16">
+                <div className="text-center mb-8">
+                    <h2 className="text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-2">Live Query Portal</h2>
+                    <p className="text-2xl md:text-4xl font-black tracking-tight" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>Track Your Service</p>
+                </div>
+                
                 <ServiceTracking
                     isVisible={isVisible}
                     isDarkMode={isDarkMode}
@@ -432,7 +454,17 @@ const LandingPage = () => {
                 />
             </div>
 
-            <div id="terms">
+            {/* SERVICE CATALOG & PRICING */}
+            <div id="services" className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 mb-16">
+                <Services
+                    isVisible={isVisible}
+                    isMobile={isMobile}
+                    isDarkMode={isDarkMode}
+                />
+            </div>
+
+            {/* TERMS, DISCLOSURES & FAQs */}
+            <div id="terms" className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 mb-20">
                 <TermsCondition
                     isVisible={isVisible}
                     isMobile={isMobile}
@@ -440,6 +472,7 @@ const LandingPage = () => {
                 />
             </div>
 
+            {/* FOOTER */}
             <Footer isDarkMode={isDarkMode} />
         </div>
     );

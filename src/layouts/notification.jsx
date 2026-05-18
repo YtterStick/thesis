@@ -44,6 +44,7 @@ export const NotificationSystem = () => {
     const [hasMore, setHasMore] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [sseStatus, setSseStatus] = useState('connecting'); // 'connected', 'connecting', 'error'
+    const [lastSeenTimestamp, setLastSeenTimestamp] = useState('');
 
     const notificationRef = useRef(null);
     const notificationsEndRef = useRef(null);
@@ -158,6 +159,45 @@ export const NotificationSystem = () => {
 
         initializeShownNotifications();
     }, [saveShownNotificationIds]);
+
+    // Helper to get notification timestamp safely
+    const getNotificationTime = useCallback((dateString) => {
+        if (!dateString) return 0;
+        try {
+            let normalizedDateString = dateString;
+            if (dateString.includes('T') && !dateString.includes('+') && !dateString.endsWith('Z')) {
+                normalizedDateString = `${dateString}+08:00`;
+            }
+            return new Date(normalizedDateString).getTime();
+        } catch (e) {
+            return 0;
+        }
+    }, []);
+
+    // Derived state: calculate the red badge count based on unread notifications newer than lastSeenTimestamp
+    const badgeCount = notifications.filter(notif => 
+        !notif.read && 
+        (!lastSeenTimestamp || getNotificationTime(notif.createdAt) > getNotificationTime(lastSeenTimestamp))
+    ).length;
+
+    // Load lastSeenTimestamp when user ID is available or changes
+    useEffect(() => {
+        if (user?.id) {
+            const key = `starwash_notifications_last_seen_${user.id}`;
+            setLastSeenTimestamp(localStorage.getItem(key) || '');
+        } else {
+            setLastSeenTimestamp('');
+        }
+    }, [user?.id]);
+
+    // Mark the badge/number count as seen/cleared
+    const markBadgeAsCleared = useCallback(() => {
+        if (!user?.id) return;
+        const nowStr = new Date().toISOString();
+        const key = `starwash_notifications_last_seen_${user.id}`;
+        localStorage.setItem(key, nowStr);
+        setLastSeenTimestamp(nowStr);
+    }, [user?.id]);
 
     // Format time ago correctly handling Manila Time (GMT+8)
     const formatTimeAgo = useCallback((dateString) => {
@@ -561,6 +601,20 @@ export const NotificationSystem = () => {
             const isAlreadyFetched = lastFetchedIdsRef.current.has(notification.id);
             if (isAlreadyFetched) {
                 console.log(`📭 Skipping - already in notification list: ${notification.id}`);
+                processedNotificationIdsRef.current.add(notification.id);
+                return false;
+            }
+
+            // Exclude stock-related notifications from screen popups (alert, warning, adequate levels, etc.)
+            const isStockNotification = 
+                notification.type === "stock_alert" || 
+                notification.type === "inventory_update" || 
+                notification.type === "stock_info" ||
+                notification.type === "low_stock_warning" ||
+                notification.type === "adequate_stock_level";
+
+            if (isStockNotification) {
+                console.log(`📭 Skipping popup for stock notification: ${notification.id}`);
                 processedNotificationIdsRef.current.add(notification.id);
                 return false;
             }
@@ -971,10 +1025,7 @@ export const NotificationSystem = () => {
                         setNotificationOpen(willOpen);
                         if (willOpen) {
                             smartRefreshNotifications(true);
-                            // Auto-read when seen (dropdown opened)
-                            if (unreadCount > 0) {
-                                markAllAsRead();
-                            }
+                            markBadgeAsCleared();
                         }
                     }}
                 >
@@ -987,9 +1038,9 @@ export const NotificationSystem = () => {
                             'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
                         }`} title={sseStatus === 'connected' ? 'Live Connected' : 'Connecting...'} />
                     </div>
-                    {unreadCount > 0 && (
+                    {badgeCount > 0 && (
                         <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
-                            {unreadCount > 99 ? '99+' : unreadCount}
+                            {badgeCount > 99 ? '99+' : badgeCount}
                         </span>
                     )}
                 </button>
@@ -1017,7 +1068,7 @@ export const NotificationSystem = () => {
                                     <div className="flex items-center gap-2">
                                         {unreadCount > 0 && (
                                             <span className="rounded-full px-2 py-1 text-xs text-white bg-slate-800 dark:bg-slate-700">
-                                                {unreadCount} new
+                                                {unreadCount} unread
                                             </span>
                                         )}
                                         <div className="flex items-center gap-1">
@@ -1058,14 +1109,14 @@ export const NotificationSystem = () => {
                                                 key={notification.id || index}
                                                 className={`flex cursor-pointer items-start gap-3 border-b p-3 transition-all ${
                                                     !notification.read
-                                                        ? "border-l-2"
-                                                        : "hover:bg-slate-50 dark:hover:bg-slate-700"
+                                                        ? "border-l-2 hover:bg-blue-50/50 dark:hover:bg-slate-850/50"
+                                                        : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
                                                 } border-slate-200 dark:border-slate-700`}
                                                 style={{ 
                                                     borderLeftColor: !notification.read ? 
                                                         getNotificationColor(notification.type) : 'transparent',
-                                                    backgroundColor: !notification.read ? 
-                                                        'rgba(100, 116, 139, 0.1)' : 'transparent'
+                                                     backgroundColor: !notification.read ? 
+                                                         (isDarkMode ? 'rgba(30, 41, 59, 0.4)' : 'rgba(239, 246, 255, 0.6)') : 'transparent'
                                                 }}
                                                 onClick={() => handleNotificationClick(notification)}
                                             >
@@ -1074,24 +1125,30 @@ export const NotificationSystem = () => {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <h4
-                                                        className="text-sm font-medium truncate text-slate-900 dark:text-slate-100"
+                                                        className={`text-sm truncate text-slate-900 dark:text-slate-100 ${
+                                                            !notification.read ? "font-bold text-slate-950 dark:text-white" : "font-medium text-slate-600 dark:text-slate-400"
+                                                        }`}
                                                     >
                                                         {notification.title || 'No Title'}
                                                     </h4>
                                                     <p
-                                                        className="mt-1 text-sm line-clamp-2 text-slate-600 dark:text-slate-400"
+                                                        className={`mt-1 text-sm line-clamp-2 ${
+                                                            !notification.read ? "text-slate-800 dark:text-slate-300 font-medium" : "text-slate-500 dark:text-slate-500"
+                                                        }`}
                                                     >
                                                         {notification.message || 'No message'}
                                                     </p>
                                                     <p
-                                                        className="mt-1 text-xs text-slate-500 dark:text-slate-500"
+                                                        className={`mt-1 text-xs ${
+                                                            !notification.read ? "text-blue-500 dark:text-blue-400 font-semibold" : "text-slate-400 dark:text-slate-500"
+                                                        }`}
                                                     >
                                                         {notification.createdAt ? formatTimeAgo(notification.createdAt) : 'Recently'}
                                                     </p>
                                                 </div>
                                                 {!notification.read && (
                                                     <div 
-                                                        className="mt-2 h-2 w-2 rounded-full flex-shrink-0"
+                                                        className="mt-2 h-2 w-2 rounded-full flex-shrink-0 animate-pulse"
                                                         style={{ backgroundColor: getNotificationColor(notification.type) }}
                                                     />
                                                 )}

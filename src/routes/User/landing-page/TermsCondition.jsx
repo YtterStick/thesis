@@ -1,8 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, ScrollText } from "lucide-react";
-
-const API_BASE_URL = "https://thesis-1-culv.onrender.com/api";
+import { getApiUrl } from "@/lib/api-config";
 
 const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -18,7 +17,7 @@ const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_BASE_URL}/terms`);
+      const response = await fetch(getApiUrl("terms"));
       
       if (!response.ok) {
         throw new Error(`Failed to fetch terms: ${response.status}`);
@@ -71,22 +70,19 @@ const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: isVisible ? 1 : 0 }}
         transition={{ duration: 0.8, delay: 2.0 }}
-        className={`py-12 md:py-16 px-4 ${
-          isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
-        }`}
+        className="py-12 md:py-16 px-4 transition-colors duration-300 bg-transparent"
         id="terms"
       >
         <div className="max-w-7xl mx-auto">
-          <div className="rounded-2xl overflow-hidden border-2 p-8 text-center"
+          <div className="rounded-2xl overflow-hidden border p-8 text-center shadow-xl backdrop-blur-md"
             style={{
-              backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D',
-              borderColor: isDarkMode ? '#2A524C' : '#183D3D',
-              color: isDarkMode ? '#13151B' : '#F3EDE3'
+              backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.75)',
+              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
+              color: isDarkMode ? '#cbd5e1' : '#475569'
             }}
           >
             <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2"
-                style={{ borderColor: isDarkMode ? '#18442A' : '#F3EDE3' }}></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
             </div>
             <p className="mt-4">Loading terms and conditions...</p>
           </div>
@@ -101,28 +97,21 @@ const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: isVisible ? 1 : 0 }}
         transition={{ duration: 0.8, delay: 2.0 }}
-        className={`py-12 md:py-16 px-4 ${
-          isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
-        }`}
+        className="py-12 md:py-16 px-4 transition-colors duration-300 bg-transparent"
         id="terms"
       >
         <div className="max-w-7xl mx-auto">
-          <div className="rounded-2xl overflow-hidden border-2 p-8 text-center"
+          <div className="rounded-2xl overflow-hidden border p-8 text-center shadow-xl backdrop-blur-md"
             style={{
-              backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D',
-              borderColor: isDarkMode ? '#2A524C' : '#183D3D',
-              color: isDarkMode ? '#13151B' : '#F3EDE3'
+              backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.75)',
+              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
+              color: isDarkMode ? '#cbd5e1' : '#475569'
             }}
           >
             <p className="text-red-500 mb-4">{error}</p>
             <button
               onClick={fetchTerms}
-              className="px-6 py-2 rounded-lg font-semibold border-2 transition-all transform hover:scale-105"
-              style={{
-                backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
-                color: isDarkMode ? '#FFFFFF' : '#183D3D',
-                borderColor: isDarkMode ? '#18442A' : '#F3EDE3'
-              }}
+              className="px-6 py-2 rounded-xl font-bold shadow-md active:scale-95 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-none cursor-pointer"
             >
               Retry
             </button>
@@ -137,183 +126,224 @@ const TermsCondition = ({ isVisible, isMobile, isDarkMode }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: isVisible ? 1 : 0 }}
       transition={{ duration: 0.8, delay: 2.0 }}
-      className={`py-12 md:py-16 px-4 ${
-        isDarkMode ? 'bg-[#0B2B26]' : 'bg-[#E0EAE8]'
-      }`}
+      className="py-16 px-4 transition-colors duration-300 bg-transparent"
       id="terms"
     >
       <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 2.4 }}
-          className="rounded-2xl overflow-hidden border-2"
-          style={{
-            backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D',
-            borderColor: isDarkMode ? '#2A524C' : '#183D3D'
-          }}
-        >
-          <button
-            onClick={toggleSection}
-            className="w-full p-6 md:p-8 text-left flex items-center justify-between transition-colors"
-            style={{ 
-              color: isDarkMode ? '#13151B' : '#F3EDE3',
-              backgroundColor: isDarkMode ? '#F3EDE3' : '#183D3D'
+        {/* Section Title */}
+        <div className="text-center mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 2.2 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/5 text-blue-500 text-xs font-black tracking-wider uppercase mb-3"
+          >
+            <ScrollText className="w-3.5 h-3.5" />
+            <span>Guidelines & Policies</span>
+          </motion.div>
+          <h2 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+            Terms & Conditions
+          </h2>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
+            Please review our store policies to ensure a seamless and pleasant service experience.
+          </p>
+        </div>
+
+        {isMobile ? (
+          /* Mobile Accordion Layout */
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 2.4 }}
+            className="rounded-3xl border shadow-2xl backdrop-blur-md p-5 space-y-3"
+            style={{
+              backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : 'rgba(255, 255, 255, 0.7)',
+              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)'
             }}
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3' }}>
-                <ScrollText className="w-6 h-6" 
-                  style={{ color: isDarkMode ? '#FFFFFF' : '#183D3D' }} />
+            {termsData.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <p>Loading terms and conditions...</p>
               </div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-bold">Terms & Conditions</h3>
-                <p className="mt-1"
-                  style={{ color: isDarkMode ? '#6B7280' : '#F3EDE3' }}>
-                  {termsData.length} terms and conditions
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm"
-                style={{ color: isDarkMode ? '#6B7280' : '#F3EDE3' }}>
-                {isOpen ? 'Collapse' : 'Expand'}
-              </span>
-              {isOpen ? (
-                <ChevronUp className="w-5 h-5" style={{ color: isDarkMode ? '#18442A' : '#F3EDE3' }} />
-              ) : (
-                <ChevronDown className="w-5 h-5" style={{ color: isDarkMode ? '#18442A' : '#F3EDE3' }} />
-              )}
-            </div>
-          </button>
-
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="border-t"
-                style={{ borderColor: isDarkMode ? '#2A524C' : '#F3EDE3' }}
-              >
-                <div className="max-h-96 overflow-y-auto">
-                  <div className="p-6">
-                    {termsData.length === 0 ? (
-                      <div className="text-center py-8"
-                        style={{ color: isDarkMode ? '#6B7280' : '#183D3D' }}>
-                        <p>No terms and conditions available.</p>
-                        <button
-                          onClick={fetchTerms}
-                          className="mt-4 px-4 py-2 rounded-lg font-semibold border transition-all"
-                          style={{
-                            backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
-                            color: isDarkMode ? '#FFFFFF' : '#183D3D',
-                            borderColor: isDarkMode ? '#18442A' : '#F3EDE3'
-                          }}
-                        >
-                          Refresh
-                        </button>
+            ) : (
+              termsData.map((term, index) => (
+                <div 
+                  key={term.id || index} 
+                  className="border rounded-2xl overflow-hidden transition-all duration-200"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.2)' : 'rgba(255, 255, 255, 0.5)',
+                    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(15, 23, 42, 0.05)'
+                  }}
+                >
+                  <button
+                    onClick={() => toggleTerm(index)}
+                    className="w-full p-4 text-left flex items-center justify-between transition-colors hover:opacity-90 cursor-pointer"
+                    style={{ 
+                      color: isDarkMode ? '#cbd5e1' : '#475569',
+                      backgroundColor: 'transparent'
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ 
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+                          color: isDarkMode ? '#3b82f6' : '#2563eb'
+                        }}>
+                        <span className="font-semibold text-xs">
+                          {index + 1}
+                        </span>
                       </div>
+                      <span className="font-bold text-left text-sm" style={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}>
+                        {term.title}
+                      </span>
+                    </div>
+                    {activeTerm === index ? (
+                      <ChevronUp className="w-4 h-4 flex-shrink-0" style={{ color: isDarkMode ? '#3b82f6' : '#2563eb' }} />
                     ) : (
-                      <div className="space-y-4">
-                        {termsData.map((term, index) => (
-                          <div 
-                            key={term.id || index} 
-                            className="border rounded-lg overflow-hidden"
-                            style={{
-                              backgroundColor: isDarkMode ? '#FFFFFF' : '#F3EDE3',
-                              borderColor: isDarkMode ? '#2A524C' : '#183D3D'
-                            }}
-                          >
-                            <button
-                              onClick={() => toggleTerm(index)}
-                              className="w-full p-4 text-left flex items-center justify-between transition-colors hover:opacity-90"
-                              style={{ 
-                                color: isDarkMode ? '#13151B' : '#183D3D',
-                                backgroundColor: isDarkMode ? '#FFFFFF' : '#F3EDE3'
-                              }}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ 
-                                    backgroundColor: isDarkMode ? '#18442A' : '#183D3D',
-                                    color: isDarkMode ? '#FFFFFF' : '#F3EDE3'
-                                  }}>
-                                  <span className="font-semibold text-sm">
-                                    {index + 1}
-                                  </span>
-                                </div>
-                                <span className="font-semibold text-left">
-                                  {term.title}
-                                </span>
-                              </div>
-                              {activeTerm === index ? (
-                                <ChevronUp className="w-5 h-5 flex-shrink-0" 
-                                  style={{ color: isDarkMode ? '#18442A' : '#183D3D' }} />
-                              ) : (
-                                <ChevronDown className="w-5 h-5 flex-shrink-0"
-                                  style={{ color: isDarkMode ? '#18442A' : '#183D3D' }} />
-                              )}
-                            </button>
-                            <AnimatePresence>
-                              {activeTerm === index && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: 'auto' }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  transition={{ duration: 0.3 }}
-                                >
-                                  <div className="p-4 border-t"
-                                    style={{ 
-                                      borderColor: isDarkMode ? '#2A524C' : '#183D3D',
-                                      backgroundColor: isDarkMode ? '#F8FAFC' : '#FFFFFF',
-                                      color: isDarkMode ? '#6B7280' : '#183D3D'
-                                    }}>
-                                    <p className="leading-relaxed">
-                                      {term.content}
-                                    </p>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        ))}
-                      </div>
+                      <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: isDarkMode ? '#3b82f6' : '#2563eb' }} />
                     )}
-                  </div>
-                </div>
-
-                <div className="border-t p-4"
-                  style={{ 
-                    borderColor: isDarkMode ? '#2A524C' : '#F3EDE3',
-                    backgroundColor: isDarkMode ? '#FFFFFF' : '#183D3D'
-                  }}>
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="text-sm text-center sm:text-left"
-                      style={{ color: isDarkMode ? '#6B7280' : '#F3EDE3' }}>
-                      Last updated: {new Date().toLocaleDateString()}
-                    </p>
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => setIsOpen(false)}
-                        className="px-6 py-2 rounded-lg font-semibold border-2 transition-all transform hover:scale-105"
-                        style={{
-                          backgroundColor: isDarkMode ? '#18442A' : '#F3EDE3',
-                          color: isDarkMode ? '#FFFFFF' : '#183D3D',
-                          borderColor: isDarkMode ? '#18442A' : '#F3EDE3'
-                        }}
+                  </button>
+                  <AnimatePresence>
+                    {activeTerm === index && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
                       >
-                        I Understand
-                      </button>
+                        <div className="p-4 border-t text-xs md:text-sm leading-relaxed"
+                          style={{ 
+                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(15, 23, 42, 0.05)',
+                            backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.1)' : 'rgba(255, 255, 255, 0.6)',
+                            color: isDarkMode ? '#cbd5e1' : '#475569'
+                          }}>
+                          <p className="leading-relaxed">
+                            {term.content}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))
+            )}
+          </motion.div>
+        ) : (
+          /* Desktop Interactive Split-Deck Guidelines Board */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Left Nav Deck */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 2.4 }}
+              className="rounded-3xl border shadow-2xl backdrop-blur-md p-6 space-y-2.5 lg:col-span-1"
+              style={{
+                backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : 'rgba(255, 255, 255, 0.7)',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)'
+              }}
+            >
+              <h3 className="text-xs font-black tracking-wider uppercase text-slate-400 dark:text-slate-500 px-2 mb-4">
+                Policy Chapters
+              </h3>
+              {termsData.map((term, index) => {
+                const isActive = activeTerm === index;
+                return (
+                  <motion.button
+                    key={term.id || index}
+                    onClick={() => setActiveTerm(index)}
+                    whileHover={{ x: 4 }}
+                    className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${
+                      isActive 
+                        ? 'border-blue-500/30 shadow-md' 
+                        : 'border-transparent hover:bg-slate-100/30 dark:hover:bg-slate-800/30'
+                    }`}
+                    style={{
+                      backgroundColor: isActive 
+                        ? (isDarkMode ? 'rgba(59, 130, 246, 0.08)' : 'rgba(37, 99, 235, 0.05)')
+                        : 'transparent',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                        isActive 
+                          ? 'bg-blue-500 text-white' 
+                          : (isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600')
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <span className={`font-bold text-sm transition-colors ${
+                        isActive 
+                          ? 'text-blue-500 dark:text-blue-400' 
+                          : (isDarkMode ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900')
+                      }`}>
+                        {term.title}
+                      </span>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+
+            {/* Right Guideline Viewport */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 2.5 }}
+              className="rounded-3xl border shadow-2xl backdrop-blur-md p-8 lg:col-span-2 min-h-[400px] flex flex-col justify-between"
+              style={{
+                backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : 'rgba(255, 255, 255, 0.7)',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)'
+              }}
+            >
+              {termsData.length > 0 && activeTerm !== null && termsData[activeTerm] ? (
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-black tracking-widest uppercase text-blue-500 mb-3">
+                    <span>SECTION {activeTerm + 1}</span>
+                    <span>•</span>
+                    <span>STORE RULES</span>
+                  </div>
+                  <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white mb-4">
+                    {termsData[activeTerm].title}
+                  </h3>
+                  <p className="text-base leading-relaxed text-slate-600 dark:text-slate-300 font-medium">
+                    {termsData[activeTerm].content}
+                  </p>
+
+                  <div className="mt-8 p-5 rounded-2xl border flex items-start gap-4"
+                    style={{
+                      backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.05)' : 'rgba(37, 99, 235, 0.03)',
+                      borderColor: isDarkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(37, 99, 235, 0.15)'
+                    }}
+                  >
+                    <ScrollText className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h5 className="font-bold text-slate-900 dark:text-white text-sm">Official StarWash Directive</h5>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                        This store policy is strictly implemented to maintain operational efficiency and fair service distribution.
+                      </p>
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+              ) : (
+                <div className="text-center py-12 text-slate-400">
+                  <p>Select a chapter from the checklist to view details.</p>
+                </div>
+              )}
+
+              <div className="border-t pt-6 mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-slate-200 dark:border-slate-800">
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                  Last updated: {new Date().toLocaleDateString()}
+                </span>
+                <button
+                  onClick={() => setActiveTerm((prev) => (prev + 1) % termsData.length)}
+                  className="px-6 py-3 rounded-2xl font-black text-xs transition-all border shadow-md active:scale-95 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 cursor-pointer"
+                >
+                  Next Chapter →
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </motion.section>
   );

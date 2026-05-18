@@ -40,8 +40,8 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
 
   const navItems = [
     { href: "#home", label: "Home" },
-    { href: "#services", label: "Services & Pricing" },
     { href: "#service_tracking", label: "Laundry Tracking" },
+    { href: "#services", label: "Services & Pricing" },
     { href: "#terms", label: "Terms & Condition" },
   ];
 
@@ -68,7 +68,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
 
   // Determine animation direction based on section order
   const getAnimationDirection = (sectionId) => {
-    const sections = ['home', 'services', 'service_tracking', 'terms'];
+    const sections = ['home', 'service_tracking', 'services', 'terms'];
     const currentIndex = sections.indexOf(currentActiveSection);
     const targetIndex = sections.indexOf(sectionId);
     
@@ -98,8 +98,8 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
         transition={{ duration: 0.6 }}
         className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b transition-colors duration-300"
         style={{
-          backgroundColor: isDarkMode ? 'rgba(11, 43, 38, 0.95)' : 'rgba(224, 234, 232, 0.95)',
-          borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26'
+          backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.9)' : 'rgba(248, 250, 252, 0.9)',
+          borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
         }}
       >
         <div className="max-w-7xl mx-auto px-6">
@@ -110,8 +110,8 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                 onClick={toggleMobileMenu}
                 className="p-2 rounded-lg transition-colors"
                 style={{
-                  backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
-                  color: isDarkMode ? '#F3EDE3' : '#0B2B26'
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                  color: isDarkMode ? '#f8fafc' : '#0f172a'
                 }}
                 aria-label="Toggle mobile menu"
                 whileHover={{ scale: 1.05 }}
@@ -136,9 +136,10 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
               <motion.div 
-                className="w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden shadow-lg transition-colors"
+                className="w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden shadow-lg transition-colors border"
                 style={{
-                  backgroundColor: isDarkMode ? '#F3EDE3' : '#0B2B26'
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#ffffff',
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.08)',
                 }}
                 whileHover={{ rotate: 5 }}
                 animate={{ rotate: [0, -2, 2, 0] }}
@@ -154,7 +155,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
               <motion.span 
                 className="font-deathstar text-xl tracking-wider transition-colors"
                 style={{
-                  color: isDarkMode ? '#F3EDE3' : '#0B2B26'
+                  color: isDarkMode ? '#f8fafc' : '#0f172a'
                 }}
                 whileHover={{ scale: 1.02 }}
               >
@@ -179,17 +180,17 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                     <a 
                       href={item.href} 
                       onClick={() => handleNavClick(item.href, item.label)}
-                      className="relative transition-colors text-base font-medium hover:opacity-80 py-2 px-1"
+                      className="relative transition-colors text-base font-medium hover:opacity-85 py-2 px-1"
                       style={{
-                        color: isDarkMode ? '#F3EDE3' : '#0B2B26',
+                        color: isDarkMode ? '#cbd5e1' : '#475569',
                       }}
                     >
                       <AnimatePresence mode="wait">
                         {isActive && (
                           <motion.div
-                            className="absolute bottom-0 left-0 right-0 h-0.5"
+                            className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
                             style={{
-                              backgroundColor: isDarkMode ? '#F3EDE3' : '#0B2B26'
+                              backgroundColor: '#3b82f6'
                             }}
                             variants={activeIndicatorVariants}
                             initial="initial"
@@ -216,6 +217,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                         }}
                         whileHover={{ 
                           y: -2,
+                          color: isDarkMode ? '#f8fafc' : '#0f172a',
                           transition: { duration: 0.2 }
                         }}
                       >
@@ -226,7 +228,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                       <motion.div
                         className="absolute inset-0 rounded-lg -z-10"
                         style={{
-                          backgroundColor: isDarkMode ? 'rgba(243, 237, 227, 0.1)' : 'rgba(11, 43, 38, 0.1)'
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'
                         }}
                         variants={{
                           hover: { opacity: 1 },
@@ -242,10 +244,11 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
               {/* Dark/Light Mode Toggle */}
               <motion.button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-lg transition-colors hover:opacity-80 relative"
+                className="p-2 rounded-lg transition-colors hover:opacity-85 relative border"
                 style={{
-                  backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
-                  color: isDarkMode ? '#F3EDE3' : '#0B2B26'
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                  color: isDarkMode ? '#f8fafc' : '#0f172a'
                 }}
                 aria-label="Toggle dark mode"
                 whileHover={{ scale: 1.1, rotate: 5 }}
@@ -278,10 +281,11 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
             <div className="flex items-center space-x-4 md:hidden">
               <motion.button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-lg transition-colors hover:opacity-80"
+                className="p-2 rounded-lg transition-colors hover:opacity-85 border"
                 style={{
-                  backgroundColor: isDarkMode ? '#1C3F3A' : '#F3EDE3',
-                  color: isDarkMode ? '#F3EDE3' : '#0B2B26'
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                  color: isDarkMode ? '#f8fafc' : '#0f172a'
                 }}
                 aria-label="Toggle dark mode"
                 whileHover={{ scale: 1.1 }}
@@ -311,7 +315,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeMobileMenu}
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
               transition={{ duration: 0.3 }}
             />
             
@@ -327,8 +331,8 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
               }}
               className="fixed top-16 left-0 z-50 w-64 h-[calc(100vh-4rem)] border-r shadow-2xl md:hidden transition-colors"
               style={{
-                backgroundColor: isDarkMode ? '#0B2B26' : '#E0EAE8',
-                borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26'
+                backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)'
               }}
             >
               <nav className="flex flex-col p-6 space-y-6">
@@ -340,10 +344,10 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                       key={item.href}
                       href={item.href}
                       onClick={() => handleNavClick(item.href, item.label)}
-                      className="transition-colors text-lg font-medium py-2 border-b hover:opacity-80 relative"
+                      className="transition-colors text-lg font-medium py-2 border-b hover:opacity-85 relative"
                       style={{
-                        color: isDarkMode ? '#F3EDE3' : '#0B2B26',
-                        borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26'
+                        color: isDarkMode ? '#cbd5e1' : '#475569',
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)'
                       }}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -362,7 +366,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                         <motion.div
                           className="absolute left-0 top-1/2 w-1 h-6 -translate-y-1/2 rounded-full"
                           style={{
-                            backgroundColor: isDarkMode ? '#F3EDE3' : '#0B2B26'
+                            backgroundColor: '#3b82f6'
                           }}
                           layoutId="mobileActiveIndicator"
                           transition={{
@@ -380,7 +384,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                 <motion.div 
                   className="pt-6 mt-6 border-t"
                   style={{
-                    borderColor: isDarkMode ? '#1C3F3A' : '#0B2B26'
+                    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)'
                   }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}  
@@ -388,7 +392,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                 >
                   <div className="text-sm opacity-70 transition-colors"
                     style={{
-                      color: isDarkMode ? '#F3EDE3' : '#0B2B26'
+                      color: isDarkMode ? '#94a3b8' : '#677489'
                     }}>
                     Star Wash Laundry
                   </div>

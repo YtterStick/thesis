@@ -1,9 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/contexts/auth-context";
-import { PackageX, PhilippinePeso, Package, Clock8, LineChart, AlertCircle, TrendingUp, Users, Monitor } from "lucide-react";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis } from "recharts";
+import { PackageX, PhilippinePeso, Package, Clock8, LineChart, AlertCircle, TrendingUp, Users, Monitor, WashingMachine, Activity, Bell, RefreshCw, PieChart as LucidePieChart } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
 import { api } from "@/lib/api-config";
 import { useNavigate } from "react-router-dom";
 import { useSse } from "@/hooks/use-sse";
@@ -146,6 +146,57 @@ export default function AdminDashboardPage() {
     const transactionCheckIntervalRef = useRef(null);
     const isMountedRef = useRef(true);
 
+    // Live Dashboard additions
+    const [machines, setMachines] = useState([]);
+    const [machinesLoading, setMachinesLoading] = useState(true);
+
+    const refreshMachines = useCallback(() => {
+        if (!isAuthenticated || !isAdmin) return;
+        
+        api.get("/machines")
+            .then(data => {
+                if (isMountedRef.current) {
+                    setMachines(data || []);
+                    setMachinesLoading(false);
+                }
+            })
+            .catch(err => console.error("❌ Failed to refresh machines:", err));
+    }, [isAuthenticated, isAdmin]);
+
+    const serviceDistribution = useMemo(() => {
+        const activeData = dashboardCache ? dashboardCache.data : dashboardData;
+        const transactions = activeData?.todayTransactions || [];
+        const counts = {
+            "Wash & Dry": 0,
+            "Wash Only": 0,
+            "Dry Only": 0,
+            "Other": 0
+        };
+
+        transactions.forEach(t => {
+            const name = (t.service || "").toLowerCase();
+            if (name.includes("wash") && name.includes("dry")) {
+                counts["Wash & Dry"] += t.price || 0;
+            } else if (name.includes("wash")) {
+                counts["Wash Only"] += t.price || 0;
+            } else if (name.includes("dry")) {
+                counts["Dry Only"] += t.price || 0;
+            } else {
+                counts["Other"] += t.price || 0;
+            }
+        });
+
+        const rawData = [
+            { name: "Wash & Dry", value: counts["Wash & Dry"], color: "#10B981" }, // green
+            { name: "Wash Only", value: counts["Wash Only"], color: "#3B82F6" },  // blue
+            { name: "Dry Only", value: counts["Dry Only"], color: "#F59E0B" },   // amber
+            { name: "Other", value: counts["Other"], color: "#8B5CF6" }          // purple
+        ];
+
+        // Filter out categories with 0 revenue
+        return rawData.filter(item => item.value > 0);
+    }, [dashboardData.todayTransactions, dashboardCache]);
+
     const hasDataChanged = (newData, oldData) => {
         if (!oldData) return true;
 
@@ -229,6 +280,9 @@ export default function AdminDashboardPage() {
             }
 
             console.log("🔐 User authenticated, proceeding to dashboard data...");
+
+            // Trigger non-blocking refresh for live machines
+            refreshMachines();
 
             const totalsResponse = await api.get("/dashboard/admin/totals");
             console.log("💰 Dashboard totals:", totalsResponse);
@@ -385,10 +439,22 @@ export default function AdminDashboardPage() {
  
      // Real-time updates via internal broadcast (to avoid duplicate SSE connections)
      useEffect(() => {
-         const handleTransactionUpdate = () => fetchDashboardData(true);
-         const handleLaundryUpdate = () => fetchDashboardData(true);
-         const handleStockUpdate = () => fetchDashboardData(true);
-         const handleNotificationUpdate = () => fetchDashboardData(true);
+         const handleTransactionUpdate = () => {
+             fetchDashboardData(true);
+             refreshMachines();
+         };
+         const handleLaundryUpdate = () => {
+             fetchDashboardData(true);
+             refreshMachines();
+         };
+         const handleStockUpdate = () => {
+             fetchDashboardData(true);
+             refreshMachines();
+         };
+         const handleNotificationUpdate = () => {
+             fetchDashboardData(true);
+             refreshMachines();
+         };
 
          window.addEventListener('STARWASH_TRANSACTION_UPDATE', handleTransactionUpdate);
          window.addEventListener('STARWASH_LAUNDRY_UPDATE', handleLaundryUpdate);
@@ -401,7 +467,7 @@ export default function AdminDashboardPage() {
              window.removeEventListener('STARWASH_STOCK_UPDATE', handleStockUpdate);
              window.removeEventListener('STARWASH_NOTIFICATION_UPDATE', handleNotificationUpdate);
          };
-     }, [fetchDashboardData]);
+     }, [fetchDashboardData, refreshMachines]);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -429,6 +495,7 @@ export default function AdminDashboardPage() {
             }
 
             fetchDashboardData();
+            refreshMachines();
 
             // Polling is now handled by useSse real-time events!
             // transactionCheckIntervalRef.current = setInterval(() => {
@@ -1018,13 +1085,13 @@ export default function AdminDashboardPage() {
                                 className="mb-1 text-lg font-bold"
                                 style={{ color: "var(--admin-text-primary)" }}
                             >
-                                Machine Status
+                                Today's Transactions
                             </p>
                             <span
                                 className="text-sm"
                                 style={{ color: "var(--admin-text-secondary)" }}
                             >
-                                Currently active equipment
+                                Real-time sales and tracking
                             </span>
                         </div>
                         <motion.div
@@ -1035,7 +1102,7 @@ export default function AdminDashboardPage() {
                                 color: "var(--admin-card-bg)",
                             }}
                         >
-                            <Monitor size={18} />
+                            <TrendingUp size={18} />
                         </motion.div>
                     </div>
 
@@ -1131,6 +1198,230 @@ export default function AdminDashboardPage() {
                         )}
                     </div>
                 </motion.div>
+            </div>
+
+            {/* 🚀 NEW PREMIUM WIDGETS SECTION */}
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7 mt-5">
+                {/* 🧺 Dedicated Live Machine Grid (col-span-4) */}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                    whileHover={{ scale: 1.005 }}
+                    className="col-span-1 rounded-xl border p-5 transition-all h-[360px] flex flex-col shadow-sm md:col-span-2 lg:col-span-4"
+                    style={{
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
+                    }}
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-lg font-bold mb-1" style={{ color: "var(--admin-text-primary)" }}>
+                                Live Machine Grid
+                            </p>
+                            <span className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                                {machines.length} total • {machines.filter(m => m.status === "Available").length} available • {machines.filter(m => m.status === "In Use" || m.status === "Busy").length} busy
+                            </span>
+                        </div>
+                        <motion.button
+                            whileHover={{ scale: 1.1, rotate: 180 }}
+                            transition={{ duration: 0.4 }}
+                            onClick={refreshMachines}
+                            className="rounded-lg p-2 transition-colors"
+                            style={{
+                                backgroundColor: "var(--admin-accent)",
+                                color: "var(--admin-card-bg)",
+                            }}
+                        >
+                            <WashingMachine size={18} />
+                        </motion.button>
+                    </div>
+
+                    <div className="flex-1 overflow-auto pr-1">
+                        {machinesLoading ? (
+                            <div className="flex h-full items-center justify-center">
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                    style={{ color: "var(--admin-accent)" }}
+                                >
+                                    <RefreshCw size={24} />
+                                </motion.div>
+                            </div>
+                        ) : machines.length === 0 ? (
+                            <div className="flex h-full flex-col items-center justify-center text-center">
+                                <WashingMachine size={36} className="mb-2 opacity-40" style={{ color: "var(--admin-text-secondary)" }} />
+                                <p className="font-semibold text-sm" style={{ color: "var(--admin-text-primary)" }}>No Machines Configured</p>
+                                <p className="text-xs" style={{ color: "var(--admin-text-secondary)" }}>Register equipment in the Machine Management page.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {machines.map((machine, index) => {
+                                    const status = machine.status || "Available";
+                                    const isAvailable = status === "Available";
+                                    const isInUse = status === "In Use" || status === "Busy";
+                                    const isDone = status === "Done" || status === "Ready";
+                                    const isMaintenance = status === "Maintenance" || status === "Out of Order";
+
+                                    let statusColor = "#10B981"; // green
+                                    let statusBg = "rgba(16, 185, 129, 0.2)";
+                                    if (isInUse) {
+                                        statusColor = "#F59E0B"; // amber
+                                        statusBg = "rgba(245, 158, 11, 0.2)";
+                                    } else if (isDone) {
+                                        statusColor = "#8B5CF6"; // purple
+                                        statusBg = "rgba(139, 92, 246, 0.2)";
+                                    } else if (isMaintenance) {
+                                        statusColor = "#EF4444"; // red
+                                        statusBg = "rgba(239, 68, 68, 0.2)";
+                                    }
+
+                                    return (
+                                        <motion.div
+                                            key={machine.id || index}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: index * 0.05 }}
+                                            whileHover={{ y: -3, boxShadow: "0 8px 20px -6px rgba(0, 0, 0, 0.15)" }}
+                                            onClick={() => navigate("/machines")}
+                                            className="cursor-pointer border-2 rounded-xl p-3 flex flex-col justify-between transition-all"
+                                            style={{
+                                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(248, 250, 252, 0.8)",
+                                                borderColor: isDarkMode ? "#334155" : "#e2e8f0"
+                                            }}
+                                        >
+                                            <div className="flex items-start justify-between gap-1 mb-2">
+                                                <p className="font-bold text-sm truncate" style={{ color: "var(--admin-text-primary)" }}>
+                                                    {machine.name}
+                                                </p>
+                                                <span className="relative flex h-2 w-2 mt-1 flex-shrink-0">
+                                                    <span
+                                                        className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                                                        style={{ backgroundColor: statusColor }}
+                                                    ></span>
+                                                    <span
+                                                        className="relative inline-flex rounded-full h-2 w-2"
+                                                        style={{ backgroundColor: statusColor }}
+                                                    ></span>
+                                                </span>
+                                            </div>
+                                            <div className="mt-auto">
+                                                <p className="text-[10px] uppercase font-bold tracking-wider opacity-60 mb-1" style={{ color: "var(--admin-text-secondary)" }}>
+                                                    {machine.type}
+                                                </p>
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <span style={{ color: "var(--admin-text-secondary)" }}>
+                                                        {machine.capacityKg ? `${machine.capacityKg} kg` : "8.0 kg"}
+                                                    </span>
+                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase" style={{ color: statusColor, backgroundColor: statusBg }}>
+                                                        {status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </motion.div>
+
+                {/* 📊 Service Revenue Distribution Doughnut Chart (col-span-3) */}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    whileHover={{ scale: 1.005 }}
+                    className="col-span-1 rounded-xl border p-5 transition-all h-[360px] flex flex-col shadow-sm md:col-span-2 lg:col-span-3"
+                    style={{
+                        backgroundColor: "var(--admin-card-bg)",
+                        borderColor: "var(--admin-card-border)",
+                    }}
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-lg font-bold mb-1" style={{ color: "var(--admin-text-primary)" }}>
+                                Service Distribution
+                            </p>
+                            <span className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                                Today's revenue share
+                            </span>
+                        </div>
+                        <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            className="rounded-lg p-2"
+                            style={{
+                                backgroundColor: "var(--admin-accent)",
+                                color: "var(--admin-card-bg)",
+                            }}
+                        >
+                            <LucidePieChart size={18} />
+                        </motion.div>
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-center">
+                        {serviceDistribution.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center text-center py-8">
+                                <LucidePieChart size={36} className="mb-2 opacity-40 animate-pulse" style={{ color: "var(--admin-text-secondary)" }} />
+                                <p className="font-semibold text-sm" style={{ color: "var(--admin-text-primary)" }}>No Revenue Today</p>
+                                <p className="text-xs" style={{ color: "var(--admin-text-secondary)" }}>Transactions completed today will show up here.</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-1 items-center justify-between gap-4">
+                                <div className="w-[45%] h-[180px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={serviceDistribution}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={45}
+                                                outerRadius={65}
+                                                paddingAngle={4}
+                                                dataKey="value"
+                                            >
+                                                {serviceDistribution.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                formatter={(value) => [`₱${Number(value).toFixed(2)}`, "Revenue"]}
+                                                contentStyle={{
+                                                    backgroundColor: "var(--admin-card-bg)",
+                                                    border: `1px solid var(--admin-card-border)`,
+                                                    color: "var(--admin-text-primary)",
+                                                    fontSize: "0.75rem",
+                                                    fontWeight: "500",
+                                                    borderRadius: "0.5rem",
+                                                    padding: "0.5rem",
+                                                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                                                }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div className="flex-1 space-y-2.5 max-h-[220px] overflow-auto pr-1">
+                                    {serviceDistribution.map((item, index) => {
+                                        const totalVal = serviceDistribution.reduce((sum, entry) => sum + entry.value, 0);
+                                        const percentage = totalVal > 0 ? ((item.value / totalVal) * 100).toFixed(0) : 0;
+                                        return (
+                                            <div key={index} className="flex items-center justify-between text-xs border-b pb-1.5 last:border-0 last:pb-0" style={{ borderColor: "rgba(148, 163, 184, 0.1)" }}>
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                                                    <span className="truncate font-semibold" style={{ color: "var(--admin-text-primary)" }}>{item.name}</span>
+                                                </div>
+                                                <div className="text-right ml-2 flex-shrink-0">
+                                                    <p className="font-bold" style={{ color: "var(--admin-text-primary)" }}>₱{item.value.toFixed(2)}</p>
+                                                    <span className="text-[10px] opacity-60 font-semibold" style={{ color: "var(--admin-text-secondary)" }}>{percentage}% share</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    </motion.div>
             </div>
         </div>
     );
