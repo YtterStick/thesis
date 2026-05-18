@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { WashingMachine, WrenchIcon, X, PlusCircle, Save, Grid, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -77,19 +77,19 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
   const inputClass = `rounded-lg border-2 transition-all ${
     isDarkMode 
       ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9] placeholder-[#94a3b8]" 
-      : "bg-white border-[#0B2B26] text-[#0B2B26] placeholder-gray-500"
-  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
+      : "bg-white border-[#1e3a8a] text-[#1e3a8a] placeholder-gray-500"
+  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a] focus-visible:ring-offset-2`;
 
   const selectTriggerClass = `rounded-lg border-2 transition-all ${
     isDarkMode 
       ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
-      : "bg-white border-[#0B2B26] text-[#0B2B26]"
-  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
+      : "bg-white border-[#1e3a8a] text-[#1e3a8a]"
+  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a] focus-visible:ring-offset-2`;
 
-  const buttonClass = `rounded-lg px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2 ${
+  const buttonClass = `rounded-lg px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a] focus-visible:ring-offset-2 ${
     isDarkMode 
       ? "bg-[#0f172a] hover:bg-[#1e293b] text-white" 
-      : "bg-[#0B2B26] hover:bg-[#18442A] text-white"
+      : "bg-[#1d4ed8] hover:bg-[#1e40af] text-white"
   }`;
 
   if (!open) return null;
@@ -102,11 +102,11 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
         className="max-w-lg w-full rounded-xl border-2 p-6 shadow-xl"
         style={{
           backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-          borderColor: isDarkMode ? "#334155" : "#0B2B26",
+          borderColor: isDarkMode ? "#334155" : "#1e3a8a",
         }}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+          <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
             {isEdit ? "Edit Machine" : "Add New Machine"}
           </h2>
           <motion.button
@@ -115,16 +115,16 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
             onClick={() => onOpenChange(false)}
             className="rounded-lg p-1 transition-colors hover:opacity-80"
             style={{
-              backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+              backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
             }}
           >
-            <X className="h-4 w-4" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }} />
+            <X className="h-4 w-4" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }} />
           </motion.button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
               Machine Type
             </Label>
             <Select value={form.type} onValueChange={(val) => handleChange("type", val)}>
@@ -134,7 +134,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
               <SelectContent className={`rounded-lg border-2 ${
                 isDarkMode 
                   ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
-                  : "bg-white border-[#0B2B26] text-[#0B2B26]"
+                  : "bg-white border-[#1e3a8a] text-[#1e3a8a]"
               }`}>
                 <SelectItem value="Washer">Washer</SelectItem>
                 <SelectItem value="Dryer">Dryer</SelectItem>
@@ -143,7 +143,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
           </div>
 
           <div>
-            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
               Machine Name
             </Label>
             <Input
@@ -155,7 +155,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
           </div>
 
           <div>
-            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
               Capacity (kg)
             </Label>
             <Input
@@ -168,7 +168,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
           </div>
 
           <div>
-            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+            <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
               Status
             </Label>
             <Select value={form.status} onValueChange={(val) => handleChange("status", val)}>
@@ -178,7 +178,7 @@ function MachineModal({ open, onOpenChange, form, onFormChange, onSubmit, isEdit
               <SelectContent className={`rounded-lg border-2 ${
                 isDarkMode 
                   ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
-                  : "bg-white border-[#0B2B26] text-[#0B2B26]"
+                  : "bg-white border-[#1e3a8a] text-[#1e3a8a]"
               }`}>
                 <SelectItem value="Available" className={statusColorMap["Available"]}>
                   Available
@@ -243,7 +243,7 @@ function MachineCard({ machine, animationData, onEdit, onDelete }) {
       className="relative flex h-[200px] cursor-pointer flex-col items-center justify-between rounded-xl border-2 p-4 shadow-sm transition-all hover:shadow-md"
       style={{
         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-        borderColor: isDarkMode ? "#334155" : "#0B2B26",
+        borderColor: isDarkMode ? "#334155" : "#1e3a8a",
       }}
     >
       <button
@@ -253,7 +253,7 @@ function MachineCard({ machine, animationData, onEdit, onDelete }) {
         }}
         className="absolute right-2 top-2 rounded-full p-1 transition-colors hover:bg-red-100"
         style={{ 
-          color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+          color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
           backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "transparent"
         }}
         title="Delete machine"
@@ -276,10 +276,10 @@ function MachineCard({ machine, animationData, onEdit, onDelete }) {
       </div>
 
       <div className="space-y-1 text-center">
-        <div className="font-semibold text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+        <div className="font-semibold text-sm" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
           {machine.name}
         </div>
-        <div className="text-xs" style={{ color: isDarkMode ? "#cbd5e1" : "#0B2B26" }}>
+        <div className="text-xs" style={{ color: isDarkMode ? "#cbd5e1" : "#1e3a8a" }}>
           {machine.capacityKg} kg
         </div>
         <div className={`text-xs italic ${statusColor[machine.status]}`}>
@@ -322,7 +322,7 @@ function MachineListItem({ machine, animationData, onEdit, onDelete }) {
       className="flex items-center justify-between rounded-xl border-2 p-4 transition-all hover:shadow-md cursor-pointer"
       style={{
         backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-        borderColor: isDarkMode ? "#334155" : "#0B2B26",
+        borderColor: isDarkMode ? "#334155" : "#1e3a8a",
       }}
     >
       <div className="flex items-center gap-4">
@@ -340,10 +340,10 @@ function MachineListItem({ machine, animationData, onEdit, onDelete }) {
           )}
         </div>
         <div>
-          <div className="font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+          <div className="font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
             {machine.name}
           </div>
-          <div className="text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#0B2B26" }}>
+          <div className="text-sm" style={{ color: isDarkMode ? "#cbd5e1" : "#1e3a8a" }}>
             {machine.capacityKg} kg • <span className={`italic ${statusColor[machine.status]}`}>{machine.status}</span>
           </div>
         </div>
@@ -355,7 +355,7 @@ function MachineListItem({ machine, animationData, onEdit, onDelete }) {
         }}
         className="rounded-full p-2 transition-colors hover:bg-red-100"
         style={{ 
-          color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+          color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
           backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "transparent"
         }}
         title="Delete machine"
@@ -380,7 +380,7 @@ function DeleteConfirmationModal({ open, onOpenChange, onConfirm, machineId }) {
         className="max-w-sm w-full rounded-xl border-2 p-6 shadow-xl"
         style={{
           backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-          borderColor: isDarkMode ? "#334155" : "#0B2B26",
+          borderColor: isDarkMode ? "#334155" : "#1e3a8a",
         }}
       >
         <div className="text-center">
@@ -391,13 +391,13 @@ function DeleteConfirmationModal({ open, onOpenChange, onConfirm, machineId }) {
           
           <h3 
             className="mb-2 text-lg font-semibold"
-            style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}
+            style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}
           >
             Delete Machine
           </h3>
           <p 
             className="mb-6 text-sm"
-            style={{ color: isDarkMode ? "#cbd5e1" : "#0B2B26" }}
+            style={{ color: isDarkMode ? "#cbd5e1" : "#1e3a8a" }}
           >
             Are you sure you want to delete this machine? This action cannot be undone.
           </p>
@@ -408,8 +408,8 @@ function DeleteConfirmationModal({ open, onOpenChange, onConfirm, machineId }) {
               onClick={() => onOpenChange(false)}
               className="rounded-lg px-4 py-2 transition-colors border-2"
               style={{
-                borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                borderColor: isDarkMode ? "#334155" : "#1e3a8a",
+                color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                 backgroundColor: 'transparent',
               }}
             >
@@ -692,8 +692,20 @@ export default function MachineMainPage() {
     }
   };
 
-  const washers = machines.filter((m) => m.type === "Washer");
-  const dryers = machines.filter((m) => m.type === "Dryer");
+  const sortedMachines = useMemo(() => {
+    if (!Array.isArray(machines)) return [];
+    return [...machines].sort((a, b) => {
+      const typeA = (a.type || "").toLowerCase();
+      const typeB = (b.type || "").toLowerCase();
+      if (typeA !== typeB) {
+        return typeA.localeCompare(typeB);
+      }
+      return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [machines]);
+
+  const washers = sortedMachines.filter((m) => m.type === "Washer");
+  const dryers = sortedMachines.filter((m) => m.type === "Dryer");
 
   const SkeletonCard = () => (
     <div
@@ -788,13 +800,13 @@ export default function MachineMainPage() {
         <div className="flex items-center gap-3">
           <div className="flex rounded-lg border-2 p-1" style={{ 
             borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
           }}>
             <button
               onClick={() => setViewMode('grid')}
               className={`rounded-md p-2 transition-colors ${
                 viewMode === 'grid' 
-                  ? isDarkMode ? "bg-[#0f172a] text-white" : "bg-[#0B2B26] text-white"
+                  ? isDarkMode ? "bg-[#0f172a] text-white" : "bg-[#1d4ed8] text-white"
                   : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
             >
@@ -804,7 +816,7 @@ export default function MachineMainPage() {
               onClick={() => setViewMode('list')}
               className={`rounded-md p-2 transition-colors ${
                 viewMode === 'list' 
-                  ? isDarkMode ? "bg-[#0f172a] text-white" : "bg-[#0B2B26] text-white"
+                  ? isDarkMode ? "bg-[#0f172a] text-white" : "bg-[#1d4ed8] text-white"
                   : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
             >

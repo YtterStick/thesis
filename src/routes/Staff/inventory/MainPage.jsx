@@ -266,7 +266,7 @@ const StaffInventoryPage = () => {
             title: "Total Items",
             icon: <Package size={20} />,
             value: totalItems,
-            color: isDarkMode ? "#3DD9B6" : "#0B2B26",
+            color: isDarkMode ? "#3b82f6" : "#1e3a8a",
             description: "All inventory items"
         },
         {
@@ -369,7 +369,7 @@ const StaffInventoryPage = () => {
                     <CardHeader
                         className="rounded-t-xl p-6"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                         }}
                     >
                         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -403,7 +403,7 @@ const StaffInventoryPage = () => {
                                         className="border-b"
                                         style={{
                                             borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                                         }}
                                     >
                                         <th className="p-4 text-left">
@@ -571,7 +571,7 @@ const StaffInventoryPage = () => {
                     <CardHeader
                         className="rounded-t-xl p-6"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                         }}
                     >
                         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -606,7 +606,7 @@ const StaffInventoryPage = () => {
                                             className="border-b"
                                             style={{
                                                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                                             }}
                                         >
                                             <th
@@ -685,12 +685,12 @@ const StaffInventoryPage = () => {
                                                                     style={{
                                                                         backgroundColor: isDarkMode
                                                                             ? "rgba(51, 65, 85, 0.3)"
-                                                                            : "rgba(11, 43, 38, 0.1)",
+                                                                            : "rgba(30, 58, 138, 0.1)",
                                                                     }}
                                                                 >
                                                                     <Package
                                                                         className="h-4 w-4"
-                                                                        style={{ color: isDarkMode ? "#3DD9B6" : "#0f172a" }}
+                                                                        style={{ color: isDarkMode ? "#3b82f6" : "#0f172a" }}
                                                                     />
                                                                 </div>
                                                                 <div>

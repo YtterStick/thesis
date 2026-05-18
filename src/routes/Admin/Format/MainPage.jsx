@@ -501,7 +501,7 @@ export default function ReceiptConfigPage() {
           whileHover={{ scale: 1.1, rotate: 5 }}
           className="rounded-lg p-2"
           style={{
-            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+            backgroundColor: isDarkMode ? "#1e293b" : "#1e3a8a",
             color: "#f1f5f9",
           }}
         >
@@ -536,7 +536,7 @@ export default function ReceiptConfigPage() {
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   className="rounded-lg p-1.5"
                   style={{
-                    backgroundColor: "#0f172a",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#1e3a8a",
                     color: "#f1f5f9",
                   }}
                 >
@@ -586,9 +586,9 @@ export default function ReceiptConfigPage() {
                 <Button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="rounded-lg px-4 py-2 text-white transition-all"
+                  className="rounded-lg px-4 py-2 text-white transition-all hover:opacity-90"
                   style={{
-                    backgroundColor: "#0f172a",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#1d4ed8",
                   }}
                 >
                   {isSaving ? (
@@ -627,7 +627,7 @@ export default function ReceiptConfigPage() {
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     className="rounded-lg p-1.5"
                     style={{
-                      backgroundColor: "#0f172a",
+                      backgroundColor: isDarkMode ? "#1e293b" : "#1e3a8a",
                       color: "#f1f5f9",
                     }}
                   >
@@ -647,11 +647,11 @@ export default function ReceiptConfigPage() {
                     }`}
                     style={{
                       backgroundColor: activePreview === "invoice" 
-                        ? "#0f172a"
-                        : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)"),
+                        ? (isDarkMode ? "#1e293b" : "#1d4ed8")
+                        : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)"),
                       color: activePreview === "invoice" 
                         ? "#FFFFFF"
-                        : (isDarkMode ? "#f1f5f9" : "#0f172a"),
+                        : (isDarkMode ? "#f1f5f9" : "#1e3a8a"),
                     }}
                   >
                     <FileText size={12} className="inline mr-1" />
@@ -668,11 +668,11 @@ export default function ReceiptConfigPage() {
                     }`}
                     style={{
                       backgroundColor: activePreview === "receipt" 
-                        ? "#0f172a"
-                        : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)"),
+                        ? (isDarkMode ? "#1e293b" : "#1d4ed8")
+                        : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)"),
                       color: activePreview === "receipt" 
                         ? "#FFFFFF"
-                        : (isDarkMode ? "#f1f5f9" : "#0f172a"),
+                        : (isDarkMode ? "#f1f5f9" : "#1e3a8a"),
                     }}
                   >
                     <Receipt size={12} className="inline mr-1" />

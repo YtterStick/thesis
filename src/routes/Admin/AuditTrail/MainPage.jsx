@@ -120,7 +120,7 @@ const SkeletonTableRow = ({ isDarkMode, index }) => (
 const SkeletonTable = ({ isDarkMode }) => (
   <Card className="rounded-xl border-2"
     style={{
-      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
       backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
     }}
   >
@@ -134,16 +134,16 @@ const SkeletonTable = ({ isDarkMode }) => (
     <CardContent>
       <div className="rounded-lg border-2 overflow-hidden"
         style={{
-          borderColor: isDarkMode ? "#334155" : "#0B2B26",
+          borderColor: isDarkMode ? "#334155" : "#1e3a8a",
         }}
       >
         <Table>
           <TableHeader>
             <TableRow style={{ 
-              backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+              backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
             }}>
               {["Timestamp", "User", "Action", "Role", "Description"].map((header) => (
-                <TableHead key={header} style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+                <TableHead key={header} style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
                   {header}
                 </TableHead>
               ))}
@@ -350,14 +350,14 @@ const AuditTrailPage = () => {
             whileHover={{ scale: 1.1, rotate: 5 }}
             className="rounded-lg p-2"
             style={{
-              backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
+              backgroundColor: isDarkMode ? "#1e293b" : "#1e3a8a",
               color: "#F3EDE3",
             }}
           >
             <History size={22} />
           </motion.div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+            <h1 className="text-2xl font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
               Audit Trail
             </h1>
             <p className="text-sm" style={{ color: isDarkMode ? '#cbd5e1' : '#6B7280' }}>
@@ -371,7 +371,7 @@ const AuditTrailPage = () => {
             onClick={fetchAuditLogs}
             className="flex items-center gap-2 transition-all hover:opacity-80"
             style={{
-              backgroundColor: isDarkMode ? "#1e293b" : "#0B2B26",
+              backgroundColor: isDarkMode ? "#1e293b" : "#1e3a8a",
               color: "#F3EDE3",
             }}
           >
@@ -392,7 +392,7 @@ const AuditTrailPage = () => {
         ) : (
           <Card className="rounded-xl border-2"
             style={{
-              borderColor: isDarkMode ? "#334155" : "#0B2B26",
+              borderColor: isDarkMode ? "#334155" : "#1e3a8a",
               backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
             }}
           >
@@ -403,7 +403,7 @@ const AuditTrailPage = () => {
                   <Search 
                     className="absolute left-3 top-1/2 transform -translate-y-1/2" 
                     size={16} 
-                    style={{ color: isDarkMode ? '#cbd5e1' : '#0B2B26' }}
+                    style={{ color: isDarkMode ? '#cbd5e1' : '#1e3a8a' }}
                   />
                   <Input
                     placeholder="Search logs..."
@@ -411,9 +411,9 @@ const AuditTrailPage = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 rounded-lg border-2 transition-all"
                     style={{
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                       backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                      color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                      color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                     }}
                   />
                 </div>
@@ -422,9 +422,9 @@ const AuditTrailPage = () => {
                 <Select value={selectedAction} onValueChange={setSelectedAction}>
                   <SelectTrigger className="rounded-lg border-2 transition-all"
                     style={{
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                       backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                      color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                      color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                     }}
                   >
                     <SelectValue placeholder="Filter by action" />
@@ -432,7 +432,7 @@ const AuditTrailPage = () => {
                   <SelectContent
                     style={{
                       backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                     }}
                   >
                     {actionTypes.map((action) => (
@@ -440,7 +440,7 @@ const AuditTrailPage = () => {
                         key={action.value} 
                         value={action.value}
                         style={{
-                          color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                          color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                         }}
                       >
                         {action.label}
@@ -453,9 +453,9 @@ const AuditTrailPage = () => {
                 <Select value={selectedUser} onValueChange={setSelectedUser}>
                   <SelectTrigger className="rounded-lg border-2 transition-all"
                     style={{
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                       backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                      color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                      color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                     }}
                   >
                     <SelectValue placeholder="Filter by user" />
@@ -463,7 +463,7 @@ const AuditTrailPage = () => {
                   <SelectContent
                     style={{
                       backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                     }}
                   >
                     {users.map((user) => (
@@ -471,7 +471,7 @@ const AuditTrailPage = () => {
                         key={user.value} 
                         value={user.value}
                         style={{
-                          color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                          color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                         }}
                       >
                         {user.label}
@@ -484,9 +484,9 @@ const AuditTrailPage = () => {
                 <Select value={dateRange} onValueChange={setDateRange}>
                   <SelectTrigger className="rounded-lg border-2 transition-all"
                     style={{
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                       backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                      color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                      color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                     }}
                   >
                     <SelectValue placeholder="Date range" />
@@ -494,13 +494,13 @@ const AuditTrailPage = () => {
                   <SelectContent
                     style={{
                       backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                     }}
                   >
                     <SelectItem 
                       value="all"
                       style={{
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                       }}
                     >
                       All Time
@@ -508,7 +508,7 @@ const AuditTrailPage = () => {
                     <SelectItem 
                       value="today"
                       style={{
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                       }}
                     >
                       Today
@@ -516,7 +516,7 @@ const AuditTrailPage = () => {
                     <SelectItem 
                       value="week"
                       style={{
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                       }}
                     >
                       Last 7 Days
@@ -524,7 +524,7 @@ const AuditTrailPage = () => {
                     <SelectItem 
                       value="month"
                       style={{
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                       }}
                     >
                       Last 30 Days
@@ -543,9 +543,9 @@ const AuditTrailPage = () => {
                   variant="outline"
                   className="rounded-lg border-2 transition-all hover:opacity-80"
                   style={{
-                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                    borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                     backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                    color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                   }}
                 >
                   <Filter size={16} className="mr-2" />
@@ -568,12 +568,12 @@ const AuditTrailPage = () => {
         ) : (
           <Card className="rounded-xl border-2"
             style={{
-              borderColor: isDarkMode ? "#334155" : "#0B2B26",
+              borderColor: isDarkMode ? "#334155" : "#1e3a8a",
               backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
             }}
           >
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+              <CardTitle style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
                 Activity Logs ({totalElements} total)
               </CardTitle>
               
@@ -585,9 +585,9 @@ const AuditTrailPage = () => {
                 <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
                   <SelectTrigger className="w-20 rounded-lg border-2 transition-all"
                     style={{
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                       backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                      color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                      color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                     }}
                   >
                     <SelectValue />
@@ -595,7 +595,7 @@ const AuditTrailPage = () => {
                   <SelectContent
                     style={{
                       backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                      borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                      borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                     }}
                   >
                     {pageSizeOptions.map((size) => (
@@ -603,7 +603,7 @@ const AuditTrailPage = () => {
                         key={size} 
                         value={size.toString()}
                         style={{
-                          color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                          color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                         }}
                       >
                         {size}
@@ -702,14 +702,14 @@ const AuditTrailPage = () => {
                       disabled={currentPage === 0}
                       className="rounded-lg border-2 transition-all hover:opacity-80"
                       style={{
-                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                        borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                         backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                       }}
                     >
                       <ChevronsLeft size={16} />
                     </Button>
-
+ 
                     {/* Previous Page */}
                     <Button
                       variant="outline"
@@ -718,14 +718,14 @@ const AuditTrailPage = () => {
                       disabled={currentPage === 0}
                       className="rounded-lg border-2 transition-all hover:opacity-80"
                       style={{
-                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                        borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                         backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                       }}
                     >
                       <ChevronLeft size={16} />
                     </Button>
-
+ 
                     {/* Page Numbers */}
                     <div className="flex items-center gap-1">
                       {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -739,7 +739,7 @@ const AuditTrailPage = () => {
                         } else {
                           pageNum = currentPage - 2 + i;
                         }
-
+ 
                         return (
                           <Button
                             key={pageNum}
@@ -750,13 +750,13 @@ const AuditTrailPage = () => {
                               currentPage === pageNum ? 'font-bold' : ''
                             }`}
                             style={{
-                              borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                              borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                               backgroundColor: currentPage === pageNum 
-                                ? (isDarkMode ? "#1e293b" : "#0B2B26")
+                                ? (isDarkMode ? "#1e293b" : "#1e3a8a")
                                 : (isDarkMode ? "#0f172a" : "#F3EDE3"),
                               color: currentPage === pageNum 
                                 ? "#F3EDE3"
-                                : (isDarkMode ? "#f1f5f9" : "#0B2B26"),
+                                : (isDarkMode ? "#f1f5f9" : "#1e3a8a"),
                             }}
                           >
                             {pageNum}
@@ -764,7 +764,7 @@ const AuditTrailPage = () => {
                         );
                       })}
                     </div>
-
+ 
                     {/* Next Page */}
                     <Button
                       variant="outline"
@@ -773,14 +773,14 @@ const AuditTrailPage = () => {
                       disabled={currentPage === totalPages - 1}
                       className="rounded-lg border-2 transition-all hover:opacity-80"
                       style={{
-                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                        borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                         backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                       }}
                     >
                       <ChevronRight size={16} />
                     </Button>
-
+ 
                     {/* Last Page */}
                     <Button
                       variant="outline"
@@ -789,9 +789,9 @@ const AuditTrailPage = () => {
                       disabled={currentPage === totalPages - 1}
                       className="rounded-lg border-2 transition-all hover:opacity-80"
                       style={{
-                        borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                        borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                         backgroundColor: isDarkMode ? "#0f172a" : "#F3EDE3",
-                        color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                        color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                       }}
                     >
                       <ChevronsRight size={16} />

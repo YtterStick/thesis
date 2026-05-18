@@ -516,7 +516,7 @@ const MainPage = () => {
                                 className="flex items-center gap-2 text-sm font-medium"
                                 style={{ 
                                     color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(11, 43, 38, 0.1)',
+                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(30, 58, 138, 0.1)',
                                 }}
                             >
                                 <XCircle className="h-4 w-4" />
@@ -524,10 +524,9 @@ const MainPage = () => {
                             </Button>
                             <Button
                                 onClick={handlePrintClaimingStub}
-                                className="flex items-center gap-2 text-sm font-medium"
+                                className="flex items-center gap-2 text-sm font-medium text-white transition-colors hover:opacity-90"
                                 style={{ 
-                                    backgroundColor: isDarkMode ? '#0f172a' : '#0f172a',
-                                    color: '#f1f5f9'
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#1d4ed8',
                                 }}
                             >
                                 <Printer className="h-4 w-4" />
@@ -567,7 +566,7 @@ const MainPage = () => {
                                 className="flex items-center gap-2 text-sm font-medium"
                                 style={{ 
                                     color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(11, 43, 38, 0.1)',
+                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(30, 58, 138, 0.1)',
                                 }}
                             >
                                 <RotateCcw className="h-4 w-4" />
@@ -579,7 +578,7 @@ const MainPage = () => {
                                 className="flex items-center gap-2 text-sm font-medium"
                                 style={{ 
                                     color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(11, 43, 38, 0.1)',
+                                    backgroundColor: isDarkMode ? 'rgba(51, 65, 85, 0.3)' : 'rgba(30, 58, 138, 0.1)',
                                 }}
                             >
                                 <XCircle className="h-4 w-4" />
@@ -662,12 +661,11 @@ const MainPage = () => {
                                     </Button>
                                     <Button
                                         onClick={handleConfirmTransaction}
-                                        className="flex items-center gap-2"
+                                        className="flex items-center gap-2 text-white transition-colors hover:opacity-90"
                                         style={{
                                             backgroundColor: isProcessingAfterConfirm 
                                                 ? (isDarkMode ? '#374151' : '#9ca3af') 
-                                                : (isDarkMode ? '#0f172a' : '#0f172a'),
-                                            color: '#f1f5f9'
+                                                : (isDarkMode ? '#1e293b' : '#1d4ed8'),
                                         }}
                                         disabled={isProcessingAfterConfirm}
                                     >

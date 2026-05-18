@@ -160,13 +160,13 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                 className="relative z-50 w-full max-w-md rounded-xl border-2 p-6 shadow-xl transition-all"
                 style={{
                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                    borderColor: isDarkMode ? "#334155" : "#1e3a8a",
+                    color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                 }}
             >
                 {/* Header */}
                 <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+                    <h2 className="text-lg font-semibold" style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
                         Edit Staff Account
                     </h2>
                     <motion.button
@@ -175,16 +175,16 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                         onClick={onClose}
                         className="rounded-lg p-1 transition-colors hover:opacity-80"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                         }}
                     >
-                        <X className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }} />
+                        <X className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }} />
                     </motion.button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
                             Username
                         </label>
                         <Input
@@ -192,16 +192,16 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                             disabled
                             className="rounded-lg border-2 transition-all"
                             style={{
-                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                                color: isDarkMode ? "#94a3b8" : "#0B2B26/70",
+                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
+                                borderColor: isDarkMode ? "#334155" : "#1e3a8a",
+                                color: isDarkMode ? "#94a3b8" : "rgba(30, 58, 138, 0.7)",
                             }}
                         />
                     </div>
 
                     {/* Password with toggle and info */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
                             New Password (leave blank to keep current)
                         </label>
                         <div className="relative">
@@ -213,8 +213,8 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                                 className="rounded-lg border-2 pr-20 transition-all"
                                 style={{
                                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                                    borderColor: isDarkMode ? "#334155" : "#1e3a8a",
+                                    color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                                 }}
                             />
                             <div className="absolute right-3 top-2 flex space-x-2">
@@ -224,7 +224,7 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                                     type="button"
                                     onClick={() => setShowPasswordInfo(!showPasswordInfo)}
                                     className="transition-colors hover:opacity-80"
-                                    style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}
+                                    style={{ color: isDarkMode ? '#94a3b8' : 'rgba(30, 58, 138, 0.7)' }}
                                 >
                                     <Info size={16} />
                                 </motion.button>
@@ -234,7 +234,7 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                                     type="button"
                                     onClick={() => setShowPassword((prev) => !prev)}
                                     className="transition-colors hover:opacity-80"
-                                    style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}
+                                    style={{ color: isDarkMode ? '#94a3b8' : 'rgba(30, 58, 138, 0.7)' }}
                                 >
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </motion.button>
@@ -266,7 +266,7 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
 
                     {/* Confirm Password */}
                     <div>
-                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
                             Confirm New Password
                         </label>
                         <div className="relative">
@@ -278,8 +278,8 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                                 className="rounded-lg border-2 pr-10 transition-all"
                                 style={{
                                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                                    borderColor: isDarkMode ? "#334155" : "#1e3a8a",
+                                    color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                                 }}
                             />
                             <motion.button
@@ -288,7 +288,7 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                                 type="button"
                                 onClick={() => setShowConfirmPassword((prev) => !prev)}
                                 className="absolute right-3 top-2 transition-colors hover:opacity-80"
-                                style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}
+                                style={{ color: isDarkMode ? '#94a3b8' : 'rgba(30, 58, 138, 0.7)' }}
                             >
                                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </motion.button>
@@ -297,15 +297,15 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
 
                     {/* Contact Input */}
                     <div>
-                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
                             Contact Number
                         </label>
                         <div className="flex items-center rounded-lg border-2 transition-all"
                              style={{
                                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                borderColor: isDarkMode ? "#334155" : "#0B2B26",
+                                borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                              }}>
-                            <span className="px-3" style={{ color: isDarkMode ? '#94a3b8' : '#0B2B26/70' }}>+63</span>
+                            <span className="px-3" style={{ color: isDarkMode ? '#94a3b8' : 'rgba(30, 58, 138, 0.7)' }}>+63</span>
                             <Input
                                 type="tel"
                                 inputMode="numeric"
@@ -316,7 +316,7 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                                 required
                                 className="flex-1 border-none bg-transparent transition-all focus-visible:ring-0 focus-visible:ring-offset-0"
                                 style={{
-                                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                                    color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                                 }}
                             />
                         </div>
@@ -327,7 +327,7 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
 
                     {/* Role Select */}
                     <div>
-                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#0B2B26' }}>
+                        <label className="text-sm font-medium mb-2 block" style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}>
                             Role
                         </label>
                         <Select
@@ -338,8 +338,8 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                                 className="rounded-lg border-2 transition-all"
                                 style={{
                                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                                    borderColor: isDarkMode ? "#334155" : "#1e3a8a",
+                                    color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                                 }}
                             >
                                 <SelectValue placeholder="Select role" />
@@ -348,8 +348,8 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                                 className="rounded-lg border-2 transition-all"
                                 style={{
                                     backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                    borderColor: isDarkMode ? "#334155" : "#0B2B26",
-                                    color: isDarkMode ? "#f1f5f9" : "#0B2B26",
+                                    borderColor: isDarkMode ? "#334155" : "#1e3a8a",
+                                    color: isDarkMode ? "#f1f5f9" : "#1e3a8a",
                                 }}
                             >
                                 {roles.map((role) => (
@@ -378,7 +378,7 @@ const EditStaffForm = ({ staff, onUpdate, onClose }) => {
                             disabled={isSubmitting}
                             className="w-full rounded-lg px-4 py-2 text-white transition-all"
                             style={{
-                                backgroundColor: isDarkMode ? "#0f172a" : "#0B2B26",
+                                backgroundColor: isDarkMode ? "#2563eb" : "#1d4ed8",
                             }}
                         >
                             {isSubmitting ? "Updating..." : "Update Account"}

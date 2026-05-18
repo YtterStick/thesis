@@ -580,13 +580,13 @@ const AdminRecordTable = ({
                 if (worksheet[cell_ref]) {
                     worksheet[cell_ref].s = {
                         font: { bold: true, color: { rgb: "FFFFFF" } },
-                        fill: { fgColor: { rgb: "0B2B26" } },
+                        fill: { fgColor: { rgb: "1E3A8A" } },
                         alignment: { horizontal: "center" },
                         border: {
-                            top: { style: "thin", color: { rgb: "1C3F3A" } },
-                            left: { style: "thin", color: { rgb: "1C3F3A" } },
-                            bottom: { style: "thin", color: { rgb: "1C3F3A" } },
-                            right: { style: "thin", color: { rgb: "1C3F3A" } },
+                            top: { style: "thin", color: { rgb: "3B82F6" } },
+                            left: { style: "thin", color: { rgb: "3B82F6" } },
+                            bottom: { style: "thin", color: { rgb: "3B82F6" } },
+                            right: { style: "thin", color: { rgb: "3B82F6" } },
                         },
                     };
                 }

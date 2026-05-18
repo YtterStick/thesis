@@ -195,7 +195,7 @@ const RecordTable = ({ items = [], isDarkMode, currentPage, totalPages, onPageCh
                                     value={searchTerm}
                                     onChange={(e) => {
                                         setSearchTerm(e.target.value);
-                                        setCurrentPage(1);
+                                        if (onPageChange) onPageChange(0);
                                     }}
                                     placeholder="Search by name"
                                     className="w-full bg-transparent px-2 text-sm placeholder:text-slate-400 focus-visible:outline-none"
@@ -274,7 +274,7 @@ const RecordTable = ({ items = [], isDarkMode, currentPage, totalPages, onPageCh
                     <table className="min-w-full table-auto text-sm">
                         <thead
                             style={{
-                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                             }}
                         >
                             <tr>
@@ -418,7 +418,7 @@ const RecordTable = ({ items = [], isDarkMode, currentPage, totalPages, onPageCh
                                                         disabled={isPrinting}
                                                         className="rounded-lg p-2 transition-all hover:opacity-80 disabled:opacity-50"
                                                         style={{
-                                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                                                         }}
                                                     >
                                                         <Printer
@@ -471,11 +471,11 @@ const RecordTable = ({ items = [], isDarkMode, currentPage, totalPages, onPageCh
                             className="font-medium px-4 py-2 rounded"
                             style={{ 
                                 color: isDarkMode ? "#f1f5f9" : "#0f172a",
-                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                             }}
                         >
-                            Page <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{currentPage + 1}</span> of{" "}
-                            <span style={{ color: isDarkMode ? "#3DD9B6" : "#0891B2", fontWeight: "bold" }}>{totalPages}</span>
+                            Page <span style={{ color: isDarkMode ? "#3b82f6" : "#2563eb", fontWeight: "bold" }}>{currentPage + 1}</span> of{" "}
+                            <span style={{ color: isDarkMode ? "#3b82f6" : "#2563eb", fontWeight: "bold" }}>{totalPages}</span>
                         </span>
 
                         <button

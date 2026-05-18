@@ -66,7 +66,7 @@ const SkeletonLoader = () => {
         <div className="min-w-full">
           <div className="grid grid-cols-10 gap-4 p-4"
                style={{
-                 backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                 backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                }}>
             {[...Array(10)].map((_, i) => (
               <div key={i} className="h-4 rounded"

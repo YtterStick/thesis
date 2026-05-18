@@ -192,7 +192,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                             className="border-b"
                             style={{
                                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                             }}
                         >
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Customer</TableHead>
@@ -315,7 +315,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                             className="border-b"
                             style={{
                                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                             }}
                         >
                             <TableHead style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>Customer</TableHead>
@@ -382,7 +382,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                         }}
                                     >
                                         <TableCell className="flex items-center font-medium" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
-                                            <Shirt className="mr-2 h-4 w-4" style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }} />
+                                            <Shirt className="mr-2 h-4 w-4" style={{ color: isDarkMode ? '#3b82f6' : '#2563eb' }} />
                                             {transaction.customerName}
                                         </TableCell>
                                         <TableCell style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>{transaction.contact || "N/A"}</TableCell>
@@ -393,7 +393,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                                 style={{
                                                     borderColor: isDarkMode ? "#475569" : "#cbd5e1",
                                                     color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                                                 }}
                                             >
                                                 {transaction.serviceType?.toLowerCase() || "N/A"}
@@ -514,7 +514,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                                     style={{
                                                         borderColor: isDarkMode ? "#475569" : "#cbd5e1",
                                                         color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                                                     }}
                                                 >
                                                     <Printer className="h-3 w-3" />
@@ -674,7 +674,7 @@ const ClaimingTable = ({ transactions, isLoading, hasFetched, onClaim, onDispose
                                     style={{
                                         borderColor: isDarkMode ? "#475569" : "#cbd5e1",
                                         color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                        backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                                     }}
                                 >
                                     Cancel

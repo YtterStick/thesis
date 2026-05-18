@@ -315,7 +315,7 @@ const MainPage = () => {
                     <CardHeader 
                         className="rounded-t-xl p-6"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                         }}
                     >
                         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -339,7 +339,7 @@ const MainPage = () => {
                                             <button 
                                                 onClick={clearSearch}
                                                 className="ml-2 text-xs underline hover:no-underline"
-                                                style={{ color: isDarkMode ? '#3DD9B6' : '#0891B2' }}
+                                                style={{ color: isDarkMode ? '#3b82f6' : '#2563eb' }}
                                             >
                                                 clear
                                             </button>
@@ -350,20 +350,20 @@ const MainPage = () => {
                             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
                                 <div className="flex space-x-2">
                                     <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                                            activeTab === "unclaimed"
-                                                ? "text-white"
-                                                : isDarkMode ? "text-slate-100" : "text-slate-700"
-                                        }`}
-                                        style={{
-                                            backgroundColor: activeTab === "unclaimed" 
-                                                ? (isDarkMode ? "#0f172a" : "#0f172a")
-                                                : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)"),
-                                        }}
-                                        onClick={() => setActiveTab("unclaimed")}
-                                    >
+                                         whileHover={{ scale: 1.05 }}
+                                         whileTap={{ scale: 0.95 }}
+                                         className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                             activeTab === "unclaimed"
+                                                 ? "text-white"
+                                                 : isDarkMode ? "text-slate-100" : "text-slate-700"
+                                         }`}
+                                         style={{
+                                             backgroundColor: activeTab === "unclaimed" 
+                                                 ? (isDarkMode ? "#1e293b" : "#1d4ed8")
+                                                 : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)"),
+                                         }}
+                                         onClick={() => setActiveTab("unclaimed")}
+                                     >
                                         Unclaimed ({transactions.length})
                                     </motion.button>
                                     <motion.button
@@ -377,7 +377,7 @@ const MainPage = () => {
                                         style={{
                                             backgroundColor: activeTab === "expired" 
                                                 ? "#EF4444"
-                                                : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)"),
+                                                : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)"),
                                         }}
                                         onClick={() => setActiveTab("expired")}
                                     >
@@ -395,7 +395,7 @@ const MainPage = () => {
                                             className="w-full border-2 pl-8 transition-all sm:w-64"
                                             style={{
                                                 backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-                                                borderColor: searchTerm ? (isDarkMode ? "#3DD9B6" : "#0891B2") : (isDarkMode ? "#475569" : "#cbd5e1"),
+                                                borderColor: searchTerm ? (isDarkMode ? "#3b82f6" : "#2563eb") : (isDarkMode ? "#475569" : "#cbd5e1"),
                                                 color: isDarkMode ? '#f1f5f9' : '#0f172a',
                                             }}
                                             value={searchTerm}
@@ -411,16 +411,16 @@ const MainPage = () => {
                                             </button>
                                         )}
                                     </div>
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={refreshData}
-                                        className="rounded-lg p-2 transition-all"
-                                        style={{
-                                            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
-                                            color: isDarkMode ? '#f1f5f9' : '#0f172a',
-                                        }}
-                                    >
+                                     <motion.button
+                                         whileHover={{ scale: 1.05 }}
+                                         whileTap={{ scale: 0.95 }}
+                                         onClick={refreshData}
+                                         className="rounded-lg p-2 transition-all"
+                                         style={{
+                                             backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
+                                             color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                                         }}
+                                     >
                                         <RefreshCw size={18} />
                                     </motion.button>
                                 </div>

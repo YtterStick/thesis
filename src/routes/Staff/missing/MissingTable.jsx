@@ -179,7 +179,7 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                                 onClick={onClose}
                                 className="rounded-lg p-1 transition-colors hover:opacity-80"
                                 style={{
-                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                                 }}
                             >
                                 <X
@@ -380,7 +380,7 @@ const ViewDetailsModal = ({ item, isOpen, onClose, machines, isDarkMode }) => {
                                 onClick={onClose}
                                 className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
                                 style={{
-                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                                    backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                                     color: isDarkMode ? "#f1f5f9" : "#0f172a",
                                 }}
                             >
@@ -537,8 +537,8 @@ const MissingTable = ({
 
     const inputClass = `rounded-lg border-2 transition-all ${
         isDarkMode
-            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3DD9B6]"
-            : "bg-white text-slate-900 border-slate-300 focus:border-cyan-500"
+            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3b82f6]"
+            : "bg-white text-slate-900 border-slate-300 focus:border-blue-500"
     }`;
 
     if (isLoading) {
@@ -555,7 +555,7 @@ const MissingTable = ({
                             className="border-b"
                             style={{
                                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                             }}
                         >
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Item Description</TableHead>
@@ -626,7 +626,7 @@ const MissingTable = ({
                             className="border-b"
                             style={{
                                 borderColor: isDarkMode ? "#334155" : "#cbd5e1",
-                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                             }}
                         >
                             <TableHead style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>Item Description</TableHead>

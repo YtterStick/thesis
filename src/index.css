@@ -40,8 +40,8 @@
         --admin-card-border: #1e293b;
         --admin-sidebar-bg: #020617;
         --admin-header-bg: #020617;
-        --admin-accent: #3DD9B6; /* Vibrant Teal */
-        --admin-accent-soft: rgba(61, 217, 182, 0.1);
+        --admin-accent: #3b82f6; /* Vibrant Blue */
+        --admin-accent-soft: rgba(59, 130, 246, 0.1);
         --admin-text-primary: #f8fafc; /* Slate 50 */
         --admin-text-secondary: #94a3b8; /* Slate 400 */
         --admin-table-header: #020617;

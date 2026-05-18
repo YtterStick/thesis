@@ -231,7 +231,7 @@ const MissingItemsPage = () => {
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         className="rounded-lg p-2"
                         style={{
-                            backgroundColor: isDarkMode ? "#1e293b" : "#0f172a",
+                            backgroundColor: isDarkMode ? "#1e293b" : "#1e3a8a",
                             color: "#f1f5f9",
                         }}
                     >
@@ -270,7 +270,7 @@ const MissingItemsPage = () => {
                     <CardHeader
                         className="rounded-t-xl p-6"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                            backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                         }}
                     >
                         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -299,12 +299,8 @@ const MissingItemsPage = () => {
                                         style={{
                                             backgroundColor:
                                                 statusFilter === "all"
-                                                    ? isDarkMode
-                                                        ? "#0f172a"
-                                                        : "#0f172a"
-                                                    : isDarkMode
-                                                      ? "rgba(51, 65, 85, 0.3)"
-                                                      : "rgba(11, 43, 38, 0.1)",
+                                                    ? (isDarkMode ? "#1e293b" : "#1d4ed8")
+                                                    : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)"),
                                         }}
                                         onClick={() => setStatusFilter("all")}
                                     >
@@ -319,12 +315,8 @@ const MissingItemsPage = () => {
                                         style={{
                                             backgroundColor:
                                                 statusFilter === "unclaimed"
-                                                    ? isDarkMode
-                                                        ? "#0f172a"
-                                                        : "#0f172a"
-                                                    : isDarkMode
-                                                      ? "rgba(51, 65, 85, 0.3)"
-                                                      : "rgba(11, 43, 38, 0.1)",
+                                                    ? (isDarkMode ? "#1e293b" : "#1d4ed8")
+                                                    : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)"),
                                         }}
                                         onClick={() => setStatusFilter("unclaimed")}
                                     >
@@ -339,12 +331,8 @@ const MissingItemsPage = () => {
                                         style={{
                                             backgroundColor:
                                                 statusFilter === "claimed"
-                                                    ? isDarkMode
-                                                        ? "#0f172a"
-                                                        : "#0f172a"
-                                                    : isDarkMode
-                                                      ? "rgba(51, 65, 85, 0.3)"
-                                                      : "rgba(11, 43, 38, 0.1)",
+                                                    ? (isDarkMode ? "#1e293b" : "#1d4ed8")
+                                                    : (isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)"),
                                         }}
                                         onClick={() => setStatusFilter("claimed")}
                                     >

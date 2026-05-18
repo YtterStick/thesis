@@ -317,7 +317,7 @@ const MainPage = () => {
             label: "Total Income",
             value: formatCurrency(summaryData.totalIncome || 0),
             icon: <PhilippinePeso size={26} />,
-            color: "#3DD9B6",
+            color: "#3b82f6",
             tooltip: `Total income from ${timeFilter} transactions`,
             loading: summaryLoading,
         },
@@ -1008,16 +1008,24 @@ const MainPage = () => {
             </div>
 
             {/* Record Table */}
-            {loading || !dataLoaded ? (
+            {!dataLoaded ? (
                 <SkeletonTable />
             ) : (
                 <div
-                    className="rounded-xl border p-5 transition-all shadow-sm"
+                    className="relative rounded-xl border p-5 transition-all shadow-sm"
                     style={{
                         backgroundColor: "var(--admin-card-bg)",
                         borderColor: "var(--admin-card-border)",
                     }}
                 >
+                    {loading && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center rounded-xl bg-slate-900/10 dark:bg-slate-900/30 backdrop-blur-[1px]">
+                            <div className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg dark:border-slate-800 dark:bg-slate-950">
+                                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Updating records...</span>
+                            </div>
+                        </div>
+                    )}
                     <div className="mb-4 flex items-center justify-between">
                         <div>
                             <p

@@ -177,7 +177,7 @@ const ConfirmationModal = ({
           onClick={onClose}
           className="absolute right-4 top-4 rounded-lg p-1 transition-colors hover:opacity-70"
           style={{
-            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+            backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
           }}
         >
           <X size={16} style={{ color: "var(--admin-text-primary)" }} />
@@ -706,7 +706,7 @@ const PaymentManagementPage = () => {
                     }}>
                 <CardHeader className="rounded-t-xl pb-4"
                            style={{
-                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.05)",
+                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.05)",
                            }}>
                   <CardTitle style={{ color: "var(--admin-text-primary)" }}>
                     Available Payment Methods
@@ -813,7 +813,7 @@ const PaymentManagementPage = () => {
                     }}>
                 <CardHeader className="rounded-t-xl pb-4"
                            style={{
-                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                            }}>
                   <div>
                     <CardTitle style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}>

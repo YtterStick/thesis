@@ -148,6 +148,17 @@ export default function AdminDashboardPage() {
 
     // Live Dashboard additions
     const [machines, setMachines] = useState([]);
+    const sortedMachines = useMemo(() => {
+        if (!Array.isArray(machines)) return [];
+        return [...machines].sort((a, b) => {
+            const typeA = (a.type || "").toLowerCase();
+            const typeB = (b.type || "").toLowerCase();
+            if (typeA !== typeB) {
+                return typeA.localeCompare(typeB);
+            }
+            return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }, [machines]);
     const [machinesLoading, setMachinesLoading] = useState(true);
 
     const refreshMachines = useCallback(() => {
@@ -828,7 +839,7 @@ export default function AdminDashboardPage() {
             title: "Total Income",
             icon: <PhilippinePeso size={26} />,
             value: formatCurrency(displayData.totalIncome || 0),
-            color: "#3DD9B6",
+            color: "#3b82f6",
             description: "Total revenue generated",
         },
         {
@@ -1007,12 +1018,12 @@ export default function AdminDashboardPage() {
                                     >
                                         <stop
                                             offset="5%"
-                                            stopColor="#0891B2"
+                                            stopColor="#3b82f6"
                                             stopOpacity={0.8}
                                         />
                                         <stop
                                             offset="95%"
-                                            stopColor="#0E7490"
+                                            stopColor="#1d4ed8"
                                             stopOpacity={0}
                                         />
                                     </linearGradient>
@@ -1036,7 +1047,7 @@ export default function AdminDashboardPage() {
                                         boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                                     }}
                                     itemStyle={{
-                                        color: "#0891B2",
+                                        color: "#3b82f6",
                                     }}
                                 />
                                 <XAxis
@@ -1058,7 +1069,7 @@ export default function AdminDashboardPage() {
                                 <Area
                                     type="monotone"
                                     dataKey="total"
-                                    stroke="#0891B2"
+                                    stroke="#3b82f6"
                                     fillOpacity={1}
                                     fill="url(#colorLoad)"
                                     strokeWidth={2}
@@ -1158,14 +1169,14 @@ export default function AdminDashboardPage() {
                                                     <p
                                                         className="text-sm font-semibold"
                                                         style={{ 
-                                                            color: isDarkMode ? "#3DD9B6" : "#059669",
+                                                            color: isDarkMode ? "#3b82f6" : "#2563eb",
                                                         }}
                                                     >
                                                         {transaction.name || transaction.customerName}
                                                     </p>
                                                     <p
                                                         className="text-sm font-bold ml-4"
-                                                        style={{ color: isDarkMode ? "#3DD9B6" : "#059669" }}
+                                                        style={{ color: isDarkMode ? "#3b82f6" : "#2563eb" }}
                                                     >
                                                         ₱{(transaction.price || transaction.totalPrice || 0).toFixed(2)}
                                                     </p>
@@ -1248,7 +1259,7 @@ export default function AdminDashboardPage() {
                                     <RefreshCw size={24} />
                                 </motion.div>
                             </div>
-                        ) : machines.length === 0 ? (
+                        ) : sortedMachines.length === 0 ? (
                             <div className="flex h-full flex-col items-center justify-center text-center">
                                 <WashingMachine size={36} className="mb-2 opacity-40" style={{ color: "var(--admin-text-secondary)" }} />
                                 <p className="font-semibold text-sm" style={{ color: "var(--admin-text-primary)" }}>No Machines Configured</p>
@@ -1256,7 +1267,7 @@ export default function AdminDashboardPage() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                {machines.map((machine, index) => {
+                                {sortedMachines.map((machine, index) => {
                                     const status = machine.status || "Available";
                                     const isAvailable = status === "Available";
                                     const isInUse = status === "In Use" || status === "Busy";

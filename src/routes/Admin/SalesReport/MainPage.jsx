@@ -856,9 +856,9 @@ const SalesReportPage = () => {
     const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
     const CHART_COLORS = {
-        primary: "#0891B2",
-        secondary: "#0E7490",
-        accent: "#3DD9B6",
+        primary: "#2563eb",
+        secondary: "#1d4ed8",
+        accent: "#3b82f6",
         highlight: "#60A5FA",
         complementary: "#FB923C",
         success: "#10B981",
@@ -867,7 +867,7 @@ const SalesReportPage = () => {
     };
 
     const SERVICE_COLORS = [
-        "#0891B2",
+        "#2563eb",
         "#10B981",
         "#F59E0B",
         "#EF4444",
@@ -916,7 +916,7 @@ const SalesReportPage = () => {
                     y={0}
                     dy={16}
                     textAnchor="middle"
-                    fill={isDarkMode ? "#f1f5f9" : "#0B2B26"}
+                    fill={isDarkMode ? "#f1f5f9" : "#1e3a8a"}
                     fontSize="12"
                     fontWeight="500"
                 >

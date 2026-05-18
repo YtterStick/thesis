@@ -284,8 +284,8 @@ const ServiceReceiptCard = ({ transaction, settings, onClose, isDarkMode }) => {
                 exit={{ scale: 0.9, opacity: 0 }}
                 className="relative mx-auto max-w-md rounded-xl border-2 p-6 shadow-xl"
                 style={{
-                    backgroundColor: isDarkMode ? "#F3EDE3" : "#FFFFFF",
-                    borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                    backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                    borderColor: isDarkMode ? "#334155" : "#1e3a8a",
                 }}
             >
                 <motion.button
@@ -294,63 +294,63 @@ const ServiceReceiptCard = ({ transaction, settings, onClose, isDarkMode }) => {
                     onClick={onClose}
                     className="absolute -right-3 -top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 shadow-lg transition-all duration-200"
                     style={{
-                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
-                        color: isDarkMode ? '#13151B' : '#0B2B26',
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#1e3a8a",
+                        color: isDarkMode ? '#f1f5f9' : '#1e3a8a',
                     }}
                     aria-label="Close receipt"
                 >
                     <X size={20} />
                 </motion.button>
-
+ 
                 {/* On-screen preview */}
                 <div
                     ref={receiptRef}
                     className="mx-auto max-w-md space-y-2 rounded-lg border-2 p-4 font-mono text-sm shadow-md"
                     style={{
-                        backgroundColor: isDarkMode ? "#FFFFFF" : "#F3EDE3",
-                        borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                        backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
+                        borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                     }}
                 >
                     {/* Store Info */}
                     <div 
                         className="text-center text-lg font-bold"
-                        style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}
                     >
                         {settings.storeName}
                     </div>
                     <div 
                         className="text-center"
-                        style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                        style={{ color: isDarkMode ? '#cbd5e1' : 'rgba(30, 58, 138, 0.7)' }}
                     >
                         {settings.address}
                     </div>
                     <div 
                         className="text-center"
-                        style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                        style={{ color: isDarkMode ? '#cbd5e1' : 'rgba(30, 58, 138, 0.7)' }}
                     >
                         {settings.phone}
                     </div>
-
+ 
                     <hr 
                         className="my-2"
                         style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     />
-
+ 
                     {/* Receipt Header */}
                     <div 
                         className="text-md text-center font-bold"
-                        style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}
                     >
                         LAUNDRY CLAIM RECEIPT
                     </div>
-
+ 
                     {/* Receipt Meta*/}
                     <div 
                         className="grid grid-cols-2 gap-1 text-xs"
-                        style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}
                     >
                         <div>
                             Transaction #: <span className="font-bold">{transactionNumber}</span>
@@ -368,17 +368,17 @@ const ServiceReceiptCard = ({ transaction, settings, onClose, isDarkMode }) => {
                             Processed By: <span className="font-bold">{staffId}</span>
                         </div>
                     </div>
-
+ 
                     <hr 
                         className="my-2"
                         style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     />
-
+ 
                     <div 
                         className="space-y-1"
-                        style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}
                     >
                         <div className="flex justify-between">
                             <span>Service Type:</span>
@@ -392,23 +392,23 @@ const ServiceReceiptCard = ({ transaction, settings, onClose, isDarkMode }) => {
                             <span>Status:</span>
                             <span 
                                 className="font-bold"
-                                style={{ color: '#059669' }}
+                                style={{ color: '#3b82f6' }}
                             >
                                 CLAIMED
                             </span>
                         </div>
                     </div>
-
+ 
                     <hr 
                         className="my-2"
                         style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     />
-
+ 
                     <div 
                         className="space-y-1 text-xs"
-                        style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                        style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}
                     >
                         <div className="flex justify-between">
                             <span>Laundry Completed:</span>
@@ -419,22 +419,22 @@ const ServiceReceiptCard = ({ transaction, settings, onClose, isDarkMode }) => {
                             <span className="font-bold">{formatDateTime(claimDate)}</span>
                         </div>
                     </div>
-
+ 
                     <hr 
                         className="my-2"
                         style={{
-                            borderColor: isDarkMode ? "#2A524C" : "#0B2B26",
+                            borderColor: isDarkMode ? "#334155" : "#cbd5e1",
                         }}
                     />
-
+ 
                     {/* Claim Confirmation */}
                     <div 
                         className="mt-2 text-xs"
-                        style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                        style={{ color: isDarkMode ? '#cbd5e1' : 'rgba(30, 58, 138, 0.7)' }}
                     >
                         <strong 
                             className="mb-1 block text-sm"
-                            style={{ color: isDarkMode ? '#13151B' : '#0B2B26' }}
+                            style={{ color: isDarkMode ? '#f1f5f9' : '#1e3a8a' }}
                         >
                             Claim Confirmation
                         </strong>
@@ -443,24 +443,24 @@ const ServiceReceiptCard = ({ transaction, settings, onClose, isDarkMode }) => {
                             have been verified and released to the customer. Laundry was completed on {formatDate(completionDate)}.
                         </p>
                     </div>
-
+ 
                     {/* Footer */}
                     <div 
                         className="mt-2 text-center text-xs"
-                        style={{ color: isDarkMode ? '#6B7280' : '#0B2B26/70' }}
+                        style={{ color: isDarkMode ? '#cbd5e1' : 'rgba(30, 58, 138, 0.7)' }}
                     >
                         {settings.footerNote || "Thank you for your business!"}
                     </div>
                 </div>
-
+ 
                 <div className="mt-4 flex justify-center">
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handlePrint}
-                        className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-white shadow-md transition-all hover:shadow-lg focus:outline-none"
+                        className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-white shadow-md transition-all hover:shadow-lg focus:outline-none hover:opacity-90"
                         style={{
-                            backgroundColor: isDarkMode ? "#18442AF5" : "#0B2B26",
+                            backgroundColor: isDarkMode ? "#334155" : "#1d4ed8",
                         }}
                         disabled={isPrinting}
                     >

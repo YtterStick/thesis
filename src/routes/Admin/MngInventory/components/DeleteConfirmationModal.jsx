@@ -54,7 +54,7 @@ const DeleteConfirmationModal = ({
             disabled={loading}
             className="rounded-lg p-1 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+              backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
             }}
           >
             <X className="h-4 w-4" style={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }} />

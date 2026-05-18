@@ -936,13 +936,19 @@ function ServiceTrackingContent() {
 
     const machineOptions = useMemo(() => {
         const byType = { WASHER: [], DRYER: [] };
-        machines.forEach((m) => {
+        
+        // Sort machines naturally by name first
+        const sorted = [...machines].sort((a, b) => 
+            (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: 'base' })
+        );
+
+        sorted.forEach((m) => {
             const t = (m.type || "")?.toString().toUpperCase();
             if (t === "WASHER") byType.WASHER.push(m);
             if (t === "DRYER") byType.DRYER.push(m);
         });
 
-        console.log("🔄 Machine Options:", {
+        console.log("🔄 Machine Options (sorted):", {
             totalMachines: machines.length,
             washers: byType.WASHER.length,
             dryers: byType.DRYER.length,
@@ -1087,7 +1093,7 @@ function ServiceTrackingContent() {
                     {
                         label: "Total Jobs",
                         value: jobs.length,
-                        color: "#3DD9B6",
+                        color: "#3b82f6",
                         description: "Active laundry jobs",
                         icon: Package,
                     },

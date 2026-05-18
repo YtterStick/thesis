@@ -31,19 +31,19 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
   const inputClass = `rounded-lg border-2 transition-all ${
     isDarkMode 
       ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9] placeholder-[#94a3b8]" 
-      : "bg-white border-[#0B2B26] text-[#0B2B26] placeholder-gray-500"
-  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
+      : "bg-white border-[#1e3a8a] text-[#1e3a8a] placeholder-gray-500"
+  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a] focus-visible:ring-offset-2`;
 
   const selectTriggerClass = `rounded-lg border-2 transition-all ${
     isDarkMode 
       ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
-      : "bg-white border-[#0B2B26] text-[#0B2B26]"
-  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2`;
+      : "bg-white border-[#1e3a8a] text-[#1e3a8a]"
+  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a] focus-visible:ring-offset-2`;
 
-  const buttonClass = `rounded-lg px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2B26] focus-visible:ring-offset-2 ${
+  const buttonClass = `rounded-lg px-4 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a] focus-visible:ring-offset-2 ${
     isDarkMode 
       ? "bg-[#0f172a] hover:bg-[#1e293b] text-white" 
-      : "bg-[#0B2B26] hover:bg-[#18442A] text-white"
+      : "bg-[#1d4ed8] hover:bg-[#1e40af] text-white"
   }`;
 
   // Fix: Handle modal close properly
@@ -77,11 +77,11 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
             className="max-w-lg w-full rounded-xl border-2 p-6 shadow-xl"
             style={{
               backgroundColor: isDarkMode ? "#1e293b" : "#FFFFFF",
-              borderColor: isDarkMode ? "#334155" : "#0B2B26",
+              borderColor: isDarkMode ? "#334155" : "#1e3a8a",
             }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+              <h2 className="text-xl font-semibold" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
                 {isEdit ? "Edit Machine" : "Add New Machine"}
               </h2>
               <motion.button
@@ -90,17 +90,17 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
                 onClick={handleClose}
                 className="rounded-lg p-1 transition-colors hover:opacity-80"
                 style={{
-                  backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(11, 43, 38, 0.1)",
+                  backgroundColor: isDarkMode ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 58, 138, 0.1)",
                 }}
               >
-                <X className="h-4 w-4" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }} />
+                <X className="h-4 w-4" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }} />
               </motion.button>
             </div>
 
             <div className="space-y-4">
               {/* Machine Type */}
               <div>
-                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
                   Machine Type
                 </Label>
                 <Select value={form.type} onValueChange={(val) => handleChange("type", val)}>
@@ -110,7 +110,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
                   <SelectContent className={`rounded-lg border-2 ${
                     isDarkMode 
                       ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
-                      : "bg-white border-[#0B2B26] text-[#0B2B26]"
+                      : "bg-white border-[#1e3a8a] text-[#1e3a8a]"
                   }`}>
                     <SelectItem value="Washer">Washer</SelectItem>
                     <SelectItem value="Dryer">Dryer</SelectItem>
@@ -120,7 +120,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Machine Name */}
               <div>
-                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
                   Machine Name
                 </Label>
                 <Input
@@ -133,7 +133,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Capacity */}
               <div>
-                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
                   Capacity (kg)
                 </Label>
                 <Input
@@ -147,7 +147,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
 
               {/* Status */}
               <div>
-                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#0B2B26" }}>
+                <Label className="text-sm font-medium" style={{ color: isDarkMode ? "#f1f5f9" : "#1e3a8a" }}>
                   Status
                 </Label>
                 <Select value={form.status} onValueChange={(val) => handleChange("status", val)}>
@@ -157,7 +157,7 @@ export default function AddMachineModal({ open, setOpen, form, setForm, onSubmit
                   <SelectContent className={`rounded-lg border-2 ${
                     isDarkMode 
                       ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" 
-                      : "bg-white border-[#0B2B26] text-[#0B2B26]"
+                      : "bg-white border-[#1e3a8a] text-[#1e3a8a]"
                   }`}>
                     <SelectItem value="Available" className={statusColorMap["Available"]}>
                       Available

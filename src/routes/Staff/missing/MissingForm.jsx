@@ -19,14 +19,14 @@ const MissingForm = ({
 }) => {
     const inputClass = `rounded-lg border-2 transition-all ${
         isDarkMode 
-            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3DD9B6]" 
-            : "bg-white text-slate-900 border-slate-300 focus:border-cyan-500"
+            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3b82f6]" 
+            : "bg-white text-slate-900 border-slate-300 focus:border-blue-500"
     }`;
     
     const selectTriggerClass = `rounded-lg border-2 transition-all ${
         isDarkMode 
-            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3DD9B6]" 
-            : "bg-white text-slate-900 border-slate-300 focus:border-cyan-500"
+            ? "bg-[#1e293b] text-[#f1f5f9] border-[#475569] focus:border-[#3b82f6]" 
+            : "bg-white text-slate-900 border-slate-300 focus:border-blue-500"
     }`;
 
     const sortedMachines = [...machines].sort((a, b) => {

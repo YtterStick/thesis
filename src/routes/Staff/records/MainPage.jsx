@@ -131,7 +131,7 @@ const MainPage = () => {
                 <div className="min-w-full">
                     <div className="grid grid-cols-10 gap-4 p-4"
                          style={{
-                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(11, 43, 38, 0.1)",
+                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(30, 58, 138, 0.1)",
                          }}>
                         {[...Array(10)].map((_, i) => (
                             <div key={i} className="h-4 rounded"
@@ -173,7 +173,7 @@ const MainPage = () => {
             label: "Today's Income",
             value: `₱${summaryData.todayIncome.toFixed(2)}`,
             icon: <PhilippinePeso size={26} />,
-            color: "#3DD9B6",
+            color: "#3b82f6",
             tooltip: "Total income from today's transactions",
         },
         {

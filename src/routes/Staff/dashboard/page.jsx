@@ -564,7 +564,7 @@ const StaffDashboardPage = () => {
       title: "Today's Income",
       icon: <PhilippinePeso size={26} />,
       value: formatCurrency(displayData.todayIncome),
-      color: "#3DD9B6",
+      color: "#3b82f6",
       description: "Revenue generated today",
       clickable: true,
       onClick: () => navigate("/staff/records")
