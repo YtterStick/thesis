@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/routes/User/layouts/Header";
 import Footer from "@/routes/User/layouts/Footer";
@@ -54,6 +54,7 @@ const AnimatedNumber = ({ value, isChanging }) => {
     );
 };
 const LandingPage = () => {
+    const scrollContainerRef = useRef(null);
     const [isVisible, setIsVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [stats, setStats] = useState([
@@ -76,6 +77,7 @@ const LandingPage = () => {
     const sectionIds = ["home", "services", "service_tracking", "terms"];
     const { activeSection, isScrolling } = useScrollSpy(sectionIds, {
         throttle: 150,
+        rootRef: scrollContainerRef,
     });
 
     useEffect(() => {
@@ -268,10 +270,10 @@ const LandingPage = () => {
 
     return (
         <div
-            className={`min-h-screen transition-colors duration-500 overflow-hidden relative ${
+            ref={scrollContainerRef}
+            className={`scrollbar-thin h-screen transition-colors duration-500 overflow-x-hidden overflow-y-auto relative ${
                 isDarkMode ? "bg-[#030712] text-slate-100" : "bg-[#f8fafc] text-slate-900"
             } font-poppins`}
-            id="home"
         >
             {/* Ambient background decorative elements */}
             <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 dark:bg-blue-500/5 blur-[120px] pointer-events-none" />
@@ -280,7 +282,7 @@ const LandingPage = () => {
 
 
             {/* Header layout */}
-            <Header activeSection={activeSection} />
+            <Header activeSection={activeSection} scrollRootRef={scrollContainerRef} />
 
             <div className="h-24" />
 
@@ -290,6 +292,7 @@ const LandingPage = () => {
                 animate={{ opacity: isVisible ? 1 : 0 }}
                 transition={{ duration: 0.8 }}
                 className="relative py-12 md:py-20 z-10"
+                id="home"
             >
                 <div className="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                     {/* Left Column: Title & Launch Console */}
@@ -441,8 +444,8 @@ const LandingPage = () => {
             </motion.section>
 
             {/* LIVE ACTION PORTAL: SERVICE TRACKING (Centerpiece) */}
-            <div id="service_tracking" className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 mb-16">
-                <div className="text-center mb-8">
+            <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 mt-20 md:mt-28 pt-8 md:pt-10 mb-24 md:mb-32">
+                <div className="text-center mb-10 md:mb-12">
                     <h2 className="text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-2">Live Query Portal</h2>
                     <p className="text-2xl md:text-4xl font-black tracking-tight" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>Track Your Service</p>
                 </div>

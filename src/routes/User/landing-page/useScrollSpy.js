@@ -7,11 +7,14 @@ export const useScrollSpy = (sectionIds, options = {}) => {
   const scrollTimeoutRef = useRef(null);
   const lastScrollYRef = useRef(0);
   const sectionHistoryRef = useRef([]);
+  const scrollRootRef = options.rootRef;
 
   // Throttle scroll events for better performance
   useEffect(() => {
+    const scrollContainer = scrollRootRef?.current || window;
+
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      const currentScrollY = scrollContainer === window ? window.scrollY : scrollContainer.scrollTop;
       const scrollDirection = currentScrollY > lastScrollYRef.current ? 'down' : 'up';
       lastScrollYRef.current = currentScrollY;
 
@@ -25,32 +28,38 @@ export const useScrollSpy = (sectionIds, options = {}) => {
       // Set new timeout
       scrollTimeoutRef.current = setTimeout(() => {
         setIsScrolling(false);
+        const rootRect = scrollContainer === window
+          ? { top: 0, bottom: window.innerHeight }
+          : scrollContainer.getBoundingClientRect();
+        const viewportHeight = scrollContainer === window ? window.innerHeight : scrollContainer.clientHeight;
         
         const sections = sectionIds.map(id => {
           const element = document.getElementById(id);
           if (!element) return null;
           
           const rect = element.getBoundingClientRect();
-          const elementTop = element.offsetTop;
+          const elementTop = scrollContainer === window
+            ? element.offsetTop
+            : rect.top - rootRect.top + scrollContainer.scrollTop;
           const elementBottom = elementTop + element.offsetHeight;
           
           return {
             id,
             element,
-            top: rect.top,
-            bottom: rect.bottom,
+            top: rect.top - rootRect.top,
+            bottom: rect.bottom - rootRect.top,
             height: rect.height,
             absoluteTop: elementTop,
             absoluteBottom: elementBottom,
-            viewportTop: rect.top,
-            viewportBottom: rect.bottom
+            viewportTop: rect.top - rootRect.top,
+            viewportBottom: rect.bottom - rootRect.top
           };
         }).filter(Boolean);
 
         if (sections.length === 0) return;
 
-        const viewportHeight = window.innerHeight;
         const viewportMiddle = viewportHeight / 2;
+        const activationLine = viewportHeight * 0.35;
         
         let mostVisibleSection = null;
         let maxVisibility = 0;
@@ -76,7 +85,12 @@ export const useScrollSpy = (sectionIds, options = {}) => {
             const totalScore = (visibilityRatio * 0.7) + (centerProximity * 0.3);
 
             // Lower threshold for detection - any visible section is considered
-            if (totalScore > maxVisibility && visibilityRatio > 0.1) { // Only 10% visibility required
+            const requiredVisibility = section.id === 'service_tracking' ? 0.42 : 0.18;
+            const topGate = section.id === 'service_tracking'
+              ? section.viewportTop <= viewportHeight * 0.25
+              : true;
+
+            if (totalScore > maxVisibility && visibilityRatio > requiredVisibility && topGate) {
               maxVisibility = totalScore;
               mostVisibleSection = section.id;
             }
@@ -97,7 +111,7 @@ export const useScrollSpy = (sectionIds, options = {}) => {
           ].slice(0, 5);
         } else {
           // NO SECTION IS VISIBLE - use intelligent fallback based on scroll position
-          const currentScrollY = window.scrollY;
+          const currentScrollY = scrollContainer === window ? window.scrollY : scrollContainer.scrollTop;
           
           // Find which section we're closest to in terms of scroll position
           let closestSection = null;
@@ -158,11 +172,11 @@ export const useScrollSpy = (sectionIds, options = {}) => {
           }
         }
 
-        // Safety check: never jump to home if we were just in terms/tracking and scrolling up
+        // Safety check: never jump to home if we were just in terms and scrolling up too close to that section
         if (scrollDirection === 'up' && 
-            ['terms', 'service_tracking'].includes(lastDetectedSection) && 
+            lastDetectedSection === 'terms' && 
             finalActiveSection === 'home' &&
-            currentScrollY > sections.find(s => s.id === 'service_tracking').absoluteTop - 500) {
+            currentScrollY > sections.find(s => s.id === 'service_tracking').absoluteTop - 120) {
           finalActiveSection = lastDetectedSection;
         }
 
@@ -181,18 +195,18 @@ export const useScrollSpy = (sectionIds, options = {}) => {
     };
 
     // Add scroll listener with passive for better performance
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
     
     // Initial check
     handleScroll();
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      scrollContainer.removeEventListener('scroll', handleScroll);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [sectionIds, activeSection, lastDetectedSection, options.throttle]);
+  }, [sectionIds, activeSection, lastDetectedSection, options.throttle, scrollRootRef]);
 
   return { activeSection, isScrolling };
 };

@@ -104,15 +104,10 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
     }, [showStatus]);
 
     useEffect(() => {
-        if (showStatus && trackingData) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "";
-        }
         return () => {
             document.body.style.overflow = "";
         };
-    }, [showStatus, trackingData]);
+    }, []);
 
     const fetchTrackingData = async (invoiceNumber, isSilentRefresh = false) => {
         if (!isSilentRefresh) {
@@ -683,7 +678,7 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 50 }}
                 transition={{ duration: 0.8, delay: 1.6 }}
-                className="px-4 py-12 md:py-16 transition-colors duration-300 bg-transparent"
+                className="px-4 py-8 md:py-10 transition-colors duration-300 bg-transparent"
                 id="service_tracking"
             >
                 <div className="mx-auto max-w-[90%]">
@@ -692,28 +687,49 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 2.0 }}
-                        className="mb-8 rounded-3xl border p-6 md:p-8 shadow-2xl backdrop-blur-md transition-all duration-300"
+                        className="mb-6 rounded-3xl border p-5 md:p-6 shadow-2xl backdrop-blur-md transition-all duration-300"
                         style={{
                             backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
                             borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
                             color: isDarkMode ? "#cbd5e1" : "#475569",
                         }}
                     >
-                        <div className="mb-6">
-                            <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
+                        <div className="mb-4">
+                            <div className="mb-4 flex flex-col gap-2 text-center md:text-left">
+                                <span
+                                    className="mx-auto md:mx-0 w-fit rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em]"
+                                    style={{
+                                        backgroundColor: isDarkMode ? "rgba(59, 130, 246, 0.14)" : "rgba(37, 99, 235, 0.1)",
+                                        color: isDarkMode ? "#93c5fd" : "#1d4ed8",
+                                    }}
+                                >
+                                    Laundry Tracking
+                                </span>
                                 <h3
-                                    className="whitespace-nowrap text-base font-black tracking-wider md:text-lg"
+                                    className="text-lg font-black tracking-tight md:text-2xl"
                                     style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}
                                 >
-                                    ENTER RECEIPT NUMBER:
+                                    Enter Receipt Number
                                 </h3>
-
-                                <form
-                                    onSubmit={handleSubmit}
-                                    className="flex w-full max-w-2xl flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-2"
+                                <p
+                                    className="text-xs md:text-sm"
+                                    style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
                                 >
+                                    Type your invoice code or scan the QR printed on your receipt.
+                                </p>
+                            </div>
+
+                            <form
+                                onSubmit={handleSubmit}
+                                className="rounded-2xl border p-3 md:p-4"
+                                style={{
+                                    backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.52)" : "rgba(248, 250, 252, 0.88)",
+                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(15, 23, 42, 0.1)",
+                                }}
+                            >
+                                <div className="flex w-full flex-col gap-3 md:flex-row md:items-center">
                                     <div className="relative flex-1">
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 transform">
+                                        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 transform">
                                             <Search
                                                 className="h-4 w-4"
                                                 style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
@@ -723,26 +739,23 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                             type="text"
                                             value={receiptNumber}
                                             onChange={(e) => setReceiptNumber(e.target.value)}
-                                            placeholder="Write here..."
-                                            className="w-full rounded-xl border py-3 pl-10 pr-4 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all sm:py-2.5"
+                                            placeholder="Write receipt number here..."
+                                            className="w-full rounded-xl border py-3 pl-10 pr-4 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
                                             style={{
-                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.6)" : "#ffffff",
+                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.75)" : "#ffffff",
                                                 borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(15, 23, 42, 0.1)",
                                                 color: isDarkMode ? "#f8fafc" : "#0f172a",
                                             }}
                                         />
                                     </div>
 
-                                    <div className="flex w-full gap-2 sm:w-auto">
+                                    <div className="flex w-full gap-2 md:w-auto">
                                         <motion.button
                                             type="submit"
                                             disabled={isLoading}
-                                            whileHover={{
-                                                scale: 1.05,
-                                                transition: { duration: 0.2 },
-                                            }}
+                                            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
                                             whileTap={{ scale: 0.95 }}
-                                            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-5 py-3 text-sm font-bold shadow-md transition-all active:scale-95 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-none sm:flex-shrink-0 sm:py-2.5 cursor-pointer ${
+                                            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-5 py-3 text-sm font-bold shadow-md transition-all active:scale-95 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:brightness-110 text-white border-none md:flex-shrink-0 cursor-pointer ${
                                                 isLoading ? "cursor-not-allowed opacity-50" : ""
                                             }`}
                                         >
@@ -754,16 +767,13 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                             type="button"
                                             onClick={handleScanQR}
                                             disabled={isLoading || isScanning}
-                                            whileHover={{
-                                                scale: 1.05,
-                                                transition: { duration: 0.2 },
-                                            }}
+                                            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
                                             whileTap={{ scale: 0.95 }}
-                                            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-5 py-3 text-sm font-bold shadow-md transition-all hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 sm:flex-shrink-0 sm:py-2.5 cursor-pointer ${
+                                            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-5 py-3 text-sm font-bold shadow-md transition-all active:scale-95 md:flex-shrink-0 cursor-pointer ${
                                                 isLoading ? "cursor-not-allowed opacity-50" : ""
                                             }`}
                                             style={{
-                                                backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "#ffffff",
+                                                backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.06)" : "#ffffff",
                                                 color: isDarkMode ? "#f8fafc" : "#0f172a",
                                                 borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(15, 23, 42, 0.1)",
                                             }}
@@ -776,8 +786,8 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                                             <span>{isScanning ? "Scanning..." : "Scan QR"}</span>
                                         </motion.button>
                                     </div>
-                                </form>
-                            </div>
+                                </div>
+                            </form>
 
                             {error && (
                                 <div className="mt-3 text-center">
@@ -797,429 +807,263 @@ const ServiceTracking = ({ isVisible, isDarkMode, isMobile: propIsMobile, autoSe
                         />
                     </motion.div>
 
-                    <div className="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-3">
-                        <RecentSearches
-                            isDarkMode={isDarkMode}
-                            recentSearches={recentSearches}
-                            onRecentSearchClick={handleRecentSearchClick}
-                        />
+                    <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-12 lg:items-start">
+                        <div className="lg:col-span-4 lg:order-2">
+                            <RecentSearches
+                                isDarkMode={isDarkMode}
+                                recentSearches={recentSearches}
+                                onRecentSearchClick={handleRecentSearchClick}
+                            />
+                        </div>
 
                         {!isMobile && (
                             <motion.div
                                 initial={{ opacity: 0, x: 30 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.5, delay: 2.6 }}
-                                className="rounded-3xl border p-6 md:p-8 lg:col-span-2 shadow-2xl backdrop-blur-md transition-all duration-300"
+                                className="rounded-3xl border p-5 md:p-6 lg:col-span-8 lg:order-1 shadow-2xl backdrop-blur-md transition-all duration-300"
                                 style={{
                                     backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
                                     borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
                                     color: isDarkMode ? "#cbd5e1" : "#475569",
                                 }}
                             >
-                                <h3 className="mb-4 text-lg font-black tracking-tight md:text-xl" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>Reminder & Information</h3>
+                                <div className="mb-5 flex items-end justify-between gap-3">
+                                    <div>
+                                        <p
+                                            className="mb-1 text-[11px] font-bold uppercase tracking-[0.2em]"
+                                            style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
+                                        >
+                                            Service Guide
+                                        </p>
+                                        <h3 className="text-lg font-black tracking-tight md:text-xl" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                                            Reminder & Information
+                                        </h3>
+                                    </div>
+                                    <span
+                                        className="rounded-full px-3 py-1 text-xs font-semibold"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "rgba(14, 165, 233, 0.16)" : "rgba(2, 132, 199, 0.1)",
+                                            color: isDarkMode ? "#7dd3fc" : "#0369a1",
+                                        }}
+                                    >
+                                        Alert Sequence
+                                    </span>
+                                </div>
 
-                                <div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-                                    <div className="flex flex-col">
-                                        <h4 className="mb-3 text-sm font-semibold md:text-base">Notification System:</h4>
-                                        <div className="space-y-3">
-                                            {[
-                                                {
-                                                    icon: CheckCircle2,
-                                                    text: "Ready for Pickup",
-                                                    description: "SMS notification when your laundry is ready",
-                                                    time: "Immediate",
-                                                    color: "green",
-                                                },
-                                                {
-                                                    icon: Bell,
-                                                    text: "3-Day Reminder",
-                                                    description: "Reminder if unclaimed after 3 days",
-                                                    time: "72 hours",
-                                                    color: "yellow",
-                                                },
-                                                {
-                                                    icon: AlertTriangle,
-                                                    text: "Final Notice",
-                                                    description: "Final notice before disposal after 7 days",
-                                                    time: "7 days",
-                                                    color: "red",
-                                                },
-                                            ].map((item, index) => (
-                                                <motion.div
-                                                    key={index}
-                                                    initial={{ opacity: 0, y: 20 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: index * 0.1 }}
-                                                    whileHover={{
-                                                        scale: 1.02,
-                                                        y: -2,
-                                                        transition: { duration: 0.2 },
-                                                    }}
-                                                    className={`rounded-2xl border p-4 transition-all ${
-                                                        isDarkMode ? "hover:bg-slate-800/40 hover:border-blue-500/30" : "hover:bg-slate-100/40 hover:border-blue-500/30"
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                    {[
+                                        {
+                                            icon: CheckCircle2,
+                                            text: "Ready for Pickup",
+                                            description: "SMS notification when your laundry is ready",
+                                            time: "Immediate",
+                                            color: "green",
+                                        },
+                                        {
+                                            icon: Bell,
+                                            text: "3-Day Reminder",
+                                            description: "Reminder if unclaimed after 3 days",
+                                            time: "72 hours",
+                                            color: "yellow",
+                                        },
+                                        {
+                                            icon: AlertTriangle,
+                                            text: "Final Notice",
+                                            description: "Final notice before disposal after 7 days",
+                                            time: "7 days",
+                                            color: "red",
+                                        },
+                                    ].map((item, index) => (
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                                            className="rounded-2xl border p-4"
+                                            style={{
+                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.45)" : "rgba(255, 255, 255, 0.92)",
+                                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                                            }}
+                                        >
+                                            <div className="mb-2 flex items-center justify-between">
+                                                <span
+                                                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black ${
+                                                        item.color === "green"
+                                                            ? isDarkMode
+                                                                ? "bg-emerald-500/25 text-emerald-200"
+                                                                : "bg-emerald-100 text-emerald-700"
+                                                            : item.color === "yellow"
+                                                              ? isDarkMode
+                                                                  ? "bg-amber-500/25 text-amber-200"
+                                                                  : "bg-amber-100 text-amber-700"
+                                                              : isDarkMode
+                                                                ? "bg-rose-500/25 text-rose-200"
+                                                                : "bg-rose-100 text-rose-700"
                                                     }`}
+                                                >
+                                                    {index + 1}
+                                                </span>
+                                                <span
+                                                    className="rounded-full px-2.5 py-1 text-[11px] font-bold"
                                                     style={{
-                                                        backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
-                                                        borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
-                                                        color: isDarkMode ? "#cbd5e1" : "#475569",
+                                                        backgroundColor: isDarkMode ? "rgba(14, 165, 233, 0.16)" : "rgba(2, 132, 199, 0.1)",
+                                                        color: isDarkMode ? "#7dd3fc" : "#0369a1",
                                                     }}
                                                 >
-                                                    <div className="flex items-start gap-3">
-                                                        <motion.div
-                                                            whileHover={{ scale: 1.1 }}
-                                                            className={`flex-shrink-0 rounded-full p-2 ${
-                                                                item.color === "green"
-                                                                    ? isDarkMode
-                                                                        ? "bg-green-100 text-green-600"
-                                                                        : "bg-green-50 text-green-700"
-                                                                    : item.color === "yellow"
-                                                                      ? isDarkMode
-                                                                          ? "bg-yellow-100 text-yellow-600"
-                                                                          : "bg-yellow-50 text-yellow-700"
-                                                                      : isDarkMode
-                                                                        ? "bg-red-100 text-red-600"
-                                                                        : "bg-red-50 text-red-700"
-                                                            }`}
-                                                        >
-                                                            <item.icon className="h-4 w-4" />
-                                                        </motion.div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="flex items-start justify-between gap-2">
-                                                                <h5
-                                                                    className="break-words text-sm font-bold md:text-base"
-                                                                    style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}
-                                                                >
-                                                                    {item.text}
-                                                                </h5>
-                                                                <motion.span
-                                                                    whileHover={{ scale: 1.05 }}
-                                                                    className="flex-shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium"
-                                                                    style={{
-                                                                        backgroundColor: isDarkMode ? "rgba(0,0,0,0.1)" : "rgba(24, 61, 61, 0.1)",
-                                                                        color: isDarkMode ? "#13151B" : "#183D3D",
-                                                                    }}
-                                                                >
-                                                                    {item.time}
-                                                                </motion.span>
-                                                            </div>
-                                                            <p
-                                                                className="mt-1 break-words text-xs leading-relaxed md:text-sm"
-                                                                style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
-                                                            >
-                                                                {item.description}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                                    {item.time}
+                                                </span>
+                                            </div>
 
-                                    <div className="flex flex-col">
-                                        <h4 className="mb-3 text-sm font-semibold md:text-base">Store Information:</h4>
-                                        <div className="space-y-4">
-                                            <motion.div
-                                                initial={{ opacity: 0, x: 20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.2 }}
-                                                whileHover={{
-                                                    scale: 1.02,
-                                                    y: -2,
-                                                    transition: { duration: 0.2 },
-                                                }}
-                                                className={`rounded-2xl border p-5 transition-all ${
-                                                    isDarkMode ? "hover:bg-slate-800/40 hover:border-blue-500/30" : "hover:bg-slate-100/40 hover:border-blue-500/30"
-                                                }`}
-                                                style={{
-                                                    backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
-                                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
-                                                }}
-                                            >
-                                                <div className="mb-3 flex items-center gap-3">
-                                                    <div
-                                                        className={`rounded-full p-2.5 ${
-                                                            isDarkMode ? "bg-blue-500/10 text-blue-400" : "bg-blue-50 text-blue-600"
-                                                        }`}
-                                                    >
-                                                        <Clock className="h-5 w-5" />
-                                                    </div>
-                                                    <h5
-                                                        className="text-base font-bold"
-                                                        style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
-                                                    >
-                                                        Operating Hours
-                                                     </h5>
-                                                </div>
-                                                <div className="text-sm mt-2">
-                                                    <div className="flex items-center justify-between py-1">
-                                                        <span
-                                                            className="font-medium text-slate-400 dark:text-slate-500"
-                                                        >
-                                                            Mon - Sun
-                                                        </span>
-                                                        <span
-                                                            className="font-black text-blue-500 dark:text-blue-400"
-                                                        >
-                                                            7:00 AM - 7:00 PM
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </motion.div>
+                                            <div className="mb-2 flex items-center gap-2">
+                                                <item.icon
+                                                    className={`h-4 w-4 ${
+                                                        item.color === "green"
+                                                            ? isDarkMode
+                                                                ? "text-emerald-300"
+                                                                : "text-emerald-700"
+                                                            : item.color === "yellow"
+                                                              ? isDarkMode
+                                                                  ? "text-amber-300"
+                                                                  : "text-amber-700"
+                                                              : isDarkMode
+                                                                ? "text-rose-300"
+                                                                : "text-rose-700"
+                                                    }`}
+                                                />
+                                                <h5 className="text-sm font-bold md:text-base" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                                                    {item.text}
+                                                </h5>
+                                            </div>
 
-                                            <motion.div
-                                                initial={{ opacity: 0, x: 20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.3 }}
-                                                whileHover={{
-                                                    scale: 1.02,
-                                                    y: -2,
-                                                    transition: { duration: 0.2 },
-                                                }}
-                                                className={`rounded-2xl border p-5 transition-all ${
-                                                    isDarkMode ? "hover:bg-slate-800/40 hover:border-purple-500/30" : "hover:bg-slate-100/40 hover:border-purple-500/30"
-                                                }`}
-                                                style={{
-                                                    backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
-                                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
-                                                }}
-                                            >
-                                                <div className="mb-3 flex items-center gap-3">
-                                                    <div
-                                                        className={`rounded-full p-2.5 ${
-                                                            isDarkMode ? "bg-purple-500/10 text-purple-400" : "bg-purple-50 text-purple-600"
-                                                        }`}
-                                                    >
-                                                        <Phone className="h-5 w-5" />
-                                                    </div>
-                                                    <h5
-                                                        className="text-base font-bold"
-                                                        style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
-                                                    >
-                                                        Contact Information
-                                                    </h5>
-                                                </div>
-                                                <p
-                                                    className="break-words text-sm leading-relaxed text-slate-400 dark:text-slate-500 mt-2"
-                                                >
-                                                    Ensure your contact number is accurate to receive service updates and notifications.
-                                                </p>
-                                            </motion.div>
-                                        </div>
-                                    </div>
+                                            <p className="text-xs leading-relaxed md:text-sm" style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}>
+                                                {item.description}
+                                            </p>
+                                        </motion.div>
+                                    ))}
                                 </div>
                             </motion.div>
                         )}
 
                         {isMobile && (
-                            <>
-                                <motion.div
-                                    initial={{ opacity: 0, x: 30 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.5, delay: 2.6 }}
-                                    className="rounded-3xl border p-6 shadow-2xl backdrop-blur-md transition-all duration-300"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
-                                        borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
-                                        color: isDarkMode ? "#cbd5e1" : "#475569",
-                                    }}
-                                >
-                                    <h3 className="mb-4 text-lg font-bold">Notification System</h3>
-                                    <div className="space-y-3">
-                                        {[
-                                            {
-                                                icon: CheckCircle2,
-                                                text: "Ready for Pickup",
-                                                description: "SMS notification when your laundry is ready",
-                                                time: "Immediate",
-                                                color: "green",
-                                            },
-                                            {
-                                                icon: Bell,
-                                                text: "3-Day Reminder",
-                                                description: "Reminder if unclaimed after 3 days",
-                                                time: "72 hours",
-                                                color: "yellow",
-                                            },
-                                            {
-                                                icon: AlertTriangle,
-                                                text: "Final Notice",
-                                                description: "Final notice before disposal after 7 days",
-                                                time: "7 days",
-                                                color: "red",
-                                            },
-                                        ].map((item, index) => (
-                                            <motion.div
-                                                key={index}
-                                                initial={{ opacity: 0, y: 20 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: index * 0.1 }}
-                                                whileHover={{
-                                                    scale: 1.02,
-                                                    y: -2,
-                                                    transition: { duration: 0.2 },
-                                                }}
-                                                className={`rounded-2xl border p-4 transition-all ${
-                                                    isDarkMode ? "hover:bg-slate-800/40 hover:border-blue-500/30" : "hover:bg-slate-100/40 hover:border-blue-500/30"
-                                                }`}
-                                                style={{
-                                                    backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
-                                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
-                                                    color: isDarkMode ? "#cbd5e1" : "#475569",
-                                                }}
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <motion.div
-                                                        whileHover={{ scale: 1.1 }}
-                                                        className={`flex-shrink-0 rounded-full p-2 ${
-                                                            item.color === "green"
-                                                                ? isDarkMode
-                                                                    ? "bg-green-100 text-green-600"
-                                                                    : "bg-green-50 text-green-700"
-                                                                : item.color === "yellow"
-                                                                  ? isDarkMode
-                                                                      ? "bg-yellow-100 text-yellow-600"
-                                                                      : "bg-yellow-50 text-yellow-700"
-                                                                  : isDarkMode
-                                                                    ? "bg-red-100 text-red-600"
-                                                                    : "bg-red-50 text-red-700"
-                                                        }`}
-                                                    >
-                                                        <item.icon className="h-4 w-4" />
-                                                    </motion.div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <h5
-                                                                className="break-words text-sm font-bold"
-                                                                style={{ color: isDarkMode ? "#13151B" : "#183D3D" }}
-                                                            >
-                                                                {item.text}
-                                                            </h5>
-                                                            <motion.span
-                                                                whileHover={{ scale: 1.05 }}
-                                                                className="flex-shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium"
-                                                                style={{
-                                                                    backgroundColor: isDarkMode ? "rgba(0,0,0,0.1)" : "rgba(24, 61, 61, 0.1)",
-                                                                    color: isDarkMode ? "#13151B" : "#183D3D",
-                                                                }}
-                                                            >
-                                                                {item.time}
-                                                            </motion.span>
-                                                        </div>
-                                                        <p
-                                                            className="mt-1 break-words text-xs leading-relaxed"
-                                                            style={{ color: isDarkMode ? "#6B7280" : "#183D3D" }}
-                                                        >
-                                                            {item.description}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </motion.div>
-                                        ))}
+                            <motion.div
+                                initial={{ opacity: 0, x: 30 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.5, delay: 2.6 }}
+                                className="rounded-3xl border p-6 shadow-2xl backdrop-blur-md transition-all duration-300"
+                                style={{
+                                    backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
+                                    borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
+                                    color: isDarkMode ? "#cbd5e1" : "#475569",
+                                }}
+                            >
+                                <div className="mb-4 flex items-end justify-between gap-3">
+                                    <div>
+                                        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}>
+                                            Service Guide
+                                        </p>
+                                        <h3 className="text-lg font-black tracking-tight" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                                            Reminder & Information
+                                        </h3>
                                     </div>
-                                </motion.div>
+                                    <span
+                                        className="rounded-full px-3 py-1 text-[11px] font-semibold"
+                                        style={{
+                                            backgroundColor: isDarkMode ? "rgba(14, 165, 233, 0.16)" : "rgba(2, 132, 199, 0.1)",
+                                            color: isDarkMode ? "#7dd3fc" : "#0369a1",
+                                        }}
+                                    >
+                                        3 Steps
+                                    </span>
+                                </div>
 
-                                <motion.div
-                                    initial={{ opacity: 0, x: 30 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.5, delay: 2.8 }}
-                                    className="rounded-3xl border p-6 shadow-2xl backdrop-blur-md transition-all duration-300"
-                                    style={{
-                                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.4)" : "rgba(255, 255, 255, 0.7)",
-                                        borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
-                                        color: isDarkMode ? "#cbd5e1" : "#475569",
-                                    }}
-                                >
-                                    <h3 className="mb-4 text-lg font-bold">Store Information</h3>
-                                    <div className="space-y-4">
+                                <div className="space-y-3">
+                                    {[
+                                        {
+                                            icon: CheckCircle2,
+                                            text: "Ready for Pickup",
+                                            description: "SMS notification when your laundry is ready",
+                                            time: "Immediate",
+                                            color: "green",
+                                        },
+                                        {
+                                            icon: Bell,
+                                            text: "3-Day Reminder",
+                                            description: "Reminder if unclaimed after 3 days",
+                                            time: "72 hours",
+                                            color: "yellow",
+                                        },
+                                        {
+                                            icon: AlertTriangle,
+                                            text: "Final Notice",
+                                            description: "Final notice before disposal after 7 days",
+                                            time: "7 days",
+                                            color: "red",
+                                        },
+                                    ].map((item, index) => (
                                         <motion.div
-                                            initial={{ opacity: 0, x: 20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.2 }}
-                                            whileHover={{
-                                                scale: 1.02,
-                                                y: -2,
-                                                transition: { duration: 0.2 },
-                                            }}
-                                            className={`rounded-2xl border p-5 transition-all ${
-                                                isDarkMode ? "hover:bg-slate-800/40 hover:border-blue-500/30" : "hover:bg-slate-100/40 hover:border-blue-500/30"
-                                            }`}
+                                            key={index}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.08 }}
+                                            className="rounded-xl border p-3.5"
                                             style={{
-                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
-                                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
+                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.45)" : "rgba(255, 255, 255, 0.92)",
+                                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
                                             }}
                                         >
-                                            <div className="mb-3 flex items-center gap-3">
-                                                <div
-                                                    className={`rounded-full p-2.5 ${
-                                                        isDarkMode ? "bg-blue-500/10 text-blue-400" : "bg-blue-50 text-blue-600"
+                                            <div className="mb-1.5 flex items-center justify-between">
+                                                <span
+                                                    className={`flex h-5.5 w-5.5 items-center justify-center rounded-full text-[10px] font-black ${
+                                                        item.color === "green"
+                                                            ? isDarkMode
+                                                                ? "bg-emerald-500/25 text-emerald-200"
+                                                                : "bg-emerald-100 text-emerald-700"
+                                                            : item.color === "yellow"
+                                                              ? isDarkMode
+                                                                  ? "bg-amber-500/25 text-amber-200"
+                                                                  : "bg-amber-100 text-amber-700"
+                                                              : isDarkMode
+                                                                ? "bg-rose-500/25 text-rose-200"
+                                                                : "bg-rose-100 text-rose-700"
                                                     }`}
                                                 >
-                                                    <Clock className="h-5 w-5" />
-                                                </div>
-                                                <h5
-                                                    className="text-base font-bold"
-                                                    style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
-                                                >
-                                                    Operating Hours
-                                                </h5>
+                                                    {index + 1}
+                                                </span>
+                                                <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: isDarkMode ? "rgba(14,165,233,0.16)" : "rgba(2,132,199,0.1)", color: isDarkMode ? "#7dd3fc" : "#0369a1" }}>
+                                                    {item.time}
+                                                </span>
                                             </div>
-                                            <div className="text-sm mt-2">
-                                                <div className="flex items-center justify-between py-1">
-                                                    <span
-                                                        className="font-medium text-slate-400 dark:text-slate-500"
-                                                    >
-                                                        Mon - Sun
-                                                    </span>
-                                                    <span
-                                                        className="font-black text-blue-500 dark:text-blue-400"
-                                                    >
-                                                        7:00 AM - 7:00 PM
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </motion.div>
 
-                                        <motion.div
-                                            initial={{ opacity: 0, x: 20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.3 }}
-                                            whileHover={{
-                                                scale: 1.02,
-                                                y: -2,
-                                                transition: { duration: 0.2 },
-                                            }}
-                                            className={`rounded-2xl border p-5 transition-all ${
-                                                isDarkMode ? "hover:bg-slate-800/40 hover:border-purple-500/30" : "hover:bg-slate-100/40 hover:border-purple-500/30"
-                                            }`}
-                                            style={{
-                                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.5)",
-                                                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
-                                            }}
-                                        >
-                                            <div className="mb-3 flex items-center gap-3">
-                                                <div
-                                                    className={`rounded-full p-2.5 ${
-                                                        isDarkMode ? "bg-purple-500/10 text-purple-400" : "bg-purple-50 text-purple-600"
+                                            <div className="mb-1 flex items-center gap-2">
+                                                <item.icon
+                                                    className={`h-4 w-4 ${
+                                                        item.color === "green"
+                                                            ? isDarkMode
+                                                                ? "text-emerald-300"
+                                                                : "text-emerald-700"
+                                                            : item.color === "yellow"
+                                                              ? isDarkMode
+                                                                  ? "text-amber-300"
+                                                                  : "text-amber-700"
+                                                              : isDarkMode
+                                                                ? "text-rose-300"
+                                                                : "text-rose-700"
                                                     }`}
-                                                >
-                                                    <Phone className="h-5 w-5" />
-                                                </div>
-                                                <h5
-                                                    className="text-base font-bold"
-                                                    style={{ color: isDarkMode ? "#ffffff" : "#0f172a" }}
-                                                >
-                                                    Contact Information
+                                                />
+                                                <h5 className="text-sm font-bold" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                                                    {item.text}
                                                 </h5>
                                             </div>
-                                            <p
-                                                className="break-words text-sm leading-relaxed text-slate-400 dark:text-slate-500 mt-2"
-                                            >
-                                                Ensure your contact number is accurate to receive service updates and notifications.
+
+                                            <p className="text-xs leading-relaxed" style={{ color: isDarkMode ? "#94a3b8" : "#475569" }}>
+                                                {item.description}
                                             </p>
                                         </motion.div>
-                                    </div>
-                                </motion.div>
-                            </>
+                                    ))}
+                                </div>
+                            </motion.div>
                         )}
                     </div>
                 </div>

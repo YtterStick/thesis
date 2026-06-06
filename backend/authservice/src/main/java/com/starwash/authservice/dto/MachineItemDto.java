@@ -8,6 +8,7 @@ public class MachineItemDto {
     private String status;
     private String lastMaintenance;
     private String nextMaintenance;
+    private Long totalLoadsProcessed = 0L;
 
     public MachineItemDto() {}
 
@@ -19,6 +20,18 @@ public class MachineItemDto {
         this.status = status;
         this.lastMaintenance = lastMaintenance;
         this.nextMaintenance = nextMaintenance;
+        this.totalLoadsProcessed = 0L;
+    }
+
+    public MachineItemDto(String id, String name, String type, Double capacityKg, String status, String lastMaintenance, String nextMaintenance, Long totalLoadsProcessed) {
+        this.id = id;
+        this.name = name;
+        this.type = type;
+        this.capacityKg = capacityKg;
+        this.status = status;
+        this.lastMaintenance = lastMaintenance;
+        this.nextMaintenance = nextMaintenance;
+        this.totalLoadsProcessed = totalLoadsProcessed;
     }
 
     public String getId() {
@@ -75,5 +88,13 @@ public class MachineItemDto {
 
     public void setNextMaintenance(String nextMaintenance) {
         this.nextMaintenance = nextMaintenance;
+    }
+
+    public Long getTotalLoadsProcessed() {
+        return totalLoadsProcessed != null ? totalLoadsProcessed : 0L;
+    }
+
+    public void setTotalLoadsProcessed(Long totalLoadsProcessed) {
+        this.totalLoadsProcessed = totalLoadsProcessed;
     }
 }

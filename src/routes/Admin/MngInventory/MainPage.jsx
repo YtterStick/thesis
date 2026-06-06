@@ -11,6 +11,7 @@ import StockModal from "./StockModal";
 import StockHistoryModal from "./StockHistoryModal";
 import InventoryTable from "./InventoryTable";
 import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
+import { InventoryAiPredictions } from "@/components/ui/InventoryAiPredictions";
 import {
   Card,
   CardContent,
@@ -218,6 +219,8 @@ const MainPage = () => {
           </Card>
         ))}
       </div>
+
+      <InventoryAiPredictions />
 
       {/* List */}
       <InventoryTable 

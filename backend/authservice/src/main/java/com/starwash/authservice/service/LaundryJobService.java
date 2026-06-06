@@ -220,6 +220,7 @@ public class LaundryJobService {
         load.setStartTime(getCurrentManilaTime());
 
         machine.setStatus(STATUS_IN_USE);
+        machine.setTotalLoadsProcessed(machine.getTotalLoadsProcessed() + 1);
         machineRepository.save(machine);
 
         job.setLaundryProcessedBy(processedBy);
@@ -255,6 +256,7 @@ public class LaundryJobService {
                 MachineItem dryer = availableDryer.get();
                 load.setMachineId(dryer.getId());
                 dryer.setStatus(STATUS_IN_USE);
+                dryer.setTotalLoadsProcessed(dryer.getTotalLoadsProcessed() + 1);
                 machineRepository.save(dryer);
             } else {
                 throw new RuntimeException("No available dryers found");
@@ -272,6 +274,7 @@ public class LaundryJobService {
             }
 
             machine.setStatus(STATUS_IN_USE);
+            machine.setTotalLoadsProcessed(machine.getTotalLoadsProcessed() + 1);
             machineRepository.save(machine);
         }
 

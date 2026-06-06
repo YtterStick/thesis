@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -18,10 +19,12 @@ public class StockController {
 
     private final StockService stockService;
     private final JwtUtil jwtUtil;
+    private final com.starwash.authservice.service.AiService aiService;
 
-    public StockController(StockService stockService, JwtUtil jwtUtil) {
+    public StockController(StockService stockService, JwtUtil jwtUtil, com.starwash.authservice.service.AiService aiService) {
         this.stockService = stockService;
         this.jwtUtil = jwtUtil;
+        this.aiService = aiService;
     }
 
     @GetMapping
@@ -147,5 +150,22 @@ public class StockController {
     @GetMapping("/{id}/history")
     public List<StockLog> getStockHistory(@PathVariable String id) {
         return stockService.getItemHistory(id);
+    }
+
+    @GetMapping("/ai-predictions")
+    public ResponseEntity<Map<String, String>> getInventoryPredictions(
+            @RequestHeader("Authorization") String authHeader) {
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            List<StockItem> currentStock = stockService.getAllItems();
+            String prediction = aiService.predictInventoryRestock(currentStock);
+            return ResponseEntity.ok(Map.of("prediction", prediction));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

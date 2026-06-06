@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/contexts/auth-context";
+import { AiSchedulingCard } from "@/components/ui/AiSchedulingCard";
+import { AiAssistantMenu } from "@/components/ui/AiAssistantMenu";
 import { PackageX, PhilippinePeso, Package, Clock8, LineChart, AlertCircle, TrendingUp, Users, Monitor, WashingMachine, Activity, Bell, RefreshCw, PieChart as LucidePieChart } from "lucide-react";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { AreaChart, ResponsiveContainer, Tooltip, Area, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
@@ -773,6 +775,10 @@ export default function AdminDashboardPage() {
                     <SkeletonCard />
                 </div>
 
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7 mb-5">
+                    <AiInsightsCard isDarkMode={isDarkMode} />
+                </div>
+
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
                     <SkeletonChart />
                     <SkeletonTodayTransactions />
@@ -870,32 +876,36 @@ export default function AdminDashboardPage() {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-3 flex items-center gap-3"
+                className="mb-3 flex items-center justify-between"
             >
-                <motion.div
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="rounded-lg p-2 shadow-sm"
-                    style={{
-                        backgroundColor: "var(--admin-accent)",
-                        color: "var(--admin-card-bg)",
-                    }}
-                >
-                    <LineChart size={22} />
-                </motion.div>
-                <div>
-                    <p
-                        className="text-xl font-bold"
-                        style={{ color: "var(--admin-text-primary)" }}
+                <div className="flex items-center gap-3">
+                    <motion.div
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="rounded-lg p-2 shadow-sm"
+                        style={{
+                            backgroundColor: "var(--admin-accent)",
+                            color: "var(--admin-card-bg)",
+                        }}
                     >
-                        Admin Dashboard
-                    </p>
-                    <p
-                        className="text-sm"
-                        style={{ color: "var(--admin-text-secondary)" }}
-                    >
-                        Real-time business overview and analytics
-                    </p>
+                        <LineChart size={22} />
+                    </motion.div>
+                    <div>
+                        <p
+                            className="text-xl font-bold"
+                            style={{ color: "var(--admin-text-primary)" }}
+                        >
+                            Admin Dashboard
+                        </p>
+                        <p
+                            className="text-sm"
+                            style={{ color: "var(--admin-text-secondary)" }}
+                        >
+                            Real-time business overview and analytics
+                        </p>
+                    </div>
                 </div>
+
+                <AiAssistantMenu isDarkMode={isDarkMode} />
             </motion.div>
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -951,7 +961,6 @@ export default function AdminDashboardPage() {
                             </h3>
                             <p
                                 className="text-sm"
-                                style={{ color: "var(--admin-text-secondary)" }}
                             >
                                 {description}
                             </p>
@@ -960,6 +969,12 @@ export default function AdminDashboardPage() {
                 ))}
             </div>
 
+            {/* AI Scheduling Warning Banner */}
+            <div className="mb-5">
+                <AiSchedulingCard isDarkMode={isDarkMode} />
+            </div>
+
+            {/* Top Stat Cards */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-7">
                 <motion.div
                     initial={{ opacity: 0, x: -30 }}

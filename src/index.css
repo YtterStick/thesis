@@ -16,6 +16,17 @@
         font-family: "Poppins", sans-serif;
     }
 
+    html,
+    body {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+        display: none;
+    }
+
     :root {
         --radius: 0.5rem;
         

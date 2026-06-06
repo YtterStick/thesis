@@ -15,6 +15,7 @@ public class MachineItem {
   private String status;
   private String lastMaintenance;
   private String nextMaintenance;
+  private Long totalLoadsProcessed = 0L;
   
 
   public MachineItem() {}
@@ -27,6 +28,7 @@ public class MachineItem {
     this.status = status;
     this.lastMaintenance = lastMaintenance;
     this.nextMaintenance = nextMaintenance;
+    this.totalLoadsProcessed = 0L;
   }
 
   public String getId() { return id; }
@@ -49,4 +51,11 @@ public class MachineItem {
 
   public String getNextMaintenance() { return nextMaintenance; }
   public void setNextMaintenance(String nextMaintenance) { this.nextMaintenance = nextMaintenance; }
+
+  public Long getTotalLoadsProcessed() {
+    return totalLoadsProcessed != null ? totalLoadsProcessed : 0L;
+  }
+  public void setTotalLoadsProcessed(Long totalLoadsProcessed) {
+    this.totalLoadsProcessed = totalLoadsProcessed;
+  }
 }

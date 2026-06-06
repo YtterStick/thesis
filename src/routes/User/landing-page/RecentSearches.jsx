@@ -1,30 +1,56 @@
 import { motion } from "framer-motion";
 
 const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => {
-    // Scrollbar colors
-    const scrollbarThumbColor = isDarkMode ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)";
-    const scrollbarThumbHover = isDarkMode ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.25)";
+    const scrollbarThumbColor = isDarkMode ? "rgba(148, 163, 184, 0.35)" : "rgba(51, 65, 85, 0.25)";
+    const scrollbarThumbHover = isDarkMode ? "rgba(148, 163, 184, 0.55)" : "rgba(51, 65, 85, 0.45)";
 
     return (
         <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 2.2 }}
-            className="rounded-2xl border p-4 md:p-6 shadow-xl backdrop-blur-md transition-all duration-300"
+            className="relative overflow-hidden rounded-3xl border p-4 md:p-6 shadow-xl backdrop-blur-md transition-all duration-300"
             style={{
-                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.7)" : "rgba(255, 255, 255, 0.75)",
+                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.65)" : "rgba(255, 255, 255, 0.86)",
                 borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
                 color: isDarkMode ? "#cbd5e1" : "#475569",
             }}
         >
-            <h3 className="mb-4 text-lg font-black tracking-tight md:text-xl" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>Recent Searches</h3>
-            
-            {/* Fixed height scrollable container with custom scrollbar */}
-            <div 
-                className="space-y-3 overflow-y-auto pr-2 md:space-y-4"
-                style={{ 
-                    height: '280px', // Fixed height to show exactly 2 cards
-                    scrollbarWidth: 'thin',
+            <div
+                className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-3xl"
+                style={{
+                    background: isDarkMode ? "rgba(59, 130, 246, 0.25)" : "rgba(59, 130, 246, 0.15)",
+                }}
+            />
+
+            <div className="relative mb-4 flex items-end justify-between gap-3">
+                <div>
+                    <p
+                        className="mb-1 text-[11px] font-bold uppercase tracking-[0.2em]"
+                        style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}
+                    >
+                        Quick Access
+                    </p>
+                    <h3 className="text-lg font-black tracking-tight md:text-xl" style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}>
+                        Recent Searches
+                    </h3>
+                </div>
+                <span
+                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                    style={{
+                        backgroundColor: isDarkMode ? "rgba(59, 130, 246, 0.16)" : "rgba(37, 99, 235, 0.1)",
+                        color: isDarkMode ? "#93c5fd" : "#1d4ed8",
+                    }}
+                >
+                    {recentSearches.length} saved
+                </span>
+            </div>
+
+            <div
+                className="recent-searches-scroll space-y-3 overflow-y-auto pr-2 md:space-y-4"
+                style={{
+                    height: "220px",
+                    scrollbarWidth: "thin",
                 }}
             >
                 {recentSearches.length > 0 ? (
@@ -34,29 +60,38 @@ const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => 
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 }}
-                            whileHover={{ scale: 1.02 }}
-                            className={`cursor-pointer rounded-xl border p-3 transition-all md:p-4 min-h-[120px] ${
-                                isDarkMode ? "hover:bg-slate-800/40" : "hover:bg-slate-100/40"
+                            whileHover={{ scale: 1.01, y: -2 }}
+                            className={`cursor-pointer rounded-2xl border p-3 transition-all md:p-4 min-h-[120px] ${
+                                isDarkMode ? "hover:border-blue-500/35 hover:bg-slate-800/45" : "hover:border-blue-400/35 hover:bg-white"
                             }`}
                             style={{
-                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.3)" : "rgba(255, 255, 255, 0.5)",
+                                backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.45)" : "rgba(248, 250, 252, 0.78)",
                                 borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
                                 color: isDarkMode ? "#cbd5e1" : "#475569",
                             }}
                             onClick={() => onRecentSearchClick(item.receiptNumber)}
                         >
-                            <div className="mb-2 flex items-start justify-between">
+                            <div className="mb-2 flex items-start justify-between gap-2">
                                 <p
-                                    className="font-mono text-sm font-black tracking-wide"
+                                    className="font-mono text-sm font-black tracking-wide md:text-[15px]"
                                     style={{ color: isDarkMode ? "#3b82f6" : "#2563eb" }}
                                 >
                                     {item.receiptNumber}
                                 </p>
+                                <span
+                                    className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+                                    style={{
+                                        backgroundColor: isDarkMode ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.1)",
+                                        color: isDarkMode ? "#6ee7b7" : "#047857",
+                                    }}
+                                >
+                                    Tap to track
+                                </span>
                             </div>
                             <h4
                                 className="mb-1 text-sm font-bold"
                                 style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}
-                              >
+                            >
                                 Click to track again
                             </h4>
                             <p
@@ -71,9 +106,9 @@ const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => 
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="rounded-xl border p-4 text-center flex flex-col justify-center items-center min-h-[120px]"
+                        className="rounded-2xl border p-4 text-center flex flex-col justify-center items-center min-h-[140px]"
                         style={{
-                            backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.4)",
+                            backgroundColor: isDarkMode ? "rgba(15, 23, 42, 0.35)" : "rgba(248, 250, 252, 0.65)",
                             borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(15, 23, 42, 0.08)",
                             color: isDarkMode ? "#cbd5e1" : "#475569",
                         }}
@@ -84,31 +119,28 @@ const RecentSearches = ({ isDarkMode, recentSearches, onRecentSearchClick }) => 
                 )}
             </div>
 
-            {/* Dynamic scrollbar styles that update with theme */}
             <style>{`
-                /* Scrollbar for Webkit browsers (Chrome, Safari, Edge) */
-                .overflow-y-auto::-webkit-scrollbar {
+                .recent-searches-scroll::-webkit-scrollbar {
                     width: 8px;
                 }
-                .overflow-y-auto::-webkit-scrollbar-track {
+                .recent-searches-scroll::-webkit-scrollbar-track {
                     background: ${isDarkMode ? "rgba(15, 23, 42, 0.1)" : "rgba(0, 0, 0, 0.05)"};
                     border-radius: 4px;
                     margin: 4px 0;
                 }
-                .overflow-y-auto::-webkit-scrollbar-thumb {
+                .recent-searches-scroll::-webkit-scrollbar-thumb {
                     background: ${scrollbarThumbColor};
                     border-radius: 4px;
                     border: 2px solid ${isDarkMode ? "#1e293b" : "#ffffff"};
                 }
-                .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+                .recent-searches-scroll::-webkit-scrollbar-thumb:hover {
                     background: ${scrollbarThumbHover};
                 }
-                .overflow-y-auto::-webkit-scrollbar-thumb:active {
+                .recent-searches-scroll::-webkit-scrollbar-thumb:active {
                     background: ${scrollbarThumbHover};
                 }
-                
-                /* Scrollbar for Firefox */
-                .overflow-y-auto {
+
+                .recent-searches-scroll {
                     scrollbar-width: thin;
                     scrollbar-color: ${scrollbarThumbColor} ${isDarkMode ? "rgba(15, 23, 42, 0.1)" : "rgba(0, 0, 0, 0.05)"};
                 }

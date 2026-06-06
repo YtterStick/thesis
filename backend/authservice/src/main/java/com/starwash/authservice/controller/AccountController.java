@@ -29,7 +29,7 @@ public class AccountController {
 
     @Autowired
     public AccountController(UserRepository userRepository, JwtUtil jwtUtil, 
-                           PasswordEncoder passwordEncoder, AuditService auditService) {
+        PasswordEncoder passwordEncoder, AuditService auditService) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;

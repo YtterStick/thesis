@@ -23,6 +23,9 @@ public class MachineController {
     @Autowired
     private MachineService machineService;
 
+    @Autowired
+    private com.starwash.authservice.service.AiService aiService;
+
     @GetMapping
     public ResponseEntity<List<MachineItemDto>> getAllMachines() {
         List<MachineItemDto> dtos = machineRepository.findAll().stream()
@@ -36,6 +39,7 @@ public class MachineController {
         MachineItem item = toEntity(dto);
         item.setId(null);
         MachineItem saved = machineRepository.save(item);
+        aiService.clearCache("machine_health_analysis");
         return ResponseEntity.ok(toDto(saved));
     }
 
@@ -46,10 +50,29 @@ public class MachineController {
                     existing.setName(dto.getName());
                     existing.setType(dto.getType());
                     existing.setCapacityKg(dto.getCapacityKg());
+                    
+                    // If changing status to Maintenance, update the lastMaintenance date and reset loads count
+                    if ("Maintenance".equals(dto.getStatus()) && !"Maintenance".equals(existing.getStatus())) {
+                        existing.setLastMaintenance(java.time.LocalDate.now().toString());
+                        existing.setTotalLoadsProcessed(0L);
+                    } else if (dto.getLastMaintenance() != null) {
+                        // Only overwrite if frontend provided a value
+                        existing.setLastMaintenance(dto.getLastMaintenance());
+                    }
+                    
+                    // If changing status to In Use, increment the loads counter
+                    if ("In Use".equals(dto.getStatus()) && !"In Use".equals(existing.getStatus())) {
+                        existing.setTotalLoadsProcessed(existing.getTotalLoadsProcessed() + 1);
+                    }
+                    
                     existing.setStatus(dto.getStatus());
-                    existing.setLastMaintenance(dto.getLastMaintenance());
-                    existing.setNextMaintenance(dto.getNextMaintenance());
+                    
+                    if (dto.getNextMaintenance() != null) {
+                        existing.setNextMaintenance(dto.getNextMaintenance());
+                    }
+                    
                     MachineItem updated = machineRepository.save(existing);
+                    aiService.clearCache("machine_health_analysis");
                     return ResponseEntity.ok(toDto(updated));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -61,6 +84,7 @@ public class MachineController {
             return ResponseEntity.notFound().build();
         }
         machineRepository.deleteById(id);
+        aiService.clearCache("machine_health_analysis");
         return ResponseEntity.ok().build();
     }
 
@@ -71,6 +95,7 @@ public class MachineController {
                 .map(machine -> {
                     machine.setStatus("Available");
                     MachineItem updated = machineRepository.save(machine);
+                    aiService.clearCache("machine_health_analysis");
                     return ResponseEntity.ok(toDto(updated));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -208,12 +233,13 @@ public class MachineController {
                 item.getCapacityKg(),
                 item.getStatus(),
                 item.getLastMaintenance(),
-                item.getNextMaintenance()
+                item.getNextMaintenance(),
+                item.getTotalLoadsProcessed()
         );
     }
 
     private MachineItem toEntity(MachineItemDto dto) {
-        return new MachineItem(
+        MachineItem item = new MachineItem(
                 dto.getId(),
                 dto.getName(),
                 dto.getType(),
@@ -222,5 +248,7 @@ public class MachineController {
                 dto.getLastMaintenance(),
                 dto.getNextMaintenance()
         );
+        item.setTotalLoadsProcessed(dto.getTotalLoadsProcessed());
+        return item;
     }
 }

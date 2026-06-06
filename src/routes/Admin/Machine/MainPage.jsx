@@ -661,6 +661,17 @@ export default function MachineMainPage() {
     setModalOpen(true);
   };
 
+  useEffect(() => {
+    const autoEditId = sessionStorage.getItem('autoEditMachineId');
+    if (autoEditId && machines.length > 0) {
+      const machineToEdit = machines.find(m => m.id === autoEditId);
+      if (machineToEdit) {
+        handleEdit(machineToEdit);
+        sessionStorage.removeItem('autoEditMachineId');
+      }
+    }
+  }, [machines]);
+
   const handleDelete = async (id) => {
     try {
       await api.delete(`/machines/${id}`);

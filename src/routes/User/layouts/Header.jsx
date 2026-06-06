@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useTheme } from "@/hooks/use-theme"; // Import your theme hook
 
-const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
+const Header = ({ activeSection, setActiveSection, onThemeChange, scrollRootRef }) => {
   const { theme, setTheme } = useTheme(); // Use your theme hook
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [previousSection, setPreviousSection] = useState('');
@@ -45,8 +45,11 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
     { href: "#terms", label: "Terms & Condition" },
   ];
 
-  const handleNavClick = (href, label) => {
+  const handleNavClick = (event, href, label) => {
+    event.preventDefault();
+
     const sectionId = href.replace('#', '');
+    const scrollRoot = scrollRootRef?.current || window;
     
     // Use provided setActiveSection or fall back to internal state
     if (setActiveSection) {
@@ -57,9 +60,19 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
     
     // Scroll to section if setActiveSection isn't provided
     if (!setActiveSection) {
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+      if (sectionId === 'home') {
+        if (scrollRoot === window) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          scrollRoot.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } else {
+        const element = scrollRoot === window
+          ? document.querySelector(href)
+          : scrollRoot.querySelector(href);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       }
     }
     
@@ -179,7 +192,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                   >
                     <a 
                       href={item.href} 
-                      onClick={() => handleNavClick(item.href, item.label)}
+                      onClick={(event) => handleNavClick(event, item.href, item.label)}
                       className="relative transition-colors text-base font-medium hover:opacity-85 py-2 px-1"
                       style={{
                         color: isDarkMode ? '#cbd5e1' : '#475569',
@@ -343,7 +356,7 @@ const Header = ({ activeSection, setActiveSection, onThemeChange }) => {
                     <motion.a
                       key={item.href}
                       href={item.href}
-                      onClick={() => handleNavClick(item.href, item.label)}
+                      onClick={(event) => handleNavClick(event, item.href, item.label)}
                       className="transition-colors text-lg font-medium py-2 border-b hover:opacity-85 relative"
                       style={{
                         color: isDarkMode ? '#cbd5e1' : '#475569',
